@@ -48,25 +48,15 @@ const MAPA_MODULOS: Record<string, string> = {
 };
 
 export default function MenuIsland({ activePage }) {
-  const initialCache = (() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const cache = window.localStorage.getItem("sgtur_menu_cache");
-      return cache ? JSON.parse(cache) : null;
-    } catch {
-      return null;
-    }
-  })();
-
-  const [userId, setUserId] = useState<string | null>(initialCache?.userId || null);
-  const [acessos, setAcessos] = useState<Record<string, NivelPermissao>>(initialCache?.acessos || {});
+  const [userId, setUserId] = useState<string | null>(null);
+  const [acessos, setAcessos] = useState<Record<string, NivelPermissao>>({});
   // loading não derruba o menu; cache evita piscada
   const [loading, setLoading] = useState(false);
-  const [cacheLoaded, setCacheLoaded] = useState(Boolean(initialCache));
+  const [cacheLoaded, setCacheLoaded] = useState(false);
   const [saindo, setSaindo] = useState(false);
-  const [tipoUsuario, setTipoUsuario] = useState<string>(initialCache?.tipoUsuario || "");
-  const [isAdminFinal, setIsAdminFinal] = useState(initialCache?.isAdmin || false);
-  const [userEmail, setUserEmail] = useState<string>(initialCache?.userEmail || "");
+  const [tipoUsuario, setTipoUsuario] = useState<string>("");
+  const [isAdminFinal, setIsAdminFinal] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
 
   async function carregar() {
     // Busca sessão primeiro para evitar estado "vazio" enquanto o supabase inicializa
@@ -178,7 +168,7 @@ export default function MenuIsland({ activePage }) {
   }
 
   useEffect(() => {
-    // tenta ler cache para não piscar menu
+    // Aplica cache só após o mount para evitar divergência SSR/hidratação
     try {
       const cache = window.localStorage.getItem("sgtur_menu_cache");
       if (cache) {
@@ -188,9 +178,9 @@ export default function MenuIsland({ activePage }) {
         setIsAdminFinal(!!parsed.isAdmin);
         setTipoUsuario(parsed.tipoUsuario || "");
         setUserEmail(parsed.userEmail || "");
-        setCacheLoaded(true);
       }
     } catch {}
+    setCacheLoaded(true);
     // Chama carregar, mas não mostra loading se já tem cache
     carregar();
   }, []);

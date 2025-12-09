@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6Zr-jH2.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CEcCj9vF.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_Di0qno_D.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BHj0yuGE.mjs';
-import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_DFwUCWgc.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_CNOZIemN.mjs';
 
 function formatCurrency(v) {
   return v.toLocaleString("pt-BR", {
@@ -163,7 +163,7 @@ function DashboardGestorIsland() {
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao Dashboard." });
   if (papel !== "GESTOR" && papel !== "ADMIN") {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: "padding:20px;", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Somente Gestores podem acessar este dashboard." }) });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Somente Gestores podem acessar este dashboard." }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-geral-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(

@@ -307,7 +307,7 @@ export default function DashboardGestorIsland() {
 
   if (papel !== "GESTOR" && papel !== "ADMIN") {
     return (
-      <div style="padding:20px;">
+      <div style={{ padding: 20 }}>
         <h3>Somente Gestores podem acessar este dashboard.</h3>
       </div>
     );
