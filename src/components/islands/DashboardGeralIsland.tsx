@@ -710,7 +710,9 @@ const DashboardGeralIsland: React.FC = () => {
     const map = new Map<string, number>();
 
     vendas.forEach((v) => {
-      const dia = v.data_lancamento;
+      // Normaliza para o formato YYYY-MM-DD e ignora hora/fuso para evitar rótulos deslocados
+      const dia = (v.data_lancamento || "").slice(0, 10);
+      if (!dia) return;
       const totalVenda = (v.vendas_recibos || []).reduce(
         (acc, r) => acc + Number(r.valor_total || 0),
         0
@@ -721,13 +723,11 @@ const DashboardGeralIsland: React.FC = () => {
     const arr = Array.from(map.entries())
       .sort(([a], [b]) => (a < b ? -1 : 1))
       .map(([date, value]) => {
-        const d = new Date(date);
-        const label = isNaN(d.getTime())
-          ? date
-          : d.toLocaleDateString("pt-BR", {
-              day: "2-digit",
-              month: "2-digit",
-            });
+        const [year, month, day] = date.split("-");
+        const label =
+          year && month && day
+            ? `${day.padStart(2, "0")}/${month.padStart(2, "0")}`
+            : date;
         return { date, label, value };
       });
 
