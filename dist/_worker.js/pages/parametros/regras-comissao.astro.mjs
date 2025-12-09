@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6Zr-jH2.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_BHj0yuGE.mjs';
+import { r as registrarLog } from '../../chunks/logs_BNJN817W.mjs';
 
 const emptyRule = {
   id: "",
@@ -448,10 +448,10 @@ const $$RegrasComissao = createComponent(($$result, $$props, $$slots) => {
   const activePage = "regras-comissao";
   return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Regras de Comiss\xE3o", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">Regras de Comissionamento</h1> <p class="page-subtitle">
 Cadastre regras gerais ou escalonadas para aplicar em produtos e cálculos de metas.
-</p> ${renderComponent($$result2, "CommissionRulesIsland", CommissionRulesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/CommissionRulesIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/regras-comissao.astro", void 0);
+</p> ${renderComponent($$result2, "CommissionRulesIsland", CommissionRulesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/CommissionRulesIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/regras-comissao.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/regras-comissao.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/regras-comissao.astro";
 const $$url = "/parametros/regras-comissao";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

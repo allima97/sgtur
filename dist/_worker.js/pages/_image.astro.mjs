@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { A as AstroError, w as NoImageMetadata, F as FailedToFetchRemoteImageDimensions, x as ExpectedImageOptions, y as ExpectedImage, z as ExpectedNotESMImage, B as resolveSrc, D as isRemoteImage, H as isCoreRemotePath, J as isESMImportedImage, K as isLocalService, Q as DEFAULT_HASH_PROPS, T as InvalidImageService, U as ImageMissingAlt, V as isRemoteAllowed } from '../chunks/astro/assets-service_6K6GS7BG.mjs';
-import { c as createComponent, a as createAstro, m as maybeRenderHead, b as addAttribute, z as spreadAttributes, d as renderTemplate } from '../chunks/astro/server_C6IdV9ex.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+import { c as createComponent, a as createAstro, m as maybeRenderHead, b as addAttribute, z as spreadAttributes, d as renderTemplate } from '../chunks/astro/server_C6Zr-jH2.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_DAXFO6RA.mjs';
 
 function isImageMetadata(src) {
   return src.fsPath && !("fsPath" in src);
@@ -947,7 +947,7 @@ const $$Image = createComponent(async ($$result, $$props, $$slots) => {
     additionalAttributes.srcset = image.srcSet.attribute;
   }
   return renderTemplate`${maybeRenderHead()}<img${addAttribute(image.src, "src")}${spreadAttributes(additionalAttributes)}${spreadAttributes(image.attributes)}>`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/node_modules/astro/components/Image.astro", void 0);
+}, "/Users/allima97/Documents/GitHub/sgtur/node_modules/astro/components/Image.astro", void 0);
 
 const mimes = {
   "3g2": "video/3gpp2",
@@ -1454,7 +1454,7 @@ const $$Picture = createComponent(async ($$result, $$props, $$slots) => {
     const srcsetAttribute = props.densities || !props.densities && !props.widths ? `${image.src}${image.srcSet.values.length > 0 ? ", " + image.srcSet.attribute : ""}` : image.srcSet.attribute;
     return renderTemplate`<source${addAttribute(srcsetAttribute, "srcset")}${addAttribute(lookup(image.options.format ?? image.src) ?? `image/${image.options.format}`, "type")}${spreadAttributes(sourceAdditionalAttributes)}>`;
   })} <img${addAttribute(fallbackImage.src, "src")}${spreadAttributes(imgAdditionalAttributes)}${spreadAttributes(fallbackImage.attributes)}> </picture>`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/node_modules/astro/components/Picture.astro", void 0);
+}, "/Users/allima97/Documents/GitHub/sgtur/node_modules/astro/components/Picture.astro", void 0);
 
 const imageConfig = {"service":{"entrypoint":"astro/assets/services/noop","config":{}},"domains":[],"remotePatterns":[]};
 					const getImage = async (options) => await getImage$1(options, imageConfig);

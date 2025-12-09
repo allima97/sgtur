@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6Zr-jH2.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_BHj0yuGE.mjs';
 
 function DashboardAdminIsland() {
   const { ativo, loading: loadingPerm } = usePermissao("AdminDashboard");
@@ -202,10 +202,10 @@ const $$Admin = createComponent(($$result, $$props, $$slots) => {
       width: 100%;
       max-width: 1300px;
       margin: 0 auto;
-    "> ${renderComponent($$result2, "DashboardAdminIsland", DashboardAdminIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/DashboardAdminIsland.tsx", "client:component-export": "default" })} </section> ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/dashboard/admin.astro", void 0);
+    "> ${renderComponent($$result2, "DashboardAdminIsland", DashboardAdminIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/DashboardAdminIsland.tsx", "client:component-export": "default" })} </section> ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/admin.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/dashboard/admin.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/admin.astro";
 const $$url = "/dashboard/admin";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

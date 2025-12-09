@@ -12,6 +12,11 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - [x] **React + TypeScript** nos islands
   - [x] CSS utilitário próprio (padrão SGTUR: cards, tabelas, cores por módulo)
   - [x] **TailwindCSS** (configurado com `preflight` desativado para preservar o visual atual)
+- **Deploy / Infra**
+  - [x] Cloudflare Pages + Functions (adapter `@astrojs/cloudflare`)
+  - [x] Build `npm run build` → pasta `dist/` (gera `_worker.js/` + `_routes.json`)
+  - [x] Variáveis: `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` em Preview/Production
+  - [x] Imagens em modo **passthrough** (Sharp não roda no runtime do Cloudflare)
 
 - **Backend / Dados**
   - [x] **Supabase (PostgreSQL)** como banco principal

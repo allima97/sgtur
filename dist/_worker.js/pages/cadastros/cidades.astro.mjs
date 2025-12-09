@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_BpuKPjcn.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6Zr-jH2.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Bxa24Le5.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_BHj0yuGE.mjs';
+import { r as registrarLog } from '../../chunks/logs_BNJN817W.mjs';
 
 const initialForm = {
   nome: "",
@@ -270,10 +270,10 @@ function CidadesIsland() {
 
 const $$Cidades = createComponent(($$result, $$props, $$slots) => {
   const activePage = "cidades";
-  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Cadastro de Cidades", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Cadastro de Cidades", "subtitle": "Gerencie a base de cidades utilizada nos destinos.", "color": "blue" })} ${renderComponent($$result2, "CidadesIsland", CidadesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/CidadesIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/cadastros/cidades.astro", void 0);
+  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Cadastro de Cidades", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Cadastro de Cidades", "subtitle": "Gerencie a base de cidades utilizada nos destinos.", "color": "blue" })} ${renderComponent($$result2, "CidadesIsland", CidadesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/CidadesIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/cadastros/cidades.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/cadastros/cidades.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/cadastros/cidades.astro";
 const $$url = "/cadastros/cidades";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

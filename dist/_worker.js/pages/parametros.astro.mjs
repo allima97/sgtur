@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6Zr-jH2.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../chunks/usePermissao_CncspAO2.mjs';
-import { r as registrarLog } from '../chunks/logs_D3Eb6w9w.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../chunks/usePermissao_BHj0yuGE.mjs';
+import { r as registrarLog } from '../chunks/logs_BNJN817W.mjs';
 
 const DEFAULT_PARAMS = {
   company_id: null,
@@ -295,10 +295,10 @@ function ParametrosSistemaIsland() {
 
 const $$Index = createComponent(($$result, $$props, $$slots) => {
   const activePage = "parametros";
-  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Par\xE2metros do Sistema", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">Parâmetros do Sistema</h1> <p class="page-subtitle">Ajuste regras globais que impactam metas, cancelamentos e modo corporativo.</p> ${renderComponent($$result2, "ParametrosSistemaIsland", ParametrosSistemaIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/ParametrosSistemaIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/index.astro", void 0);
+  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Par\xE2metros do Sistema", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">Parâmetros do Sistema</h1> <p class="page-subtitle">Ajuste regras globais que impactam metas, cancelamentos e modo corporativo.</p> ${renderComponent($$result2, "ParametrosSistemaIsland", ParametrosSistemaIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/ParametrosSistemaIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/index.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/index.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/index.astro";
 const $$url = "/parametros";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

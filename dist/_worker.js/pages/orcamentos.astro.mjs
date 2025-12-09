@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6Zr-jH2.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../chunks/usePermissao_CncspAO2.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../chunks/usePermissao_BHj0yuGE.mjs';
 
 function OrcamentosCadastroIsland() {
   const { ativo } = usePermissao("Vendas");
@@ -970,10 +970,10 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
   const activePage = "orcamentos";
   return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Or\xE7amentos", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">Orçamentos / CRM</h1> <p class="page-subtitle">
 Cadastre e acompanhe orçamentos antes de virarem vendas.
-</p> ${renderComponent($$result2, "OrcamentosCadastroIsland", OrcamentosCadastroIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/OrcamentosCadastroIsland.tsx", "client:component-export": "default" })} ${renderComponent($$result2, "OrcamentosConsultaIsland", OrcamentosConsultaIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/OrcamentosConsultaIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/orcamentos/index.astro", void 0);
+</p> ${renderComponent($$result2, "OrcamentosCadastroIsland", OrcamentosCadastroIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosCadastroIsland.tsx", "client:component-export": "default" })} ${renderComponent($$result2, "OrcamentosConsultaIsland", OrcamentosConsultaIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosConsultaIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/orcamentos/index.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro";
 const $$url = "/orcamentos";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_BpuKPjcn.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6Zr-jH2.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Bxa24Le5.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
 import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DkICCBHU.mjs';
 
 function hojeISO() {
@@ -737,10 +737,10 @@ function RelatorioVendasIsland() {
 
 const $$Vendas = createComponent(($$result, $$props, $$slots) => {
   const activePage = "relatorios-vendas";
-  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Relat\xF3rio de Vendas", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Relat\xF3rio de Vendas", "subtitle": "Filtre e analise vendas por per\xEDodo, cliente, destino e produto.", "color": "purple" })} ${renderComponent($$result2, "RelatorioVendasIsland", RelatorioVendasIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/RelatorioVendasIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/relatorios/vendas.astro", void 0);
+  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Relat\xF3rio de Vendas", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Relat\xF3rio de Vendas", "subtitle": "Filtre e analise vendas por per\xEDodo, cliente, destino e produto.", "color": "purple" })} ${renderComponent($$result2, "RelatorioVendasIsland", RelatorioVendasIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/RelatorioVendasIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/relatorios/vendas.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/relatorios/vendas.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/relatorios/vendas.astro";
 const $$url = "/relatorios/vendas";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

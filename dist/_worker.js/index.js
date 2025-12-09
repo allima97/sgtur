@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { a as renderers } from './chunks/_@astro-renderers_DYCwg6Ew.mjs';
+import { a as renderers } from './chunks/_@astro-renderers_DAXFO6RA.mjs';
 import { createExports } from './_@astrojs-ssr-adapter.mjs';
-import { manifest } from './manifest_BjPMGmWj.mjs';
+import { manifest } from './manifest_C-wtcp90.mjs';
 
 const _page0 = () => import('./pages/_image.astro.mjs');
 const _page1 = () => import('./pages/admin/permissoes.astro.mjs');
@@ -33,9 +33,10 @@ const _page26 = () => import('./pages/relatorios/vendas.astro.mjs');
 const _page27 = () => import('./pages/relatorios/vendas-por-cliente.astro.mjs');
 const _page28 = () => import('./pages/relatorios/vendas-por-destino.astro.mjs');
 const _page29 = () => import('./pages/relatorios/vendas-por-produto.astro.mjs');
-const _page30 = () => import('./pages/vendas/cadastro.astro.mjs');
-const _page31 = () => import('./pages/vendas/consulta.astro.mjs');
-const _page32 = () => import('./pages/index.astro.mjs');
+const _page30 = () => import('./pages/test-env.astro.mjs');
+const _page31 = () => import('./pages/vendas/cadastro.astro.mjs');
+const _page32 = () => import('./pages/vendas/consulta.astro.mjs');
+const _page33 = () => import('./pages/index.astro.mjs');
 
 const pageMap = new Map([
     ["node_modules/astro/dist/assets/endpoint/generic.js", _page0],
@@ -68,9 +69,10 @@ const pageMap = new Map([
     ["src/pages/relatorios/vendas-por-cliente.astro", _page27],
     ["src/pages/relatorios/vendas-por-destino.astro", _page28],
     ["src/pages/relatorios/vendas-por-produto.astro", _page29],
-    ["src/pages/vendas/cadastro.astro", _page30],
-    ["src/pages/vendas/consulta.astro", _page31],
-    ["src/pages/index.astro", _page32]
+    ["src/pages/test-env.astro", _page30],
+    ["src/pages/vendas/cadastro.astro", _page31],
+    ["src/pages/vendas/consulta.astro", _page32],
+    ["src/pages/index.astro", _page33]
 ]);
 const serverIslandMap = new Map();
 const _manifest = Object.assign(manifest, {

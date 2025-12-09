@@ -1,6 +1,9 @@
 import { defineMiddleware } from "astro:middleware";
 import { createServerClient } from "@supabase/ssr";
 
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies } = context;
   const pathname = url.pathname;
@@ -19,10 +22,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
 
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error(
+      "PUBLIC_SUPABASE_URL ou PUBLIC_SUPABASE_ANON_KEY ausentes. Configure as variáveis de ambiente (Pages → Settings → Environment Variables)."
+    );
+    return new Response(
+      "Faltam PUBLIC_SUPABASE_URL/PUBLIC_SUPABASE_ANON_KEY. Configure no Cloudflare Pages ou no .env local.",
+      { status: 500 }
+    );
+  }
+
   // Criar supabase SSR
   const supabase = createServerClient(
-    import.meta.env.PUBLIC_SUPABASE_URL!,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get: (name) => cookies.get(name)?.value ?? "",

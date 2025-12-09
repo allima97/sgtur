@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderHead, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, f as renderHead, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6Zr-jH2.mjs';
 /* empty css                                         */
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { r as registrarLog } from '../../chunks/logs_BNJN817W.mjs';
 
 function AuthLoginIsland() {
   const [email, setEmail] = reactExports.useState("");
@@ -201,10 +201,10 @@ function AuthLoginIsland() {
 }
 
 const $$Login = createComponent(($$result, $$props, $$slots) => {
-  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>Login - SGTUR</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthLoginIsland", AuthLoginIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/AuthLoginIsland.tsx", "client:component-export": "default" })} </body></html>`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/auth/login.astro", void 0);
+  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>Login - SGTUR</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthLoginIsland", AuthLoginIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthLoginIsland.tsx", "client:component-export": "default" })} </body></html>`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/login.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/auth/login.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/login.astro";
 const $$url = "/auth/login";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

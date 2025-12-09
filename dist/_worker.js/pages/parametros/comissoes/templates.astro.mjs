@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_Bfm88K_S.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_CtqDhMax.mjs';
-import { r as reactExports } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../../chunks/usePermissao_CncspAO2.mjs';
-import { r as registrarLog } from '../../../chunks/logs_D3Eb6w9w.mjs';
+import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../../chunks/astro/server_C6Zr-jH2.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_CEcCj9vF.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_Di0qno_D.mjs';
+import { r as reactExports } from '../../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+export { a as renderers } from '../../../chunks/_@astro-renderers_DAXFO6RA.mjs';
+import { u as usePermissao } from '../../../chunks/usePermissao_BHj0yuGE.mjs';
+import { r as registrarLog } from '../../../chunks/logs_BNJN817W.mjs';
 
 const initialForm = {
   id: "",
@@ -520,10 +520,10 @@ function CommissionTemplatesIsland() {
 
 const $$Templates = createComponent(($$result, $$props, $$slots) => {
   const pageTitle = "Templates de Comiss\xE3o";
-  return renderTemplate`${renderComponent($$result, "Layout", $$DashboardLayout, { "title": pageTitle, "module": "Parametros" }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">${pageTitle}</h1> ${renderComponent($$result2, "CommissionTemplatesIsland", CommissionTemplatesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgt-astro/src/components/islands/CommissionTemplatesIsland.tsx", "client:component-export": "default" })} ` })}`;
-}, "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/comissoes/templates.astro", void 0);
+  return renderTemplate`${renderComponent($$result, "Layout", $$DashboardLayout, { "title": pageTitle, "module": "Parametros" }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">${pageTitle}</h1> ${renderComponent($$result2, "CommissionTemplatesIsland", CommissionTemplatesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/CommissionTemplatesIsland.tsx", "client:component-export": "default" })} ` })}`;
+}, "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/comissoes/templates.astro", void 0);
 
-const $$file = "/Users/allima97/Documents/GitHub/sgt-astro/src/pages/parametros/comissoes/templates.astro";
+const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/parametros/comissoes/templates.astro";
 const $$url = "/parametros/comissoes/templates";
 
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

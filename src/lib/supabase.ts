@@ -9,9 +9,21 @@ const supabaseCookieName = supabaseProjectRef
   : "sb-auth-token";
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Supabase URL or anon key is missing. Check your environment variables.",
-  );
+  const missing = [
+    !supabaseUrl && "PUBLIC_SUPABASE_URL",
+    !supabaseAnonKey && "PUBLIC_SUPABASE_ANON_KEY",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const msg = `Faltam variáveis de ambiente: ${missing}. Configure-as no Cloudflare Pages (Settings → Environment Variables) ou crie um .env.local com esses nomes. Consulte /test-env para validar.`;
+
+  // Em dev, logar para deixar explícito.
+  if (import.meta.env.MODE !== "production") {
+    console.error(msg);
+  }
+
+  throw new Error(msg);
 }
 
 // Use the SSR helper so auth sessions are stored in cookies, allowing
