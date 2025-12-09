@@ -1,0 +1,14 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import PerfilIsland from "../../components/islands/PerfilIsland.tsx";
+
+const activePage = "perfil";
+---
+
+<DashboardLayout title="Meu Perfil" {activePage}>
+  <h1 class="page-title">Meu Perfil</h1>
+  <p class="page-subtitle">Atualize seus dados pessoais e de acesso.</p>
+
+  <PerfilIsland client:load />
+</DashboardLayout>

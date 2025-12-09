@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/_astro/*",
+    "/SGTUR_DOCUMENTACAO.md",
+    "/sgtur-plano-modulos.md"
+  ]
+}

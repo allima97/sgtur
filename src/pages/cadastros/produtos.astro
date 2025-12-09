@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ProdutosIsland from "../../components/islands/ProdutosIsland.tsx";
+
+const activePage = "produtos";
+---
+
+<DashboardLayout title="Cadastro de Produtos" {activePage}>
+  <HeaderPage
+    title="Cadastro de Produtos"
+    subtitle="Produtos genéricos independentes de destino, com regra de comissionamento."
+    color="blue"
+  />
+
+  <ProdutosIsland client:load />
+</DashboardLayout>

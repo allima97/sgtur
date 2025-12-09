@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import PaisesIsland from "../../components/islands/PaisesIsland.tsx";
+
+const activePage = "paises";
+---
+
+<DashboardLayout title="Cadastro de Países" {activePage}>
+  <HeaderPage
+    title="Cadastro de Países"
+    subtitle="Gerencie a base de países utilizada nos destinos."
+    color="blue"
+  />
+
+  <PaisesIsland client:load />
+</DashboardLayout>

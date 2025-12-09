@@ -1,0 +1,30 @@
+---
+import "../styles/global.css";
+import "../styles/auth-extra.css";
+
+import MenuIsland from "../components/islands/MenuIsland.tsx";
+
+const { title = "SGTUR", activePage = "" } = Astro.props;
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="app-shell">
+
+      <!-- MENU DINÂMICO -->
+      <MenuIsland client:load {activePage} />
+
+      <!-- CONTEÚDO -->
+      <main class="app-main">
+        <slot />
+      </main>
+</html>
+
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import RelatorioAgrupadoProdutoIsland from "../../components/islands/RelatorioAgrupadoProdutoIsland.tsx";
+
+const activePage = "relatorios-vendas-produto";
+---
+
+<DashboardLayout title="Relatório de Vendas por Produto" {activePage}>
+  <HeaderPage
+    title="Relatório de Vendas por Produto"
+    subtitle="Analise o desempenho dos produtos em quantidade, faturamento e ticket médio."
+    color="purple"
+  />
+
+  <RelatorioAgrupadoProdutoIsland client:load />
+</DashboardLayout>

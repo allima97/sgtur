@@ -1,0 +1,18 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import OrcamentosCadastroIsland from "../../components/islands/OrcamentosCadastroIsland.tsx";
+import OrcamentosConsultaIsland from "../../components/islands/OrcamentosConsultaIsland.tsx";
+
+const activePage = "orcamentos";
+---
+
+<DashboardLayout title="Orçamentos" {activePage}>
+  <h1 class="page-title">Orçamentos / CRM</h1>
+  <p class="page-subtitle">
+    Cadastre e acompanhe orçamentos antes de virarem vendas.
+  </p>
+
+  <OrcamentosCadastroIsland client:load />
+  <OrcamentosConsultaIsland client:load />
+</DashboardLayout>

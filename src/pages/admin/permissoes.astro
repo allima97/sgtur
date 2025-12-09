@@ -1,0 +1,12 @@
+---
+import Layout from "../../layouts/DashboardLayout.astro";
+import AdminPermissoesIsland from "../../components/islands/AdminPermissoesIsland.tsx";
+
+const pageTitle = "Painel de Permissões";
+---
+
+<Layout title={pageTitle} module="Admin">
+  <h1 class="page-title">{pageTitle}</h1>
+
+  <AdminPermissoesIsland client:load />
+</Layout>

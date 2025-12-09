@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ClientesIsland from "../../components/islands/ClientesIsland.tsx";
+
+const activePage = "clientes";
+---
+
+<DashboardLayout title="Carteira de Clientes" {activePage}>
+  <HeaderPage
+    title="Carteira de Clientes"
+    subtitle="Gerencie seus clientes com visão de CRM."
+    color="blue"
+  />
+
+  <ClientesIsland client:load />
+</DashboardLayout>

@@ -1,0 +1,11 @@
+---
+import Layout from "../../layouts/DashboardLayout.astro";
+import MetasVendedorIsland from "../../components/islands/MetasVendedorIsland.tsx";
+
+const pageTitle = "Metas do Vendedor";
+---
+
+<Layout title={pageTitle} module="Metas">
+  <h1 class="page-title">{pageTitle}</h1>
+  <MetasVendedorIsland client:load />
+</Layout>

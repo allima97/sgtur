@@ -1,0 +1,19 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import DashboardAdminIsland from "../../components/islands/DashboardAdminIsland.tsx";
+---
+
+<!-- Apenas ADMIN deve acessar — middleware + island verificam isso -->
+
+<DashboardLayout title="Dashboard Administrativo">
+  <section
+    style="
+      padding: 16px;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+    "
+  >
+    <DashboardAdminIsland client:load />
+  </section>
+</DashboardLayout>

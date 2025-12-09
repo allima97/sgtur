@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import VendasCadastroIsland from "../../components/islands/VendasCadastroIsland.tsx";
+
+const activePage = "vendas";
+---
+
+<DashboardLayout title="Cadastro de Vendas" {activePage}>
+  <HeaderPage
+    title="Cadastro de Vendas"
+    subtitle="Registre vendas completas com cliente, destino, produto e recibos."
+    color="green"
+  />
+
+  <VendasCadastroIsland client:load />
+</DashboardLayout>

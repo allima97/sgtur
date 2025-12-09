@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import LogsIsland from "../../components/islands/LogsIsland.tsx";
+---
+
+<DashboardLayout title="Logs de Auditoria">
+  <section
+    style="
+      padding: 16px;
+      width: 100%;
+      max-width: 1300px;
+      margin: 0 auto;
+    "
+  >
+    <LogsIsland client:load />
+  </section>
+</DashboardLayout>

@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import VendasConsultaIsland from "../../components/islands/VendasConsultaIsland.tsx";
+
+const activePage = "vendas";
+---
+
+<DashboardLayout title="Consulta de Vendas" {activePage}>
+  <HeaderPage
+    title="Consulta de Vendas"
+    subtitle="Listagem simples integrada ao Supabase (ajuste depois para sua regra completa)"
+    color="green"
+  />
+
+  <VendasConsultaIsland client:load />
+</DashboardLayout>

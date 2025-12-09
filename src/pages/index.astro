@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import HeaderPage from "../components/ui/HeaderPage.astro";
+import DashboardGeralIsland from "../components/islands/DashboardGeralIsland.tsx";
+
+const activePage = "dashboard";
+---
+
+<DashboardLayout title="Dashboard Geral" {activePage}>
+  <HeaderPage
+    title="Dashboard Geral"
+    subtitle="Visão consolidada do mês: metas, vendas, produtos diferenciados, orçamentos e aniversariantes."
+    color="purple"
+  />
+
+  <DashboardGeralIsland client:load />
+</DashboardLayout>

@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import DestinosIsland from "../../components/islands/DestinosIsland.tsx";
+
+const activePage = "destinos";
+---
+
+<DashboardLayout title="Cadastro de Destinos" {activePage}>
+  <HeaderPage
+    title="Cadastro de Destinos"
+    subtitle="Gerencie destinos completos vinculados a países e cidades."
+    color="blue"
+  />
+
+  <DestinosIsland client:load />
+</DashboardLayout>

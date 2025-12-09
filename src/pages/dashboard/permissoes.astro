@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import PermissoesAdminIsland from "../../components/islands/PermissoesAdminIsland.tsx";
+---
+
+<DashboardLayout title="Permissões do Sistema">
+  <section
+    style="
+      padding: 16px;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    "
+  >
+    <PermissoesAdminIsland client:load />
+  </section>
+</DashboardLayout>

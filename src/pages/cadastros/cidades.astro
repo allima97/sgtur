@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import CidadesIsland from "../../components/islands/CidadesIsland.tsx";
+
+const activePage = "cidades";
+---
+
+<DashboardLayout title="Cadastro de Cidades" {activePage}>
+  <HeaderPage
+    title="Cadastro de Cidades"
+    subtitle="Gerencie a base de cidades utilizada nos destinos."
+    color="blue"
+  />
+
+  <CidadesIsland client:load />
+</DashboardLayout>
