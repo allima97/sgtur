@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
 import { logoutUsuario } from "../../lib/logout";
 
@@ -57,6 +58,50 @@ export default function MenuIsland({ activePage }) {
   const [tipoUsuario, setTipoUsuario] = useState<string>("");
   const [isAdminFinal, setIsAdminFinal] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) {
+        setMobileOpen(false);
+      }
+    };
+
+    if (mq.addEventListener) {
+      mq.addEventListener("change", onChange);
+    } else {
+      mq.addListener(onChange);
+    }
+
+    return () => {
+      if (mq.removeEventListener) {
+        mq.removeEventListener("change", onChange);
+      } else {
+        mq.removeListener(onChange);
+      }
+    };
+  }, [mounted]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
 
   async function carregar() {
     // Busca sessão primeiro para evitar estado "vazio" enquanto o supabase inicializa
@@ -167,6 +212,15 @@ export default function MenuIsland({ activePage }) {
     setCacheLoaded(true);
   }
 
+  const toggleMobile = () => setMobileOpen((prev) => !prev);
+  const closeMobile = () => setMobileOpen(false);
+
+  const handleNavClick = () => {
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
+      closeMobile();
+    }
+  };
+
   useEffect(() => {
     // Aplica cache só após o mount para evitar divergência SSR/hidratação
     try {
@@ -187,6 +241,7 @@ export default function MenuIsland({ activePage }) {
 
   async function handleLogout() {
     setSaindo(true);
+    closeMobile();
     await logoutUsuario();
     setSaindo(false);
   }
@@ -213,10 +268,35 @@ export default function MenuIsland({ activePage }) {
   };
 
   const isAdminMenu = isAdminFinal;
+  const sidebarId = "app-sidebar";
+
+  const mobileControls = mounted
+    ? createPortal(
+        <>
+          <button
+            type="button"
+            className="sidebar-mobile-trigger"
+            aria-expanded={mobileOpen}
+            aria-controls={sidebarId}
+            onClick={toggleMobile}
+          >
+            <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
+            <span>{mobileOpen ? "Fechar" : "Menu"}</span>
+          </button>
+          <div
+            className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`}
+            onClick={closeMobile}
+          />
+        </>,
+        document.body
+      )
+    : null;
 
   return (
-    <aside className="app-sidebar">
-      <div className="sidebar-logo">SGTUR</div>
+    <>
+      {mobileControls}
+      <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
+        <div className="sidebar-logo">SGTUR</div>
 
       {/* DEBUG opcional — pode remover */}
       {/* <div style={{color:"red",fontSize:12,padding:10}}>
@@ -235,6 +315,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "dashboard" ? "active" : ""}`}
                 href="/"
+                onClick={handleNavClick}
               >
                 <span>📊</span>Dashboard
               </a>
@@ -246,6 +327,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "vendas" ? "active" : ""}`}
                 href="/vendas/consulta"
+                onClick={handleNavClick}
               >
                 <span>🧾</span>Vendas
               </a>
@@ -257,6 +339,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
                 href="/orcamentos"
+                onClick={handleNavClick}
               >
                 <span>💼</span>Orçamentos
               </a>
@@ -268,6 +351,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "clientes" ? "active" : ""}`}
                 href="/clientes/carteira"
+                onClick={handleNavClick}
               >
                 <span>👥</span>Clientes
               </a>
@@ -286,6 +370,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "paises" ? "active" : ""}`}
                 href="/cadastros/paises"
+                onClick={handleNavClick}
               >
                 <span>🌍</span>Países
               </a>
@@ -295,6 +380,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "cidades" ? "active" : ""}`}
                 href="/cadastros/cidades"
+                onClick={handleNavClick}
               >
                 <span>🏙️</span>Cidades
               </a>
@@ -304,6 +390,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "destinos" ? "active" : ""}`}
                 href="/cadastros/destinos"
+                onClick={handleNavClick}
               >
                 <span>📌</span>Destinos
               </a>
@@ -313,6 +400,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "produtos" ? "active" : ""}`}
                 href="/cadastros/produtos"
+                onClick={handleNavClick}
               >
                 <span>🎫</span>Produtos
               </a>
@@ -330,6 +418,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "relatorios-vendas" ? "active" : ""}`}
                 href="/relatorios/vendas"
+                onClick={handleNavClick}
               >
                 <span>📈</span>Vendas (detalhado)
               </a>
@@ -338,6 +427,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "relatorios-vendas-destino" ? "active" : ""}`}
                 href="/relatorios/vendas-por-destino"
+                onClick={handleNavClick}
               >
                 <span>📌</span>Vendas por destino
               </a>
@@ -346,6 +436,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "relatorios-vendas-produto" ? "active" : ""}`}
                 href="/relatorios/vendas-por-produto"
+                onClick={handleNavClick}
               >
                 <span>🎫</span>Vendas por produto
               </a>
@@ -354,6 +445,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "relatorios-vendas-cliente" ? "active" : ""}`}
                 href="/relatorios/vendas-por-cliente"
+                onClick={handleNavClick}
               >
                 <span>👤</span>Vendas por cliente
               </a>
@@ -372,6 +464,7 @@ export default function MenuIsland({ activePage }) {
                 <a
                   className={`sidebar-link ${activePage === "parametros-metas" ? "active" : ""}`}
                   href="/parametros/metas"
+                  onClick={handleNavClick}
                 >
                   <span>🎯</span>Metas
                 </a>
@@ -381,6 +474,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "parametros" ? "active" : ""}`}
                 href="/parametros"
+                onClick={handleNavClick}
               >
                 <span>⚙️</span>Parâmetros do Sistema
               </a>
@@ -389,6 +483,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "regras-comissao" ? "active" : ""}`}
                 href="/parametros/regras-comissao"
+                onClick={handleNavClick}
               >
                 <span>💰</span>Regras de Comissão
               </a>
@@ -406,6 +501,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "perfil" ? "active" : ""}`}
                 href="/perfil"
+                onClick={handleNavClick}
               >
                 <span>👤</span>Perfil
               </a>
@@ -423,6 +519,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "admin-permissoes" ? "active" : ""}`}
                 href="/admin/permissoes"
+                onClick={handleNavClick}
               >
                 <span>⚙️</span>Permissões
               </a>
@@ -431,6 +528,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "admin-logs" ? "active" : ""}`}
                 href="/dashboard/logs"
+                onClick={handleNavClick}
               >
                 <span>📜</span>Logs
               </a>
@@ -439,6 +537,7 @@ export default function MenuIsland({ activePage }) {
               <a
                 className={`sidebar-link ${activePage === "admin-users" ? "active" : ""}`}
                 href="/dashboard/admin"
+                onClick={handleNavClick}
               >
                 <span>🧑‍💼</span>Usuários
               </a>
@@ -470,5 +569,6 @@ export default function MenuIsland({ activePage }) {
         </ul>
       </div>
     </aside>
+    </>
   );
 }
