@@ -36,19 +36,24 @@ export default function PaisesIsland() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
-  async function carregarPaises() {
+  async function carregarPaises(todos = false) {
     try {
       setLoading(true);
       setErro(null);
 
-      const { data, error } = await supabase
+      const query = supabase
         .from("paises")
         .select("id, nome, codigo_iso, continente, created_at")
-        .order("nome", { ascending: true });
+        .order(todos ? "nome" : "created_at", { ascending: !todos })
+        .limit(todos ? undefined : 10);
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setPaises((data || []) as Pais[]);
+      setCarregouTodos(todos || false);
     } catch (e: any) {
       console.error(e);
       setErro(
@@ -60,8 +65,14 @@ export default function PaisesIsland() {
   }
 
   useEffect(() => {
-    carregarPaises();
+    carregarPaises(false);
   }, []);
+
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos) {
+      carregarPaises(true);
+    }
+  }, [busca, carregouTodos]);
 
   const paisesFiltrados = useMemo(() => {
     if (!busca.trim()) return paises;
@@ -127,7 +138,7 @@ export default function PaisesIsland() {
 
       setForm(initialForm);
       setEditandoId(null);
-      await carregarPaises();
+      await carregarPaises(carregouTodos);
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao salvar país. Verifique se o nome é único.");
@@ -150,7 +161,7 @@ export default function PaisesIsland() {
       const { error } = await supabase.from("paises").delete().eq("id", id);
       if (error) throw error;
 
-      await carregarPaises();
+      await carregarPaises(carregouTodos);
     } catch (e: any) {
       console.error(e);
       setErro(
@@ -245,6 +256,12 @@ export default function PaisesIsland() {
           </div>
         </div>
       </div>
+
+      {!carregouTodos && (
+        <div className="card-base card-config mb-3">
+          Últimos Países Cadastrados (10). Digite na busca para consultar todos.
+        </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">

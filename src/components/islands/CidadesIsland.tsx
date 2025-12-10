@@ -63,23 +63,24 @@ export default function CidadesIsland() {
   const [paises, setPaises] = useState<Pais[]>([]);
   const [estados, setEstados] = useState<Estado[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
-  const [busca, setBusca] = useState("");
-  const [form, setForm] = useState(initialForm);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+const [busca, setBusca] = useState("");
+const [form, setForm] = useState(initialForm);
+const [editId, setEditId] = useState<string | null>(null);
+const [erro, setErro] = useState<string | null>(null);
+const [salvando, setSalvando] = useState(false);
+const [excluindoId, setExcluindoId] = useState<string | null>(null);
+const [loading, setLoading] = useState(true);
+const [carregouTodos, setCarregouTodos] = useState(false);
 
-  // CARREGAR DADOS
-  async function carregar() {
-    if (!podeVer) return;
+// CARREGAR DADOS
+async function carregar(todos = false) {
+  if (!podeVer) return;
 
-    async function carregarTodasCidades() {
+  async function carregarCidades() {
+    if (todos) {
       const todas: Cidade[] = [];
       const pageSize = 1000;
       let from = 0;
-      // Supabase pagina automaticamente; buscamos em blocos para não perder registros
       while (true) {
         const { data, error } = await supabase
           .from("cidades")
@@ -92,27 +93,37 @@ export default function CidadesIsland() {
         from += pageSize;
       }
       return todas;
-    }
-
-    try {
-      setLoading(true);
-
-      const [{ data: paisesData }, { data: estadosData }, cidadesData] = await Promise.all([
-        supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("estados").select("id, nome, pais_id").order("nome"),
-        carregarTodasCidades(),
-      ]);
-
-      setPaises(paisesData || []);
-      setEstados(estadosData || []);
-      setCidades((cidadesData as Cidade[]) || []);
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao carregar cidades.");
-    } finally {
-      setLoading(false);
+    } else {
+      const { data, error } = await supabase
+        .from("cidades")
+        .select("id, nome, estado_id, descricao, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data || []) as Cidade[];
     }
   }
+
+  try {
+    setLoading(true);
+
+    const [{ data: paisesData }, { data: estadosData }, cidadesData] = await Promise.all([
+      supabase.from("paises").select("id, nome").order("nome"),
+      supabase.from("estados").select("id, nome, pais_id").order("nome"),
+      carregarCidades(),
+    ]);
+
+    setPaises(paisesData || []);
+    setEstados(estadosData || []);
+    setCidades((cidadesData as Cidade[]) || []);
+    setCarregouTodos(todos);
+  } catch (e) {
+    console.error(e);
+    setErro("Erro ao carregar cidades.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   useEffect(() => {
     if (carregando) return;
@@ -120,8 +131,14 @@ export default function CidadesIsland() {
       setLoading(false);
       return;
     }
-    carregar();
+    carregar(false);
   }, [carregando, podeVer]);
+
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos) {
+      carregar(true);
+    }
+  }, [busca, carregouTodos]);
 
   // FILTRO
   const cidadesEnriquecidas = useMemo(() => {
@@ -221,7 +238,7 @@ export default function CidadesIsland() {
       }
 
       iniciarNovo();
-      carregar();
+      carregar(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar cidade.");
@@ -248,7 +265,7 @@ export default function CidadesIsland() {
         detalhes: { id },
       });
 
-      carregar();
+      carregar(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao excluir cidade (provavelmente usada em produtos/destinos).");
@@ -348,6 +365,11 @@ export default function CidadesIsland() {
       {!carregando && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
+        </div>
+      )}
+      {!carregouTodos && !erro && (
+        <div className="card-base card-config mb-3">
+          Últimas Cidades Cadastradas (10). Digite na busca para consultar todas.
         </div>
       )}
 

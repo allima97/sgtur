@@ -40,15 +40,20 @@ export default function EstadosIsland() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
-  async function carregarDados() {
+  async function carregarDados(todos = false) {
     try {
       setLoading(true);
       setErro(null);
 
       const [{ data: paisData, error: paisErr }, { data: estadoData, error: estErr }] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("estados").select("id, nome, pais_id, created_at").order("nome"),
+        supabase
+          .from("estados")
+          .select("id, nome, pais_id, created_at")
+          .order(todos ? "nome" : "created_at", { ascending: !todos })
+          .limit(todos ? undefined : 10),
       ]);
 
       if (paisErr) throw paisErr;
@@ -56,6 +61,7 @@ export default function EstadosIsland() {
 
       setPaises((paisData || []) as Pais[]);
       setEstados((estadoData || []) as Estado[]);
+      setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar estados.");
@@ -65,8 +71,14 @@ export default function EstadosIsland() {
   }
 
   useEffect(() => {
-    carregarDados();
+    carregarDados(false);
   }, []);
+
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos) {
+      carregarDados(true);
+    }
+  }, [busca, carregouTodos]);
 
   const estadosEnriquecidos = useMemo(() => {
     const paisMap = new Map(paises.map((p) => [p.id, p.nome]));
@@ -126,13 +138,13 @@ export default function EstadosIsland() {
         const { error } = await supabase.from("estados").update(payload).eq("id", editandoId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("estados").insert(payload);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from("estados").insert(payload);
+      if (error) throw error;
+    }
 
-      iniciarNovo();
-      await carregarDados();
-    } catch (e) {
+    iniciarNovo();
+    await carregarDados(carregouTodos);
+  } catch (e) {
       console.error(e);
       setErro("Erro ao salvar estado.");
     } finally {
@@ -151,8 +163,8 @@ export default function EstadosIsland() {
       setExcluindoId(id);
       const { error } = await supabase.from("estados").delete().eq("id", id);
       if (error) throw error;
-      await carregarDados();
-    } catch (e) {
+    await carregarDados(carregouTodos);
+  } catch (e) {
       console.error(e);
       setErro("Erro ao excluir estado. Verifique se não existem cidades vinculadas.");
     } finally {
@@ -219,6 +231,12 @@ export default function EstadosIsland() {
           />
         </div>
       </div>
+
+      {!carregouTodos && (
+        <div className="card-base card-config mb-3">
+          Últimos Estados Cadastrados (10). Digite na busca para consultar todos.
+        </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">
