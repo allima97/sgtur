@@ -271,12 +271,18 @@ export default function CidadesIsland() {
     if (!busca.trim()) return cidadesEnriquecidas;
 
     const t = normalizeText(busca);
-    return cidadesEnriquecidas.filter(
-      (c) =>
-        normalizeText(c.nome).includes(t) ||
-        normalizeText((c as any).subdivisao_nome || "").includes(t) ||
-        normalizeText((c as any).pais_nome || "").includes(t)
+    // Primeiro, cidades cujo nome bate exatamente ou contém o termo
+    const cidadesNome = cidadesEnriquecidas.filter(
+      (c) => normalizeText(c.nome).includes(t)
     );
+    // Depois, cidades que batem pela subdivisão ou país, mas não já incluídas
+    const cidadesOutros = cidadesEnriquecidas.filter(
+      (c) =>
+        !normalizeText(c.nome).includes(t) &&
+        (normalizeText((c as any).subdivisao_nome || "").includes(t) ||
+         normalizeText((c as any).pais_nome || "").includes(t))
+    );
+    return [...cidadesNome, ...cidadesOutros];
   }, [busca, cidadesEnriquecidas]);
 
   // CHANGE
