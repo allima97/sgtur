@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 
@@ -11,10 +11,16 @@ type Pais = {
   nome: string;
 };
 
-type Cidade = {
+type Subdivisao = {
   id: string;
   nome: string;
   pais_id: string;
+};
+
+type Cidade = {
+  id: string;
+  nome: string;
+  subdivisao_id: string;
 };
 
 type Destino = {
@@ -64,6 +70,7 @@ export default function DestinosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
   const [paises, setPaises] = useState<Pais[]>([]);
+  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [destinos, setDestinos] = useState<Destino[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,11 +88,13 @@ export default function DestinosIsland() {
 
       const [
         { data: paisesData, error: paisesErr },
+        { data: subdivisoesData, error: subErr },
         { data: cidadesData, error: cidadesErr },
         { data: destinosData, error: destinosErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome", { ascending: true }),
-        supabase.from("cidades").select("id, nome, pais_id").order("nome", { ascending: true }),
+        supabase.from("subdivisoes").select("id, nome, pais_id").order("nome", { ascending: true }),
+        supabase.from("cidades").select("id, nome, subdivisao_id").order("nome", { ascending: true }),
         supabase
           .from("destinos")
           .select(
@@ -95,16 +104,18 @@ export default function DestinosIsland() {
       ]);
 
       if (paisesErr) throw paisesErr;
+      if (subErr) throw subErr;
       if (cidadesErr) throw cidadesErr;
       if (destinosErr) throw destinosErr;
 
       setPaises((paisesData || []) as Pais[]);
+      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
       setCidades((cidadesData || []) as Cidade[]);
       setDestinos((destinosData || []) as Destino[]);
     } catch (e: any) {
       console.error(e);
       setErro(
-        "Erro ao carregar destinos. Verifique se as tabelas 'paises', 'cidades' e 'destinos' existem e se as colunas estão corretas."
+        "Erro ao carregar destinos. Verifique se as tabelas 'paises', 'subdivisoes' e 'cidades' existem e se as colunas estao corretas."
       );
     } finally {
       setLoading(false);
@@ -115,10 +126,15 @@ export default function DestinosIsland() {
     carregarDadosIniciais();
   }, []);
 
+  const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
+
   const cidadesFiltradas = useMemo(() => {
     if (!form.pais_id) return cidades;
-    return cidades.filter((c) => c.pais_id === form.pais_id);
-  }, [cidades, form.pais_id]);
+    return cidades.filter((c) => {
+      const subdivisao = subdivisaoMap.get(c.subdivisao_id);
+      return subdivisao?.pais_id === form.pais_id;
+    });
+  }, [cidades, form.pais_id, subdivisaoMap]);
 
   const destinosEnriquecidos = useMemo(() => {
     const cidadeMap = new Map(cidades.map((c) => [c.id, c]));
@@ -126,14 +142,15 @@ export default function DestinosIsland() {
 
     return destinos.map((d) => {
       const cidade = cidadeMap.get(d.cidade_id || "");
-      const pais = cidade ? paisMap.get(cidade.pais_id) : undefined;
+      const subdivisao = cidade ? subdivisaoMap.get(cidade.subdivisao_id) : undefined;
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
       return {
         ...d,
         cidade_nome: cidade?.nome || "",
         pais_nome: pais?.nome || "",
       };
     });
-  }, [destinos, cidades, paises]);
+  }, [destinos, cidades, paises, subdivisaoMap]);
 
   const destinosFiltrados = useMemo(() => {
     if (!busca.trim()) return destinosEnriquecidos;
@@ -151,9 +168,7 @@ export default function DestinosIsland() {
     setForm((prev) => ({
       ...prev,
       [campo]: valor,
-      ...(campo === "pais_id"
-        ? { cidade_id: "" }
-        : {}),
+      ...(campo === "pais_id" ? { cidade_id: "" } : {}),
     }));
   }
 
@@ -164,7 +179,8 @@ export default function DestinosIsland() {
 
   function iniciarEdicao(destino: Destino & { cidade_nome?: string; pais_nome?: string }) {
     const cidade = cidades.find((c) => c.id === destino.cidade_id);
-    const paisId = cidade?.pais_id || "";
+    const subdivisao = cidade ? subdivisaoMap.get(cidade.subdivisao_id) : undefined;
+    const paisId = subdivisao?.pais_id || "";
 
     setEditandoId(destino.id);
     setForm({
@@ -186,16 +202,16 @@ export default function DestinosIsland() {
     e.preventDefault();
 
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar destinos.");
+      setErro("Voce nao tem permissao para salvar destinos.");
       return;
     }
 
     if (!form.nome.trim()) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome e obrigatorio.");
       return;
     }
     if (!form.cidade_id) {
-      setErro("Cidade é obrigatória.");
+      setErro("Cidade e obrigatoria.");
       return;
     }
 
@@ -253,18 +269,18 @@ export default function DestinosIsland() {
       await carregarDadosIniciais();
     } catch (e: any) {
       console.error(e);
-      setErro("Não foi possível excluir o destino. Verifique se não existem vendas vinculadas.");
+      setErro("Nao foi possivel excluir o destino. Verifique se nao existem vendas vinculadas.");
     } finally {
       setExcluindoId(null);
     }
   }
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
-  if (!ativo) return <div>Você não possui acesso ao módulo de Cadastros.</div>;
+  if (loadingPerm) return <div>Carregando permissoes...</div>;
+  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="destinos-page">
-      {/* Formulário */}
+      {/* Formulario */}
       <div className="card-base card-blue mb-3">
         <form onSubmit={salvar}>
           <div className="form-row">
@@ -280,14 +296,14 @@ export default function DestinosIsland() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">País *</label>
+              <label className="form-label">Pais *</label>
               <select
                 className="form-select"
                 value={form.pais_id}
                 onChange={(e) => handleChange("pais_id", e.target.value)}
                 disabled={permissao === "view"}
               >
-                <option value="">Selecione um país</option>
+                <option value="">Selecione um pais</option>
                 {paises.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nome}
@@ -326,12 +342,12 @@ export default function DestinosIsland() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Atração principal</label>
+              <label className="form-label">Atracao principal</label>
               <input
                 className="form-input"
                 value={form.atracao_principal}
                 onChange={(e) => handleChange("atracao_principal", e.target.value)}
-                placeholder="Ex: Disney, Torre Eiffel, Centro Histórico..."
+                placeholder="Ex: Disney, Torre Eiffel, Centro Historico..."
                 disabled={permissao === "view"}
               />
             </div>
@@ -339,17 +355,17 @@ export default function DestinosIsland() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Melhor época</label>
+              <label className="form-label">Melhor epoca</label>
               <input
                 className="form-input"
                 value={form.melhor_epoca}
                 onChange={(e) => handleChange("melhor_epoca", e.target.value)}
-                placeholder="Ex: Dezembro a Março"
+                placeholder="Ex: Dezembro a Marco"
                 disabled={permissao === "view"}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Duração sugerida</label>
+              <label className="form-label">Duracao sugerida</label>
               <input
                 className="form-input"
                 value={form.duracao_sugerida}
@@ -359,12 +375,12 @@ export default function DestinosIsland() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Nível de preço</label>
+              <label className="form-label">Nivel de preco</label>
               <input
                 className="form-input"
                 value={form.nivel_preco}
                 onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                placeholder="Ex: Econômico, Intermediário, Premium"
+                placeholder="Ex: Economico, Intermediario, Premium"
                 disabled={permissao === "view"}
               />
             </div>
@@ -390,19 +406,19 @@ export default function DestinosIsland() {
                 disabled={permissao === "view"}
               >
                 <option value="true">Sim</option>
-                <option value="false">Não</option>
+                <option value="false">Nao</option>
               </select>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Informações importantes</label>
+            <label className="form-label">Informacoes importantes</label>
             <textarea
               className="form-input"
               rows={3}
               value={form.informacoes_importantes}
               onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-              placeholder="Observações gerais, dicas, documentação necessária, etc."
+              placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
               disabled={permissao === "view"}
             />
           </div>
@@ -417,7 +433,7 @@ export default function DestinosIsland() {
                 {salvando
                   ? "Salvando..."
                   : editandoId
-                  ? "Salvar alterações"
+                  ? "Salvar alteracoes"
                   : "Adicionar destino"}
               </button>
             )}
@@ -429,7 +445,7 @@ export default function DestinosIsland() {
                 style={{ marginLeft: 8 }}
                 onClick={iniciarNovo}
               >
-                Cancelar edição
+                Cancelar edicao
               </button>
             )}
           </div>
@@ -445,7 +461,7 @@ export default function DestinosIsland() {
               className="form-input"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, cidade ou país..."
+              placeholder="Busque por nome, cidade ou pais..."
             />
           </div>
         </div>
@@ -464,12 +480,12 @@ export default function DestinosIsland() {
             <tr>
               <th>Destino</th>
               <th>Cidade</th>
-              <th>País</th>
+              <th>Pais</th>
               <th>Tipo</th>
-              <th>Nível de preço</th>
+              <th>Nivel de preco</th>
               <th>Ativo</th>
               <th>Criado em</th>
-              <th className="th-actions">Ações</th>
+              <th className="th-actions">Acoes</th>
             </tr>
           </thead>
           <tbody>
@@ -493,7 +509,7 @@ export default function DestinosIsland() {
                   <td>{(d as any).pais_nome || "-"}</td>
                   <td>{d.tipo || "-"}</td>
                   <td>{d.nivel_preco || "-"}</td>
-                  <td>{d.ativo ? "Sim" : "Não"}</td>
+                  <td>{d.ativo ? "Sim" : "Nao"}</td>
                   <td>
                     {d.created_at
                       ? new Date(d.created_at).toLocaleDateString("pt-BR")
@@ -506,7 +522,7 @@ export default function DestinosIsland() {
                         title="Editar"
                         onClick={() => iniciarEdicao(d)}
                       >
-                        ✏️
+                        Editar
                       </button>
                     )}
 
@@ -517,7 +533,7 @@ export default function DestinosIsland() {
                         onClick={() => excluir(d.id)}
                         disabled={excluindoId === d.id}
                       >
-                        {excluindoId === d.id ? "..." : "🗑️"}
+                        {excluindoId === d.id ? "..." : "Excluir"}
                       </button>
                     )}
                   </td>

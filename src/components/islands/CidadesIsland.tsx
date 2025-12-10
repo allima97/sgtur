@@ -12,28 +12,30 @@ type Pais = {
   nome: string;
 };
 
-type Estado = {
+type Subdivisao = {
   id: string;
   nome: string;
   pais_id: string;
+  codigo_admin1?: string | null;
+  tipo?: string | null;
 };
 
 type Cidade = {
   id: string;
   nome: string;
-  estado_id: string;
+  subdivisao_id: string;
   descricao: string | null;
   created_at: string | null;
 };
 
 const initialForm = {
   nome: "",
-  estado_id: "",
+  subdivisao_id: "",
   descricao: "",
 };
 
 export default function CidadesIsland() {
-  // PERMISSÕES
+  // PERMISSOES
   const permCidade = usePermissao("Cidades");
   const permCadastros = usePermissao("Cadastros");
 
@@ -56,74 +58,73 @@ export default function CidadesIsland() {
     permissao === "edit" ||
     permissao === "delete" ||
     permissao === "admin";
-  const podeExcluir =
-    isAdmin || permissao === "delete" || permissao === "admin";
+  const podeExcluir = isAdmin || permissao === "delete" || permissao === "admin";
 
   // STATES
   const [paises, setPaises] = useState<Pais[]>([]);
-  const [estados, setEstados] = useState<Estado[]>([]);
+  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
-const [busca, setBusca] = useState("");
-const [form, setForm] = useState(initialForm);
-const [editId, setEditId] = useState<string | null>(null);
-const [erro, setErro] = useState<string | null>(null);
-const [salvando, setSalvando] = useState(false);
-const [excluindoId, setExcluindoId] = useState<string | null>(null);
-const [loading, setLoading] = useState(true);
-const [carregouTodos, setCarregouTodos] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [form, setForm] = useState(initialForm);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
-// CARREGAR DADOS
-async function carregar(todos = false) {
-  if (!podeVer) return;
+  // CARREGAR DADOS
+  async function carregar(todos = false) {
+    if (!podeVer) return;
 
-  async function carregarCidades() {
-    if (todos) {
-      const todas: Cidade[] = [];
-      const pageSize = 1000;
-      let from = 0;
-      while (true) {
+    async function carregarCidades() {
+      if (todos) {
+        const todas: Cidade[] = [];
+        const pageSize = 1000;
+        let from = 0;
+        while (true) {
+          const { data, error } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_id, descricao, created_at")
+            .order("nome")
+            .range(from, from + pageSize - 1);
+          if (error) throw error;
+          todas.push(...((data || []) as Cidade[]));
+          if (!data || data.length < pageSize) break;
+          from += pageSize;
+        }
+        return todas;
+      } else {
         const { data, error } = await supabase
           .from("cidades")
-          .select("id, nome, estado_id, descricao, created_at")
-          .order("nome")
-          .range(from, from + pageSize - 1);
+          .select("id, nome, subdivisao_id, descricao, created_at")
+          .order("created_at", { ascending: false })
+          .limit(10);
         if (error) throw error;
-        todas.push(...((data || []) as Cidade[]));
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
+        return (data || []) as Cidade[];
       }
-      return todas;
-    } else {
-      const { data, error } = await supabase
-        .from("cidades")
-        .select("id, nome, estado_id, descricao, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return (data || []) as Cidade[];
+    }
+
+    try {
+      setLoading(true);
+
+      const [{ data: paisesData }, { data: subdivisoesData }, cidadesData] = await Promise.all([
+        supabase.from("paises").select("id, nome").order("nome"),
+        supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome"),
+        carregarCidades(),
+      ]);
+
+      setPaises(paisesData || []);
+      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
+      setCidades((cidadesData as Cidade[]) || []);
+      setCarregouTodos(todos);
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao carregar cidades.");
+    } finally {
+      setLoading(false);
     }
   }
-
-  try {
-    setLoading(true);
-
-    const [{ data: paisesData }, { data: estadosData }, cidadesData] = await Promise.all([
-      supabase.from("paises").select("id, nome").order("nome"),
-      supabase.from("estados").select("id, nome, pais_id").order("nome"),
-      carregarCidades(),
-    ]);
-
-    setPaises(paisesData || []);
-    setEstados(estadosData || []);
-    setCidades((cidadesData as Cidade[]) || []);
-    setCarregouTodos(todos);
-  } catch (e) {
-    console.error(e);
-    setErro("Erro ao carregar cidades.");
-  } finally {
-    setLoading(false);
-  }
-}
 
   useEffect(() => {
     if (carregando) return;
@@ -142,19 +143,19 @@ async function carregar(todos = false) {
 
   // FILTRO
   const cidadesEnriquecidas = useMemo(() => {
-    const estadoMap = new Map(estados.map((e) => [e.id, e]));
+    const subdivisaoMap = new Map(subdivisoes.map((s) => [s.id, s]));
     const paisMap = new Map(paises.map((p) => [p.id, p]));
 
     return cidades.map((c) => {
-      const estado = estadoMap.get(c.estado_id);
-      const pais = estado ? paisMap.get(estado.pais_id) : undefined;
+      const subdivisao = subdivisaoMap.get(c.subdivisao_id);
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
       return {
         ...c,
-        estado_nome: estado?.nome || "",
+        subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
       };
     });
-  }, [cidades, estados, paises]);
+  }, [cidades, subdivisoes, paises]);
 
   const filtradas = useMemo(() => {
     if (!busca.trim()) return cidadesEnriquecidas;
@@ -163,10 +164,11 @@ async function carregar(todos = false) {
     return cidadesEnriquecidas.filter(
       (c) =>
         normalizeText(c.nome).includes(t) ||
-        normalizeText(c.estado_nome).includes(t) ||
-        normalizeText(c.pais_nome).includes(t)
+        normalizeText((c as any).subdivisao_nome || "").includes(t) ||
+        normalizeText((c as any).pais_nome || "").includes(t)
     );
   }, [busca, cidadesEnriquecidas]);
+
   // CHANGE
   function handleChange(campo: string, valor: any) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -179,7 +181,7 @@ async function carregar(todos = false) {
     setEditId(c.id);
     setForm({
       nome: c.nome,
-      estado_id: c.estado_id,
+      subdivisao_id: c.subdivisao_id,
       descricao: c.descricao || "",
     });
   }
@@ -196,8 +198,8 @@ async function carregar(todos = false) {
 
     if (!podeCriar && !podeEditar) return;
 
-    if (!form.estado_id) {
-      setErro("Estado é obrigatório.");
+    if (!form.subdivisao_id) {
+      setErro("Subdivisao e obrigatoria.");
       return;
     }
 
@@ -207,7 +209,7 @@ async function carregar(todos = false) {
 
       const payload = {
         nome: form.nome,
-        estado_id: form.estado_id,
+        subdivisao_id: form.subdivisao_id,
         descricao: form.descricao || null,
       };
 
@@ -276,14 +278,14 @@ async function carregar(todos = false) {
 
   if (!podeVer && !isAdmin) {
     if (carregando) {
-      return <div className="auth-info">Carregando permissões...</div>;
+      return <div className="auth-info">Carregando permissoes...</div>;
     }
-    return <div className="auth-error">Você não possui permissão para visualizar Cidades.</div>;
+    return <div className="auth-error">Voce nao possui permissao para visualizar Cidades.</div>;
   }
 
   return (
     <div className="cidades-page">
-        {(podeCriar || podeEditar) && (
+      {(podeCriar || podeEditar) && (
         <div className="card-base card-blue mb-3">
           <form onSubmit={salvar}>
             <h3>{editId ? "Editar cidade" : "Nova cidade"}</h3>
@@ -300,26 +302,25 @@ async function carregar(todos = false) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Estado *</label>
+                <label className="form-label">Subdivisao *</label>
                 <select
                   className="form-select"
-                  value={form.estado_id}
-                  onChange={(e) => handleChange("estado_id", e.target.value)}
+                  value={form.subdivisao_id}
+                  onChange={(e) => handleChange("subdivisao_id", e.target.value)}
                   required
                 >
-                  <option value="">Selecione o estado</option>
-                  {estados.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.nome} — {paises.find((p) => p.id === e.pais_id)?.nome || "Sem país"}
+                  <option value="">Selecione a subdivisao</option>
+                  {subdivisoes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nome} - {paises.find((p) => p.id === s.pais_id)?.nome || "Sem pais"}
                     </option>
                   ))}
                 </select>
               </div>
-
             </div>
 
             <div className="form-group">
-              <label className="form-label">Descrição</label>
+              <label className="form-label">Descricao</label>
               <textarea
                 className="form-input"
                 rows={3}
@@ -330,11 +331,7 @@ async function carregar(todos = false) {
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
               <button className="btn btn-primary" disabled={salvando}>
-                {salvando
-                  ? "Salvando..."
-                  : editId
-                  ? "Salvar alterações"
-                  : "Adicionar cidade"}
+                {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade"}
               </button>
 
               {editId && (
@@ -348,20 +345,20 @@ async function carregar(todos = false) {
       )}
 
       <div className="card-base mb-3">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Buscar cidade</label>
-                <input
-                  className="form-input"
-                  placeholder="Nome, estado ou país..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                />
-              </div>
-            </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Buscar cidade</label>
+            <input
+              className="form-input"
+              placeholder="Nome, subdivisao ou pais..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
-      {carregando && <div className="auth-info mb-3">Carregando permissões...</div>}
+      {carregando && <div className="auth-info mb-3">Carregando permissoes...</div>}
       {!carregando && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
@@ -369,7 +366,7 @@ async function carregar(todos = false) {
       )}
       {!carregouTodos && !erro && (
         <div className="card-base card-config mb-3">
-          Últimas Cidades Cadastradas (10). Digite na busca para consultar todas.
+          Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas.
         </div>
       )}
 
@@ -378,10 +375,10 @@ async function carregar(todos = false) {
           <thead>
             <tr>
               <th>Cidade</th>
-              <th>Estado</th>
-              <th>País</th>
+              <th>Subdivisao</th>
+              <th>Pais</th>
               <th>Criada em</th>
-              {(podeEditar || podeExcluir) && <th className="th-actions">Ações</th>}
+              {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
             </tr>
           </thead>
           <tbody>
@@ -399,18 +396,14 @@ async function carregar(todos = false) {
               filtradas.map((c) => (
                 <tr key={c.id}>
                   <td>{c.nome}</td>
-                  <td>{(c as any).estado_nome || "—"}</td>
-                  <td>{(c as any).pais_nome || "—"}</td>
-                  <td>{c.created_at ? c.created_at.slice(0, 10) : "—"}</td>
+                  <td>{(c as any).subdivisao_nome || "-"}</td>
+                  <td>{(c as any).pais_nome || "-"}</td>
+                  <td>{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
                   {(podeEditar || podeExcluir) && (
                     <td className="th-actions">
                       {podeEditar && (
-                        <button
-                          className="btn-icon"
-                          onClick={() => iniciarEdicao(c)}
-                          title="Editar"
-                        >
-                          ✏️
+                        <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
+                          Editar
                         </button>
                       )}
                       {podeExcluir && (
@@ -420,7 +413,7 @@ async function carregar(todos = false) {
                           disabled={excluindoId === c.id}
                           title="Excluir"
                         >
-                          {excluindoId === c.id ? "..." : "🗑️"}
+                          {excluindoId === c.id ? "..." : "Excluir"}
                         </button>
                       )}
                     </td>
@@ -433,3 +426,4 @@ async function carregar(todos = false) {
     </div>
   );
 }
+

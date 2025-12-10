@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 
@@ -11,28 +11,34 @@ type Pais = {
   nome: string;
 };
 
-type Estado = {
+type Subdivisao = {
   id: string;
   nome: string;
   pais_id: string;
+  codigo_admin1: string;
+  tipo: string | null;
   created_at: string | null;
 };
 
 type FormState = {
   nome: string;
   pais_id: string;
+  codigo_admin1: string;
+  tipo: string;
 };
 
 const initialForm: FormState = {
   nome: "",
   pais_id: "",
+  codigo_admin1: "",
+  tipo: "",
 };
 
-export default function EstadosIsland() {
+export default function SubdivisoesIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
   const [paises, setPaises] = useState<Pais[]>([]);
-  const [estados, setEstados] = useState<Estado[]>([]);
+  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
   const [form, setForm] = useState<FormState>(initialForm);
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
@@ -47,24 +53,24 @@ export default function EstadosIsland() {
       setLoading(true);
       setErro(null);
 
-      const [{ data: paisData, error: paisErr }, { data: estadoData, error: estErr }] = await Promise.all([
+      const [{ data: paisData, error: paisErr }, { data: subdivisaoData, error: subErr }] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase
-          .from("estados")
-          .select("id, nome, pais_id, created_at")
+          .from("subdivisoes")
+          .select("id, nome, pais_id, codigo_admin1, tipo, created_at")
           .order(todos ? "nome" : "created_at", { ascending: !todos })
           .limit(todos ? undefined : 10),
       ]);
 
       if (paisErr) throw paisErr;
-      if (estErr) throw estErr;
+      if (subErr) throw subErr;
 
       setPaises((paisData || []) as Pais[]);
-      setEstados((estadoData || []) as Estado[]);
+      setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
       setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar estados.");
+      setErro("Erro ao carregar subdivisoes.");
     } finally {
       setLoading(false);
     }
@@ -80,21 +86,24 @@ export default function EstadosIsland() {
     }
   }, [busca, carregouTodos]);
 
-  const estadosEnriquecidos = useMemo(() => {
+  const subdivisoesEnriquecidas = useMemo(() => {
     const paisMap = new Map(paises.map((p) => [p.id, p.nome]));
-    return estados.map((e) => ({
-      ...e,
-      pais_nome: paisMap.get(e.pais_id) || "",
+    return subdivisoes.map((s) => ({
+      ...s,
+      pais_nome: paisMap.get(s.pais_id) || "",
     }));
-  }, [estados, paises]);
+  }, [subdivisoes, paises]);
 
   const filtrados = useMemo(() => {
-    if (!busca.trim()) return estadosEnriquecidos;
+    if (!busca.trim()) return subdivisoesEnriquecidas;
     const termo = normalizeText(busca);
-    return estadosEnriquecidos.filter(
-      (e) => normalizeText(e.nome).includes(termo) || normalizeText(e.pais_nome).includes(termo)
+    return subdivisoesEnriquecidas.filter(
+      (s) =>
+        normalizeText(s.nome).includes(termo) ||
+        normalizeText(s.pais_nome).includes(termo) ||
+        normalizeText(s.codigo_admin1).includes(termo)
     );
-  }, [busca, estadosEnriquecidos]);
+  }, [busca, subdivisoesEnriquecidas]);
 
   function handleChange<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -106,22 +115,24 @@ export default function EstadosIsland() {
     setErro(null);
   }
 
-  function iniciarEdicao(estado: Estado) {
-    setEditandoId(estado.id);
+  function iniciarEdicao(subdivisao: Subdivisao) {
+    setEditandoId(subdivisao.id);
     setForm({
-      nome: estado.nome,
-      pais_id: estado.pais_id,
+      nome: subdivisao.nome,
+      pais_id: subdivisao.pais_id,
+      codigo_admin1: subdivisao.codigo_admin1,
+      tipo: subdivisao.tipo || "",
     });
   }
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar estados.");
+      setErro("Voce nao tem permissao para salvar subdivisoes.");
       return;
     }
-    if (!form.nome.trim() || !form.pais_id) {
-      setErro("Preencha nome e país.");
+    if (!form.nome.trim() || !form.pais_id || !form.codigo_admin1.trim()) {
+      setErro("Preencha nome, codigo e pais.");
       return;
     }
 
@@ -132,21 +143,23 @@ export default function EstadosIsland() {
       const payload = {
         nome: form.nome.trim(),
         pais_id: form.pais_id,
+        codigo_admin1: form.codigo_admin1.trim(),
+        tipo: form.tipo.trim() || null,
       };
 
       if (editandoId) {
-        const { error } = await supabase.from("estados").update(payload).eq("id", editandoId);
+        const { error } = await supabase.from("subdivisoes").update(payload).eq("id", editandoId);
         if (error) throw error;
       } else {
-      const { error } = await supabase.from("estados").insert(payload);
-      if (error) throw error;
-    }
+        const { error } = await supabase.from("subdivisoes").insert(payload);
+        if (error) throw error;
+      }
 
-    iniciarNovo();
-    await carregarDados(carregouTodos);
-  } catch (e) {
+      iniciarNovo();
+      await carregarDados(carregouTodos);
+    } catch (e) {
       console.error(e);
-      setErro("Erro ao salvar estado.");
+      setErro("Erro ao salvar subdivisao.");
     } finally {
       setSalvando(false);
     }
@@ -154,26 +167,26 @@ export default function EstadosIsland() {
 
   async function excluir(id: string) {
     if (permissao !== "admin") {
-      alert("Somente administradores podem excluir estados.");
+      alert("Somente administradores podem excluir subdivisoes.");
       return;
     }
-    if (!confirm("Excluir este estado?")) return;
+    if (!confirm("Excluir esta subdivisao?")) return;
 
     try {
       setExcluindoId(id);
-      const { error } = await supabase.from("estados").delete().eq("id", id);
+      const { error } = await supabase.from("subdivisoes").delete().eq("id", id);
       if (error) throw error;
-    await carregarDados(carregouTodos);
-  } catch (e) {
+      await carregarDados(carregouTodos);
+    } catch (e) {
       console.error(e);
-      setErro("Erro ao excluir estado. Verifique se não existem cidades vinculadas.");
+      setErro("Erro ao excluir subdivisao. Verifique se nao existem cidades vinculadas.");
     } finally {
       setExcluindoId(null);
     }
   }
 
-  if (loadingPerm) return <div className="paises-page">Carregando permissões...</div>;
-  if (!ativo) return <div className="paises-page">Você não possui acesso ao módulo de Cadastros.</div>;
+  if (loadingPerm) return <div className="paises-page">Carregando permissoes...</div>;
+  if (!ativo) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="paises-page">
@@ -181,17 +194,39 @@ export default function EstadosIsland() {
         <form onSubmit={salvar}>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Nome do estado *</label>
+              <label className="form-label">Nome da subdivisao *</label>
               <input
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
-                placeholder="Ex: São Paulo, Califórnia..."
+                placeholder="Ex: Sao Paulo, California..."
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">País *</label>
+              <label className="form-label">Codigo admin1 *</label>
+              <input
+                className="form-input"
+                value={form.codigo_admin1}
+                onChange={(e) => handleChange("codigo_admin1", e.target.value)}
+                placeholder="Ex: SP, CA, NY..."
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Tipo</label>
+              <input
+                className="form-input"
+                value={form.tipo}
+                onChange={(e) => handleChange("tipo", e.target.value)}
+                placeholder="Ex: Estado, Provincia, Regiao..."
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Pais *</label>
               <select
                 className="form-select"
                 value={form.pais_id}
@@ -209,11 +244,11 @@ export default function EstadosIsland() {
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
             <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
-              {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar estado"}
+              {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar subdivisao"}
             </button>
             {editandoId && (
               <button type="button" className="btn btn-light" onClick={iniciarNovo}>
-                Cancelar edição
+                Cancelar edicao
               </button>
             )}
           </div>
@@ -222,19 +257,19 @@ export default function EstadosIsland() {
 
       <div className="card-base mb-3">
         <div className="form-group">
-          <label className="form-label">Buscar estado</label>
+          <label className="form-label">Buscar subdivisao</label>
           <input
             className="form-input"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome ou país..."
+            placeholder="Nome, pais ou codigo..."
           />
         </div>
       </div>
 
       {!carregouTodos && (
         <div className="card-base card-config mb-3">
-          Últimos Estados Cadastrados (10). Digite na busca para consultar todos.
+          Ultimas Subdivisoes Cadastradas (10). Digite na busca para consultar todas.
         </div>
       )}
 
@@ -245,48 +280,52 @@ export default function EstadosIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[640px]">
+        <table className="table-default table-header-blue min-w-[720px]">
           <thead>
             <tr>
-              <th>Estado</th>
-              <th>País</th>
+              <th>Subdivisao</th>
+              <th>Codigo</th>
+              <th>Pais</th>
+              <th>Tipo</th>
               <th>Criado em</th>
-              <th className="th-actions">Ações</th>
+              <th className="th-actions">Acoes</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4}>Carregando estados...</td>
+                <td colSpan={6}>Carregando subdivisoes...</td>
               </tr>
             )}
 
             {!loading && filtrados.length === 0 && (
               <tr>
-                <td colSpan={4}>Nenhum estado encontrado.</td>
+                <td colSpan={6}>Nenhuma subdivisao encontrada.</td>
               </tr>
             )}
 
             {!loading &&
-              filtrados.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.nome}</td>
-                  <td>{(e as any).pais_nome || "-"}</td>
-                  <td>{e.created_at ? new Date(e.created_at).toLocaleDateString("pt-BR") : "-"}</td>
+              filtrados.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.nome}</td>
+                  <td>{s.codigo_admin1}</td>
+                  <td>{(s as any).pais_nome || "-"}</td>
+                  <td>{s.tipo || "-"}</td>
+                  <td>{s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">
                     {permissao !== "view" && (
                       <>
-                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(e)}>
-                          ✏️
+                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
+                          Editar
                         </button>
                         {permissao === "admin" && (
                           <button
                             className="btn-icon btn-danger"
                             title="Excluir"
-                            onClick={() => excluir(e.id)}
-                            disabled={excluindoId === e.id}
+                            onClick={() => excluir(s.id)}
+                            disabled={excluindoId === s.id}
                           >
-                            {excluindoId === e.id ? "..." : "🗑️"}
+                            {excluindoId === s.id ? "..." : "Excluir"}
                           </button>
                         )}
                       </>

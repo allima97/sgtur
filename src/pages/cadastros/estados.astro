@@ -1,17 +1,17 @@
----
+﻿---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import HeaderPage from "../../components/ui/HeaderPage.astro";
-import EstadosIsland from "../../components/islands/EstadosIsland.tsx";
+import SubdivisoesIsland from "../../components/islands/EstadosIsland.tsx";
 
-const activePage = "estados";
+const activePage = "subdivisoes";
 ---
 
-<DashboardLayout title="Cadastro de Estados" {activePage}>
+<DashboardLayout title="Cadastro de Subdivisoes" {activePage}>
   <HeaderPage
-    title="Cadastro de Estados"
-    subtitle="Gerencie estados/províncias vinculados a países."
+    title="Cadastro de Subdivisoes"
+    subtitle="Gerencie subdivisoes administrativas vinculadas a paises."
     color="blue"
   />
 
-  <EstadosIsland client:load />
+  <SubdivisoesIsland client:load />
 </DashboardLayout>

@@ -28,7 +28,7 @@ const MAPA_MODULOS: Record<string, string> = {
 
   Cadastros: "cadastros",
   Paises: "cadastros_paises",
-  Estados: "cadastros_estados",
+  Subdivisoes: "cadastros_estados",
   Cidades: "cadastros_cidades",
   Destinos: "cadastros_destinos",
   Produtos: "cadastros_produtos",
@@ -380,11 +380,11 @@ export default function MenuIsland({ activePage }) {
 
             <li>
               <a
-                className={`sidebar-link ${activePage === "estados" ? "active" : ""}`}
+                className={`sidebar-link ${activePage === "subdivisoes" ? "active" : ""}`}
                 href="/cadastros/estados"
                 onClick={handleNavClick}
               >
-                <span>🗺️</span>Estados
+                <span>🗺️</span>Subdivisoes
               </a>
             </li>
 
@@ -583,3 +583,5 @@ export default function MenuIsland({ activePage }) {
     </>
   );
 }
+
+

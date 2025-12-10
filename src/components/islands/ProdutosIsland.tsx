@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 
@@ -7,8 +7,8 @@ function normalizeText(value: string) {
 }
 
 type Pais = { id: string; nome: string };
-type Estado = { id: string; nome: string; pais_id: string };
-type Cidade = { id: string; nome: string; estado_id: string };
+type Subdivisao = { id: string; nome: string; pais_id: string };
+type Cidade = { id: string; nome: string; subdivisao_id: string };
 type TipoProduto = { id: string; nome: string | null; tipo: string };
 
 type Produto = {
@@ -56,7 +56,7 @@ export default function ProdutosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
   const [paises, setPaises] = useState<Pais[]>([]);
-  const [estados, setEstados] = useState<Estado[]>([]);
+  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [tipos, setTipos] = useState<TipoProduto[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -78,7 +78,7 @@ export default function ProdutosIsland() {
       while (true) {
         const { data, error } = await supabase
           .from("cidades")
-          .select("id, nome, estado_id")
+          .select("id, nome, subdivisao_id")
           .order("nome")
           .range(from, from + pageSize - 1);
         if (error) throw error;
@@ -95,13 +95,13 @@ export default function ProdutosIsland() {
 
       const [
         { data: paisData, error: paisErr },
-        { data: estadoData, error: estErr },
+        { data: subdivisaoData, error: subErr },
         cidadeData,
         { data: tipoData, error: tipoErr },
         { data: produtoData, error: prodErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("estados").select("id, nome, pais_id").order("nome"),
+        supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
         carregarTodasCidades(),
         supabase.from("tipo_produtos").select("id, nome, tipo").order("nome"),
         supabase
@@ -113,18 +113,18 @@ export default function ProdutosIsland() {
       ]);
 
       if (paisErr) throw paisErr;
-      if (estErr) throw estErr;
+      if (subErr) throw subErr;
       if (tipoErr) throw tipoErr;
       if (prodErr) throw prodErr;
 
       setPaises((paisData || []) as Pais[]);
-      setEstados((estadoData || []) as Estado[]);
+      setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
       setCidades((cidadeData || []) as Cidade[]);
       setTipos((tipoData || []) as TipoProduto[]);
       setProdutos((produtoData || []) as Produto[]);
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar produtos. Verifique se as tabelas estão corretas.");
+      setErro("Erro ao carregar produtos. Verifique se as tabelas estao corretas.");
     } finally {
       setLoading(false);
     }
@@ -140,36 +140,35 @@ export default function ProdutosIsland() {
     return cidades.filter((c) => normalizeText(c.nome).includes(termo));
   }, [cidades, cidadeBusca]);
 
-  const estadoMap = useMemo(() => new Map(estados.map((e) => [e.id, e.nome])), [estados]);
+  const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
 
   function formatarCidadeNome(cidadeId: string) {
     const cidade = cidades.find((c) => c.id === cidadeId);
     if (!cidade) return "";
-    const estadoNome = estadoMap.get(cidade.estado_id);
-    return estadoNome ? `${cidade.nome} (${estadoNome})` : cidade.nome;
+    const subdivisao = subdivisaoMap.get(cidade.subdivisao_id);
+    return subdivisao ? `${cidade.nome} (${subdivisao.nome})` : cidade.nome;
   }
 
   const produtosEnriquecidos = useMemo(() => {
     const cidadeMap = new Map(cidades.map((c) => [c.id, c]));
-    const estadoMap = new Map(estados.map((e) => [e.id, e]));
     const paisMap = new Map(paises.map((p) => [p.id, p]));
     const tipoMap = new Map(tipos.map((t) => [t.id, t]));
 
     return produtos.map((p) => {
       const cidade = cidadeMap.get(p.cidade_id || "");
-      const estado = cidade ? estadoMap.get(cidade.estado_id) : undefined;
-      const pais = estado ? paisMap.get(estado.pais_id) : undefined;
+      const subdivisao = cidade ? subdivisaoMap.get(cidade.subdivisao_id) : undefined;
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
       const tipo = p.tipo_produto ? tipoMap.get(p.tipo_produto) : undefined;
 
       return {
         ...p,
         cidade_nome: cidade?.nome || "",
-        estado_nome: estado?.nome || "",
+        subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipo?.nome || tipo?.tipo || "",
       };
     });
-  }, [produtos, cidades, estados, paises, tipos]);
+  }, [produtos, cidades, subdivisoes, paises, tipos]);
 
   const produtosFiltrados = useMemo(() => {
     if (!busca.trim()) return produtosEnriquecidos;
@@ -178,7 +177,7 @@ export default function ProdutosIsland() {
       (p) =>
         normalizeText(p.nome).includes(termo) ||
         normalizeText(p.cidade_nome).includes(termo) ||
-        normalizeText(p.estado_nome).includes(termo) ||
+        normalizeText(p.subdivisao_nome).includes(termo) ||
         normalizeText(p.pais_nome).includes(termo) ||
         normalizeText(p.tipo_nome).includes(termo)
     );
@@ -193,7 +192,6 @@ export default function ProdutosIsland() {
 
   function handleCidadeBusca(valor: string) {
     setCidadeBusca(valor);
-    // mantém seleção apenas se cidade atual ainda corresponde ao texto
     const cidadeAtual = cidades.find((c) => c.id === form.cidade_id);
     if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
       setForm((prev) => ({ ...prev, cidade_id: "" }));
@@ -233,19 +231,19 @@ export default function ProdutosIsland() {
     e.preventDefault();
 
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar produtos.");
+      setErro("Voce nao tem permissao para salvar produtos.");
       return;
     }
     if (!form.nome.trim()) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome e obrigatorio.");
       return;
     }
     if (!form.cidade_id) {
-      setErro("Cidade é obrigatória.");
+      setErro("Cidade e obrigatoria.");
       return;
     }
     if (!form.tipo_produto) {
-      setErro("Tipo de produto é obrigatório.");
+      setErro("Tipo de produto e obrigatorio.");
       return;
     }
 
@@ -301,18 +299,18 @@ export default function ProdutosIsland() {
       await carregarDados();
     } catch (e) {
       console.error(e);
-      setErro("Não foi possível excluir o produto. Verifique vínculos com vendas/orçamentos.");
+      setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
     } finally {
       setExcluindoId(null);
     }
   }
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
-  if (!ativo) return <div>Você não possui acesso ao módulo de Cadastros.</div>;
+  if (loadingPerm) return <div>Carregando permissoes...</div>;
+  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="destinos-page">
-      {/* Formulário */}
+      {/* Formulario */}
       <div className="card-base card-blue mb-3">
         <form onSubmit={salvar}>
           <div className="form-row">
@@ -372,30 +370,30 @@ export default function ProdutosIsland() {
                     <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
                   )}
                   {cidadesFiltradasPesquisa.map((c) => {
-                    const estadoNome = estadoMap.get(c.estado_id);
-                    const label = estadoNome ? `${c.nome} (${estadoNome})` : c.nome;
+                    const subdivisao = subdivisaoMap.get(c.subdivisao_id);
+                    const label = subdivisao ? `${c.nome} (${subdivisao.nome})` : c.nome;
                     return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="btn btn-light"
-                      style={{
-                        width: "100%",
-                        justifyContent: "flex-start",
-                        marginBottom: 4,
-                        background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
-                        borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleChange("cidade_id", c.id);
-                        setCidadeBusca(label);
-                        setMostrarSugestoes(false);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="btn btn-light"
+                        style={{
+                          width: "100%",
+                          justifyContent: "flex-start",
+                          marginBottom: 4,
+                          background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
+                          borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleChange("cidade_id", c.id);
+                          setCidadeBusca(label);
+                          setMostrarSugestoes(false);
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
                   })}
                 </div>
               )}
@@ -404,7 +402,7 @@ export default function ProdutosIsland() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Atração principal</label>
+              <label className="form-label">Atracao principal</label>
               <input
                 className="form-input"
                 value={form.atracao_principal}
@@ -414,12 +412,12 @@ export default function ProdutosIsland() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Melhor época</label>
+              <label className="form-label">Melhor epoca</label>
               <input
                 className="form-input"
                 value={form.melhor_epoca}
                 onChange={(e) => handleChange("melhor_epoca", e.target.value)}
-                placeholder="Ex: Dezembro a Março"
+                placeholder="Ex: Dezembro a Marco"
                 disabled={permissao === "view"}
               />
             </div>
@@ -427,7 +425,7 @@ export default function ProdutosIsland() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Duração sugerida</label>
+              <label className="form-label">Duracao sugerida</label>
               <input
                 className="form-input"
                 value={form.duracao_sugerida}
@@ -437,12 +435,12 @@ export default function ProdutosIsland() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Nível de preço</label>
+              <label className="form-label">Nivel de preco</label>
               <input
                 className="form-input"
                 value={form.nivel_preco}
                 onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                placeholder="Ex: Econômico, Intermediário, Premium"
+                placeholder="Ex: Economico, Intermediario, Premium"
                 disabled={permissao === "view"}
               />
             </div>
@@ -459,13 +457,13 @@ export default function ProdutosIsland() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Informações importantes</label>
+            <label className="form-label">Informacoes importantes</label>
             <textarea
               className="form-input"
               rows={3}
               value={form.informacoes_importantes}
               onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-              placeholder="Observações gerais, dicas, documentação necessária, etc."
+              placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
               disabled={permissao === "view"}
             />
           </div>
@@ -479,20 +477,20 @@ export default function ProdutosIsland() {
               disabled={permissao === "view"}
             >
               <option value="true">Sim</option>
-              <option value="false">Não</option>
+              <option value="false">Nao</option>
             </select>
           </div>
 
           <div className="mt-2">
             {permissao !== "view" && (
               <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar produto"}
+                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar produto"}
               </button>
             )}
 
             {editandoId && permissao !== "view" && (
               <button type="button" className="btn btn-light" style={{ marginLeft: 8 }} onClick={iniciarNovo}>
-                Cancelar edição
+                Cancelar edicao
               </button>
             )}
           </div>
@@ -508,7 +506,7 @@ export default function ProdutosIsland() {
               className="form-input"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, tipo, cidade, estado ou país..."
+              placeholder="Busque por nome, tipo, cidade, subdivisao ou pais..."
             />
           </div>
         </div>
@@ -528,12 +526,12 @@ export default function ProdutosIsland() {
               <th>Produto</th>
               <th>Tipo</th>
               <th>Cidade</th>
-              <th>Estado</th>
-              <th>País</th>
-              <th>Nível de preço</th>
+              <th>Subdivisao</th>
+              <th>Pais</th>
+              <th>Nivel de preco</th>
               <th>Ativo</th>
               <th>Criado em</th>
-              <th className="th-actions">Ações</th>
+              <th className="th-actions">Acoes</th>
             </tr>
           </thead>
           <tbody>
@@ -555,15 +553,15 @@ export default function ProdutosIsland() {
                   <td>{p.nome}</td>
                   <td>{(p as any).tipo_nome || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
-                  <td>{(p as any).estado_nome || "-"}</td>
+                  <td>{(p as any).subdivisao_nome || "-"}</td>
                   <td>{(p as any).pais_nome || "-"}</td>
                   <td>{p.nivel_preco || "-"}</td>
-                  <td>{p.ativo ? "Sim" : "Não"}</td>
+                  <td>{p.ativo ? "Sim" : "Nao"}</td>
                   <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">
                     {permissao !== "view" && (
                       <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
-                        ✏️
+                        Editar
                       </button>
                     )}
 
@@ -574,7 +572,7 @@ export default function ProdutosIsland() {
                         onClick={() => excluir(p.id)}
                         disabled={excluindoId === p.id}
                       >
-                        {excluindoId === p.id ? "..." : "🗑️"}
+                        {excluindoId === p.id ? "..." : "Excluir"}
                       </button>
                     )}
                   </td>
