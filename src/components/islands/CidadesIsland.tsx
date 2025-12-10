@@ -23,9 +23,11 @@ type Subdivisao = {
 type Cidade = {
   id: string;
   nome: string;
-  subdivisao_id: string;
+  subdivisao_id?: string;
   descricao?: string | null;
   created_at?: string | null;
+  subdivisao_nome?: string | null;
+  pais_nome?: string | null;
 };
 
 const initialForm = {
@@ -168,17 +170,23 @@ export default function CidadesIsland() {
         carregarCidades(),
       ]);
 
-      if (paisesErro) throw paisesErro;
-      if (subdivisoesErro) throw subdivisoesErro;
+      if (paisesErro) {
+        setErro("Erro ao carregar paises.");
+      } else {
+        setPaises(paisesData || []);
+      }
 
-      setPaises(paisesData || []);
-      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
+      if (subdivisoesErro) {
+        setErro("Erro ao carregar subdivisoes.");
+      } else {
+        setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
+      }
+
       setCidades((cidadesData as Cidade[]) || []);
       setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
-      const msg = e instanceof Error ? e.message : "";
-      setErro(`Erro ao carregar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
+      setErro("Erro ao carregar cidades.");
     } finally {
       setLoading(false);
     }
@@ -193,11 +201,55 @@ export default function CidadesIsland() {
     carregar(false);
   }, [carregando, podeVer]);
 
+  // Limpa para listagem inicial quando apaga a busca
   useEffect(() => {
-    if (busca.trim() && !carregouTodos) {
-      carregar(true);
+    if (!busca.trim() && !carregando && podeVer) {
+      carregar(false);
     }
-  }, [busca, carregouTodos]);
+  }, [busca, carregando, podeVer]);
+
+  // Busca via RPC (mais leve) quando houver texto
+  useEffect(() => {
+    const termo = busca.trim();
+    if (!termo || carregando || !podeVer) return;
+
+    const controller = new AbortController();
+    async function buscar() {
+      setLoading(true);
+      setErro(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: termo, limite: 200 },
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+        if (error) throw error;
+        const lista = (data as any[]) || [];
+        setCidades(
+          lista.map((c) => ({
+            id: c.id,
+            nome: c.nome,
+            subdivisao_id: c.subdivisao_id || "",
+            descricao: c.descricao || null,
+            created_at: c.created_at || null,
+            subdivisao_nome: c.subdivisao_nome || "",
+            pais_nome: c.pais_nome || "",
+          }))
+        );
+        setCarregouTodos(true);
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        console.error(e);
+        setErro("Erro ao buscar cidades.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    buscar();
+    return () => controller.abort();
+  }, [busca, carregando, podeVer]);
 
   // FILTRO
   const cidadesEnriquecidas = useMemo(() => {
@@ -205,12 +257,12 @@ export default function CidadesIsland() {
     const paisMap = new Map(paises.map((p) => [p.id, p]));
 
     return cidades.map((c) => {
-      const subdivisao = subdivisaoMap.get(c.subdivisao_id);
+      const subdivisao = c.subdivisao_id ? subdivisaoMap.get(c.subdivisao_id) : undefined;
       const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
       return {
         ...c,
-        subdivisao_nome: subdivisao?.nome || "",
-        pais_nome: pais?.nome || "",
+        subdivisao_nome: subdivisao?.nome || c.subdivisao_nome || "",
+        pais_nome: pais?.nome || c.pais_nome || "",
       };
     });
   }, [cidades, subdivisoes, paises]);
@@ -236,12 +288,38 @@ export default function CidadesIsland() {
   function iniciarEdicao(c: Cidade) {
     if (!podeEditar) return;
 
-    setEditId(c.id);
-    setForm({
-      nome: c.nome,
-      subdivisao_id: c.subdivisao_id,
-      descricao: c.descricao || "",
-    });
+    async function prepararEdicao() {
+      try {
+        let alvo = c;
+        if (!c.subdivisao_id) {
+          const { data, error } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_id, descricao")
+            .eq("id", c.id)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) {
+            alvo = {
+              ...c,
+              subdivisao_id: (data as any).subdivisao_id || "",
+              descricao: (data as any).descricao || "",
+            };
+          }
+        }
+
+        setEditId(alvo.id);
+        setForm({
+          nome: alvo.nome,
+          subdivisao_id: alvo.subdivisao_id || "",
+          descricao: alvo.descricao || "",
+        });
+      } catch (err) {
+        console.error(err);
+        setErro("Nao foi possivel carregar dados da cidade para edicao.");
+      }
+    }
+
+    prepararEdicao();
   }
 
   function iniciarNovo() {

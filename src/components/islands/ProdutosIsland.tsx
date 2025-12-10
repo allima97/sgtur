@@ -101,21 +101,37 @@ export default function ProdutosIsland() {
       return todas;
     }
 
-    try {
-      setLoading(true);
-      setErro(null);
+    const erros: string[] = [];
+    setLoading(true);
+    setErro(null);
 
+    try {
       const [
         { data: paisData, error: paisErr },
         { data: subdivisaoData, error: subErr },
         cidadeData,
-        { data: tipoData, error: tipoErr },
+        tipoResp,
         { data: produtoData, error: prodErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
-        carregarTodasCidades(),
-        supabase.from("tipo_produtos").select("id, nome, tipo").order("nome"),
+        carregarTodasCidades().catch((err) => {
+          erros.push("cidades");
+          console.error("Erro ao carregar cidades:", err);
+          return [];
+        }),
+        supabase
+          .from("tipo_produtos")
+          .select("id, nome, tipo")
+          .order("nome")
+          .then(async (res) => {
+            if (res.error) {
+              console.warn("Fallback tipo_produtos por 'tipo':", res.error);
+              const fallback = await supabase.from("tipo_produtos").select("id, nome, tipo").order("tipo");
+              return fallback;
+            }
+            return res;
+          }),
         supabase
           .from("produtos")
           .select(
@@ -124,20 +140,38 @@ export default function ProdutosIsland() {
           .order("nome"),
       ]);
 
-      if (paisErr) throw paisErr;
-      if (subErr) throw subErr;
-      if (tipoErr) throw tipoErr;
-      if (prodErr) throw prodErr;
+      if (paisErr) {
+        erros.push("paises");
+      } else {
+        setPaises((paisData || []) as Pais[]);
+      }
 
-      setPaises((paisData || []) as Pais[]);
-      setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
+      if (subErr) {
+        erros.push("subdivisoes");
+      } else {
+        setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
+      }
+
+      if (tipoResp.error) {
+        erros.push("tipo_produtos");
+      } else {
+        setTipos((tipoResp.data || []) as TipoProduto[]);
+      }
+
+      if (prodErr) {
+        erros.push("produtos");
+      } else {
+        setProdutos((produtoData || []) as Produto[]);
+      }
+
       setCidades((cidadeData || []) as Cidade[]);
-      setTipos((tipoData || []) as TipoProduto[]);
-      setProdutos((produtoData || []) as Produto[]);
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar produtos. Verifique se as tabelas estao corretas.");
+      erros.push("geral");
     } finally {
+      if (erros.length) {
+        setErro(`Erro ao carregar: ${erros.join(", ")}. Verifique permissoes/RLS.`);
+      }
       setLoading(false);
     }
   }
