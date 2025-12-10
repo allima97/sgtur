@@ -24,8 +24,8 @@ type Cidade = {
   id: string;
   nome: string;
   subdivisao_id: string;
-  descricao: string | null;
-  created_at: string | null;
+  descricao?: string | null;
+  created_at?: string | null;
 };
 
 const initialForm = {
@@ -78,41 +78,98 @@ export default function CidadesIsland() {
     if (!podeVer) return;
 
     async function carregarCidades() {
+      const selectPadrao = "id, nome, subdivisao_id, descricao, created_at";
+      const selectFallback = "id, nome, subdivisao_id, descricao";
       if (todos) {
         const todas: Cidade[] = [];
         const pageSize = 1000;
         let from = 0;
         while (true) {
-          const { data, error } = await supabase
-            .from("cidades")
-            .select("id, nome, subdivisao_id, descricao, created_at")
-            .order("nome")
-            .range(from, from + pageSize - 1);
-          if (error) throw error;
-          todas.push(...((data || []) as Cidade[]));
-          if (!data || data.length < pageSize) break;
-          from += pageSize;
+          try {
+            const { data, error } = await supabase
+              .from("cidades")
+              .select(selectPadrao)
+              .order("nome")
+              .range(from, from + pageSize - 1);
+            if (error) throw error;
+            todas.push(...((data || []) as Cidade[]));
+            if (!data || data.length < pageSize) break;
+            from += pageSize;
+          } catch (err) {
+            console.warn("[Cidades] Falha na query principal, aplicando fallback.", err);
+            try {
+              const { data, error } = await supabase
+                .from("cidades")
+                .select(selectFallback)
+                .order("nome")
+                .range(from, from + pageSize - 1);
+              if (error) throw error;
+              todas.push(...((data || []) as Cidade[]));
+              if (!data || data.length < pageSize) break;
+              from += pageSize;
+            } catch (fallbackErr) {
+              console.warn("[Cidades] Fallback sem campo descricao.", fallbackErr);
+              const { data, error } = await supabase
+                .from("cidades")
+                .select("id, nome, subdivisao_id")
+                .order("nome")
+                .range(from, from + pageSize - 1);
+              if (error) throw error;
+              todas.push(...((data || []) as Cidade[]));
+              if (!data || data.length < pageSize) break;
+              from += pageSize;
+            }
+          }
         }
         return todas;
       } else {
-        const { data, error } = await supabase
-          .from("cidades")
-          .select("id, nome, subdivisao_id, descricao, created_at")
-          .order("created_at", { ascending: false })
-          .limit(10);
-        if (error) throw error;
-        return (data || []) as Cidade[];
+        try {
+          const { data, error } = await supabase
+            .from("cidades")
+            .select(selectPadrao)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          if (error) throw error;
+          return (data || []) as Cidade[];
+        } catch (err) {
+          console.warn("[Cidades] created_at indisponivel, ordenando por nome.", err);
+          try {
+            const { data, error } = await supabase
+              .from("cidades")
+              .select(selectFallback)
+              .order("nome")
+              .limit(10);
+            if (error) throw error;
+            return (data || []) as Cidade[];
+          } catch (fallbackErr) {
+            console.warn("[Cidades] Fallback sem descricao/nome.", fallbackErr);
+            const { data, error } = await supabase
+              .from("cidades")
+              .select("id, nome, subdivisao_id")
+              .order("nome")
+              .limit(10);
+            if (error) throw error;
+            return (data || []) as Cidade[];
+          }
+        }
       }
     }
 
     try {
       setLoading(true);
 
-      const [{ data: paisesData }, { data: subdivisoesData }, cidadesData] = await Promise.all([
+      const [
+        { data: paisesData, error: paisesErro },
+        { data: subdivisoesData, error: subdivisoesErro },
+        cidadesData,
+      ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome"),
         carregarCidades(),
       ]);
+
+      if (paisesErro) throw paisesErro;
+      if (subdivisoesErro) throw subdivisoesErro;
 
       setPaises(paisesData || []);
       setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
@@ -120,7 +177,8 @@ export default function CidadesIsland() {
       setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar cidades.");
+      const msg = e instanceof Error ? e.message : "";
+      setErro(`Erro ao carregar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
     } finally {
       setLoading(false);
     }
@@ -426,4 +484,3 @@ export default function CidadesIsland() {
     </div>
   );
 }
-

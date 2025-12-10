@@ -11,6 +11,16 @@ type Subdivisao = { id: string; nome: string; pais_id: string };
 type Cidade = { id: string; nome: string; subdivisao_id: string };
 type TipoProduto = { id: string; nome: string | null; tipo: string };
 
+type CidadeBusca = {
+  id: string;
+  nome: string;
+  latitude: number | null;
+  longitude: number | null;
+  populacao: number | null;
+  subdivisao_nome: string | null;
+  pais_nome: string | null;
+};
+
 type Produto = {
   id: string;
   nome: string;
@@ -64,6 +74,8 @@ export default function ProdutosIsland() {
   const [busca, setBusca] = useState("");
   const [cidadeBusca, setCidadeBusca] = useState("");
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [resultadosCidade, setResultadosCidade] = useState<CidadeBusca[]>([]);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -133,12 +145,6 @@ export default function ProdutosIsland() {
   useEffect(() => {
     carregarDados();
   }, []);
-
-  const cidadesFiltradasPesquisa = useMemo(() => {
-    const termo = normalizeText(cidadeBusca.trim());
-    if (!termo) return cidades;
-    return cidades.filter((c) => normalizeText(c.nome).includes(termo));
-  }, [cidades, cidadeBusca]);
 
   const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
 
@@ -226,6 +232,40 @@ export default function ProdutosIsland() {
     setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
   }
+
+  useEffect(() => {
+    if (cidadeBusca.trim().length < 2) {
+      setResultadosCidade([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setBuscandoCidade(true);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: cidadeBusca.trim(), limite: 10 },
+          { signal: controller.signal }
+        );
+        if (!controller.signal.aborted) {
+          if (error) {
+            console.error("Erro ao buscar cidades:", error);
+            setErro("Erro ao buscar cidades (RPC).");
+          } else {
+            setResultadosCidade((data as CidadeBusca[]) || []);
+          }
+        }
+      } finally {
+        if (!controller.signal.aborted) setBuscandoCidade(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [cidadeBusca]);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -355,6 +395,7 @@ export default function ProdutosIsland() {
                 disabled={permissao === "view"}
                 style={{ marginBottom: 6 }}
               />
+              {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
               {mostrarSugestoes && (
                 <div
                   className="card-base"
@@ -366,12 +407,11 @@ export default function ProdutosIsland() {
                     border: "1px solid #e5e7eb",
                   }}
                 >
-                  {cidadesFiltradasPesquisa.length === 0 && (
+                  {resultadosCidade.length === 0 && !buscandoCidade && (
                     <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
                   )}
-                  {cidadesFiltradasPesquisa.map((c) => {
-                    const subdivisao = subdivisaoMap.get(c.subdivisao_id);
-                    const label = subdivisao ? `${c.nome} (${subdivisao.nome})` : c.nome;
+                  {resultadosCidade.map((c) => {
+                    const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
                     return (
                       <button
                         key={c.id}
@@ -389,9 +429,11 @@ export default function ProdutosIsland() {
                           handleChange("cidade_id", c.id);
                           setCidadeBusca(label);
                           setMostrarSugestoes(false);
+                          setResultadosCidade([]);
                         }}
                       >
                         {label}
+                        {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>• {c.pais_nome}</span> : null}
                       </button>
                     );
                   })}
