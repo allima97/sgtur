@@ -19,6 +19,7 @@ type CidadeBusca = {
   populacao: number | null;
   subdivisao_nome: string | null;
   pais_nome: string | null;
+  subdivisao_id?: string | null;
 };
 
 type Produto = {
@@ -83,24 +84,6 @@ export default function ProdutosIsland() {
   const [erro, setErro] = useState<string | null>(null);
 
   async function carregarDados() {
-    async function carregarTodasCidades() {
-      const todas: Cidade[] = [];
-      const pageSize = 1000;
-      let from = 0;
-      while (true) {
-        const { data, error } = await supabase
-          .from("cidades")
-          .select("id, nome, subdivisao_id")
-          .order("nome")
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        todas.push(...((data || []) as Cidade[]));
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
-      return todas;
-    }
-
     const erros: string[] = [];
     setLoading(true);
     setErro(null);
@@ -109,17 +92,11 @@ export default function ProdutosIsland() {
       const [
         { data: paisData, error: paisErr },
         { data: subdivisaoData, error: subErr },
-        cidadeData,
+        produtosResp,
         tipoResp,
-        { data: produtoData, error: prodErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
-        carregarTodasCidades().catch((err) => {
-          erros.push("cidades");
-          console.error("Erro ao carregar cidades:", err);
-          return [];
-        }),
         supabase
           .from("tipo_produtos")
           .select("id, nome, tipo")
@@ -158,13 +135,28 @@ export default function ProdutosIsland() {
         setTipos((tipoResp.data || []) as TipoProduto[]);
       }
 
-      if (prodErr) {
+      if (produtosResp.error) {
         erros.push("produtos");
       } else {
-        setProdutos((produtoData || []) as Produto[]);
-      }
+        const produtoData = (produtosResp.data || []) as Produto[];
+        setProdutos(produtoData);
 
-      setCidades((cidadeData || []) as Cidade[]);
+        // Busca apenas as cidades referenciadas nos produtos (economiza e evita falhas maiores)
+        const idsCidade = Array.from(new Set(produtoData.map((p) => p.cidade_id).filter(Boolean)));
+        if (idsCidade.length) {
+          const { data: cidadesData, error: cidadesErr } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_id")
+            .in("id", idsCidade);
+          if (cidadesErr) {
+            erros.push("cidades");
+          } else {
+            setCidades((cidadesData || []) as Cidade[]);
+          }
+        } else {
+          setCidades([]);
+        }
+      }
     } catch (e) {
       console.error(e);
       erros.push("geral");
