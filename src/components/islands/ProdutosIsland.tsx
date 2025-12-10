@@ -85,6 +85,7 @@ export default function ProdutosIsland() {
 
   async function carregarDados() {
     const erros: string[] = [];
+    const detalhesErro: string[] = [];
     setLoading(true);
     setErro(null);
 
@@ -100,9 +101,11 @@ export default function ProdutosIsland() {
         supabase
           .from("tipo_produtos")
           .select("id, nome, tipo")
+          .eq("ativo", true)
           .order("nome")
           .then(async (res) => {
             if (res.error) {
+              detalhesErro.push(`tipo_produtos: ${res.error.message}`);
               console.warn("Fallback tipo_produtos por 'tipo':", res.error);
               const fallback = await supabase.from("tipo_produtos").select("id, nome, tipo").order("tipo");
               return fallback;
@@ -119,24 +122,28 @@ export default function ProdutosIsland() {
 
       if (paisErr) {
         erros.push("paises");
+        if (paisErr.message) detalhesErro.push(`paises: ${paisErr.message}`);
       } else {
         setPaises((paisData || []) as Pais[]);
       }
 
       if (subErr) {
         erros.push("subdivisoes");
+        if (subErr.message) detalhesErro.push(`subdivisoes: ${subErr.message}`);
       } else {
         setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
       }
 
       if (tipoResp.error) {
         erros.push("tipo_produtos");
+        if (tipoResp.error.message) detalhesErro.push(`tipo_produtos: ${tipoResp.error.message}`);
       } else {
         setTipos((tipoResp.data || []) as TipoProduto[]);
       }
 
       if (produtosResp.error) {
         erros.push("produtos");
+        if (produtosResp.error.message) detalhesErro.push(`produtos: ${produtosResp.error.message}`);
       } else {
         const produtoData = (produtosResp.data || []) as Produto[];
         setProdutos(produtoData);
@@ -150,6 +157,7 @@ export default function ProdutosIsland() {
             .in("id", idsCidade);
           if (cidadesErr) {
             erros.push("cidades");
+            if (cidadesErr.message) detalhesErro.push(`cidades: ${cidadesErr.message}`);
           } else {
             setCidades((cidadesData || []) as Cidade[]);
           }
@@ -157,12 +165,14 @@ export default function ProdutosIsland() {
           setCidades([]);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       erros.push("geral");
+      if (e?.message) detalhesErro.push(`geral: ${e.message}`);
     } finally {
       if (erros.length) {
-        setErro(`Erro ao carregar: ${erros.join(", ")}. Verifique permissoes/RLS.`);
+        const detalhes = detalhesErro.length ? ` Detalhes: ${detalhesErro.join(" | ")}` : "";
+        setErro(`Erro ao carregar: ${erros.join(", ")}. Verifique permissoes/RLS.${detalhes}`);
       }
       setLoading(false);
     }
