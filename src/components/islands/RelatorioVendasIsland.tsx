@@ -57,6 +57,10 @@ function hojeISO() {
   return new Date().toISOString().substring(0, 10);
 }
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function addDays(base: Date, days: number) {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
@@ -192,8 +196,8 @@ export default function RelatorioVendasIsland() {
         const [{ data: clientesData, error: cliErr }, { data: destinosData, error: destErr }, { data: produtosData, error: prodErr }] =
           await Promise.all([
             supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
-            supabase.from("destinos").select("id, nome").order("nome", { ascending: true }),
-            supabase.from("produtos").select("id, nome, tipo").order("nome", { ascending: true }),
+            supabase.from("produtos").select("id, nome").order("nome", { ascending: true }),
+            supabase.from("tipo_produtos").select("id, nome, tipo").order("nome", { ascending: true }),
           ]);
 
         if (cliErr) throw cliErr;
@@ -216,28 +220,28 @@ export default function RelatorioVendasIsland() {
 
   const clientesFiltrados = useMemo(() => {
     if (!clienteBusca.trim()) return clientes;
-    const termo = clienteBusca.toLowerCase();
+    const termo = normalizeText(clienteBusca);
     return clientes.filter((c) => {
       const doc = c.cpf || "";
       return (
-        c.nome.toLowerCase().includes(termo) ||
-        doc.toLowerCase().includes(termo)
+        normalizeText(c.nome).includes(termo) ||
+        normalizeText(doc).includes(termo)
       );
     });
   }, [clientes, clienteBusca]);
 
   const destinosFiltrados = useMemo(() => {
     if (!destinoBusca.trim()) return destinos;
-    const termo = destinoBusca.toLowerCase();
-    return destinos.filter((d) => d.nome.toLowerCase().includes(termo));
+    const termo = normalizeText(destinoBusca);
+    return destinos.filter((d) => normalizeText(d.nome).includes(termo));
   }, [destinos, destinoBusca]);
 
   const produtosFiltrados = useMemo(() => {
     if (!produtoBusca.trim()) return produtos;
-    const termo = produtoBusca.toLowerCase();
+    const termo = normalizeText(produtoBusca);
     return produtos.filter((p) => {
-      const nome = (p.nome || "").toLowerCase();
-      const tipo = (p.tipo || "").toLowerCase();
+      const nome = normalizeText(p.nome || "");
+      const tipo = normalizeText(p.tipo || "");
       return nome.includes(termo) || tipo.includes(termo);
     });
   }, [produtos, produtoBusca]);

@@ -79,7 +79,7 @@ export default function MetasVendedorIsland() {
 
       // carregar produtos ativos
       const { data: produtosData } = await supabase
-        .from("produtos")
+        .from("tipo_produtos")
         .select("id, nome")
         .eq("ativo", true);
       setProdutos(produtosData || []);

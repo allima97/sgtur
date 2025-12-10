@@ -432,12 +432,12 @@ const DashboardGeralIsland: React.FC = () => {
           cancelada,
           vendedor_id,
           clientes:clientes (id, nome),
-          destinos:destinos (id, nome),
+          destinos:produtos!destino_id (id, nome),
           vendas_recibos (
             id,
             valor_total,
             valor_taxas,
-            produtos:produtos (id, nome, regra_comissionamento)
+            produtos:tipo_produtos!produto_id (id, nome, regra_comissionamento)
           )
         `
           )
@@ -466,7 +466,7 @@ const DashboardGeralIsland: React.FC = () => {
           valor,
           notas,
           clientes:clientes (id, nome),
-          destinos:destinos (id, nome)
+          destinos:produtos!destino_id (id, nome)
         `
           )
           .gte("data_orcamento", inicio)

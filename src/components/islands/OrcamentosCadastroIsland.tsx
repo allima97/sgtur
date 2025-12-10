@@ -4,7 +4,7 @@ import { usePermissao } from "../../lib/usePermissao";
 
 type Cliente = { id: string; nome: string };
 type Destino = { id: string; nome: string };
-type Produto = { id: string; nome: string };
+type TipoProduto = { id: string; nome: string | null; tipo?: string };
 
 type StatusOrcamento = "novo" | "enviado" | "negociando" | "fechado" | "perdido";
 
@@ -12,7 +12,7 @@ export default function OrcamentosCadastroIsland() {
   const { ativo } = usePermissao("Vendas");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtos, setProdutos] = useState<TipoProduto[]>([]);
 
   const [clienteId, setClienteId] = useState("");
   const [destinoId, setDestinoId] = useState("");
@@ -34,11 +34,11 @@ export default function OrcamentosCadastroIsland() {
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
         supabase
-          .from("destinos")
+          .from("produtos")
           .select("id, nome")
           .eq("ativo", true)
           .order("nome"),
-        supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo").eq("ativo", true).order("nome"),
       ]);
 
       if (c.data) setClientes(c.data as Cliente[]);
@@ -137,7 +137,7 @@ export default function OrcamentosCadastroIsland() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Produto</label>
+            <label className="form-label">Tipo de produto</label>
             <select
               className="form-select"
               value={produtoId}
@@ -146,7 +146,7 @@ export default function OrcamentosCadastroIsland() {
               <option value="">(Opcional)</option>
               {produtos.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.nome}
+                  {p.nome || p.tipo}
                 </option>
               ))}
             </select>

@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import EstadosIsland from "../../components/islands/EstadosIsland.tsx";
+
+const activePage = "estados";
+---
+
+<DashboardLayout title="Cadastro de Estados" {activePage}>
+  <HeaderPage
+    title="Cadastro de Estados"
+    subtitle="Gerencie estados/províncias vinculados a países."
+    color="blue"
+  />
+
+  <EstadosIsland client:load />
+</DashboardLayout>

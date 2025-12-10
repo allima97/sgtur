@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import TipoProdutosIsland from "../../components/islands/TipoProdutosIsland.tsx";
+
+const activePage = "parametros-tipo-produtos";
+---
+
+<DashboardLayout title="Tipo de Produtos" {activePage}>
+  <HeaderPage
+    title="Tipo de Produtos"
+    subtitle="Cadastre tipos de produto e regras de comissão associadas."
+    color="blue"
+  />
+
+  <TipoProdutosIsland client:load />
+</DashboardLayout>

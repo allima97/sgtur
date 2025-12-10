@@ -96,7 +96,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
     async function carregarBase() {
       try {
         const { data, error } = await supabase
-          .from("destinos")
+          .from("produtos")
           .select("id, nome")
           .order("nome", { ascending: true });
 

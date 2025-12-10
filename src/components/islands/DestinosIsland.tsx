@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 type Pais = {
   id: string;
   nome: string;
@@ -133,12 +137,12 @@ export default function DestinosIsland() {
 
   const destinosFiltrados = useMemo(() => {
     if (!busca.trim()) return destinosEnriquecidos;
-    const termo = busca.toLowerCase();
+    const termo = normalizeText(busca);
     return destinosEnriquecidos.filter((d) => {
       return (
-        d.nome.toLowerCase().includes(termo) ||
-        d.cidade_nome.toLowerCase().includes(termo) ||
-        d.pais_nome.toLowerCase().includes(termo)
+        normalizeText(d.nome).includes(termo) ||
+        normalizeText(d.cidade_nome).includes(termo) ||
+        normalizeText(d.pais_nome).includes(termo)
       );
     });
   }, [destinosEnriquecidos, busca]);

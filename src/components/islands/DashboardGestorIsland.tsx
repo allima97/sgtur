@@ -184,11 +184,11 @@ export default function DashboardGestorIsland() {
           data_lancamento,
           vendedor_id,
           clientes:clientes (nome),
-          destinos:destinos (nome),
+          destinos:produtos!destino_id (nome),
           vendas_recibos (
             id,
             valor_total,
-            produtos:produtos (nome)
+            produtos:tipo_produtos!produto_id (nome)
           )
         `
           )

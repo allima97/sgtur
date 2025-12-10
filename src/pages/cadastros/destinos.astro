@@ -1,17 +1,17 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import HeaderPage from "../../components/ui/HeaderPage.astro";
-import DestinosIsland from "../../components/islands/DestinosIsland.tsx";
+import ProdutosIsland from "../../components/islands/ProdutosIsland.tsx";
 
-const activePage = "destinos";
+const activePage = "produtos";
 ---
 
-<DashboardLayout title="Cadastro de Destinos" {activePage}>
+<DashboardLayout title="Cadastro de Produtos" {activePage}>
   <HeaderPage
-    title="Cadastro de Destinos"
-    subtitle="Gerencie destinos completos vinculados a países e cidades."
+    title="Cadastro de Produtos"
+    subtitle="Gerencie produtos/destinos vinculados a cidades e tipos de produto."
     color="blue"
   />
 
-  <DestinosIsland client:load />
+  <ProdutosIsland client:load />
 </DashboardLayout>

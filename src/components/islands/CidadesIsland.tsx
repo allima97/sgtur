@@ -3,24 +3,32 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 type Pais = {
   id: string;
   nome: string;
 };
 
-type Cidade = {
+type Estado = {
   id: string;
   nome: string;
   pais_id: string;
-  estado_provincia: string | null;
+};
+
+type Cidade = {
+  id: string;
+  nome: string;
+  estado_id: string;
   descricao: string | null;
   created_at: string | null;
 };
 
 const initialForm = {
   nome: "",
-  pais_id: "",
-  estado_provincia: "",
+  estado_id: "",
   descricao: "",
 };
 
@@ -53,6 +61,7 @@ export default function CidadesIsland() {
 
   // STATES
   const [paises, setPaises] = useState<Pais[]>([]);
+  const [estados, setEstados] = useState<Estado[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState(initialForm);
@@ -66,16 +75,37 @@ export default function CidadesIsland() {
   async function carregar() {
     if (!podeVer) return;
 
+    async function carregarTodasCidades() {
+      const todas: Cidade[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      // Supabase pagina automaticamente; buscamos em blocos para não perder registros
+      while (true) {
+        const { data, error } = await supabase
+          .from("cidades")
+          .select("id, nome, estado_id, descricao, created_at")
+          .order("nome")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        todas.push(...((data || []) as Cidade[]));
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return todas;
+    }
+
     try {
       setLoading(true);
 
-      const [{ data: paisesData }, { data: cidadesData }] = await Promise.all([
+      const [{ data: paisesData }, { data: estadosData }, cidadesData] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("cidades").select("*").order("nome"),
+        supabase.from("estados").select("id, nome, pais_id").order("nome"),
+        carregarTodasCidades(),
       ]);
 
       setPaises(paisesData || []);
-      setCidades(cidadesData || []);
+      setEstados(estadosData || []);
+      setCidades((cidadesData as Cidade[]) || []);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar cidades.");
@@ -94,16 +124,32 @@ export default function CidadesIsland() {
   }, [carregando, podeVer]);
 
   // FILTRO
-  const filtradas = useMemo(() => {
-    if (!busca.trim()) return cidades;
+  const cidadesEnriquecidas = useMemo(() => {
+    const estadoMap = new Map(estados.map((e) => [e.id, e]));
+    const paisMap = new Map(paises.map((p) => [p.id, p]));
 
-    const t = busca.toLowerCase();
-    return cidades.filter(
+    return cidades.map((c) => {
+      const estado = estadoMap.get(c.estado_id);
+      const pais = estado ? paisMap.get(estado.pais_id) : undefined;
+      return {
+        ...c,
+        estado_nome: estado?.nome || "",
+        pais_nome: pais?.nome || "",
+      };
+    });
+  }, [cidades, estados, paises]);
+
+  const filtradas = useMemo(() => {
+    if (!busca.trim()) return cidadesEnriquecidas;
+
+    const t = normalizeText(busca);
+    return cidadesEnriquecidas.filter(
       (c) =>
-        c.nome.toLowerCase().includes(t) ||
-        (paises.find((p) => p.id === c.pais_id)?.nome.toLowerCase() || "").includes(t)
+        normalizeText(c.nome).includes(t) ||
+        normalizeText(c.estado_nome).includes(t) ||
+        normalizeText(c.pais_nome).includes(t)
     );
-  }, [busca, cidades, paises]);
+  }, [busca, cidadesEnriquecidas]);
   // CHANGE
   function handleChange(campo: string, valor: any) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -116,8 +162,7 @@ export default function CidadesIsland() {
     setEditId(c.id);
     setForm({
       nome: c.nome,
-      pais_id: c.pais_id,
-      estado_provincia: c.estado_provincia || "",
+      estado_id: c.estado_id,
       descricao: c.descricao || "",
     });
   }
@@ -134,14 +179,18 @@ export default function CidadesIsland() {
 
     if (!podeCriar && !podeEditar) return;
 
+    if (!form.estado_id) {
+      setErro("Estado é obrigatório.");
+      return;
+    }
+
     try {
       setSalvando(true);
       setErro(null);
 
       const payload = {
         nome: form.nome,
-        pais_id: form.pais_id,
-        estado_provincia: form.estado_provincia || null,
+        estado_id: form.estado_id,
         descricao: form.descricao || null,
       };
 
@@ -202,7 +251,7 @@ export default function CidadesIsland() {
       carregar();
     } catch (e) {
       console.error(e);
-      setErro("Erro ao excluir cidade (provavelmente usada em Destinos).");
+      setErro("Erro ao excluir cidade (provavelmente usada em produtos/destinos).");
     } finally {
       setExcluindoId(null);
     }
@@ -234,30 +283,22 @@ export default function CidadesIsland() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">País *</label>
+                <label className="form-label">Estado *</label>
                 <select
                   className="form-select"
-                  value={form.pais_id}
-                  onChange={(e) => handleChange("pais_id", e.target.value)}
+                  value={form.estado_id}
+                  onChange={(e) => handleChange("estado_id", e.target.value)}
                   required
                 >
-                  <option value="">Selecione</option>
-                  {paises.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
+                  <option value="">Selecione o estado</option>
+                  {estados.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nome} — {paises.find((p) => p.id === e.pais_id)?.nome || "Sem país"}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Estado/Província</label>
-                <input
-                  className="form-input"
-                  value={form.estado_provincia}
-                  onChange={(e) => handleChange("estado_provincia", e.target.value)}
-                />
-              </div>
             </div>
 
             <div className="form-group">
@@ -290,17 +331,17 @@ export default function CidadesIsland() {
       )}
 
       <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Buscar cidade</label>
-            <input
-              className="form-input"
-              placeholder="Nome ou país..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          </div>
-        </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Buscar cidade</label>
+                <input
+                  className="form-input"
+                  placeholder="Nome, estado ou país..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                />
+              </div>
+            </div>
       </div>
 
       {carregando && <div className="auth-info mb-3">Carregando permissões...</div>}
@@ -315,7 +356,7 @@ export default function CidadesIsland() {
           <thead>
             <tr>
               <th>Cidade</th>
-              <th>Estado/Prov.</th>
+              <th>Estado</th>
               <th>País</th>
               <th>Criada em</th>
               {(podeEditar || podeExcluir) && <th className="th-actions">Ações</th>}
@@ -336,8 +377,8 @@ export default function CidadesIsland() {
               filtradas.map((c) => (
                 <tr key={c.id}>
                   <td>{c.nome}</td>
-                  <td>{c.estado_provincia || "—"}</td>
-                  <td>{paises.find((p) => p.id === c.pais_id)?.nome || "—"}</td>
+                  <td>{(c as any).estado_nome || "—"}</td>
+                  <td>{(c as any).pais_nome || "—"}</td>
                   <td>{c.created_at ? c.created_at.slice(0, 10) : "—"}</td>
                   {(podeEditar || podeExcluir) && (
                     <td className="th-actions">

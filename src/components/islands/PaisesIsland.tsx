@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 type Pais = {
   id: string;
   nome: string;
@@ -61,8 +65,8 @@ export default function PaisesIsland() {
 
   const paisesFiltrados = useMemo(() => {
     if (!busca.trim()) return paises;
-    const termo = busca.toLowerCase();
-    return paises.filter((p) => p.nome.toLowerCase().includes(termo));
+    const termo = normalizeText(busca);
+    return paises.filter((p) => normalizeText(p.nome).includes(termo));
   }, [busca, paises]);
 
   function handleChange(campo: keyof FormState, valor: string) {

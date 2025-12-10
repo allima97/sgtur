@@ -28,6 +28,7 @@ const MAPA_MODULOS: Record<string, string> = {
 
   Cadastros: "cadastros",
   Paises: "cadastros_paises",
+  Estados: "cadastros_estados",
   Cidades: "cadastros_cidades",
   Destinos: "cadastros_destinos",
   Produtos: "cadastros_produtos",
@@ -39,6 +40,7 @@ const MAPA_MODULOS: Record<string, string> = {
   RelatorioClientes: "relatorios_clientes",
 
   Parametros: "parametros",
+  TipoProdutos: "parametros_tipo_produtos",
   Metas: "parametros_metas",
   RegrasComissao: "parametros_regras_comissao",
 
@@ -378,21 +380,21 @@ export default function MenuIsland({ activePage }) {
 
             <li>
               <a
-                className={`sidebar-link ${activePage === "cidades" ? "active" : ""}`}
-                href="/cadastros/cidades"
+                className={`sidebar-link ${activePage === "estados" ? "active" : ""}`}
+                href="/cadastros/estados"
                 onClick={handleNavClick}
               >
-                <span>🏙️</span>Cidades
+                <span>🗺️</span>Estados
               </a>
             </li>
 
             <li>
               <a
-                className={`sidebar-link ${activePage === "destinos" ? "active" : ""}`}
-                href="/cadastros/destinos"
+                className={`sidebar-link ${activePage === "cidades" ? "active" : ""}`}
+                href="/cadastros/cidades"
                 onClick={handleNavClick}
               >
-                <span>📌</span>Destinos
+                <span>🏙️</span>Cidades
               </a>
             </li>
 
@@ -459,6 +461,15 @@ export default function MenuIsland({ activePage }) {
         <div>
           <div className="sidebar-section-title">Parâmetros</div>
           <ul className="sidebar-nav">
+            <li>
+              <a
+                className={`sidebar-link ${activePage === "parametros-tipo-produtos" ? "active" : ""}`}
+                href="/parametros/tipo-produtos"
+                onClick={handleNavClick}
+              >
+                <span>🏷️</span>Tipo de Produtos
+              </a>
+            </li>
             {can("Metas") && (
               <li>
                 <a

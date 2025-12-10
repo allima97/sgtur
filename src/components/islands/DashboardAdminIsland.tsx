@@ -29,8 +29,8 @@ type Gestor = {
 type SistemaCount = {
   clientes: number;
   vendas: number;
-  destinos: number;
   produtos: number;
+  tipos: number;
 };
 
 export default function DashboardAdminIsland() {
@@ -46,8 +46,8 @@ export default function DashboardAdminIsland() {
   const [sistema, setSistema] = useState<SistemaCount>({
     clientes: 0,
     vendas: 0,
-    destinos: 0,
     produtos: 0,
+    tipos: 0,
   });
 
   // =========================================================
@@ -134,15 +134,20 @@ export default function DashboardAdminIsland() {
         setGestores(listaGestores);
 
         // CONTAGEM DO SISTEMA
-        const tabelas = ["clientes", "vendas", "destinos", "produtos"];
-        const resultado = { clientes: 0, vendas: 0, destinos: 0, produtos: 0 };
+        const tabelas = [
+          { chave: "clientes", tabela: "clientes" },
+          { chave: "vendas", tabela: "vendas" },
+          { chave: "produtos", tabela: "produtos" }, // destinos/produtos cadastrados
+          { chave: "tipos", tabela: "tipo_produtos" },
+        ];
+        const resultado: SistemaCount = { clientes: 0, vendas: 0, produtos: 0, tipos: 0 };
 
-        for (const t of tabelas) {
+        for (const { chave, tabela } of tabelas) {
           const { count } = await supabase
-            .from(t)
+            .from(tabela)
             .select("*", { count: "exact", head: true });
 
-          (resultado as any)[t] = count || 0;
+          (resultado as any)[chave] = count || 0;
         }
 
         setSistema(resultado);
@@ -201,13 +206,13 @@ export default function DashboardAdminIsland() {
           </div>
 
           <div className="kpi-card">
-            <div className="kpi-label">Destinos</div>
-            <div className="kpi-value">{sistema.destinos}</div>
+            <div className="kpi-label">Produtos</div>
+            <div className="kpi-value">{sistema.produtos}</div>
           </div>
 
           <div className="kpi-card">
-            <div className="kpi-label">Produtos</div>
-            <div className="kpi-value">{sistema.produtos}</div>
+            <div className="kpi-label">Tipos de produto</div>
+            <div className="kpi-value">{sistema.tipos}</div>
           </div>
         </div>
       </div>

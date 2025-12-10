@@ -90,7 +90,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     async function carregarBase() {
       try {
         const { data, error } = await supabase
-          .from("produtos")
+          .from("tipo_produtos")
           .select("id, nome, tipo")
           .order("nome", { ascending: true });
 

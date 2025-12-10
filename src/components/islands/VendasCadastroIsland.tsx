@@ -3,9 +3,13 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 type Cliente = { id: string; nome: string; cpf?: string | null };
 type Destino = { id: string; nome: string };
-type Produto = { id: string; nome: string };
+type TipoProduto = { id: string; nome: string };
 
 type FormVenda = {
   cliente_id: string;
@@ -51,7 +55,7 @@ export default function VendasCadastroIsland() {
   // =======================================================
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtos, setProdutos] = useState<TipoProduto[]>([]);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
@@ -77,8 +81,8 @@ export default function VendasCadastroIsland() {
 
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
-        supabase.from("destinos").select("id, nome").order("nome"),
         supabase.from("produtos").select("id, nome").order("nome"),
+        supabase.from("tipo_produtos").select("id, nome").order("nome"),
       ]);
 
       setClientes(c.data || []);
@@ -159,11 +163,11 @@ export default function VendasCadastroIsland() {
 
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
-    const t = buscaCliente.toLowerCase();
+    const t = normalizeText(buscaCliente);
     return clientes.filter((c) => {
       const cpf = normalizarCpf(c.cpf || "");
       return (
-        c.nome.toLowerCase().includes(t) ||
+        normalizeText(c.nome).includes(t) ||
         cpf.includes(normalizarCpf(t))
       );
     });
@@ -171,14 +175,14 @@ export default function VendasCadastroIsland() {
 
   const destinosFiltrados = useMemo(() => {
     if (!buscaDestino.trim()) return destinos;
-    const t = buscaDestino.toLowerCase();
-    return destinos.filter((c) => c.nome.toLowerCase().includes(t));
+    const t = normalizeText(buscaDestino);
+    return destinos.filter((c) => normalizeText(c.nome).includes(t));
   }, [destinos, buscaDestino]);
 
   const produtosFiltrados = useMemo(() => {
     if (!buscaProduto.trim()) return produtos;
-    const t = buscaProduto.toLowerCase();
-    return produtos.filter((c) => c.nome.toLowerCase().includes(t));
+    const t = normalizeText(buscaProduto);
+    return produtos.filter((c) => normalizeText(c.nome).includes(t));
   }, [produtos, buscaProduto]);
 
   // =======================================================

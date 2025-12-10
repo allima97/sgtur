@@ -180,7 +180,7 @@ export default function ClientesIsland() {
     try {
       const { data: viagens } = await supabase
         .from("historico_viagens_real")
-        .select("id, data_viagem, valor_total, notas, destinos(nome)")
+        .select("id, data_viagem, valor_total, notas, destinos:produtos!destino_id (nome)")
         .eq("cliente_id", cliente.id)
         .order("data_viagem", { ascending: false });
 
@@ -196,7 +196,7 @@ export default function ClientesIsland() {
       // Vendas e recibos
       const { data: vendasData } = await supabase
         .from("vendas")
-        .select("id, data_lancamento, data_embarque, destino_id, destinos(nome)")
+        .select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome)")
         .eq("cliente_id", cliente.id)
         .order("data_lancamento", { ascending: false });
 
@@ -241,7 +241,7 @@ export default function ClientesIsland() {
 
       const { data: orc } = await supabase
         .from("orcamentos")
-        .select("id, data_orcamento, status, valor, numero_venda, destinos(nome)")
+        .select("id, data_orcamento, status, valor, numero_venda, destinos:produtos!destino_id (nome)")
         .eq("cliente_id", cliente.id)
         .order("data_orcamento", { ascending: false });
 

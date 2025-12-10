@@ -3,6 +3,10 @@ import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissao } from "../../lib/usePermissao";
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 type Venda = {
   id: string;
   vendedor_id?: string | null;
@@ -150,7 +154,7 @@ export default function VendasConsultaIsland() {
           data_lancamento,
           data_embarque,
           clientes(nome),
-          destinos(nome)
+          destinos:produtos!destino_id (nome)
         `)
         .order("data_lancamento", { ascending: false });
 
@@ -215,13 +219,13 @@ export default function VendasConsultaIsland() {
   const vendasFiltradas = useMemo(() => {
     if (!busca.trim()) return vendas;
 
-    const t = busca.toLowerCase();
+    const t = normalizeText(busca);
 
     return vendas.filter(
       (v) =>
-        v.cliente_nome?.toLowerCase().includes(t) ||
-        v.destino_nome?.toLowerCase().includes(t) ||
-        v.id.toLowerCase().includes(t)
+        normalizeText(v.cliente_nome || "").includes(t) ||
+        normalizeText(v.destino_nome || "").includes(t) ||
+        normalizeText(v.id).includes(t)
     );
   }, [vendas, busca]);
 

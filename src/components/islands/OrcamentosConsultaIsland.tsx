@@ -19,7 +19,7 @@ type Orcamento = {
   interacoes?: { criado_em: string; texto: string }[] | null;
   clientes?: { nome: string } | null;
   destinos?: { nome: string } | null;
-  produtos?: { nome: string } | null;
+  produtos?: { nome: string; tipo?: string } | null;
 };
 
 type StatusOrcamento = "novo" | "enviado" | "negociando" | "fechado" | "perdido";
@@ -52,7 +52,7 @@ export default function OrcamentosConsultaIsland() {
   const [novaInteracao, setNovaInteracao] = useState<string>("");
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [destinos, setDestinos] = useState<{ id: string; nome: string }[]>([]);
-  const [produtos, setProdutos] = useState<{ id: string; nome: string }[]>([]);
+  const [produtos, setProdutos] = useState<{ id: string; nome: string | null; tipo?: string }[]>([]);
   const statuses: StatusOrcamento[] = ["novo", "enviado", "negociando", "fechado", "perdido"];
   const statusCores: Record<StatusOrcamento, { bg: string; border: string }> = {
     novo: { bg: "#f8fafc", border: "#e2e8f0" },
@@ -105,8 +105,8 @@ export default function OrcamentosConsultaIsland() {
             numero_venda_url,
             interacoes,
             clientes:cliente_id (nome),
-            destinos:destino_id (nome),
-            produtos:produto_id (nome)
+            destinos:produtos!destino_id (nome),
+            produtos:tipo_produtos!produto_id (nome, tipo)
           `
         )
         .order("data_orcamento", { ascending: false });
@@ -228,8 +228,8 @@ export default function OrcamentosConsultaIsland() {
     try {
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("destinos").select("id, nome").eq("ativo", true).order("nome"),
         supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo").eq("ativo", true).order("nome"),
       ]);
       if (c.data) setClientes(c.data as any);
       if (d.data) setDestinos(d.data as any);
