@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -8,6 +8,9 @@ export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
 
+function normalizeText(value) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 const initialVenda = {
   cliente_id: "",
   destino_id: "",
@@ -41,8 +44,8 @@ function VendasCadastroIsland() {
       setLoading(true);
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
-        supabase.from("destinos").select("id, nome").order("nome"),
-        supabase.from("produtos").select("id, nome").order("nome")
+        supabase.from("produtos").select("id, nome").order("nome"),
+        supabase.from("tipo_produtos").select("id, nome").order("nome")
       ]);
       setClientes(c.data || []);
       setDestinos(d.data || []);
@@ -101,21 +104,21 @@ function VendasCadastroIsland() {
   const normalizarCpf = (v) => v.replace(/\D/g, "");
   const clientesFiltrados = reactExports.useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
-    const t = buscaCliente.toLowerCase();
+    const t = normalizeText(buscaCliente);
     return clientes.filter((c) => {
       const cpf = normalizarCpf(c.cpf || "");
-      return c.nome.toLowerCase().includes(t) || cpf.includes(normalizarCpf(t));
+      return normalizeText(c.nome).includes(t) || cpf.includes(normalizarCpf(t));
     });
   }, [clientes, buscaCliente]);
   const destinosFiltrados = reactExports.useMemo(() => {
     if (!buscaDestino.trim()) return destinos;
-    const t = buscaDestino.toLowerCase();
-    return destinos.filter((c) => c.nome.toLowerCase().includes(t));
+    const t = normalizeText(buscaDestino);
+    return destinos.filter((c) => normalizeText(c.nome).includes(t));
   }, [destinos, buscaDestino]);
   const produtosFiltrados = reactExports.useMemo(() => {
     if (!buscaProduto.trim()) return produtos;
-    const t = buscaProduto.toLowerCase();
-    return produtos.filter((c) => c.nome.toLowerCase().includes(t));
+    const t = normalizeText(buscaProduto);
+    return produtos.filter((c) => normalizeText(c.nome).includes(t));
   }, [produtos, buscaProduto]);
   function addRecibo() {
     setRecibos((prev) => [...prev, { ...initialRecibo }]);

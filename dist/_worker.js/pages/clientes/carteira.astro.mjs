@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -87,7 +87,7 @@ function ClientesIsland() {
     setHistoricoCliente(cliente);
     setLoadingHistorico(true);
     try {
-      const { data: viagens } = await supabase.from("historico_viagens_real").select("id, data_viagem, valor_total, notas, destinos(nome)").eq("cliente_id", cliente.id).order("data_viagem", { ascending: false });
+      const { data: viagens } = await supabase.from("historico_viagens_real").select("id, data_viagem, valor_total, notas, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_viagem", { ascending: false });
       const viagensFmt = viagens?.map((v) => ({
         id: v.id,
         data_viagem: v.data_viagem,
@@ -95,7 +95,7 @@ function ClientesIsland() {
         valor_total: v.valor_total ?? null,
         notas: v.notas || null
       })) || [];
-      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destinos(nome)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
+      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
       let vendasFmt = [];
       if (vendasData && vendasData.length > 0) {
         const vendaIds = vendasData.map((v) => v.id);
@@ -120,7 +120,7 @@ function ClientesIsland() {
           };
         });
       }
-      const { data: orc } = await supabase.from("orcamentos").select("id, data_orcamento, status, valor, numero_venda, destinos(nome)").eq("cliente_id", cliente.id).order("data_orcamento", { ascending: false });
+      const { data: orc } = await supabase.from("orcamentos").select("id, data_orcamento, status, valor, numero_venda, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_orcamento", { ascending: false });
       const orcFmt = orc?.map((o) => ({
         id: o.id,
         data_orcamento: o.data_orcamento,

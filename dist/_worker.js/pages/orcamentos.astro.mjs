@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout__E2c9QIl.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -29,8 +29,8 @@ function OrcamentosCadastroIsland() {
     try {
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("destinos").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome")
+        supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo").eq("ativo", true).order("nome")
       ]);
       if (c.data) setClientes(c.data);
       if (d.data) setDestinos(d.data);
@@ -116,7 +116,7 @@ function OrcamentosCadastroIsland() {
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de produto" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
@@ -125,7 +125,7 @@ function OrcamentosCadastroIsland() {
               onChange: (e) => setProdutoId(e.target.value),
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "(Opcional)" }),
-                produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome }, p.id))
+                produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome || p.tipo }, p.id))
               ]
             }
           )
@@ -272,8 +272,8 @@ function OrcamentosConsultaIsland() {
             numero_venda_url,
             interacoes,
             clientes:cliente_id (nome),
-            destinos:destino_id (nome),
-            produtos:produto_id (nome)
+            destinos:produtos!destino_id (nome),
+            produtos:tipo_produtos!produto_id (nome, tipo)
           `
       ).order("data_orcamento", { ascending: false });
       if (statusFiltro) {
@@ -386,8 +386,8 @@ function OrcamentosConsultaIsland() {
     try {
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("destinos").select("id, nome").eq("ativo", true).order("nome"),
-        supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome")
+        supabase.from("produtos").select("id, nome").eq("ativo", true).order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo").eq("ativo", true).order("nome")
       ]);
       if (c.data) setClientes(c.data);
       if (d.data) setDestinos(d.data);

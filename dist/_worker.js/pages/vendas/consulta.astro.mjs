@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -8,6 +8,9 @@ export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
 
+function normalizeText(value) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 function VendasConsultaIsland() {
   const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
   const podeVer = permissao !== "none";
@@ -80,7 +83,7 @@ function VendasConsultaIsland() {
           data_lancamento,
           data_embarque,
           clientes(nome),
-          destinos(nome)
+          destinos:produtos!destino_id (nome)
         `).order("data_lancamento", { ascending: false });
       if (userCtx.papel !== "ADMIN") {
         query = query.in("vendedor_id", userCtx.vendedorIds);
@@ -128,9 +131,9 @@ function VendasConsultaIsland() {
   }, [userCtx]);
   const vendasFiltradas = reactExports.useMemo(() => {
     if (!busca.trim()) return vendas;
-    const t = busca.toLowerCase();
+    const t = normalizeText(busca);
     return vendas.filter(
-      (v) => v.cliente_nome?.toLowerCase().includes(t) || v.destino_nome?.toLowerCase().includes(t) || v.id.toLowerCase().includes(t)
+      (v) => normalizeText(v.cliente_nome || "").includes(t) || normalizeText(v.destino_nome || "").includes(t) || normalizeText(v.id).includes(t)
     );
   }, [vendas, busca]);
   function recibosDaVenda(id) {

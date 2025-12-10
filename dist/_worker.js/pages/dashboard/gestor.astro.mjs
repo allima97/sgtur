@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
-import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_CNOZIemN.mjs';
+import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_-doxkyKm.mjs';
 
 function formatCurrency(v) {
   return v.toLocaleString("pt-BR", {
@@ -86,11 +86,11 @@ function DashboardGestorIsland() {
           data_lancamento,
           vendedor_id,
           clientes:clientes (nome),
-          destinos:destinos (nome),
+          destinos:produtos!destino_id (nome),
           vendas_recibos (
             id,
             valor_total,
-            produtos:produtos (nome)
+            produtos:tipo_produtos!produto_id (nome)
           )
         `
         ).gte("data_lancamento", inicio).lte("data_lancamento", fim).eq("cancelada", false);

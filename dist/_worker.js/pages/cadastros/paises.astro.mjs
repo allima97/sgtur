@@ -1,12 +1,15 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
 
+function normalizeText(value) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 const initialForm = {
   nome: "",
   codigo_iso: "",
@@ -22,13 +25,16 @@ function PaisesIsland() {
   const [editandoId, setEditandoId] = reactExports.useState(null);
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
-  async function carregarPaises() {
+  const [carregouTodos, setCarregouTodos] = reactExports.useState(false);
+  async function carregarPaises(todos = false) {
     try {
       setLoading(true);
       setErro(null);
-      const { data, error } = await supabase.from("paises").select("id, nome, codigo_iso, continente, created_at").order("nome", { ascending: true });
+      const query = supabase.from("paises").select("id, nome, codigo_iso, continente, created_at").order(todos ? "nome" : "created_at", { ascending: !todos }).limit(todos ? void 0 : 10);
+      const { data, error } = await query;
       if (error) throw error;
       setPaises(data || []);
+      setCarregouTodos(todos || false);
     } catch (e) {
       console.error(e);
       setErro(
@@ -39,12 +45,17 @@ function PaisesIsland() {
     }
   }
   reactExports.useEffect(() => {
-    carregarPaises();
+    carregarPaises(false);
   }, []);
+  reactExports.useEffect(() => {
+    if (busca.trim() && !carregouTodos) {
+      carregarPaises(true);
+    }
+  }, [busca, carregouTodos]);
   const paisesFiltrados = reactExports.useMemo(() => {
     if (!busca.trim()) return paises;
-    const termo = busca.toLowerCase();
-    return paises.filter((p) => p.nome.toLowerCase().includes(termo));
+    const termo = normalizeText(busca);
+    return paises.filter((p) => normalizeText(p.nome).includes(termo));
   }, [busca, paises]);
   function handleChange(campo, valor) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -92,7 +103,7 @@ function PaisesIsland() {
       }
       setForm(initialForm);
       setEditandoId(null);
-      await carregarPaises();
+      await carregarPaises(carregouTodos);
     } catch (e2) {
       console.error(e2);
       setErro("Erro ao salvar país. Verifique se o nome é único.");
@@ -111,7 +122,7 @@ function PaisesIsland() {
       setErro(null);
       const { error } = await supabase.from("paises").delete().eq("id", id);
       if (error) throw error;
-      await carregarPaises();
+      await carregarPaises(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro(
@@ -200,6 +211,7 @@ function PaisesIsland() {
         }
       )
     ] }) }) }),
+    !carregouTodos && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Últimos Países Cadastrados (10). Digite na busca para consultar todos." }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[520px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [

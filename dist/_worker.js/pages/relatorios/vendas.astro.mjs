@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -9,6 +9,9 @@ import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DkICCBHU.mjs';
 
 function hojeISO() {
   return (/* @__PURE__ */ new Date()).toISOString().substring(0, 10);
+}
+function normalizeText(value) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 function addDays(base, days) {
   const d = new Date(base);
@@ -107,8 +110,8 @@ function RelatorioVendasIsland() {
       try {
         const [{ data: clientesData, error: cliErr }, { data: destinosData, error: destErr }, { data: produtosData, error: prodErr }] = await Promise.all([
           supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
-          supabase.from("destinos").select("id, nome").order("nome", { ascending: true }),
-          supabase.from("produtos").select("id, nome, tipo").order("nome", { ascending: true })
+          supabase.from("produtos").select("id, nome").order("nome", { ascending: true }),
+          supabase.from("tipo_produtos").select("id, nome, tipo").order("nome", { ascending: true })
         ]);
         if (cliErr) throw cliErr;
         if (destErr) throw destErr;
@@ -127,23 +130,23 @@ function RelatorioVendasIsland() {
   }, []);
   const clientesFiltrados = reactExports.useMemo(() => {
     if (!clienteBusca.trim()) return clientes;
-    const termo = clienteBusca.toLowerCase();
+    const termo = normalizeText(clienteBusca);
     return clientes.filter((c) => {
       const doc = c.cpf || "";
-      return c.nome.toLowerCase().includes(termo) || doc.toLowerCase().includes(termo);
+      return normalizeText(c.nome).includes(termo) || normalizeText(doc).includes(termo);
     });
   }, [clientes, clienteBusca]);
   const destinosFiltrados = reactExports.useMemo(() => {
     if (!destinoBusca.trim()) return destinos;
-    const termo = destinoBusca.toLowerCase();
-    return destinos.filter((d) => d.nome.toLowerCase().includes(termo));
+    const termo = normalizeText(destinoBusca);
+    return destinos.filter((d) => normalizeText(d.nome).includes(termo));
   }, [destinos, destinoBusca]);
   const produtosFiltrados = reactExports.useMemo(() => {
     if (!produtoBusca.trim()) return produtos;
-    const termo = produtoBusca.toLowerCase();
+    const termo = normalizeText(produtoBusca);
     return produtos.filter((p) => {
-      const nome = (p.nome || "").toLowerCase();
-      const tipo = (p.tipo || "").toLowerCase();
+      const nome = normalizeText(p.nome || "");
+      const tipo = normalizeText(p.tipo || "");
       return nome.includes(termo) || tipo.includes(termo);
     });
   }, [produtos, produtoBusca]);

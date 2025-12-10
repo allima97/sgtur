@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -50,7 +50,7 @@ function RelatorioAgrupadoDestinoIsland() {
   reactExports.useEffect(() => {
     async function carregarBase() {
       try {
-        const { data, error } = await supabase.from("destinos").select("id, nome").order("nome", { ascending: true });
+        const { data, error } = await supabase.from("produtos").select("id, nome").order("nome", { ascending: true });
         if (error) throw error;
         setDestinos(data || []);
       } catch (e) {

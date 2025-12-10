@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_iifXH6qW.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -16,8 +16,8 @@ function DashboardAdminIsland() {
   const [sistema, setSistema] = reactExports.useState({
     clientes: 0,
     vendas: 0,
-    destinos: 0,
-    produtos: 0
+    produtos: 0,
+    tipos: 0
   });
   const [isAdmin, setIsAdmin] = reactExports.useState(false);
   reactExports.useEffect(() => {
@@ -59,11 +59,17 @@ function DashboardAdminIsland() {
           }
         }
         setGestores(listaGestores);
-        const tabelas = ["clientes", "vendas", "destinos", "produtos"];
-        const resultado = { clientes: 0, vendas: 0, destinos: 0, produtos: 0 };
-        for (const t of tabelas) {
-          const { count } = await supabase.from(t).select("*", { count: "exact", head: true });
-          resultado[t] = count || 0;
+        const tabelas = [
+          { chave: "clientes", tabela: "clientes" },
+          { chave: "vendas", tabela: "vendas" },
+          { chave: "produtos", tabela: "produtos" },
+          // destinos/produtos cadastrados
+          { chave: "tipos", tabela: "tipo_produtos" }
+        ];
+        const resultado = { clientes: 0, vendas: 0, produtos: 0, tipos: 0 };
+        for (const { chave, tabela } of tabelas) {
+          const { count } = await supabase.from(tabela).select("*", { count: "exact", head: true });
+          resultado[chave] = count || 0;
         }
         setSistema(resultado);
       } catch (e) {
@@ -113,12 +119,12 @@ function DashboardAdminIsland() {
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.vendas })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Destinos" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.destinos })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Produtos" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.produtos })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Tipos de produto" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.tipos })
             ] })
           ]
         }
