@@ -139,7 +139,22 @@ export default function ProdutosIsland() {
         erros.push("tipo_produtos");
         if (tipoResp.error.message) detalhesErro.push(`tipo_produtos: ${tipoResp.error.message}`);
       } else {
-        setTipos((tipoResp.data || []) as TipoProduto[]);
+        const listaTipos = (tipoResp.data || []) as TipoProduto[];
+        if (listaTipos.length === 0) {
+          // fallback sem filtro de ativo para evitar lista vazia
+          const { data: tiposAll, error: tiposAllErr } = await supabase
+            .from("tipo_produtos")
+            .select("id, nome, tipo")
+            .order("nome");
+          if (tiposAllErr) {
+            erros.push("tipo_produtos");
+            detalhesErro.push(`tipo_produtos (fallback): ${tiposAllErr.message}`);
+          } else {
+            setTipos((tiposAll || []) as TipoProduto[]);
+          }
+        } else {
+          setTipos(listaTipos);
+        }
       }
 
       if (produtosResp.error) {
@@ -665,7 +680,7 @@ export default function ProdutosIsland() {
                       </button>
                     )}
 
-                    {permissao === "admin" && (
+                    {(permissao === "admin" || permissao === "delete") && (
                       <button
                         className="btn-icon btn-danger"
                         title="Excluir"
