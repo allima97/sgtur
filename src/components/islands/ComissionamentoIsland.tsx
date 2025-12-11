@@ -262,10 +262,11 @@ export default function ComissionamentoIsland() {
 
     // Agregadores por produto
     const baseMetaPorProduto: Record<string, number> = {};
-    const liquidoPorProduto: Record<string, number> = {};
+    const brutoPorProduto: Record<string, number> = {};
 
     let baseMeta = 0;
-    let valorLiquido = 0;
+    let totalBruto = 0;
+    let totalTaxas = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
     const comissaoDifDetalhe: Record<string, number> = {};
@@ -293,23 +294,25 @@ export default function ComissionamentoIsland() {
             ? valTotal + valTaxas
             : valTotal;
 
-        liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + valTotal;
+        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + valTotal;
         baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
 
         if (prod.soma_na_meta) baseMeta += valParaMeta;
-        valorLiquido += valTotal;
+        totalBruto += valTotal;
+        totalTaxas += valTaxas;
       });
     });
 
+    const valorLiquido = totalBruto - totalTaxas;
     const pctMetaGeral =
       metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? (baseMeta / metaGeral.meta_geral) * 100 : 0;
 
     // 2) Calcula comissões com base nos agregados
-    Object.keys(liquidoPorProduto).forEach((prodId) => {
+    Object.keys(brutoPorProduto).forEach((prodId) => {
       const prod = produtos[prodId];
       if (!prod) return;
 
-      const baseCom = liquidoPorProduto[prodId] || 0;
+      const baseCom = brutoPorProduto[prodId] || 0;
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
@@ -340,6 +343,8 @@ export default function ComissionamentoIsland() {
 
     return {
       baseMeta,
+      totalBruto,
+      totalTaxas,
       valorLiquido,
       pctMetaGeral,
       comissaoGeral,
@@ -402,7 +407,7 @@ export default function ComissionamentoIsland() {
               className="kpi-grid"
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(180px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
                 gap: 12,
                 marginBottom: 4,
               }}
@@ -414,20 +419,26 @@ export default function ComissionamentoIsland() {
                 </div>
               </div>
               <div className="kpi-card" style={{ ...cardColStyle, color: "#ca8a04" }}>
-                <div className="kpi-label">Vendas do mês</div>
+                <div className="kpi-label">Total Bruto</div>
                 <div className="kpi-value">
-                  {resumo.baseMeta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              </div>
+              <div className="kpi-card" style={{ ...cardColStyle, color: "#c2410c" }}>
+                <div className="kpi-label">Total Taxas</div>
+                <div className="kpi-value">
+                  {resumo.totalTaxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              </div>
+              <div className="kpi-card" style={{ ...cardColStyle, color: "#0ea5e9" }}>
+                <div className="kpi-label">Valor Liquido</div>
+                <div className="kpi-value">
+                  {resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
               <div className="kpi-card" style={{ ...cardColStyle, color: "#2563eb" }}>
                 <div className="kpi-label">Meta atingida</div>
                 <div className="kpi-value">{resumo.pctMetaGeral.toFixed(1)}%</div>
-              </div>
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#c2410c" }}>
-                <div className="kpi-label">Base para comissionamento</div>
-                <div className="kpi-value">
-                  {resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </div>
               </div>
             </div>
           </div>

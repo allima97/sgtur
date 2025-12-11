@@ -194,6 +194,12 @@ export default function AuthLoginIsland() {
               onChange={e => setPassword(e.target.value)}
             />
           </div>
+          <div className="auth-links auth-links-forgot">
+            <a href="/auth/recover">
+              <i className="fa-solid fa-unlock-keyhole"></i>
+              Esqueceu a senha? Redefinir
+            </a>
+          </div>
           <div className="auth-actions">
             <button
               type="submit"

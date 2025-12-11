@@ -90,6 +90,17 @@
   flex-wrap: wrap;
 }
 
+.auth-links.auth-links-forgot {
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.auth-links.auth-links-forgot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .auth-links a {
   color: #a855f7;
   text-decoration: none;

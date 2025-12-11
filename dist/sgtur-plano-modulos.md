@@ -308,6 +308,29 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 
 ---
 
+### 2.9 Operação / Comissionamento (Novo)
+
+- Página: `/operacao/comissionamento`
+- Menu: seção **Operação** → Comissionamento
+- Funcionalidades:
+  - Filtro rápido de período (mês atual/anteriores, 3/6/12 meses)
+  - KPIs separados em dois cards:
+    - **Como está seu Progresso**: Meta do mês, Vendas do mês, Meta atingida, Base para comissionamento (cores verde/amarelo/azul/laranja, texto centralizado)
+    - **Seus Valores a Receber**: Comissão geral, comissão por cada produto diferenciado (cards individuais automáticos) e comissão total
+  - Cálculo considera:
+    - Parâmetros do sistema (`foco_valor`, `usar_taxas_na_meta`)
+    - Metas gerais (`metas_vendedor`) e metas por produto (`metas_vendedor_produto`)
+    - Regras gerais (`commission_rule`) e regras/percentuais fixos por produto (`product_commission_rule`)
+    - Recebíveis da venda (`vendas` + `vendas_recibos`) filtrando `cancelada = false`
+    - Produtos diferenciados: pagam comissão fixa; se `soma_na_meta = true` contribuem para atingimento; KPIs exibem um card por produto
+    - Comissão sempre calculada sobre o líquido (`valor_total`), atingimento de meta pode usar bruto ou líquido conforme parâmetros
+- Tecnologias:
+  - React Island (`ComissionamentoIsland`)
+  - Supabase queries paralelas
+  - Layout em cards/KPIs alinhados e centralizados
+
+---
+
 ## 3. Módulos Que Faltam (Essenciais para um Sistema Profissional)
 
 ### 3.1 Módulo de Orçamentos (CRM)
@@ -385,6 +408,8 @@ Tecnologias:
 - `FechamentoComissaoIsland` permanece usando `meta_geral`; metas diferenciadas ficam disponíveis via `metas_vendedor_produto` para evoluções futuras de cálculo.
 - `MetasVendedorIsland` segue escopo “vendedor/equipe”, status ativo/inativo e validação com `parametros_comissao` (foco líquido exige metas diferenciadas > 0).
 - `CommissionTemplatesIsland` mantém validações de modo fixo/escalonado; templates continuam no fluxo de regras, mas não são mais selecionados em metas.
+- **Comissionamento (novo)**: página `/operacao/comissionamento` mostra KPIs de progresso e valores a receber, calcula comissão geral e por produto diferenciado com base em parâmetros, metas e recebíveis do período.
+- **product_commission_rule**: correção no upsert para produtos diferenciados criando regra fixa automática quando faltar `rule_id` e garantindo persistência dos campos `fix_meta_*`.
 
 **Próximos passos imediatos:**
 - Garantir no Supabase a tabela `metas_vendedor_produto` (FK para `metas_vendedor` e `produtos`) para evitar erros 42703 no CRUD de metas diferenciadas.
