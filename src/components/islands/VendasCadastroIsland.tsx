@@ -94,10 +94,11 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       setClientes(c.data || []);
       const cidadesLista = (d.data || []) as Cidade[];
       setCidades(cidadesLista);
-      setProdutos(p.data || []);
+      const produtosLista = (p.data || []) as Produto[];
+      setProdutos(produtosLista);
 
       if (vendaId) {
-        await carregarVenda(vendaId, cidadesLista);
+        await carregarVenda(vendaId, cidadesLista, produtosLista);
       }
     } catch (e) {
       console.error(e);
@@ -107,7 +108,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     }
   }
 
-  async function carregarVenda(id: string, cidadesBase?: Cidade[]) {
+  async function carregarVenda(id: string, cidadesBase?: Cidade[], produtosBase?: Produto[]) {
     try {
       setLoadingVenda(true);
 
@@ -153,11 +154,14 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         .eq("venda_id", id);
       if (recErr) throw recErr;
 
+      const produtosLista = produtosBase || produtos;
       setRecibos(
         (recibosData || []).map((r: any) => ({
           id: r.id,
           produto_id:
-            produtos.find((p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId))?.id || "",
+            produtosLista.find(
+              (p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId || !p.cidade_id)
+            )?.id || "",
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? String(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? String(r.valor_taxas) : "0",
@@ -254,12 +258,22 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
   const produtosFiltrados = useMemo(() => {
     const base = formVenda.destino_id
-      ? produtos.filter((p) => p.cidade_id === formVenda.destino_id)
-      : [];
+      ? produtos.filter((p) => !p.cidade_id || p.cidade_id === formVenda.destino_id)
+      : produtos.filter((p) => !p.cidade_id); // sem cidade definida, mostra globais
     if (!buscaProduto.trim()) return base;
     const t = normalizeText(buscaProduto);
     return base.filter((c) => normalizeText(c.nome).includes(t));
   }, [produtos, buscaProduto, formVenda.destino_id]);
+
+  const existeProdutoGlobal = useMemo(() => produtos.some((p) => !p.cidade_id), [produtos]);
+
+  const cidadeObrigatoria = useMemo(() => {
+    if (recibos.length === 0) return false;
+    return recibos.some((r) => {
+      const prod = produtos.find((p) => p.id === r.produto_id);
+      return prod?.cidade_id;
+    });
+  }, [recibos, produtos]);
 
   function handleCidadeDestino(valor: string) {
     setBuscaDestino(valor);
@@ -291,7 +305,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     setRecibos((prev) =>
       prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        if (prod && prod.cidade_id === formVenda.destino_id) return r;
+        if (prod && (!prod.cidade_id || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
     );
@@ -343,10 +357,39 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       }
 
       const produtoDestino = produtos.find((p) => p.id === produtoDestinoId);
-      if (!produtoDestino || produtoDestino.cidade_id !== formVenda.destino_id) {
+      const possuiProdutoLocal = recibos.some((r) => {
+        const prod = produtos.find((p) => p.id === r.produto_id);
+        return prod?.cidade_id;
+      });
+
+      if (possuiProdutoLocal && !formVenda.destino_id) {
+        setErro("Selecione a cidade de destino para vendas com produtos vinculados a cidade.");
+        setSalvando(false);
+        return;
+      }
+
+      if (!produtoDestino) {
+        setErro("O produto do recibo precisa ser válido.");
+        setSalvando(false);
+        return;
+      }
+
+      if (produtoDestino.cidade_id && formVenda.destino_id && produtoDestino.cidade_id !== formVenda.destino_id) {
         setErro("O produto do recibo precisa pertencer à cidade de destino selecionada.");
         setSalvando(false);
         return;
+      }
+
+      if (formVenda.destino_id) {
+        const produtoDeOutraCidade = recibos.some((r) => {
+          const prod = produtos.find((p) => p.id === r.produto_id);
+          return prod?.cidade_id && prod.cidade_id !== formVenda.destino_id;
+        });
+        if (produtoDeOutraCidade) {
+          setErro("Todos os produtos precisam pertencer à cidade selecionada ou ser globais.");
+          setSalvando(false);
+          return;
+        }
       }
       if (!produtoDestino.tipo_produto) {
         setErro("O produto selecionado não possui tipo vinculado. Cadastre um tipo de produto para ele.");
@@ -394,7 +437,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         });
 
         alert("Venda atualizada com sucesso!");
-        await carregarVenda(editId);
+        await carregarVenda(editId, cidades, produtos);
       } else {
         // 1) INSERE VENDA
         const { data: vendaData, error: vendaErr } = await supabase
@@ -542,6 +585,11 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             {/* CIDADE DE DESTINO */}
             <div className="form-group" style={{ position: "relative" }}>
               <label className="form-label">Cidade de Destino *</label>
+              {existeProdutoGlobal && (
+                <small style={{ display: "block", color: "#475569", marginBottom: 4 }}>
+                  Obrigatório apenas se o recibo tiver produto vinculado a uma cidade.
+                </small>
+              )}
               <input
                 className="form-input"
                 placeholder="Digite o nome da cidade"
@@ -549,7 +597,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 onChange={(e) => handleCidadeDestino(e.target.value)}
                 onFocus={() => setMostrarSugestoesCidade(true)}
                 onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                required
+                required={cidadeObrigatoria}
                 style={{ marginBottom: 6 }}
               />
               {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
@@ -634,7 +682,11 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                   <input
                     className="form-input"
                     list={`listaProdutos-${i}`}
-                    placeholder="Selecione uma cidade primeiro e busque o produto..."
+                    placeholder={
+                      existeProdutoGlobal
+                        ? "Escolha uma cidade ou selecione um produto global..."
+                        : "Selecione uma cidade primeiro e busque o produto..."
+                    }
                     value={produtos.find((p) => p.id === r.produto_id)?.nome || buscaProduto}
                     onChange={(e) => setBuscaProduto(e.target.value)}
                     onBlur={() => {
@@ -646,7 +698,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                       }
                     }}
                     required
-                    disabled={!formVenda.destino_id}
+                    disabled={!formVenda.destino_id && !existeProdutoGlobal}
                   />
                   <datalist id={`listaProdutos-${i}`}>
                     {produtosFiltrados.map((p) => (

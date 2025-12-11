@@ -44,6 +44,7 @@ type FormState = {
   destino: string;
   cidade_id: string;
   tipo_produto: string;
+  global: boolean;
   atracao_principal: string;
   melhor_epoca: string;
   duracao_sugerida: string;
@@ -58,6 +59,7 @@ const initialForm: FormState = {
   destino: "",
   cidade_id: "",
   tipo_produto: "",
+  global: false,
   atracao_principal: "",
   melhor_epoca: "",
   duracao_sugerida: "",
@@ -265,7 +267,7 @@ export default function ProdutosIsland() {
 
       return {
         ...p,
-        cidade_nome: cidade?.nome || "",
+        cidade_nome: cidade?.nome || (!p.cidade_id ? "Todas as cidades" : ""),
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipoLabel(tipo),
@@ -319,6 +321,7 @@ export default function ProdutosIsland() {
       nome: produto.nome,
       cidade_id: produto.cidade_id,
       tipo_produto: produto.tipo_produto || "",
+      global: !produto.cidade_id,
       atracao_principal: produto.atracao_principal || "",
       melhor_epoca: produto.melhor_epoca || "",
       duracao_sugerida: produto.duracao_sugerida || "",
@@ -328,7 +331,7 @@ export default function ProdutosIsland() {
       ativo: produto.ativo ?? true,
       destino: produto.destino || "",
     });
-    setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
+    setCidadeBusca(produto.cidade_id ? formatarCidadeNome(produto.cidade_id) || cidade?.nome || "" : "");
     setMostrarSugestoes(false);
   }
 
@@ -394,7 +397,7 @@ export default function ProdutosIsland() {
       setErro("Destino e obrigatorio.");
       return;
     }
-    if (!form.cidade_id) {
+    if (!form.global && !form.cidade_id) {
       setErro("Cidade e obrigatoria.");
       return;
     }
@@ -413,7 +416,7 @@ export default function ProdutosIsland() {
       const payload = {
         nome: nomeNormalizado,
         destino: destinoNormalizado,
-        cidade_id: form.cidade_id,
+        cidade_id: form.global ? null : form.cidade_id,
         tipo_produto: form.tipo_produto,
         atracao_principal: form.atracao_principal.trim() || null,
         melhor_epoca: form.melhor_epoca.trim() || null,
@@ -524,7 +527,7 @@ export default function ProdutosIsland() {
                 onChange={(e) => handleCidadeBusca(e.target.value)}
                 onFocus={() => setMostrarSugestoes(true)}
                 onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                disabled={permissao === "view"}
+                disabled={permissao === "view" || form.global}
                 style={{ marginBottom: 6 }}
               />
               {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
@@ -574,6 +577,29 @@ export default function ProdutosIsland() {
                   })}
                 </div>
               )}
+              <div style={{ marginTop: 6 }}>
+                <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: "#0f172a" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.global}
+                    onChange={(e) => {
+                      const marcado = e.target.checked;
+                      handleChange("global", marcado);
+                      if (marcado) {
+                        handleChange("cidade_id", "");
+                        setCidadeBusca("");
+                        setResultadosCidade([]);
+                        setMostrarSugestoes(false);
+                      }
+                    }}
+                    disabled={permissao === "view"}
+                  />
+                  Produto disponível para todas as cidades
+                </label>
+                <small style={{ color: "#475569" }}>
+                  Marque para produtos comuns (ex.: seguro viagem, chip) que devem aparecer em qualquer destino.
+                </small>
+              </div>
             </div>
           </div>
 
