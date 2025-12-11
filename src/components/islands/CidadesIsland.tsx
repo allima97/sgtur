@@ -74,6 +74,7 @@ export default function CidadesIsland() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [loadingBusca, setLoadingBusca] = useState(false);
 
   // CARREGAR DADOS
   async function carregar(todos = false) {
@@ -215,7 +216,7 @@ export default function CidadesIsland() {
 
     const controller = new AbortController();
     async function buscar() {
-      setLoading(true);
+      setLoadingBusca(true);
       setErro(null);
       try {
         const { data, error } = await supabase.rpc(
@@ -240,10 +241,23 @@ export default function CidadesIsland() {
         setCarregouTodos(true);
       } catch (e) {
         if (controller.signal.aborted) return;
-        console.error(e);
-        setErro("Erro ao buscar cidades.");
+        console.warn("[Cidades] RPC falhou, tentando fallback direto.", e);
+        try {
+          const { data, error } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_id, descricao, created_at")
+            .ilike("nome", `%${termo}%`)
+            .order("nome");
+          if (error) throw error;
+          setCidades((data as Cidade[]) || []);
+          setCarregouTodos(true);
+        } catch (errFinal) {
+          console.error(errFinal);
+          const msg = errFinal instanceof Error ? errFinal.message : "";
+          setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
+        }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) setLoadingBusca(false);
       }
     }
 
