@@ -263,6 +263,7 @@ export default function ComissionamentoIsland() {
     // Agregadores por produto
     const baseMetaPorProduto: Record<string, number> = {};
     const brutoPorProduto: Record<string, number> = {};
+    const liquidoPorProduto: Record<string, number> = {};
 
     let baseMeta = 0;
     let totalBruto = 0;
@@ -285,20 +286,17 @@ export default function ComissionamentoIsland() {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
-        const valTotal = Number(r.valor_total || 0);
+        const valTotalBruto = Number(r.valor_total || 0);
         const valTaxas = Number(r.valor_taxas || 0);
-        const valParaMeta =
-          parametros.foco_valor === "liquido"
-            ? valTotal
-            : parametros.usar_taxas_na_meta
-            ? valTotal + valTaxas
-            : valTotal;
+        const valLiquido = valTotalBruto - valTaxas;
+        const valParaMeta = parametros.usar_taxas_na_meta ? valTotalBruto : valLiquido;
 
-        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + valTotal;
+        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + valTotalBruto;
+        liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + valLiquido;
         baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
 
         if (prod.soma_na_meta) baseMeta += valParaMeta;
-        totalBruto += valTotal;
+        totalBruto += valTotalBruto;
         totalTaxas += valTaxas;
       });
     });
@@ -312,7 +310,8 @@ export default function ComissionamentoIsland() {
       const prod = produtos[prodId];
       if (!prod) return;
 
-      const baseCom = brutoPorProduto[prodId] || 0;
+      const baseCom =
+        parametros.foco_valor === "liquido" ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
