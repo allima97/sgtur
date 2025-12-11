@@ -317,13 +317,15 @@ export default function ComissionamentoIsland() {
         if (!regProd) return;
         const metaProd = metasProdutoMap[prodId] || 0;
         const baseMetaProd = baseMetaPorProduto[prodId] || 0;
-        const pctMetaProd = metaProd > 0 ? (baseMetaProd / metaProd) * 100 : 0;
-        const pctCom =
-          pctMetaProd >= 120
+        const temMetaProd = metaProd > 0;
+        const pctMetaProd = temMetaProd ? (baseMetaProd / metaProd) * 100 : 0;
+        const pctCom = temMetaProd
+          ? baseMetaProd < metaProd
+            ? 0
+            : pctMetaProd >= 120
             ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
-            : pctMetaProd >= 100
-            ? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
-            : regProd.fix_meta_nao_atingida ?? 0;
+            : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
+          : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
         comissaoDif += val;
         comissaoDifDetalhe[prodId] = val;
