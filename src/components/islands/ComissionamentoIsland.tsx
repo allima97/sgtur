@@ -458,7 +458,7 @@ export default function ComissionamentoIsland() {
               </div>
               {(resumo.produtosDiferenciados || []).map((pid) => (
                 <div key={pid} className="kpi-card" style={cardColStyle}>
-                  <div className="kpi-label">Comissão {produtos[pid]?.nome || "(produto)"}</div>
+                  <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
                   <div className="kpi-value">
                     {(resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
                       style: "currency",
