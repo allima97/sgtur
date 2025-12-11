@@ -82,6 +82,7 @@ export default function ProdutosIsland() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
 
   async function carregarDados() {
     const erros: string[] = [];
@@ -191,6 +192,11 @@ export default function ProdutosIsland() {
     return subdivisao ? `${cidade.nome} (${subdivisao.nome})` : cidade.nome;
   }
 
+  function tipoLabel(t?: TipoProduto | null) {
+    if (!t) return "";
+    return (t.nome || "").trim() || t.tipo || "";
+  }
+
   const produtosEnriquecidos = useMemo(() => {
     const cidadeMap = new Map(cidades.map((c) => [c.id, c]));
     const paisMap = new Map(paises.map((p) => [p.id, p]));
@@ -207,7 +213,7 @@ export default function ProdutosIsland() {
         cidade_nome: cidade?.nome || "",
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
-        tipo_nome: tipo?.nome || tipo?.tipo || "",
+        tipo_nome: tipoLabel(tipo),
       };
     });
   }, [produtos, cidades, subdivisoes, paises, tipos]);
@@ -278,6 +284,7 @@ export default function ProdutosIsland() {
     const controller = new AbortController();
     const t = setTimeout(async () => {
       setBuscandoCidade(true);
+      setErroCidadeBusca(null);
       try {
         const { data, error } = await supabase.rpc(
           "buscar_cidades",
@@ -287,7 +294,19 @@ export default function ProdutosIsland() {
         if (!controller.signal.aborted) {
           if (error) {
             console.error("Erro ao buscar cidades:", error);
-            setErro("Erro ao buscar cidades (RPC).");
+            setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
+            const { data: dataFallback, error: errorFallback } = await supabase
+              .from("cidades")
+              .select("id, nome, subdivisao_id")
+              .ilike("nome", `%${cidadeBusca.trim()}%`)
+              .order("nome");
+            if (errorFallback) {
+              console.error("Erro no fallback de cidades:", errorFallback);
+              setErroCidadeBusca("Erro ao buscar cidades.");
+            } else {
+              setResultadosCidade((dataFallback as CidadeBusca[]) || []);
+              setErroCidadeBusca(null);
+            }
           } else {
             setResultadosCidade((data as CidadeBusca[]) || []);
           }
@@ -411,7 +430,7 @@ export default function ProdutosIsland() {
                 <option value="">Selecione o tipo</option>
                 {tipos.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.nome || t.tipo}
+                    {tipoLabel(t) || "(sem nome)"}
                   </option>
                 ))}
               </select>
@@ -432,6 +451,9 @@ export default function ProdutosIsland() {
                 style={{ marginBottom: 6 }}
               />
               {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
+              {erroCidadeBusca && !buscandoCidade && (
+                <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
+              )}
               {mostrarSugestoes && (
                 <div
                   className="card-base"
