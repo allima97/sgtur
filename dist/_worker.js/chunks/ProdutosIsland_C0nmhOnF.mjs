@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { j as jsxRuntimeExports, s as supabase } from './supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports } from './supabase_CtqDhMax.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from './usePermissao_CncspAO2.mjs';
 
@@ -21,7 +21,7 @@ const initialForm = {
 function ProdutosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [paises, setPaises] = reactExports.useState([]);
-  const [estados, setEstados] = reactExports.useState([]);
+  const [subdivisoes, setSubdivisoes] = reactExports.useState([]);
   const [cidades, setCidades] = reactExports.useState([]);
   const [tipos, setTipos] = reactExports.useState([]);
   const [produtos, setProdutos] = reactExports.useState([]);
@@ -29,98 +29,138 @@ function ProdutosIsland() {
   const [busca, setBusca] = reactExports.useState("");
   const [cidadeBusca, setCidadeBusca] = reactExports.useState("");
   const [mostrarSugestoes, setMostrarSugestoes] = reactExports.useState(false);
+  const [resultadosCidade, setResultadosCidade] = reactExports.useState([]);
+  const [buscandoCidade, setBuscandoCidade] = reactExports.useState(false);
   const [loading, setLoading] = reactExports.useState(true);
   const [salvando, setSalvando] = reactExports.useState(false);
   const [editandoId, setEditandoId] = reactExports.useState(null);
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const [erro, setErro] = reactExports.useState(null);
+  const [erroCidadeBusca, setErroCidadeBusca] = reactExports.useState(null);
   async function carregarDados() {
-    async function carregarTodasCidades() {
-      const todas = [];
-      const pageSize = 1e3;
-      let from = 0;
-      while (true) {
-        const { data, error } = await supabase.from("cidades").select("id, nome, estado_id").order("nome").range(from, from + pageSize - 1);
-        if (error) throw error;
-        todas.push(...data || []);
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
-      return todas;
-    }
+    const erros = [];
+    const detalhesErro = [];
+    setLoading(true);
+    setErro(null);
     try {
-      setLoading(true);
-      setErro(null);
       const [
         { data: paisData, error: paisErr },
-        { data: estadoData, error: estErr },
-        cidadeData,
-        { data: tipoData, error: tipoErr },
-        { data: produtoData, error: prodErr }
+        { data: subdivisaoData, error: subErr },
+        produtosResp,
+        tipoResp
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("estados").select("id, nome, pais_id").order("nome"),
-        carregarTodasCidades(),
-        supabase.from("tipo_produtos").select("id, nome, tipo").order("nome"),
+        supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo").eq("ativo", true).order("nome").then(async (res) => {
+          if (res.error) {
+            detalhesErro.push(`tipo_produtos: ${res.error.message}`);
+            console.warn("Fallback tipo_produtos por 'tipo':", res.error);
+            const fallback = await supabase.from("tipo_produtos").select("id, nome, tipo").order("tipo");
+            return fallback;
+          }
+          return res;
+        }),
         supabase.from("produtos").select(
           "id, nome, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at"
         ).order("nome")
       ]);
-      if (paisErr) throw paisErr;
-      if (estErr) throw estErr;
-      if (tipoErr) throw tipoErr;
-      if (prodErr) throw prodErr;
-      setPaises(paisData || []);
-      setEstados(estadoData || []);
-      setCidades(cidadeData || []);
-      setTipos(tipoData || []);
-      setProdutos(produtoData || []);
+      if (paisErr) {
+        erros.push("paises");
+        if (paisErr.message) detalhesErro.push(`paises: ${paisErr.message}`);
+      } else {
+        setPaises(paisData || []);
+      }
+      if (subErr) {
+        erros.push("subdivisoes");
+        if (subErr.message) detalhesErro.push(`subdivisoes: ${subErr.message}`);
+      } else {
+        setSubdivisoes(subdivisaoData || []);
+      }
+      if (tipoResp.error) {
+        erros.push("tipo_produtos");
+        if (tipoResp.error.message) detalhesErro.push(`tipo_produtos: ${tipoResp.error.message}`);
+      } else {
+        const listaTipos = tipoResp.data || [];
+        if (listaTipos.length === 0) {
+          const { data: tiposAll, error: tiposAllErr } = await supabase.from("tipo_produtos").select("id, nome, tipo").order("nome");
+          if (tiposAllErr) {
+            erros.push("tipo_produtos");
+            detalhesErro.push(`tipo_produtos (fallback): ${tiposAllErr.message}`);
+          } else {
+            setTipos(tiposAll || []);
+          }
+        } else {
+          setTipos(listaTipos);
+        }
+      }
+      if (produtosResp.error) {
+        erros.push("produtos");
+        if (produtosResp.error.message) detalhesErro.push(`produtos: ${produtosResp.error.message}`);
+      } else {
+        const produtoData = produtosResp.data || [];
+        setProdutos(produtoData);
+        const idsCidade = Array.from(new Set(produtoData.map((p) => p.cidade_id).filter(Boolean)));
+        if (idsCidade.length) {
+          const { data: cidadesData, error: cidadesErr } = await supabase.from("cidades").select("id, nome, subdivisao_id").in("id", idsCidade);
+          if (cidadesErr) {
+            erros.push("cidades");
+            if (cidadesErr.message) detalhesErro.push(`cidades: ${cidadesErr.message}`);
+          } else {
+            setCidades(cidadesData || []);
+          }
+        } else {
+          setCidades([]);
+        }
+      }
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar produtos. Verifique se as tabelas estão corretas.");
+      erros.push("geral");
+      if (e?.message) detalhesErro.push(`geral: ${e.message}`);
     } finally {
+      if (erros.length) {
+        const detalhes = detalhesErro.length ? ` Detalhes: ${detalhesErro.join(" | ")}` : "";
+        setErro(`Erro ao carregar: ${erros.join(", ")}. Verifique permissoes/RLS.${detalhes}`);
+      }
       setLoading(false);
     }
   }
   reactExports.useEffect(() => {
     carregarDados();
   }, []);
-  const cidadesFiltradasPesquisa = reactExports.useMemo(() => {
-    const termo = normalizeText(cidadeBusca.trim());
-    if (!termo) return cidades;
-    return cidades.filter((c) => normalizeText(c.nome).includes(termo));
-  }, [cidades, cidadeBusca]);
-  const estadoMap = reactExports.useMemo(() => new Map(estados.map((e) => [e.id, e.nome])), [estados]);
+  const subdivisaoMap = reactExports.useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
   function formatarCidadeNome(cidadeId) {
     const cidade = cidades.find((c) => c.id === cidadeId);
     if (!cidade) return "";
-    const estadoNome = estadoMap.get(cidade.estado_id);
-    return estadoNome ? `${cidade.nome} (${estadoNome})` : cidade.nome;
+    const subdivisao = subdivisaoMap.get(cidade.subdivisao_id);
+    return subdivisao ? `${cidade.nome} (${subdivisao.nome})` : cidade.nome;
+  }
+  function tipoLabel(t) {
+    if (!t) return "";
+    return (t.nome || "").trim() || t.tipo || "";
   }
   const produtosEnriquecidos = reactExports.useMemo(() => {
     const cidadeMap = new Map(cidades.map((c) => [c.id, c]));
-    const estadoMap2 = new Map(estados.map((e) => [e.id, e]));
     const paisMap = new Map(paises.map((p) => [p.id, p]));
     const tipoMap = new Map(tipos.map((t) => [t.id, t]));
     return produtos.map((p) => {
       const cidade = cidadeMap.get(p.cidade_id || "");
-      const estado = cidade ? estadoMap2.get(cidade.estado_id) : void 0;
-      const pais = estado ? paisMap.get(estado.pais_id) : void 0;
+      const subdivisao = cidade ? subdivisaoMap.get(cidade.subdivisao_id) : void 0;
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : void 0;
       const tipo = p.tipo_produto ? tipoMap.get(p.tipo_produto) : void 0;
       return {
         ...p,
         cidade_nome: cidade?.nome || "",
-        estado_nome: estado?.nome || "",
+        subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
-        tipo_nome: tipo?.nome || tipo?.tipo || ""
+        tipo_nome: tipoLabel(tipo)
       };
     });
-  }, [produtos, cidades, estados, paises, tipos]);
+  }, [produtos, cidades, subdivisoes, paises, tipos]);
   const produtosFiltrados = reactExports.useMemo(() => {
     if (!busca.trim()) return produtosEnriquecidos;
     const termo = normalizeText(busca);
     return produtosEnriquecidos.filter(
-      (p) => normalizeText(p.nome).includes(termo) || normalizeText(p.cidade_nome).includes(termo) || normalizeText(p.estado_nome).includes(termo) || normalizeText(p.pais_nome).includes(termo) || normalizeText(p.tipo_nome).includes(termo)
+      (p) => normalizeText(p.nome).includes(termo) || normalizeText(p.cidade_nome).includes(termo) || normalizeText(p.subdivisao_nome).includes(termo) || normalizeText(p.pais_nome).includes(termo) || normalizeText(p.tipo_nome).includes(termo)
     );
   }, [busca, produtosEnriquecidos]);
   function handleChange(campo, valor) {
@@ -162,22 +202,62 @@ function ProdutosIsland() {
     setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
   }
+  reactExports.useEffect(() => {
+    if (cidadeBusca.trim().length < 2) {
+      setResultadosCidade([]);
+      return;
+    }
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setBuscandoCidade(true);
+      setErroCidadeBusca(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: cidadeBusca.trim(), limite: 10 },
+          { signal: controller.signal }
+        );
+        if (!controller.signal.aborted) {
+          if (error) {
+            console.error("Erro ao buscar cidades:", error);
+            setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
+            const { data: dataFallback, error: errorFallback } = await supabase.from("cidades").select("id, nome, subdivisao_id").ilike("nome", `%${cidadeBusca.trim()}%`).order("nome");
+            if (errorFallback) {
+              console.error("Erro no fallback de cidades:", errorFallback);
+              setErroCidadeBusca("Erro ao buscar cidades.");
+            } else {
+              setResultadosCidade(dataFallback || []);
+              setErroCidadeBusca(null);
+            }
+          } else {
+            setResultadosCidade(data || []);
+          }
+        }
+      } finally {
+        if (!controller.signal.aborted) setBuscandoCidade(false);
+      }
+    }, 300);
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [cidadeBusca]);
   async function salvar(e) {
     e.preventDefault();
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar produtos.");
+      setErro("Voce nao tem permissao para salvar produtos.");
       return;
     }
     if (!form.nome.trim()) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome e obrigatorio.");
       return;
     }
     if (!form.cidade_id) {
-      setErro("Cidade é obrigatória.");
+      setErro("Cidade e obrigatoria.");
       return;
     }
     if (!form.tipo_produto) {
-      setErro("Tipo de produto é obrigatório.");
+      setErro("Tipo de produto e obrigatorio.");
       return;
     }
     try {
@@ -225,13 +305,13 @@ function ProdutosIsland() {
       await carregarDados();
     } catch (e) {
       console.error(e);
-      setErro("Não foi possível excluir o produto. Verifique vínculos com vendas/orçamentos.");
+      setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
     } finally {
       setExcluindoId(null);
     }
   }
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
-  if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Cadastros." });
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissoes..." });
+  if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Voce nao possui acesso ao modulo de Cadastros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "destinos-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
@@ -259,7 +339,7 @@ function ProdutosIsland() {
               disabled: permissao === "view",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione o tipo" }),
-                tipos.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t.id, children: t.nome || t.tipo }, t.id))
+                tipos.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: t.id, children: tipoLabel(t) || "(sem nome)" }, t.id))
               ]
             }
           )
@@ -280,6 +360,8 @@ function ProdutosIsland() {
             style: { marginBottom: 6 }
           }
         ),
+        buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: 12, color: "#6b7280" }, children: "Buscando..." }),
+        erroCidadeBusca && !buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: 12, color: "#dc2626" }, children: erroCidadeBusca }),
         mostrarSugestoes && /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -292,11 +374,10 @@ function ProdutosIsland() {
               border: "1px solid #e5e7eb"
             },
             children: [
-              cidadesFiltradasPesquisa.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 6px", color: "#6b7280" }, children: "Nenhuma cidade encontrada." }),
-              cidadesFiltradasPesquisa.map((c) => {
-                const estadoNome = estadoMap.get(c.estado_id);
-                const label = estadoNome ? `${c.nome} (${estadoNome})` : c.nome;
-                return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              resultadosCidade.length === 0 && !buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 6px", color: "#6b7280" }, children: "Nenhuma cidade encontrada." }),
+              resultadosCidade.map((c) => {
+                const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
                     type: "button",
@@ -313,8 +394,15 @@ function ProdutosIsland() {
                       handleChange("cidade_id", c.id);
                       setCidadeBusca(label);
                       setMostrarSugestoes(false);
+                      setResultadosCidade([]);
                     },
-                    children: label
+                    children: [
+                      label,
+                      c.pais_nome ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#6b7280", marginLeft: 6 }, children: [
+                        "• ",
+                        c.pais_nome
+                      ] }) : null
+                    ]
                   },
                   c.id
                 );
@@ -325,7 +413,7 @@ function ProdutosIsland() {
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Atração principal" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Atracao principal" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -338,14 +426,14 @@ function ProdutosIsland() {
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Melhor época" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Melhor epoca" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
               className: "form-input",
               value: form.melhor_epoca,
               onChange: (e) => handleChange("melhor_epoca", e.target.value),
-              placeholder: "Ex: Dezembro a Março",
+              placeholder: "Ex: Dezembro a Marco",
               disabled: permissao === "view"
             }
           )
@@ -353,7 +441,7 @@ function ProdutosIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Duração sugerida" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Duracao sugerida" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -366,14 +454,14 @@ function ProdutosIsland() {
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nível de preço" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nivel de preco" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
               className: "form-input",
               value: form.nivel_preco,
               onChange: (e) => handleChange("nivel_preco", e.target.value),
-              placeholder: "Ex: Econômico, Intermediário, Premium",
+              placeholder: "Ex: Economico, Intermediario, Premium",
               disabled: permissao === "view"
             }
           )
@@ -393,7 +481,7 @@ function ProdutosIsland() {
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Informações importantes" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Informacoes importantes" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "textarea",
           {
@@ -401,7 +489,7 @@ function ProdutosIsland() {
             rows: 3,
             value: form.informacoes_importantes,
             onChange: (e) => handleChange("informacoes_importantes", e.target.value),
-            placeholder: "Observações gerais, dicas, documentação necessária, etc.",
+            placeholder: "Observacoes gerais, dicas, documentacao necessaria, etc.",
             disabled: permissao === "view"
           }
         )
@@ -417,14 +505,14 @@ function ProdutosIsland() {
             disabled: permissao === "view",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "true", children: "Sim" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "false", children: "Não" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "false", children: "Nao" })
             ]
           }
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
-        permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar produto" }),
-        editandoId && permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", style: { marginLeft: 8 }, onClick: iniciarNovo, children: "Cancelar edição" })
+        permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar produto" }),
+        editandoId && permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", style: { marginLeft: 8 }, onClick: iniciarNovo, children: "Cancelar edicao" })
       ] })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
@@ -435,7 +523,7 @@ function ProdutosIsland() {
           className: "form-input",
           value: busca,
           onChange: (e) => setBusca(e.target.value),
-          placeholder: "Busque por nome, tipo, cidade, estado ou país..."
+          placeholder: "Busque por nome, tipo, cidade, subdivisao ou pais..."
         }
       )
     ] }) }) }),
@@ -445,12 +533,12 @@ function ProdutosIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cidade" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Estado" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "País" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nível de preço" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nivel de preco" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
         loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Carregando produtos..." }) }),
@@ -459,21 +547,21 @@ function ProdutosIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.nome }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.tipo_nome || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.cidade_nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.estado_nome || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.subdivisao_nome || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.pais_nome || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.nivel_preco || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.ativo ? "Sim" : "Não" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.ativo ? "Sim" : "Nao" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
-            permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(p), children: "✏️" }),
-            permissao === "admin" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(p), children: "Editar" }),
+            (permissao === "admin" || permissao === "delete") && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 className: "btn-icon btn-danger",
                 title: "Excluir",
                 onClick: () => excluir(p.id),
                 disabled: excluindoId === p.id,
-                children: excluindoId === p.id ? "..." : "🗑️"
+                children: excluindoId === p.id ? "..." : "Excluir"
               }
             )
           ] })

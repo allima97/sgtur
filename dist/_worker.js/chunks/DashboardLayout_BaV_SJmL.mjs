@@ -414,7 +414,7 @@ const MAPA_MODULOS = {
   Clientes: "clientes",
   Cadastros: "cadastros",
   Paises: "cadastros_paises",
-  Estados: "cadastros_estados",
+  Subdivisoes: "cadastros_estados",
   Cidades: "cadastros_cidades",
   Destinos: "cadastros_destinos",
   Produtos: "cadastros_produtos",
@@ -682,12 +682,12 @@ function MenuIsland({ activePage }) {
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "a",
             {
-              className: `sidebar-link ${activePage === "estados" ? "active" : ""}`,
+              className: `sidebar-link ${activePage === "subdivisoes" ? "active" : ""}`,
               href: "/cadastros/estados",
               onClick: handleNavClick,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🗺️" }),
-                "Estados"
+                "Subdivisoes"
               ]
             }
           ) }),

@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout__E2c9QIl.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -13,7 +13,7 @@ function normalizeText(value) {
 }
 const initialForm = {
   nome: "",
-  estado_id: "",
+  subdivisao_id: "",
   descricao: ""
 };
 function CidadesIsland() {
@@ -27,7 +27,7 @@ function CidadesIsland() {
   const podeEditar = isAdmin || permissao === "edit" || permissao === "delete" || permissao === "admin";
   const podeExcluir = isAdmin || permissao === "delete" || permissao === "admin";
   const [paises, setPaises] = reactExports.useState([]);
-  const [estados, setEstados] = reactExports.useState([]);
+  const [subdivisoes, setSubdivisoes] = reactExports.useState([]);
   const [cidades, setCidades] = reactExports.useState([]);
   const [busca, setBusca] = reactExports.useState("");
   const [form, setForm] = reactExports.useState(initialForm);
@@ -37,36 +37,83 @@ function CidadesIsland() {
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(true);
   const [carregouTodos, setCarregouTodos] = reactExports.useState(false);
+  const [loadingBusca, setLoadingBusca] = reactExports.useState(false);
   async function carregar(todos = false) {
     if (!podeVer) return;
     async function carregarCidades() {
+      const selectPadrao = "id, nome, subdivisao_id, descricao, created_at";
+      const selectFallback = "id, nome, subdivisao_id, descricao";
       if (todos) {
         const todas = [];
         const pageSize = 1e3;
         let from = 0;
         while (true) {
-          const { data, error } = await supabase.from("cidades").select("id, nome, estado_id, descricao, created_at").order("nome").range(from, from + pageSize - 1);
-          if (error) throw error;
-          todas.push(...data || []);
-          if (!data || data.length < pageSize) break;
-          from += pageSize;
+          try {
+            const { data, error } = await supabase.from("cidades").select(selectPadrao).order("nome").range(from, from + pageSize - 1);
+            if (error) throw error;
+            todas.push(...data || []);
+            if (!data || data.length < pageSize) break;
+            from += pageSize;
+          } catch (err) {
+            console.warn("[Cidades] Falha na query principal, aplicando fallback.", err);
+            try {
+              const { data, error } = await supabase.from("cidades").select(selectFallback).order("nome").range(from, from + pageSize - 1);
+              if (error) throw error;
+              todas.push(...data || []);
+              if (!data || data.length < pageSize) break;
+              from += pageSize;
+            } catch (fallbackErr) {
+              console.warn("[Cidades] Fallback sem campo descricao.", fallbackErr);
+              const { data, error } = await supabase.from("cidades").select("id, nome, subdivisao_id").order("nome").range(from, from + pageSize - 1);
+              if (error) throw error;
+              todas.push(...data || []);
+              if (!data || data.length < pageSize) break;
+              from += pageSize;
+            }
+          }
         }
         return todas;
       } else {
-        const { data, error } = await supabase.from("cidades").select("id, nome, estado_id, descricao, created_at").order("created_at", { ascending: false }).limit(10);
-        if (error) throw error;
-        return data || [];
+        try {
+          const { data, error } = await supabase.from("cidades").select(selectPadrao).order("created_at", { ascending: false }).limit(10);
+          if (error) throw error;
+          return data || [];
+        } catch (err) {
+          console.warn("[Cidades] created_at indisponivel, ordenando por nome.", err);
+          try {
+            const { data, error } = await supabase.from("cidades").select(selectFallback).order("nome").limit(10);
+            if (error) throw error;
+            return data || [];
+          } catch (fallbackErr) {
+            console.warn("[Cidades] Fallback sem descricao/nome.", fallbackErr);
+            const { data, error } = await supabase.from("cidades").select("id, nome, subdivisao_id").order("nome").limit(10);
+            if (error) throw error;
+            return data || [];
+          }
+        }
       }
     }
     try {
       setLoading(true);
-      const [{ data: paisesData }, { data: estadosData }, cidadesData] = await Promise.all([
+      const [
+        { data: paisesData, error: paisesErro },
+        { data: subdivisoesData, error: subdivisoesErro },
+        cidadesData
+      ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("estados").select("id, nome, pais_id").order("nome"),
+        supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome"),
         carregarCidades()
       ]);
-      setPaises(paisesData || []);
-      setEstados(estadosData || []);
+      if (paisesErro) {
+        setErro("Erro ao carregar paises.");
+      } else {
+        setPaises(paisesData || []);
+      }
+      if (subdivisoesErro) {
+        setErro("Erro ao carregar subdivisoes.");
+      } else {
+        setSubdivisoes(subdivisoesData || []);
+      }
       setCidades(cidadesData || []);
       setCarregouTodos(todos);
     } catch (e) {
@@ -85,41 +132,113 @@ function CidadesIsland() {
     carregar(false);
   }, [carregando, podeVer]);
   reactExports.useEffect(() => {
-    if (busca.trim() && !carregouTodos) {
-      carregar(true);
+    if (!busca.trim() && !carregando && podeVer) {
+      carregar(false);
     }
-  }, [busca, carregouTodos]);
+  }, [busca, carregando, podeVer]);
+  reactExports.useEffect(() => {
+    const termo = busca.trim();
+    if (!termo || carregando || !podeVer) return;
+    const controller = new AbortController();
+    async function buscar() {
+      setLoadingBusca(true);
+      setErro(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: termo, limite: 200 },
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+        if (error) throw error;
+        const lista = data || [];
+        setCidades(
+          lista.map((c) => ({
+            id: c.id,
+            nome: c.nome,
+            subdivisao_id: c.subdivisao_id || "",
+            descricao: c.descricao || null,
+            created_at: c.created_at || null,
+            subdivisao_nome: c.subdivisao_nome || "",
+            pais_nome: c.pais_nome || ""
+          }))
+        );
+        setCarregouTodos(true);
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        console.warn("[Cidades] RPC falhou, tentando fallback direto.", e);
+        try {
+          const { data, error } = await supabase.from("cidades").select("id, nome, subdivisao_id, descricao, created_at").ilike("nome", `%${termo}%`).order("nome");
+          if (error) throw error;
+          setCidades(data || []);
+          setCarregouTodos(true);
+        } catch (errFinal) {
+          console.error(errFinal);
+          const msg = errFinal instanceof Error ? errFinal.message : "";
+          setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoadingBusca(false);
+      }
+    }
+    buscar();
+    return () => controller.abort();
+  }, [busca, carregando, podeVer]);
   const cidadesEnriquecidas = reactExports.useMemo(() => {
-    const estadoMap = new Map(estados.map((e) => [e.id, e]));
+    const subdivisaoMap = new Map(subdivisoes.map((s) => [s.id, s]));
     const paisMap = new Map(paises.map((p) => [p.id, p]));
     return cidades.map((c) => {
-      const estado = estadoMap.get(c.estado_id);
-      const pais = estado ? paisMap.get(estado.pais_id) : void 0;
+      const subdivisao = c.subdivisao_id ? subdivisaoMap.get(c.subdivisao_id) : void 0;
+      const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : void 0;
       return {
         ...c,
-        estado_nome: estado?.nome || "",
-        pais_nome: pais?.nome || ""
+        subdivisao_nome: subdivisao?.nome || c.subdivisao_nome || "",
+        pais_nome: pais?.nome || c.pais_nome || ""
       };
     });
-  }, [cidades, estados, paises]);
+  }, [cidades, subdivisoes, paises]);
   const filtradas = reactExports.useMemo(() => {
     if (!busca.trim()) return cidadesEnriquecidas;
     const t = normalizeText(busca);
-    return cidadesEnriquecidas.filter(
-      (c) => normalizeText(c.nome).includes(t) || normalizeText(c.estado_nome).includes(t) || normalizeText(c.pais_nome).includes(t)
+    const cidadesNome = cidadesEnriquecidas.filter(
+      (c) => normalizeText(c.nome).includes(t)
     );
+    const cidadesOutros = cidadesEnriquecidas.filter(
+      (c) => !normalizeText(c.nome).includes(t) && (normalizeText(c.subdivisao_nome || "").includes(t) || normalizeText(c.pais_nome || "").includes(t))
+    );
+    return [...cidadesNome, ...cidadesOutros];
   }, [busca, cidadesEnriquecidas]);
   function handleChange(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
   }
   function iniciarEdicao(c) {
     if (!podeEditar) return;
-    setEditId(c.id);
-    setForm({
-      nome: c.nome,
-      estado_id: c.estado_id,
-      descricao: c.descricao || ""
-    });
+    async function prepararEdicao() {
+      try {
+        let alvo = c;
+        if (!c.subdivisao_id) {
+          const { data, error } = await supabase.from("cidades").select("id, nome, subdivisao_id, descricao").eq("id", c.id).maybeSingle();
+          if (error) throw error;
+          if (data) {
+            alvo = {
+              ...c,
+              subdivisao_id: data.subdivisao_id || "",
+              descricao: data.descricao || ""
+            };
+          }
+        }
+        setEditId(alvo.id);
+        setForm({
+          nome: alvo.nome,
+          subdivisao_id: alvo.subdivisao_id || "",
+          descricao: alvo.descricao || ""
+        });
+      } catch (err) {
+        console.error(err);
+        setErro("Nao foi possivel carregar dados da cidade para edicao.");
+      }
+    }
+    prepararEdicao();
   }
   function iniciarNovo() {
     if (!podeCriar) return;
@@ -129,8 +248,8 @@ function CidadesIsland() {
   async function salvar(e) {
     e.preventDefault();
     if (!podeCriar && !podeEditar) return;
-    if (!form.estado_id) {
-      setErro("Estado é obrigatório.");
+    if (!form.subdivisao_id) {
+      setErro("Subdivisao e obrigatoria.");
       return;
     }
     try {
@@ -138,7 +257,7 @@ function CidadesIsland() {
       setErro(null);
       const payload = {
         nome: form.nome,
-        estado_id: form.estado_id,
+        subdivisao_id: form.subdivisao_id,
         descricao: form.descricao || null
       };
       if (editId) {
@@ -192,9 +311,9 @@ function CidadesIsland() {
   }
   if (!podeVer && !isAdmin) {
     if (carregando) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info", children: "Carregando permissões..." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info", children: "Carregando permissoes..." });
     }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Você não possui permissão para visualizar Cidades." });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Voce nao possui permissao para visualizar Cidades." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cidades-page", children: [
     (podeCriar || podeEditar) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
@@ -213,28 +332,28 @@ function CidadesIsland() {
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Estado *" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Subdivisao *" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               className: "form-select",
-              value: form.estado_id,
-              onChange: (e) => handleChange("estado_id", e.target.value),
+              value: form.subdivisao_id,
+              onChange: (e) => handleChange("subdivisao_id", e.target.value),
               required: true,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione o estado" }),
-                estados.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: e.id, children: [
-                  e.nome,
-                  " — ",
-                  paises.find((p) => p.id === e.pais_id)?.nome || "Sem país"
-                ] }, e.id))
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione a subdivisao" }),
+                subdivisoes.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: s.id, children: [
+                  s.nome,
+                  " - ",
+                  paises.find((p) => p.id === s.pais_id)?.nome || "Sem pais"
+                ] }, s.id))
               ]
             }
           )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Descrição" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Descricao" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "textarea",
           {
@@ -246,7 +365,7 @@ function CidadesIsland() {
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Adicionar cidade" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade" }),
         editId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: iniciarNovo, children: "Cancelar" })
       ] })
     ] }) }),
@@ -256,41 +375,33 @@ function CidadesIsland() {
         "input",
         {
           className: "form-input",
-          placeholder: "Nome, estado ou país...",
+          placeholder: "Nome, subdivisao ou pais...",
           value: busca,
           onChange: (e) => setBusca(e.target.value)
         }
       )
     ] }) }) }),
-    carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info mb-3", children: "Carregando permissões..." }),
+    carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info mb-3", children: "Carregando permissoes..." }),
     !carregando && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-    !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Últimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),
+    !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cidade" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Estado" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "País" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criada em" }),
-        (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+        (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
         loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando..." }) }),
         !loading && filtradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma cidade encontrada." }) }),
         !loading && filtradas.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.estado_nome || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.pais_nome || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.created_at ? c.created_at.slice(0, 10) : "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.subdivisao_nome || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.pais_nome || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.created_at ? c.created_at.slice(0, 10) : "-" }),
           (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
-            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon",
-                onClick: () => iniciarEdicao(c),
-                title: "Editar",
-                children: "✏️"
-              }
-            ),
+            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => iniciarEdicao(c), title: "Editar", children: "Editar" }),
             podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -298,7 +409,7 @@ function CidadesIsland() {
                 onClick: () => excluir(c.id),
                 disabled: excluindoId === c.id,
                 title: "Excluir",
-                children: excluindoId === c.id ? "..." : "🗑️"
+                children: excluindoId === c.id ? "..." : "Excluir"
               }
             )
           ] })
