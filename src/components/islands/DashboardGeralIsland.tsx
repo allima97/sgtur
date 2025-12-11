@@ -13,6 +13,7 @@ import {
   Cell,
   LineChart,
   Line,
+  Legend,
 } from "recharts";
 
 // ----------------- TIPOS -----------------
@@ -755,6 +756,31 @@ const DashboardGeralIsland: React.FC = () => {
     });
   }, [clientes]);
 
+  const renderPieLegendList = (data: { name: string; value: number }[]) => {
+    if (!data.length) return null;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {data.map((entry, idx) => (
+          <div key={`${entry.name}-${idx}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: 2,
+                background: COLORS_PURPLE[idx % COLORS_PURPLE.length],
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 600, color: "#0f172a" }}>{entry.name}</div>
+              <div style={{ color: "#475569" }}>{formatCurrency(Number(entry.value || 0))}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // ----------------- RENDER -----------------
 
   // Evita ficar preso no estado de carregamento caso o hook demore,
@@ -913,22 +939,30 @@ const DashboardGeralIsland: React.FC = () => {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={vendasPorDestino}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={90}
-                      label={(entry) => `${entry.name} (${formatCurrency(entry.value)})`}
-                    >
-                      {vendasPorDestino.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", height: "100%" }}>
+                  <div style={{ flex: 1, height: "100%" }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie
+                          data={vendasPorDestino}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={90}
+                          label={false}
+                          labelLine={false}
+                        >
+                          {vendasPorDestino.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ minWidth: 220, maxHeight: "100%", overflowY: "auto" }}>
+                    {renderPieLegendList(vendasPorDestino)}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -952,22 +986,30 @@ const DashboardGeralIsland: React.FC = () => {
               {vendasPorProduto.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefs.vendas_produto === "pie" ? (
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={vendasPorProduto}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={90}
-                      label={(entry) => `${entry.name} (${formatCurrency(entry.value)})`}
-                    >
-                      {vendasPorProduto.map((entry, index) => (
-                        <Cell key={`cell-prod-pie-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", height: "100%" }}>
+                  <div style={{ flex: 1, height: "100%" }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie
+                          data={vendasPorProduto}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={90}
+                          label={false}
+                          labelLine={false}
+                        >
+                          {vendasPorProduto.map((entry, index) => (
+                            <Cell key={`cell-prod-pie-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ minWidth: 220, maxHeight: "100%", overflowY: "auto" }}>
+                    {renderPieLegendList(vendasPorProduto)}
+                  </div>
+                </div>
               ) : (
                 <ResponsiveContainer>
                   <BarChart data={vendasPorProduto}>

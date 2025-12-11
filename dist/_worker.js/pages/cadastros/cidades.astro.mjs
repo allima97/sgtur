@@ -1,12 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -255,8 +256,9 @@ function CidadesIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const payload = {
-        nome: form.nome,
+        nome: nomeNormalizado,
         subdivisao_id: form.subdivisao_id,
         descricao: form.descricao || null
       };
@@ -327,6 +329,7 @@ function CidadesIsland() {
               className: "form-input",
               value: form.nome,
               onChange: (e) => handleChange("nome", e.target.value),
+              onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
               required: true
             }
           )
@@ -352,7 +355,7 @@ function CidadesIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Descricao" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "textarea",
@@ -369,7 +372,7 @@ function CidadesIsland() {
         editId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: iniciarNovo, children: "Cancelar" })
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cidade" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
@@ -401,7 +404,7 @@ function CidadesIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.pais_nome || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.created_at ? c.created_at.slice(0, 10) : "-" }),
           (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
-            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => iniciarEdicao(c), title: "Editar", children: "Editar" }),
+            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => iniciarEdicao(c), title: "Editar", children: "✏️" }),
             podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -409,7 +412,7 @@ function CidadesIsland() {
                 onClick: () => excluir(c.id),
                 disabled: excluindoId === c.id,
                 title: "Excluir",
-                children: excluindoId === c.id ? "..." : "Excluir"
+                children: excluindoId === c.id ? "..." : "🗑️"
               }
             )
           ] })

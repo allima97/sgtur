@@ -1,11 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -114,8 +115,8 @@ function TipoProdutosIsland() {
       setErro("Você não tem permissão para salvar tipos de produto.");
       return;
     }
-    const nome = form.nome.trim();
-    const tipo = form.tipo.trim() || nome;
+    const nome = titleCaseWithExceptions(form.nome);
+    const tipo = titleCaseWithExceptions(form.tipo || nome);
     if (!nome) {
       setErro("Nome é obrigatório.");
       return;
@@ -123,6 +124,17 @@ function TipoProdutosIsland() {
     if (form.regra_comissionamento === "geral" && !regraSelecionada) {
       setErro("Selecione uma regra de comissão para produtos do tipo 'geral'.");
       return;
+    }
+    const toNumberOrNull = (v) => v.trim() === "" ? null : Number(v);
+    if (form.regra_comissionamento === "diferenciado") {
+      const fixNaoNum = toNumberOrNull(fixMetaNao);
+      const fixAtNum = toNumberOrNull(fixMetaAtingida);
+      const fixSupNum = toNumberOrNull(fixSuperMeta);
+      const algumInvalido = fixNaoNum === null || isNaN(fixNaoNum) || fixAtNum === null || isNaN(fixAtNum) || fixSupNum === null || isNaN(fixSupNum);
+      if (algumInvalido) {
+        setErro("Preencha os percentuais fixos para meta não atingida, atingida e super meta (apenas números).");
+        return;
+      }
     }
     try {
       setErro(null);
@@ -143,14 +155,34 @@ function TipoProdutosIsland() {
         tipoId = insertData?.id || null;
       }
       if (tipoId) {
-        const fixNao = form.regra_comissionamento === "diferenciado" ? Number(fixMetaNao) || null : null;
-        const fixAt = form.regra_comissionamento === "diferenciado" ? Number(fixMetaAtingida) || null : null;
-        const fixSup = form.regra_comissionamento === "diferenciado" ? Number(fixSuperMeta) || null : null;
+        async function garantirRegraFixa() {
+          const nomeRegra = "Comissão Fixa (auto)";
+          const { data: regraExistente } = await supabase.from("commission_rule").select("id").eq("nome", nomeRegra).maybeSingle();
+          if (regraExistente?.id) return regraExistente.id;
+          const { data: regraNova, error: regraErr } = await supabase.from("commission_rule").insert({
+            nome: nomeRegra,
+            descricao: "Gerada automaticamente para produtos diferenciados sem regra vinculada.",
+            tipo: "GERAL",
+            meta_nao_atingida: 0,
+            meta_atingida: 0,
+            super_meta: 0,
+            ativo: true
+          }).select("id").single();
+          if (regraErr) throw regraErr;
+          return regraNova?.id;
+        }
+        const fixNao = form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixMetaNao) : null;
+        const fixAt = form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixMetaAtingida) : null;
+        const fixSup = form.regra_comissionamento === "diferenciado" ? toNumberOrNull(fixSuperMeta) : null;
+        let ruleIdToUse = regraSelecionada || produtoRegraMap[tipoId]?.rule_id || null;
+        if (form.regra_comissionamento === "diferenciado" && !ruleIdToUse) {
+          ruleIdToUse = await garantirRegraFixa();
+        }
         if (regraSelecionada || form.regra_comissionamento === "diferenciado") {
-          await supabase.from("product_commission_rule").upsert(
+          const { error: upsertErr } = await supabase.from("product_commission_rule").upsert(
             {
               produto_id: tipoId,
-              rule_id: regraSelecionada || null,
+              rule_id: ruleIdToUse,
               ativo: true,
               fix_meta_nao_atingida: fixNao,
               fix_meta_atingida: fixAt,
@@ -158,6 +190,7 @@ function TipoProdutosIsland() {
             },
             { onConflict: "produto_id" }
           );
+          if (upsertErr) throw upsertErr;
         } else {
           await supabase.from("product_commission_rule").delete().eq("produto_id", tipoId);
         }
@@ -205,6 +238,7 @@ function TipoProdutosIsland() {
               className: "form-input",
               value: form.nome,
               onChange: (e) => handleChange("nome", e.target.value),
+              onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
               disabled: permissao === "view"
             }
           )
@@ -232,7 +266,7 @@ function TipoProdutosIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row mt-1", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Soma na meta?" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -288,7 +322,7 @@ function TipoProdutosIsland() {
           }
         )
       ] }),
-      form.regra_comissionamento === "diferenciado" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+      form.regra_comissionamento === "diferenciado" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Comissão fixa (meta não atingida) %" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(

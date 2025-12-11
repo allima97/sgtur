@@ -16,6 +16,7 @@ type Venda = {
   data_embarque: string | null;
   valor_total: number | null;
   status: string | null;
+  vendas_recibos?: { produto_id: string | null; valor_total: number | null; valor_taxas: number | null }[];
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -167,23 +168,35 @@ export default function RelatorioAgrupadoProdutoIsland() {
     const prodMap = new Map(produtos.map((p) => [p.id, p]));
     const map = new Map<string, LinhaProduto>();
 
-    vendas.forEach((v) => {
-      const key = v.produto_id || "sem-produto";
-      const base = v.produto_id ? prodMap.get(v.produto_id) : undefined;
+    const adicionar = (prodId: string | null, valor: number) => {
+      const key = prodId || "sem-produto";
+      const base = prodId ? prodMap.get(prodId) : undefined;
       const nome = base?.nome || base?.tipo || "(sem produto)";
       const atual =
         map.get(key) ||
         {
-          produto_id: v.produto_id || null,
+          produto_id: prodId,
           produto_nome: nome,
           quantidade: 0,
           total: 0,
           ticketMedio: 0,
         };
-      const val = v.valor_total ?? 0;
       atual.quantidade += 1;
-      atual.total += val;
+      atual.total += valor;
       map.set(key, atual);
+    };
+
+    vendas.forEach((v) => {
+      const recibos = v.vendas_recibos || [];
+      if (recibos.length) {
+        recibos.forEach((r) => {
+          const val = Number(r.valor_total || 0) + Number(r.valor_taxas || 0);
+          adicionar(r.produto_id, val);
+        });
+      } else {
+        const val = v.valor_total ?? 0;
+        adicionar(v.produto_id, val);
+      }
     });
 
     const arr = Array.from(map.values()).map((l) => ({
@@ -250,7 +263,18 @@ export default function RelatorioAgrupadoProdutoIsland() {
       let query = supabase
         .from("vendas")
         .select(
-          "id, vendedor_id, cliente_id, destino_id, produto_id, data_lancamento, data_embarque, valor_total, status"
+          `
+          id,
+          vendedor_id,
+          cliente_id,
+          destino_id,
+          produto_id,
+          data_lancamento,
+          data_embarque,
+          valor_total,
+          status,
+          vendas_recibos (produto_id, valor_total, valor_taxas)
+        `
         )
         .order("data_lancamento", { ascending: false });
 

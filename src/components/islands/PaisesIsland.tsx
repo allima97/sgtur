@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -115,11 +116,13 @@ export default function PaisesIsland() {
       setSalvando(true);
       setErro(null);
 
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+
       if (editandoId) {
         const { error } = await supabase
           .from("paises")
           .update({
-            nome: form.nome.trim(),
+            nome: nomeNormalizado,
             codigo_iso: form.codigo_iso.trim() || null,
             continente: form.continente.trim() || null
           })
@@ -128,7 +131,7 @@ export default function PaisesIsland() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("paises").insert({
-          nome: form.nome.trim(),
+          nome: nomeNormalizado,
           codigo_iso: form.codigo_iso.trim() || null,
           continente: form.continente.trim() || null
         });
@@ -195,6 +198,7 @@ export default function PaisesIsland() {
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Brasil, Estados Unidos, França..."
               />
             </div>

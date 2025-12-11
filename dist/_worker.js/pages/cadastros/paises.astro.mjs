@@ -1,11 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -86,16 +87,17 @@ function PaisesIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
       if (editandoId) {
         const { error } = await supabase.from("paises").update({
-          nome: form.nome.trim(),
+          nome: nomeNormalizado,
           codigo_iso: form.codigo_iso.trim() || null,
           continente: form.continente.trim() || null
         }).eq("id", editandoId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("paises").insert({
-          nome: form.nome.trim(),
+          nome: nomeNormalizado,
           codigo_iso: form.codigo_iso.trim() || null,
           continente: form.continente.trim() || null
         });
@@ -149,6 +151,7 @@ function PaisesIsland() {
               className: "form-input",
               value: form.nome,
               onChange: (e) => handleChange("nome", e.target.value),
+              onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
               placeholder: "Ex: Brasil, Estados Unidos, França..."
             }
           )

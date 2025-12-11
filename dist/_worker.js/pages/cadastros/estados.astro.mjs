@@ -1,11 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -101,7 +102,7 @@ function SubdivisoesIsland() {
       setSalvando(true);
       setErro(null);
       const payload = {
-        nome: form.nome.trim(),
+        nome: titleCaseWithExceptions(form.nome),
         pais_id: form.pais_id,
         codigo_admin1: form.codigo_admin1.trim(),
         tipo: form.tipo.trim() || null
@@ -153,6 +154,7 @@ function SubdivisoesIsland() {
               className: "form-input",
               value: form.nome,
               onChange: (e) => handleChange("nome", e.target.value),
+              onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
               placeholder: "Ex: Sao Paulo, California..."
             }
           )
@@ -170,7 +172,7 @@ function SubdivisoesIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -200,7 +202,7 @@ function SubdivisoesIsland() {
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando || permissao === "view", children: salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar subdivisao" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando || permissao === "view", children: salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar Estado/Província" }),
         editandoId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: iniciarNovo, children: "Cancelar edicao" })
       ] })
     ] }) }),
@@ -237,7 +239,7 @@ function SubdivisoesIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.tipo || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(s), children: "Editar" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(s), children: "✏️" }),
             permissao === "admin" && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -245,7 +247,7 @@ function SubdivisoesIsland() {
                 title: "Excluir",
                 onClick: () => excluir(s.id),
                 disabled: excluindoId === s.id,
-                children: excluindoId === s.id ? "..." : "Excluir"
+                children: excluindoId === s.id ? "..." : "🗑️"
               }
             )
           ] }) })
@@ -257,7 +259,7 @@ function SubdivisoesIsland() {
 
 const $$Estados = createComponent(($$result, $$props, $$slots) => {
   const activePage = "subdivisoes";
-  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Cadastro de Subdivisoes", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Cadastro de Subdivisoes", "subtitle": "Gerencie subdivisoes administrativas vinculadas a paises.", "color": "blue" })} ${renderComponent($$result2, "SubdivisoesIsland", SubdivisoesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/EstadosIsland.tsx", "client:component-export": "default" })} ` })}`;
+  return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Cadastro de Estados/Prov\xEDncias", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${renderComponent($$result2, "HeaderPage", $$HeaderPage, { "title": "Cadastro de Estados/Prov\xEDncias", "subtitle": "Gerencie estados/prov\xEDncias vinculados a pa\xEDses.", "color": "blue" })} ${renderComponent($$result2, "SubdivisoesIsland", SubdivisoesIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/EstadosIsland.tsx", "client:component-export": "default" })} ` })}`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/cadastros/estados.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/cadastros/estados.astro";

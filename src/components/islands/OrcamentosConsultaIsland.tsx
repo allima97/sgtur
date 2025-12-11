@@ -369,12 +369,12 @@ export default function OrcamentosConsultaIsland() {
   return (
     <>
       <div className="card-base">
-      <div className="page-header">
-        <div>
-          <h2 className="card-title">Orçamentos</h2>
-          <p className="page-subtitle">Consulta rápida dos orçamentos cadastrados.</p>
-        </div>
-        <div className="grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="page-header">
+          <div>
+            <h2 className="card-title">Orçamentos</h2>
+            <p className="page-subtitle">Consulta rápida dos orçamentos cadastrados.</p>
+          </div>
+        <div className="grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Status</label>
             <select
@@ -525,13 +525,13 @@ export default function OrcamentosConsultaIsland() {
               <td>{o.notas || "—"}</td>
               <td>
                 <button
-                  className="btn btn-light"
+                  className="btn-icon"
                   onClick={() => iniciarEdicao(o)}
-                  style={{ padding: "4px 8px", fontSize: "0.85rem" }}
+                  style={{ marginRight: 6 }}
                   disabled={o.status === "fechado" || o.status === "perdido"}
                   title={o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar"}
                 >
-                  Editar
+                  ✏️
                 </button>
                 <button
                   className="btn btn-primary"

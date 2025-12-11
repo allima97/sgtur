@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -215,7 +215,7 @@ function CommissionRulesIsland() {
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     erroValidacao && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erroValidacao }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome *" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(

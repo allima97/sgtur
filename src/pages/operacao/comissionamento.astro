@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ComissionamentoIsland from "../../components/islands/ComissionamentoIsland.tsx";
+
+const activePage = "comissionamento";
+---
+
+<DashboardLayout title="Comissionamento" {activePage}>
+  <HeaderPage
+    title="Comissionamento"
+    subtitle="Resumo de comissões por regra e produtos diferenciados."
+    color="green"
+  />
+
+  <ComissionamentoIsland client:load />
+</DashboardLayout>

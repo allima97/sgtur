@@ -280,7 +280,7 @@ export default function CommissionRulesIsland() {
       )}
 
       <form onSubmit={salvar}>
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Nome *</label>
             <input

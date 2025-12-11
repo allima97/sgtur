@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -120,7 +120,11 @@ function RelatorioAgrupadoDestinoIsland() {
         total: 0,
         ticketMedio: 0
       };
-      const val = v.valor_total ?? 0;
+      const valRecibos = (v.vendas_recibos || []).reduce(
+        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        0
+      );
+      const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
       atual.quantidade += 1;
       atual.total += val;
       map.set(key, atual);
@@ -181,7 +185,18 @@ function RelatorioAgrupadoDestinoIsland() {
       setLoading(true);
       setErro(null);
       let query = supabase.from("vendas").select(
-        "id, vendedor_id, cliente_id, destino_id, produto_id, data_lancamento, data_embarque, valor_total, status"
+        `
+          id,
+          vendedor_id,
+          cliente_id,
+          destino_id,
+          produto_id,
+          data_lancamento,
+          data_embarque,
+          valor_total,
+          status,
+          vendas_recibos (valor_total, valor_taxas)
+        `
       ).order("data_lancamento", { ascending: false });
       if (userCtx.papel !== "ADMIN") {
         query = query.in("vendedor_id", userCtx.vendedorIds);

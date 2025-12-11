@@ -348,6 +348,18 @@ export default function MenuIsland({ activePage }) {
             </li>
           )}
 
+          {can("Vendas") && (
+            <li>
+              <a
+                className={`sidebar-link ${activePage === "comissionamento" ? "active" : ""}`}
+                href="/operacao/comissionamento"
+                onClick={handleNavClick}
+              >
+                <span>💰</span>Comissionamento
+              </a>
+            </li>
+          )}
+
           {can("Clientes") && (
             <li>
               <a
@@ -384,7 +396,7 @@ export default function MenuIsland({ activePage }) {
                 href="/cadastros/estados"
                 onClick={handleNavClick}
               >
-                <span>🗺️</span>Subdivisoes
+                <span>🗺️</span>Estado/Província
               </a>
             </li>
 
@@ -583,5 +595,3 @@ export default function MenuIsland({ activePage }) {
     </>
   );
 }
-
-

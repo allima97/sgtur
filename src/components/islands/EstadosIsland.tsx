@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -141,7 +142,7 @@ export default function SubdivisoesIsland() {
       setErro(null);
 
       const payload = {
-        nome: form.nome.trim(),
+        nome: titleCaseWithExceptions(form.nome),
         pais_id: form.pais_id,
         codigo_admin1: form.codigo_admin1.trim(),
         tipo: form.tipo.trim() || null,
@@ -199,6 +200,7 @@ export default function SubdivisoesIsland() {
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Sao Paulo, California..."
               />
             </div>
@@ -214,7 +216,7 @@ export default function SubdivisoesIsland() {
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 12 }}>
             <div className="form-group">
               <label className="form-label">Tipo</label>
               <input
@@ -244,7 +246,7 @@ export default function SubdivisoesIsland() {
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
             <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
-              {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar subdivisao"}
+              {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar Estado/Província"}
             </button>
             {editandoId && (
               <button type="button" className="btn btn-light" onClick={iniciarNovo}>
@@ -313,23 +315,23 @@ export default function SubdivisoesIsland() {
                   <td>{s.tipo || "-"}</td>
                   <td>{s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">
-                    {permissao !== "view" && (
-                      <>
-                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
-                          Editar
-                        </button>
-                        {permissao === "admin" && (
-                          <button
-                            className="btn-icon btn-danger"
-                            title="Excluir"
-                            onClick={() => excluir(s.id)}
-                            disabled={excluindoId === s.id}
-                          >
-                            {excluindoId === s.id ? "..." : "Excluir"}
-                          </button>
+                        {permissao !== "view" && (
+                          <>
+                            <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
+                              ✏️
+                            </button>
+                            {permissao === "admin" && (
+                              <button
+                                className="btn-icon btn-danger"
+                                title="Excluir"
+                                onClick={() => excluir(s.id)}
+                                disabled={excluindoId === s.id}
+                              >
+                                {excluindoId === s.id ? "..." : "🗑️"}
+                              </button>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
                   </td>
                 </tr>
               ))}

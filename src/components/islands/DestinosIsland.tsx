@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -219,8 +220,10 @@ export default function DestinosIsland() {
       setSalvando(true);
       setErro(null);
 
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+
       const payload = {
-        nome: form.nome.trim(),
+        nome: nomeNormalizado,
         cidade_id: form.cidade_id,
         tipo: form.tipo.trim() || null,
         atracao_principal: form.atracao_principal.trim() || null,
@@ -290,6 +293,7 @@ export default function DestinosIsland() {
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Orlando, Paris, Gramado..."
                 disabled={permissao === "view"}
               />
@@ -522,7 +526,7 @@ export default function DestinosIsland() {
                         title="Editar"
                         onClick={() => iniciarEdicao(d)}
                       >
-                        Editar
+                        ✏️
                       </button>
                     )}
 
@@ -533,7 +537,7 @@ export default function DestinosIsland() {
                         onClick={() => excluir(d.id)}
                         disabled={excluindoId === d.id}
                       >
-                        {excluindoId === d.id ? "..." : "Excluir"}
+                        {excluindoId === d.id ? "..." : "🗑️"}
                       </button>
                     )}
                   </td>

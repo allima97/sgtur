@@ -1,12 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
 
 const initialForm = {
   nome: "",
@@ -199,8 +200,9 @@ function ClientesIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const payload = {
-        nome: form.nome.trim(),
+        nome: nomeNormalizado,
         nascimento: form.nascimento || null,
         cpf: form.cpf.trim(),
         telefone: form.telefone.trim(),
@@ -282,6 +284,7 @@ function ClientesIsland() {
                 className: "form-input",
                 value: form.nome,
                 onChange: (e) => handleChange("nome", e.target.value),
+                onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
                 required: true
               }
             )
@@ -310,7 +313,7 @@ function ClientesIsland() {
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Whatsapp" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -367,7 +370,7 @@ function ClientesIsland() {
           )
         ] })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",

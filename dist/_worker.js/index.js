@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { a as renderers } from './chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { createExports } from './_@astrojs-ssr-adapter.mjs';
-import { manifest } from './manifest_xZEG-XHR.mjs';
+import { manifest } from './manifest_D978pYSO.mjs';
 
 const _page0 = () => import('./pages/_image.astro.mjs');
 const _page1 = () => import('./pages/admin/permissoes.astro.mjs');
@@ -24,21 +24,22 @@ const _page17 = () => import('./pages/dashboard.astro.mjs');
 const _page18 = () => import('./pages/documentacao.astro.mjs');
 const _page19 = () => import('./pages/metas/vendedor.astro.mjs');
 const _page20 = () => import('./pages/negado.astro.mjs');
-const _page21 = () => import('./pages/orcamentos.astro.mjs');
-const _page22 = () => import('./pages/parametros/comissoes/templates.astro.mjs');
-const _page23 = () => import('./pages/parametros/metas.astro.mjs');
-const _page24 = () => import('./pages/parametros/regras-comissao.astro.mjs');
-const _page25 = () => import('./pages/parametros/tipo-produtos.astro.mjs');
-const _page26 = () => import('./pages/parametros.astro.mjs');
-const _page27 = () => import('./pages/perfil.astro.mjs');
-const _page28 = () => import('./pages/relatorios/vendas.astro.mjs');
-const _page29 = () => import('./pages/relatorios/vendas-por-cliente.astro.mjs');
-const _page30 = () => import('./pages/relatorios/vendas-por-destino.astro.mjs');
-const _page31 = () => import('./pages/relatorios/vendas-por-produto.astro.mjs');
-const _page32 = () => import('./pages/test-env.astro.mjs');
-const _page33 = () => import('./pages/vendas/cadastro.astro.mjs');
-const _page34 = () => import('./pages/vendas/consulta.astro.mjs');
-const _page35 = () => import('./pages/index.astro.mjs');
+const _page21 = () => import('./pages/operacao/comissionamento.astro.mjs');
+const _page22 = () => import('./pages/orcamentos.astro.mjs');
+const _page23 = () => import('./pages/parametros/comissoes/templates.astro.mjs');
+const _page24 = () => import('./pages/parametros/metas.astro.mjs');
+const _page25 = () => import('./pages/parametros/regras-comissao.astro.mjs');
+const _page26 = () => import('./pages/parametros/tipo-produtos.astro.mjs');
+const _page27 = () => import('./pages/parametros.astro.mjs');
+const _page28 = () => import('./pages/perfil.astro.mjs');
+const _page29 = () => import('./pages/relatorios/vendas.astro.mjs');
+const _page30 = () => import('./pages/relatorios/vendas-por-cliente.astro.mjs');
+const _page31 = () => import('./pages/relatorios/vendas-por-destino.astro.mjs');
+const _page32 = () => import('./pages/relatorios/vendas-por-produto.astro.mjs');
+const _page33 = () => import('./pages/test-env.astro.mjs');
+const _page34 = () => import('./pages/vendas/cadastro.astro.mjs');
+const _page35 = () => import('./pages/vendas/consulta.astro.mjs');
+const _page36 = () => import('./pages/index.astro.mjs');
 
 const pageMap = new Map([
     ["node_modules/astro/dist/assets/endpoint/generic.js", _page0],
@@ -62,21 +63,22 @@ const pageMap = new Map([
     ["src/pages/documentacao/index.astro", _page18],
     ["src/pages/metas/vendedor.astro", _page19],
     ["src/pages/negado.astro", _page20],
-    ["src/pages/orcamentos/index.astro", _page21],
-    ["src/pages/parametros/comissoes/templates.astro", _page22],
-    ["src/pages/parametros/metas.astro", _page23],
-    ["src/pages/parametros/regras-comissao.astro", _page24],
-    ["src/pages/parametros/tipo-produtos.astro", _page25],
-    ["src/pages/parametros/index.astro", _page26],
-    ["src/pages/perfil/index.astro", _page27],
-    ["src/pages/relatorios/vendas.astro", _page28],
-    ["src/pages/relatorios/vendas-por-cliente.astro", _page29],
-    ["src/pages/relatorios/vendas-por-destino.astro", _page30],
-    ["src/pages/relatorios/vendas-por-produto.astro", _page31],
-    ["src/pages/test-env.astro", _page32],
-    ["src/pages/vendas/cadastro.astro", _page33],
-    ["src/pages/vendas/consulta.astro", _page34],
-    ["src/pages/index.astro", _page35]
+    ["src/pages/operacao/comissionamento.astro", _page21],
+    ["src/pages/orcamentos/index.astro", _page22],
+    ["src/pages/parametros/comissoes/templates.astro", _page23],
+    ["src/pages/parametros/metas.astro", _page24],
+    ["src/pages/parametros/regras-comissao.astro", _page25],
+    ["src/pages/parametros/tipo-produtos.astro", _page26],
+    ["src/pages/parametros/index.astro", _page27],
+    ["src/pages/perfil/index.astro", _page28],
+    ["src/pages/relatorios/vendas.astro", _page29],
+    ["src/pages/relatorios/vendas-por-cliente.astro", _page30],
+    ["src/pages/relatorios/vendas-por-destino.astro", _page31],
+    ["src/pages/relatorios/vendas-por-produto.astro", _page32],
+    ["src/pages/test-env.astro", _page33],
+    ["src/pages/vendas/cadastro.astro", _page34],
+    ["src/pages/vendas/consulta.astro", _page35],
+    ["src/pages/index.astro", _page36]
 ]);
 const serverIslandMap = new Map();
 const _manifest = Object.assign(manifest, {

@@ -29,6 +29,13 @@ type Venda = {
   data_embarque: string | null;
   valor_total: number | null;
   status: string | null;
+  vendas_recibos?: {
+    numero_recibo: string | null;
+    valor_total: number | null;
+    valor_taxas: number | null;
+    produto_id: string | null;
+    tipo_produtos?: { id: string; nome: string | null; tipo: string | null } | null;
+  }[];
 };
 
 type VendaEnriquecida = Venda & {
@@ -193,7 +200,11 @@ export default function RelatorioVendasIsland() {
   useEffect(() => {
     async function carregarBase() {
       try {
-        const [{ data: clientesData, error: cliErr }, { data: destinosData, error: destErr }, { data: produtosData, error: prodErr }] =
+        const [
+          { data: clientesData, error: cliErr },
+          { data: destinosData, error: destErr },
+          { data: produtosData, error: prodErr },
+        ] =
           await Promise.all([
             supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
             supabase.from("produtos").select("id, nome").order("nome", { ascending: true }),
@@ -255,13 +266,28 @@ export default function RelatorioVendasIsland() {
       const c = cliMap.get(v.cliente_id);
       const d = destMap.get(v.destino_id);
       const p = v.produto_id ? prodMap.get(v.produto_id) : undefined;
+      const recibos = v.vendas_recibos || [];
+      const numeroRecibos = recibos.map((r) => r.numero_recibo).filter(Boolean).join(" / ");
+      const valorRecibos = recibos.reduce(
+        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        0
+      );
+      const prodRecibo = recibos.find((r) => r.tipo_produtos?.id);
+      const valorCalculado = valorRecibos > 0 ? valorRecibos : v.valor_total ?? null;
 
       return {
         ...v,
+        numero_venda: v.numero_venda || numeroRecibos || v.id,
+        valor_total: valorCalculado,
         cliente_nome: c?.nome || "(sem cliente)",
         cliente_cpf: c?.cpf || "",
         destino_nome: d?.nome || "(sem destino)",
-        produto_nome: p?.nome || p?.tipo || "(sem produto)",
+        produto_nome:
+          p?.nome ||
+          p?.tipo ||
+          prodRecibo?.tipo_produtos?.nome ||
+          prodRecibo?.tipo_produtos?.tipo ||
+          "(sem produto)",
       };
     });
   }, [vendas, clientes, destinos, produtos]);
@@ -282,7 +308,25 @@ export default function RelatorioVendasIsland() {
       let query = supabase
         .from("vendas")
         .select(
-          "id, vendedor_id, numero_venda, cliente_id, destino_id, produto_id, data_lancamento, data_embarque, valor_total, status"
+          `
+          id,
+          vendedor_id,
+          numero_venda,
+          cliente_id,
+          destino_id,
+          produto_id,
+          data_lancamento,
+          data_embarque,
+          valor_total,
+          status,
+          vendas_recibos (
+            numero_recibo,
+            valor_total,
+            valor_taxas,
+            produto_id,
+            tipo_produtos (id, nome, tipo)
+          )
+        `
         )
         .order("data_lancamento", { ascending: false });
 

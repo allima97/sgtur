@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -157,8 +158,8 @@ export default function TipoProdutosIsland() {
       setErro("Você não tem permissão para salvar tipos de produto.");
       return;
     }
-    const nome = form.nome.trim();
-    const tipo = form.tipo.trim() || nome;
+    const nome = titleCaseWithExceptions(form.nome);
+    const tipo = titleCaseWithExceptions(form.tipo || nome);
     if (!nome) {
       setErro("Nome é obrigatório.");
       return;
@@ -166,6 +167,18 @@ export default function TipoProdutosIsland() {
     if (form.regra_comissionamento === "geral" && !regraSelecionada) {
       setErro("Selecione uma regra de comissão para produtos do tipo 'geral'.");
       return;
+    }
+    const toNumberOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
+    if (form.regra_comissionamento === "diferenciado") {
+      const fixNaoNum = toNumberOrNull(fixMetaNao);
+      const fixAtNum = toNumberOrNull(fixMetaAtingida);
+      const fixSupNum = toNumberOrNull(fixSuperMeta);
+      const algumInvalido =
+        fixNaoNum === null || isNaN(fixNaoNum) || fixAtNum === null || isNaN(fixAtNum) || fixSupNum === null || isNaN(fixSupNum);
+      if (algumInvalido) {
+        setErro("Preencha os percentuais fixos para meta não atingida, atingida e super meta (apenas números).");
+        return;
+      }
     }
 
     try {
@@ -193,17 +206,58 @@ export default function TipoProdutosIsland() {
       }
 
       if (tipoId) {
-        const fixNao = form.regra_comissionamento === "diferenciado" ? Number(fixMetaNao) || null : null;
-        const fixAt = form.regra_comissionamento === "diferenciado" ? Number(fixMetaAtingida) || null : null;
-        const fixSup = form.regra_comissionamento === "diferenciado" ? Number(fixSuperMeta) || null : null;
+        // garante uma regra para respeitar o NOT NULL de rule_id quando diferenciado
+        async function garantirRegraFixa(): Promise<string> {
+          const nomeRegra = "Comissão Fixa (auto)";
+          const { data: regraExistente } = await supabase
+            .from("commission_rule")
+            .select("id")
+            .eq("nome", nomeRegra)
+            .maybeSingle();
+          if ((regraExistente as any)?.id) return (regraExistente as any).id;
+
+          const { data: regraNova, error: regraErr } = await supabase
+            .from("commission_rule")
+            .insert({
+              nome: nomeRegra,
+              descricao: "Gerada automaticamente para produtos diferenciados sem regra vinculada.",
+              tipo: "GERAL",
+              meta_nao_atingida: 0,
+              meta_atingida: 0,
+              super_meta: 0,
+              ativo: true,
+            })
+            .select("id")
+            .single();
+          if (regraErr) throw regraErr;
+          return (regraNova as any)?.id;
+        }
+
+        const fixNao =
+          form.regra_comissionamento === "diferenciado"
+            ? toNumberOrNull(fixMetaNao)
+            : null;
+        const fixAt =
+          form.regra_comissionamento === "diferenciado"
+            ? toNumberOrNull(fixMetaAtingida)
+            : null;
+        const fixSup =
+          form.regra_comissionamento === "diferenciado"
+            ? toNumberOrNull(fixSuperMeta)
+            : null;
+
+        let ruleIdToUse = regraSelecionada || produtoRegraMap[tipoId]?.rule_id || null;
+        if (form.regra_comissionamento === "diferenciado" && !ruleIdToUse) {
+          ruleIdToUse = await garantirRegraFixa();
+        }
 
         if (regraSelecionada || form.regra_comissionamento === "diferenciado") {
-          await supabase
+          const { error: upsertErr } = await supabase
             .from("product_commission_rule")
             .upsert(
               {
                 produto_id: tipoId,
-                rule_id: regraSelecionada || null,
+                rule_id: ruleIdToUse,
                 ativo: true,
                 fix_meta_nao_atingida: fixNao,
                 fix_meta_atingida: fixAt,
@@ -211,6 +265,7 @@ export default function TipoProdutosIsland() {
               },
               { onConflict: "produto_id" }
             );
+          if (upsertErr) throw upsertErr;
         } else {
           await supabase.from("product_commission_rule").delete().eq("produto_id", tipoId);
         }
@@ -267,6 +322,7 @@ export default function TipoProdutosIsland() {
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 disabled={permissao === "view"}
               />
             </div>
@@ -291,7 +347,7 @@ export default function TipoProdutosIsland() {
             </div>
           </div>
 
-          <div className="form-row mt-1">
+          <div className="form-row" style={{ marginTop: 12 }}>
             <div className="form-group">
               <label className="form-label">Soma na meta?</label>
               <select
@@ -340,7 +396,7 @@ export default function TipoProdutosIsland() {
           )}
 
           {form.regra_comissionamento === "diferenciado" && (
-            <div className="form-row">
+            <div className="form-row" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Comissão fixa (meta não atingida) %</label>
                 <input

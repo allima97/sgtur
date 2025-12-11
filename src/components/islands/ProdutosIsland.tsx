@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -25,6 +26,7 @@ type CidadeBusca = {
 type Produto = {
   id: string;
   nome: string;
+  destino: string | null;
   cidade_id: string;
   tipo_produto: string | null;
   informacoes_importantes: string | null;
@@ -39,6 +41,7 @@ type Produto = {
 
 type FormState = {
   nome: string;
+  destino: string;
   cidade_id: string;
   tipo_produto: string;
   atracao_principal: string;
@@ -52,6 +55,7 @@ type FormState = {
 
 const initialForm: FormState = {
   nome: "",
+  destino: "",
   cidade_id: "",
   tipo_produto: "",
   atracao_principal: "",
@@ -83,8 +87,9 @@ export default function ProdutosIsland() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
-  async function carregarDados() {
+  async function carregarDados(todos = false) {
     const erros: string[] = [];
     const detalhesErro: string[] = [];
     setLoading(true);
@@ -94,8 +99,8 @@ export default function ProdutosIsland() {
       const [
         { data: paisData, error: paisErr },
         { data: subdivisaoData, error: subErr },
-        produtosResp,
         tipoResp,
+        produtosResp,
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
@@ -116,9 +121,10 @@ export default function ProdutosIsland() {
         supabase
           .from("produtos")
           .select(
-            "id, nome, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at"
+            "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at"
           )
-          .order("nome"),
+          .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
+          .limit(todos ? undefined : 10),
       ]);
 
       if (paisErr) {
@@ -128,11 +134,13 @@ export default function ProdutosIsland() {
         setPaises((paisData || []) as Pais[]);
       }
 
+      const baseSubdivisoes = (subdivisaoData || []) as Subdivisao[];
+
       if (subErr) {
         erros.push("subdivisoes");
         if (subErr.message) detalhesErro.push(`subdivisoes: ${subErr.message}`);
       } else {
-        setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
+        setSubdivisoes(baseSubdivisoes);
       }
 
       if (tipoResp.error) {
@@ -163,19 +171,44 @@ export default function ProdutosIsland() {
       } else {
         const produtoData = (produtosResp.data || []) as Produto[];
         setProdutos(produtoData);
+        setCarregouTodos(todos);
 
         // Busca apenas as cidades referenciadas nos produtos (economiza e evita falhas maiores)
         const idsCidade = Array.from(new Set(produtoData.map((p) => p.cidade_id).filter(Boolean)));
         if (idsCidade.length) {
           const { data: cidadesData, error: cidadesErr } = await supabase
             .from("cidades")
-            .select("id, nome, subdivisao_id")
+            .select("id, nome, subdivisao_id, subdivisoes (id, nome, pais_id)")
             .in("id", idsCidade);
           if (cidadesErr) {
             erros.push("cidades");
             if (cidadesErr.message) detalhesErro.push(`cidades: ${cidadesErr.message}`);
           } else {
-            setCidades((cidadesData || []) as Cidade[]);
+            const cidadesLista = (cidadesData || []) as Cidade[];
+            setCidades(cidadesLista);
+
+            // Garante que as subdivisoes usadas pelas cidades estejam carregadas
+            const idsSubdiv = Array.from(new Set(cidadesLista.map((c) => c.subdivisao_id).filter(Boolean)));
+            if (idsSubdiv.length) {
+              const jaCarregadas = new Set(baseSubdivisoes.map((s) => s.id));
+              const faltantes = idsSubdiv.filter((id) => !jaCarregadas.has(id));
+              if (faltantes.length) {
+                const { data: subsExtra, error: subsExtraErr } = await supabase
+                  .from("subdivisoes")
+                  .select("id, nome, pais_id")
+                  .in("id", faltantes);
+                if (subsExtraErr) {
+                  erros.push("subdivisoes");
+                  if (subsExtraErr.message) detalhesErro.push(`subdivisoes (faltantes): ${subsExtraErr.message}`);
+                } else if (subsExtra?.length) {
+                  setSubdivisoes((prev) => {
+                    const existente = new Map(prev.map((s) => [s.id, s]));
+                    subsExtra.forEach((s) => existente.set(s.id, s as any));
+                    return Array.from(existente.values());
+                  });
+                }
+              }
+            }
           }
         } else {
           setCidades([]);
@@ -195,8 +228,14 @@ export default function ProdutosIsland() {
   }
 
   useEffect(() => {
-    carregarDados();
+    carregarDados(false);
   }, []);
+
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos) {
+      carregarDados(true);
+    }
+  }, [busca, carregouTodos]);
 
   const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
 
@@ -219,7 +258,8 @@ export default function ProdutosIsland() {
 
     return produtos.map((p) => {
       const cidade = cidadeMap.get(p.cidade_id || "");
-      const subdivisao = cidade ? subdivisaoMap.get(cidade.subdivisao_id) : undefined;
+      const subdivisao =
+        cidade ? subdivisaoMap.get(cidade.subdivisao_id) || (cidade as any).subdivisoes : undefined;
       const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
       const tipo = p.tipo_produto ? tipoMap.get(p.tipo_produto) : undefined;
 
@@ -242,7 +282,8 @@ export default function ProdutosIsland() {
         normalizeText(p.cidade_nome).includes(termo) ||
         normalizeText(p.subdivisao_nome).includes(termo) ||
         normalizeText(p.pais_nome).includes(termo) ||
-        normalizeText(p.tipo_nome).includes(termo)
+        normalizeText(p.tipo_nome).includes(termo) ||
+        normalizeText(p.destino || "").includes(termo)
     );
   }, [busca, produtosEnriquecidos]);
 
@@ -285,6 +326,7 @@ export default function ProdutosIsland() {
       imagem_url: produto.imagem_url || "",
       informacoes_importantes: produto.informacoes_importantes || "",
       ativo: produto.ativo ?? true,
+      destino: produto.destino || "",
     });
     setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
@@ -348,6 +390,10 @@ export default function ProdutosIsland() {
       setErro("Nome e obrigatorio.");
       return;
     }
+    if (!form.destino.trim()) {
+      setErro("Destino e obrigatorio.");
+      return;
+    }
     if (!form.cidade_id) {
       setErro("Cidade e obrigatoria.");
       return;
@@ -361,8 +407,12 @@ export default function ProdutosIsland() {
       setSalvando(true);
       setErro(null);
 
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+      const destinoNormalizado = titleCaseWithExceptions(form.destino);
+
       const payload = {
-        nome: form.nome.trim(),
+        nome: nomeNormalizado,
+        destino: destinoNormalizado,
         cidade_id: form.cidade_id,
         tipo_produto: form.tipo_produto,
         atracao_principal: form.atracao_principal.trim() || null,
@@ -383,7 +433,7 @@ export default function ProdutosIsland() {
       }
 
       iniciarNovo();
-      await carregarDados();
+      await carregarDados(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar produto. Verifique os dados e tente novamente.");
@@ -406,7 +456,7 @@ export default function ProdutosIsland() {
       const { error } = await supabase.from("produtos").delete().eq("id", id);
       if (error) throw error;
 
-      await carregarDados();
+      await carregarDados(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
@@ -430,6 +480,7 @@ export default function ProdutosIsland() {
                 className="form-input"
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
+                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Passeio em Gramado, Pacote Paris..."
                 disabled={permissao === "view"}
               />
@@ -452,7 +503,18 @@ export default function ProdutosIsland() {
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 12 }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Destino *</label>
+              <input
+                className="form-input"
+                value={form.destino}
+                onChange={(e) => handleChange("destino", e.target.value)}
+                onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                placeholder="Ex: Disney, Porto de Galinhas"
+                disabled={permissao === "view"}
+              />
+            </div>
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Cidade *</label>
               <input
@@ -515,7 +577,7 @@ export default function ProdutosIsland() {
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 12 }}>
             <div className="form-group">
               <label className="form-label">Atracao principal</label>
               <input
@@ -538,26 +600,37 @@ export default function ProdutosIsland() {
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ marginTop: 12 }}>
             <div className="form-group">
               <label className="form-label">Duracao sugerida</label>
-              <input
-                className="form-input"
+              <select
+                className="form-select"
                 value={form.duracao_sugerida}
                 onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
-                placeholder="Ex: 7 dias"
                 disabled={permissao === "view"}
-              />
+              >
+                <option value="">Selecione</option>
+                <option value="De 1 a 3 dias">De 1 a 3 dias</option>
+                <option value="De 3 a 5 dias">De 3 a 5 dias</option>
+                <option value="De 5 a 7 dias">De 5 a 7 dias</option>
+                <option value="De 7 a 10 dias">De 7 a 10 dias</option>
+                <option value="10 dias ou mais">10 dias ou mais</option>
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Nivel de preco</label>
-              <input
-                className="form-input"
+              <select
+                className="form-select"
                 value={form.nivel_preco}
                 onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                placeholder="Ex: Economico, Intermediario, Premium"
                 disabled={permissao === "view"}
-              />
+              >
+                <option value="">Selecione</option>
+                <option value="Economico">Economico</option>
+                <option value="Intermediario">Intermediario</option>
+                <option value="Premium">Premium</option>
+                <option value="Super Premium">Super Premium</option>
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Imagem (URL)</label>
@@ -571,7 +644,7 @@ export default function ProdutosIsland() {
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group" style={{ marginTop: 12 }}>
             <label className="form-label">Informacoes importantes</label>
             <textarea
               className="form-input"
@@ -583,7 +656,7 @@ export default function ProdutosIsland() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group" style={{ marginTop: 12 }}>
             <label className="form-label">Ativo</label>
             <select
               className="form-select"
@@ -621,7 +694,7 @@ export default function ProdutosIsland() {
               className="form-input"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, tipo, cidade, subdivisao ou pais..."
+              placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
             />
           </div>
         </div>
@@ -632,6 +705,11 @@ export default function ProdutosIsland() {
           <strong>{erro}</strong>
         </div>
       )}
+      {!carregouTodos && !erro && (
+        <div className="card-base card-config mb-3">
+          Ultimos Produtos Cadastrados (10). Digite na busca para consultar todos.
+        </div>
+      )}
 
       {/* Tabela */}
       <div className="table-container overflow-x-auto">
@@ -640,8 +718,9 @@ export default function ProdutosIsland() {
             <tr>
               <th>Produto</th>
               <th>Tipo</th>
+              <th>Destino</th>
               <th>Cidade</th>
-              <th>Subdivisao</th>
+              <th>Estado/Província</th>
               <th>Pais</th>
               <th>Nivel de preco</th>
               <th>Ativo</th>
@@ -667,6 +746,7 @@ export default function ProdutosIsland() {
                 <tr key={p.id}>
                   <td>{p.nome}</td>
                   <td>{(p as any).tipo_nome || "-"}</td>
+                  <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
                   <td>{(p as any).subdivisao_nome || "-"}</td>
                   <td>{(p as any).pais_nome || "-"}</td>
@@ -676,7 +756,7 @@ export default function ProdutosIsland() {
                   <td className="th-actions">
                     {permissao !== "view" && (
                       <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
-                        Editar
+                        ✏️
                       </button>
                     )}
 
@@ -687,7 +767,7 @@ export default function ProdutosIsland() {
                         onClick={() => excluir(p.id)}
                         disabled={excluindoId === p.id}
                       >
-                        {excluindoId === p.id ? "..." : "Excluir"}
+                        {excluindoId === p.id ? "..." : "🗑️"}
                       </button>
                     )}
                   </td>

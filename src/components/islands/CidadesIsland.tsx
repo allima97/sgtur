@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -363,8 +364,10 @@ export default function CidadesIsland() {
       setSalvando(true);
       setErro(null);
 
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+
       const payload = {
-        nome: form.nome,
+        nome: nomeNormalizado,
         subdivisao_id: form.subdivisao_id,
         descricao: form.descricao || null,
       };
@@ -453,6 +456,7 @@ export default function CidadesIsland() {
                   className="form-input"
                   value={form.nome}
                   onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   required
                 />
               </div>
@@ -475,7 +479,7 @@ export default function CidadesIsland() {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ marginTop: 12 }}>
               <label className="form-label">Descricao</label>
               <textarea
                 className="form-input"
@@ -501,7 +505,7 @@ export default function CidadesIsland() {
       )}
 
       <div className="card-base mb-3">
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Buscar cidade</label>
             <input
@@ -559,7 +563,7 @@ export default function CidadesIsland() {
                     <td className="th-actions">
                       {podeEditar && (
                         <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
-                          Editar
+                          ✏️
                         </button>
                       )}
                       {podeExcluir && (
@@ -569,7 +573,7 @@ export default function CidadesIsland() {
                           disabled={excluindoId === c.id}
                           title="Excluir"
                         >
-                          {excluindoId === c.id ? "..." : "Excluir"}
+                          {excluindoId === c.id ? "..." : "🗑️"}
                         </button>
                       )}
                     </td>

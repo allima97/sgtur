@@ -8,8 +8,9 @@ function normalizeText(value: string) {
 }
 
 type Cliente = { id: string; nome: string; cpf?: string | null };
-type Destino = { id: string; nome: string };
-type TipoProduto = { id: string; nome: string };
+type Cidade = { id: string; nome: string };
+type CidadeSugestao = { id: string; nome: string; subdivisao_nome?: string | null; pais_nome?: string | null };
+type Produto = { id: string; nome: string; cidade_id: string | null; tipo_produto: string | null };
 
 type FormVenda = {
   cliente_id: string;
@@ -54,8 +55,8 @@ export default function VendasCadastroIsland() {
   // ESTADOS
   // =======================================================
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [produtos, setProdutos] = useState<TipoProduto[]>([]);
+  const [cidades, setCidades] = useState<Cidade[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
@@ -67,10 +68,15 @@ export default function VendasCadastroIsland() {
   const [loading, setLoading] = useState(true);
   const [loadingVenda, setLoadingVenda] = useState(false);
 
-  // AUTOCOMPLETE (cliente, destino, produto)
-  const [buscaCliente, setBuscaCliente] = useState("");
-  const [buscaDestino, setBuscaDestino] = useState("");
-  const [buscaProduto, setBuscaProduto] = useState("");
+  // AUTOCOMPLETE (cliente, cidade de destino, produto)
+const [buscaCliente, setBuscaCliente] = useState("");
+const [buscaDestino, setBuscaDestino] = useState("");
+const [buscaProduto, setBuscaProduto] = useState("");
+const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
+const [resultadosCidade, setResultadosCidade] = useState<CidadeSugestao[]>([]);
+const [buscandoCidade, setBuscandoCidade] = useState(false);
+const [erroCidade, setErroCidade] = useState<string | null>(null);
+const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
   // =======================================================
   // CARREGAR DADOS INICIAIS
@@ -81,16 +87,17 @@ export default function VendasCadastroIsland() {
 
       const [c, d, p] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
-        supabase.from("produtos").select("id, nome").order("nome"),
-        supabase.from("tipo_produtos").select("id, nome").order("nome"),
+        supabase.from("cidades").select("id, nome").order("nome"),
+        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto").order("nome"),
       ]);
 
       setClientes(c.data || []);
-      setDestinos(d.data || []);
+      const cidadesLista = (d.data || []) as Cidade[];
+      setCidades(cidadesLista);
       setProdutos(p.data || []);
 
       if (vendaId) {
-        await carregarVenda(vendaId);
+        await carregarVenda(vendaId, cidadesLista);
       }
     } catch (e) {
       console.error(e);
@@ -100,7 +107,7 @@ export default function VendasCadastroIsland() {
     }
   }
 
-  async function carregarVenda(id: string) {
+  async function carregarVenda(id: string, cidadesBase?: Cidade[]) {
     try {
       setLoadingVenda(true);
 
@@ -116,12 +123,29 @@ export default function VendasCadastroIsland() {
         return;
       }
 
+      // destino_id na tabela aponta para produto; buscamos cidade desse produto
+      let cidadeId = "";
+      let cidadeNome = "";
+      if (vendaData.destino_id) {
+        const { data: prodData } = await supabase
+          .from("produtos")
+          .select("id, cidade_id")
+          .eq("id", vendaData.destino_id)
+          .maybeSingle();
+        cidadeId = prodData?.cidade_id || "";
+        const lista = cidadesBase || cidades;
+        const cidadeSelecionada = lista.find((c) => c.id === cidadeId);
+        if (cidadeSelecionada) cidadeNome = cidadeSelecionada.nome;
+      }
+
       setFormVenda({
         cliente_id: vendaData.cliente_id,
-        destino_id: vendaData.destino_id,
+        destino_id: cidadeId,
         data_lancamento: vendaData.data_lancamento,
         data_embarque: vendaData.data_embarque || "",
       });
+      setBuscaDestino(cidadeNome);
+      setBuscaCidadeSelecionada(cidadeNome);
 
       const { data: recibosData, error: recErr } = await supabase
         .from("vendas_recibos")
@@ -132,7 +156,8 @@ export default function VendasCadastroIsland() {
       setRecibos(
         (recibosData || []).map((r: any) => ({
           id: r.id,
-          produto_id: r.produto_id || "",
+          produto_id:
+            produtos.find((p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId))?.id || "",
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? String(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? String(r.valor_taxas) : "0",
@@ -156,6 +181,54 @@ export default function VendasCadastroIsland() {
     if (!loadPerm && ativo) carregarDados(editId || undefined);
   }, [loadPerm, ativo, editId]);
 
+  // Busca cidade (autocomplete)
+  useEffect(() => {
+    if (buscaDestino.trim().length < 2) {
+      setResultadosCidade([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setBuscandoCidade(true);
+      setErroCidade(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: buscaDestino.trim(), limite: 10 },
+          { signal: controller.signal }
+        );
+        if (!controller.signal.aborted) {
+          if (error) {
+            console.error("Erro ao buscar cidades:", error);
+            setErroCidade("Erro ao buscar cidades (RPC). Tentando fallback...");
+            const { data: dataFallback, error: errorFallback } = await supabase
+              .from("cidades")
+              .select("id, nome")
+              .ilike("nome", `%${buscaDestino.trim()}%`)
+              .order("nome");
+            if (errorFallback) {
+              console.error("Erro no fallback de cidades:", errorFallback);
+              setErroCidade("Erro ao buscar cidades.");
+            } else {
+              setResultadosCidade((dataFallback as CidadeSugestao[]) || []);
+              setErroCidade(null);
+            }
+          } else {
+            setResultadosCidade((data as CidadeSugestao[]) || []);
+          }
+        }
+      } finally {
+        if (!controller.signal.aborted) setBuscandoCidade(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [buscaDestino]);
+
   // =======================================================
   // AUTOCOMPLETE
   // =======================================================
@@ -173,17 +246,29 @@ export default function VendasCadastroIsland() {
     });
   }, [clientes, buscaCliente]);
 
-  const destinosFiltrados = useMemo(() => {
-    if (!buscaDestino.trim()) return destinos;
+  const cidadesFiltradas = useMemo(() => {
+    if (!buscaDestino.trim()) return cidades;
     const t = normalizeText(buscaDestino);
-    return destinos.filter((c) => normalizeText(c.nome).includes(t));
-  }, [destinos, buscaDestino]);
+    return cidades.filter((c) => normalizeText(c.nome).includes(t));
+  }, [cidades, buscaDestino]);
 
   const produtosFiltrados = useMemo(() => {
-    if (!buscaProduto.trim()) return produtos;
+    const base = formVenda.destino_id
+      ? produtos.filter((p) => p.cidade_id === formVenda.destino_id)
+      : [];
+    if (!buscaProduto.trim()) return base;
     const t = normalizeText(buscaProduto);
-    return produtos.filter((c) => normalizeText(c.nome).includes(t));
-  }, [produtos, buscaProduto]);
+    return base.filter((c) => normalizeText(c.nome).includes(t));
+  }, [produtos, buscaProduto, formVenda.destino_id]);
+
+  function handleCidadeDestino(valor: string) {
+    setBuscaDestino(valor);
+    const cidadeAtual = cidades.find((c) => c.id === formVenda.destino_id);
+    if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
+      setFormVenda((prev) => ({ ...prev, destino_id: "" }));
+    }
+    setMostrarSugestoesCidade(true);
+  }
 
   // =======================================================
   // HANDLERS
@@ -199,6 +284,18 @@ export default function VendasCadastroIsland() {
       return novo;
     });
   }
+
+  useEffect(() => {
+    // Ao trocar a cidade, limpa buscas e produtos que não pertencem a ela
+    setBuscaProduto("");
+    setRecibos((prev) =>
+      prev.map((r) => {
+        const prod = produtos.find((p) => p.id === r.produto_id);
+        if (prod && prod.cidade_id === formVenda.destino_id) return r;
+        return { ...r, produto_id: "" };
+      })
+    );
+  }, [formVenda.destino_id, produtos]);
 
   function removerRecibo(index: number) {
     setRecibos((prev) => prev.filter((_, i) => i !== index));
@@ -232,6 +329,31 @@ export default function VendasCadastroIsland() {
         return;
       }
 
+      if (!recibos.length) {
+        setErro("Uma venda precisa ter ao menos 1 recibo.");
+        setSalvando(false);
+        return;
+      }
+
+      const produtoDestinoId = recibos[0]?.produto_id;
+      if (!produtoDestinoId) {
+        setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
+        setSalvando(false);
+        return;
+      }
+
+      const produtoDestino = produtos.find((p) => p.id === produtoDestinoId);
+      if (!produtoDestino || produtoDestino.cidade_id !== formVenda.destino_id) {
+        setErro("O produto do recibo precisa pertencer à cidade de destino selecionada.");
+        setSalvando(false);
+        return;
+      }
+      if (!produtoDestino.tipo_produto) {
+        setErro("O produto selecionado não possui tipo vinculado. Cadastre um tipo de produto para ele.");
+        setSalvando(false);
+        return;
+      }
+
       let vendaId = editId;
 
       if (editId) {
@@ -240,7 +362,7 @@ export default function VendasCadastroIsland() {
           .from("vendas")
           .update({
             cliente_id: formVenda.cliente_id,
-            destino_id: formVenda.destino_id,
+            destino_id: produtoDestinoId, // FK para produtos
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
           })
@@ -251,9 +373,13 @@ export default function VendasCadastroIsland() {
         await supabase.from("vendas_recibos").delete().eq("venda_id", editId);
 
         for (const r of recibos) {
+          const prod = produtos.find((p) => p.id === r.produto_id);
+          if (!prod?.tipo_produto) {
+            throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: editId,
-            produto_id: r.produto_id || null,
+            produto_id: prod.tipo_produto, // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
             valor_total: Number(r.valor_total),
             valor_taxas: Number(r.valor_taxas),
@@ -276,7 +402,7 @@ export default function VendasCadastroIsland() {
           .insert({
             vendedor_id: userId,
             cliente_id: formVenda.cliente_id,
-            destino_id: formVenda.destino_id,
+            destino_id: produtoDestinoId, // FK para produtos
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
           })
@@ -289,9 +415,13 @@ export default function VendasCadastroIsland() {
 
         // 2) INSERE RECIBOS
         for (const r of recibos) {
+          const prod = produtos.find((p) => p.id === r.produto_id);
+          if (!prod?.tipo_produto) {
+            throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: vendaId,
-            produto_id: r.produto_id || null,
+            produto_id: prod.tipo_produto, // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
             valor_total: Number(r.valor_total),
             valor_taxas: Number(r.valor_taxas),
@@ -315,9 +445,11 @@ export default function VendasCadastroIsland() {
         setFormVenda(initialVenda);
         setRecibos([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setErro("Erro ao salvar venda.");
+      const detalhes = e?.message || e?.error?.message || "";
+      const cod = e?.code || e?.error?.code || "";
+      setErro(`Erro ao salvar venda.${cod ? ` Código: ${cod}.` : ""}${detalhes ? ` Detalhes: ${detalhes}` : ""}`);
     } finally {
       setSalvando(false);
     }
@@ -353,7 +485,7 @@ export default function VendasCadastroIsland() {
         <h3>{editId ? "Editar venda" : "Cadastro de Venda"}</h3>
         {editId && (
           <small style={{ color: "#0f172a" }}>
-            Modo edição — altere cliente, destino, embarque e recibos.
+            Modo edição — altere cliente, cidade de destino, embarque e recibos.
           </small>
         )}
 
@@ -407,36 +539,70 @@ export default function VendasCadastroIsland() {
               </datalist>
             </div>
 
-            {/* DESTINO */}
-            <div className="form-group">
-              <label className="form-label">Destino *</label>
+            {/* CIDADE DE DESTINO */}
+            <div className="form-group" style={{ position: "relative" }}>
+              <label className="form-label">Cidade de Destino *</label>
               <input
                 className="form-input"
-                list="listaDestinos"
-                placeholder="Buscar destino..."
-                value={
-                  destinos.find((d) => d.id === formVenda.destino_id)?.nome ||
-                  buscaDestino
-                }
-                onChange={(e) => setBuscaDestino(e.target.value)}
-                onBlur={() => {
-                  const achado = destinosFiltrados.find(
-                    (d) => d.nome.toLowerCase() === buscaDestino.toLowerCase()
-                  );
-                  if (achado) {
-                    setFormVenda({
-                      ...formVenda,
-                      destino_id: achado.id,
-                    });
-                  }
-                }}
+                placeholder="Digite o nome da cidade"
+                value={buscaDestino}
+                onChange={(e) => handleCidadeDestino(e.target.value)}
+                onFocus={() => setMostrarSugestoesCidade(true)}
+                onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
                 required
+                style={{ marginBottom: 6 }}
               />
-              <datalist id="listaDestinos">
-                {destinosFiltrados.map((d) => (
-                  <option key={d.id} value={d.nome} />
-                ))}
-              </datalist>
+              {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
+              {erroCidade && !buscandoCidade && (
+                <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidade}</div>
+              )}
+              {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
+                <div
+                  className="card-base"
+                  style={{
+                    marginTop: 4,
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    padding: 6,
+                    border: "1px solid #e5e7eb",
+                    position: "absolute",
+                    zIndex: 5,
+                    width: "100%",
+                    background: "#fff",
+                  }}
+                >
+                  {resultadosCidade.length === 0 && !buscandoCidade && buscaDestino.trim().length >= 2 && (
+                    <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                  )}
+                  {resultadosCidade.map((c) => {
+                    const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="btn btn-light"
+                        style={{
+                          width: "100%",
+                          justifyContent: "flex-start",
+                          marginBottom: 4,
+                          background: formVenda.destino_id === c.id ? "#e0f2fe" : "#fff",
+                          borderColor: formVenda.destino_id === c.id ? "#38bdf8" : "#e5e7eb",
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
+                          setBuscaDestino(label);
+                          setMostrarSugestoesCidade(false);
+                          setResultadosCidade([]);
+                        }}
+                      >
+                        {label}
+                        {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>• {c.pais_nome}</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* EMBARQUE */}
@@ -467,25 +633,22 @@ export default function VendasCadastroIsland() {
                   <label className="form-label">Produto *</label>
                   <input
                     className="form-input"
-                    list="listaProdutos"
-                    placeholder="Buscar produto..."
-                    value={
-                      produtos.find((p) => p.id === r.produto_id)?.nome ||
-                      buscaProduto
-                    }
+                    list={`listaProdutos-${i}`}
+                    placeholder="Selecione uma cidade primeiro e busque o produto..."
+                    value={produtos.find((p) => p.id === r.produto_id)?.nome || buscaProduto}
                     onChange={(e) => setBuscaProduto(e.target.value)}
                     onBlur={() => {
                       const achado = produtosFiltrados.find(
-                        (p) =>
-                          p.nome.toLowerCase() === buscaProduto.toLowerCase()
+                        (p) => p.nome.toLowerCase() === buscaProduto.toLowerCase()
                       );
                       if (achado) {
                         updateRecibo(i, "produto_id", achado.id);
                       }
                     }}
                     required
+                    disabled={!formVenda.destino_id}
                   />
-                  <datalist id="listaProdutos">
+                  <datalist id={`listaProdutos-${i}`}>
                     {produtosFiltrados.map((p) => (
                       <option key={p.id} value={p.nome} />
                     ))}

@@ -16,6 +16,7 @@ type Venda = {
   data_embarque: string | null;
   valor_total: number | null;
   status: string | null;
+  vendas_recibos?: { valor_total: number | null; valor_taxas: number | null }[];
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -200,7 +201,11 @@ export default function RelatorioAgrupadoDestinoIsland() {
           total: 0,
           ticketMedio: 0,
         };
-      const val = v.valor_total ?? 0;
+      const valRecibos = (v.vendas_recibos || []).reduce(
+        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        0
+      );
+      const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
       atual.quantidade += 1;
       atual.total += val;
       map.set(key, atual);
@@ -270,7 +275,18 @@ export default function RelatorioAgrupadoDestinoIsland() {
       let query = supabase
         .from("vendas")
         .select(
-          "id, vendedor_id, cliente_id, destino_id, produto_id, data_lancamento, data_embarque, valor_total, status"
+          `
+          id,
+          vendedor_id,
+          cliente_id,
+          destino_id,
+          produto_id,
+          data_lancamento,
+          data_embarque,
+          valor_total,
+          status,
+          vendas_recibos (valor_total, valor_taxas)
+        `
         )
         .order("data_lancamento", { ascending: false });
 

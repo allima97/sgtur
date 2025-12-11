@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 
 type Cliente = {
   id: string;
@@ -353,8 +354,10 @@ export default function ClientesIsland() {
       setSalvando(true);
       setErro(null);
 
+      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+
       const payload = {
-        nome: form.nome.trim(),
+        nome: nomeNormalizado,
         nascimento: form.nascimento || null,
         cpf: form.cpf.trim(),
         telefone: form.telefone.trim(),
@@ -482,6 +485,7 @@ export default function ClientesIsland() {
                   className="form-input"
                   value={form.nome}
                   onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   required
                 />
               </div>
@@ -506,7 +510,7 @@ export default function ClientesIsland() {
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="form-row" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Whatsapp</label>
                 <input
@@ -561,7 +565,7 @@ export default function ClientesIsland() {
 
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Buscar cliente</label>
             <input

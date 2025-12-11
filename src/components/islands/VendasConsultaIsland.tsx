@@ -356,7 +356,7 @@ export default function VendasConsultaIsland() {
 
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: 8 }}>
           <div className="form-group">
             <label className="form-label">Buscar venda</label>
             <input

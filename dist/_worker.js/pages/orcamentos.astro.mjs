@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_BaV_SJmL.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_G6itN-OC.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -504,7 +504,7 @@ function OrcamentosConsultaIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Orçamentos" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle", children: "Consulta rápida dos orçamentos cadastrados." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6", style: { marginTop: 12 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -639,12 +639,12 @@ function OrcamentosConsultaIsland() {
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  className: "btn btn-light",
+                  className: "btn-icon",
                   onClick: () => iniciarEdicao(o),
-                  style: { padding: "4px 8px", fontSize: "0.85rem" },
+                  style: { marginRight: 6 },
                   disabled: o.status === "fechado" || o.status === "perdido",
                   title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar",
-                  children: "Editar"
+                  children: "✏️"
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
