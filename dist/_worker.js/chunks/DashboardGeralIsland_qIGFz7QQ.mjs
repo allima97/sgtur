@@ -2,7 +2,7 @@ globalThis.process ??= {}; globalThis.process.env ??= {};
 import { j as jsxRuntimeExports, s as supabase } from './supabase_CtqDhMax.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from './usePermissao_CncspAO2.mjs';
-import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_BXJtniqq.mjs';
+import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_DCls3pID.mjs';
 import { j as clsx } from './astro/server_C6IdV9ex.mjs';
 
 /**
@@ -2301,7 +2301,7 @@ const DashboardGeralIsland = () => {
       atingimentoMeta: atingimentoMeta2
     };
   }, [vendas, orcamentos, metas]);
-  const vendasPorDestino = reactExports.useMemo(() => {
+  const vendasPorDestinoFull = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     vendas.forEach((v) => {
       const destino = v.destinos?.nome || "Sem destino";
@@ -2314,8 +2314,9 @@ const DashboardGeralIsland = () => {
     return Array.from(map.entries()).map(([name, value]) => ({
       name,
       value
-    }));
+    })).sort((a, b) => b.value - a.value);
   }, [vendas]);
+  const vendasPorDestinoTop5 = reactExports.useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
   const vendasPorProduto = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     vendas.forEach((v) => {
@@ -2521,9 +2522,10 @@ const DashboardGeralIsland = () => {
           }
         ) });
       case "vendas_destino":
+        const tituloDestino = chartPrefs.vendas_destino === "bar" ? "Vendas por Destino (Visão Completa)" : "Vendas por destino (Top 5)";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 8 }, children: "Vendas por destino" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 8 }, children: tituloDestino }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
@@ -2538,28 +2540,28 @@ const DashboardGeralIsland = () => {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 260 }, children: vendasPorDestino.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_destino === "bar" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorDestino, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 260 }, children: vendasPorDestinoFull.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_destino === "bar" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorDestinoFull, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(XAxis, { dataKey: "name", hide: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(YAxis, {}),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Bar, { dataKey: "value", children: vendasPorDestino.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-dest-${index}`)) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Bar, { dataKey: "value", children: vendasPorDestinoFull.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-dest-${index}`)) })
           ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 16, alignItems: "center", height: "100%" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(PieChart, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Pie,
                 {
-                  data: vendasPorDestino,
+                  data: vendasPorDestinoTop5,
                   dataKey: "value",
                   nameKey: "name",
                   outerRadius: 90,
                   label: false,
                   labelLine: false,
-                  children: vendasPorDestino.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-${index}`))
+                  children: vendasPorDestinoTop5.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-${index}`))
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) })
             ] }) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { minWidth: 220, maxHeight: "100%", overflowY: "auto" }, children: renderPieLegendList(vendasPorDestino) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { minWidth: 220, maxHeight: "100%", overflowY: "auto" }, children: renderPieLegendList(vendasPorDestinoTop5) })
           ] }) })
         ] });
       case "vendas_produto":

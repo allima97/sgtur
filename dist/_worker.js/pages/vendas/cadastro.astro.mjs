@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B4UzsGdb.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CwEMmlUN.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -23,12 +23,32 @@ const initialRecibo = {
   valor_total: "",
   valor_taxas: "0"
 };
+function formatarValorDigitado(valor) {
+  const apenasDigitos = valor.replace(/\D/g, "");
+  if (!apenasDigitos) return "";
+  const num = Number(apenasDigitos) / 100;
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatarNumeroComoMoeda(valor) {
+  const num = Number(valor);
+  if (Number.isNaN(num)) return "";
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function moedaParaNumero(valor) {
+  if (!valor) return NaN;
+  const limpo = valor.replace(/\./g, "").replace(",", ".");
+  const num = Number(limpo);
+  return num;
+}
 function VendasCadastroIsland() {
   const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
   const podeCriar = permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
   const [clientes, setClientes] = reactExports.useState([]);
   const [cidades, setCidades] = reactExports.useState([]);
   const [produtos, setProdutos] = reactExports.useState([]);
+  const [tipos, setTipos] = reactExports.useState(
+    []
+  );
   const [formVenda, setFormVenda] = reactExports.useState(initialVenda);
   const [recibos, setRecibos] = reactExports.useState([]);
   const [editId, setEditId] = reactExports.useState(null);
@@ -47,16 +67,26 @@ function VendasCadastroIsland() {
   async function carregarDados(vendaId) {
     try {
       setLoading(true);
-      const [c, d, p] = await Promise.all([
+      const [c, d, p, tiposResp] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
         supabase.from("cidades").select("id, nome").order("nome"),
-        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto").order("nome")
+        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades")
       ]);
       setClientes(c.data || []);
       const cidadesLista = d.data || [];
       setCidades(cidadesLista);
-      const produtosLista = p.data || [];
+      const tiposLista = tiposResp.data || [];
+      const tiposMap = new Map(tiposLista.map((t) => [t.id, t]));
+      const produtosLista = (p.data || []).map((prod) => {
+        const tipoInfo = prod.tipo_produtos;
+        return {
+          ...prod,
+          tipo_info: tipoInfo ? { disponivel_todas_cidades: tipoInfo.disponivel_todas_cidades } : tiposMap.has(prod.tipo_produto) ? { disponivel_todas_cidades: tiposMap.get(prod.tipo_produto || "")?.disponivel_todas_cidades } : void 0
+        };
+      });
       setProdutos(produtosLista);
+      setTipos(tiposLista);
       if (vendaId) {
         await carregarVenda(vendaId, cidadesLista, produtosLista);
       }
@@ -99,12 +129,13 @@ function VendasCadastroIsland() {
       setRecibos(
         (recibosData || []).map((r) => ({
           id: r.id,
-          produto_id: produtosLista.find(
-            (p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId || !p.cidade_id)
-          )?.id || "",
+          produto_id: produtosLista.find((p) => {
+            const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+            return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
+          })?.id || "",
           numero_recibo: r.numero_recibo || "",
-          valor_total: r.valor_total != null ? String(r.valor_total) : "",
-          valor_taxas: r.valor_taxas != null ? String(r.valor_taxas) : "0"
+          valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
+          valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00"
         }))
       );
     } catch (e) {
@@ -177,19 +208,47 @@ function VendasCadastroIsland() {
     return cidades.filter((c) => normalizeText(c.nome).includes(t));
   }, [cidades, buscaDestino]);
   const produtosFiltrados = reactExports.useMemo(() => {
-    const base = formVenda.destino_id ? produtos.filter((p) => !p.cidade_id || p.cidade_id === formVenda.destino_id) : produtos.filter((p) => !p.cidade_id);
+    const globalTypes = tipos.filter((t2) => t2.disponivel_todas_cidades);
+    let base = [];
+    if (formVenda.destino_id) {
+      const baseProd = produtos.filter((p) => {
+        const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+        return ehGlobal || p.cidade_id === formVenda.destino_id;
+      });
+      const existentesTipo = new Set(
+        baseProd.filter((p) => p.cidade_id === formVenda.destino_id).map((p) => p.tipo_produto)
+      );
+      const virtuais = globalTypes.filter((t2) => !existentesTipo.has(t2.id)).map((t2) => ({
+        id: `virtual-${t2.id}`,
+        nome: t2.nome || "Produto global",
+        cidade_id: formVenda.destino_id,
+        tipo_produto: t2.id,
+        tipo_info: { disponivel_todas_cidades: true },
+        isVirtual: true
+      }));
+      base = [...baseProd, ...virtuais];
+    } else {
+      base = [
+        ...produtos.filter((p) => !!p.tipo_info?.disponivel_todas_cidades),
+        ...globalTypes.map((t2) => ({
+          id: `virtual-${t2.id}`,
+          nome: t2.nome || "Produto global",
+          cidade_id: null,
+          tipo_produto: t2.id,
+          tipo_info: { disponivel_todas_cidades: true },
+          isVirtual: true
+        }))
+      ];
+    }
     if (!buscaProduto.trim()) return base;
     const t = normalizeText(buscaProduto);
     return base.filter((c) => normalizeText(c.nome).includes(t));
-  }, [produtos, buscaProduto, formVenda.destino_id]);
-  const existeProdutoGlobal = reactExports.useMemo(() => produtos.some((p) => !p.cidade_id), [produtos]);
-  const cidadeObrigatoria = reactExports.useMemo(() => {
-    if (recibos.length === 0) return false;
-    return recibos.some((r) => {
-      const prod = produtos.find((p) => p.id === r.produto_id);
-      return prod?.cidade_id;
-    });
-  }, [recibos, produtos]);
+  }, [produtos, tipos, buscaProduto, formVenda.destino_id]);
+  const existeProdutoGlobal = reactExports.useMemo(
+    () => produtos.some((p) => p.tipo_info?.disponivel_todas_cidades),
+    [produtos]
+  );
+  const cidadeObrigatoria = reactExports.useMemo(() => recibos.length > 0, [recibos.length]);
   function handleCidadeDestino(valor) {
     setBuscaDestino(valor);
     const cidadeAtual = cidades.find((c) => c.id === formVenda.destino_id);
@@ -208,12 +267,17 @@ function VendasCadastroIsland() {
       return novo;
     });
   }
+  function updateReciboMonetario(index, campo, valor) {
+    const formatado = formatarValorDigitado(valor);
+    updateRecibo(index, campo, formatado);
+  }
   reactExports.useEffect(() => {
     setBuscaProduto("");
     setRecibos(
       (prev) => prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        if (prod && (!prod.cidade_id || prod.cidade_id === formVenda.destino_id)) return r;
+        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades;
+        if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
     );
@@ -246,48 +310,64 @@ function VendasCadastroIsland() {
         setSalvando(false);
         return;
       }
-      const produtoDestinoId = recibos[0]?.produto_id;
-      if (!produtoDestinoId) {
+      const produtoDestinoIdRaw = recibos[0]?.produto_id;
+      if (!produtoDestinoIdRaw) {
         setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
         setSalvando(false);
         return;
       }
-      const produtoDestino = produtos.find((p) => p.id === produtoDestinoId);
       const possuiProdutoLocal = recibos.some((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        return prod?.cidade_id;
+        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades || (r.produto_id || "").startsWith("virtual-");
+        return prod?.cidade_id && !ehGlobal;
       });
       if (possuiProdutoLocal && !formVenda.destino_id) {
         setErro("Selecione a cidade de destino para vendas com produtos vinculados a cidade.");
         setSalvando(false);
         return;
       }
-      if (!produtoDestino) {
-        setErro("O produto do recibo precisa ser válido.");
-        setSalvando(false);
-        return;
-      }
-      if (produtoDestino.cidade_id && formVenda.destino_id && produtoDestino.cidade_id !== formVenda.destino_id) {
-        setErro("O produto do recibo precisa pertencer à cidade de destino selecionada.");
-        setSalvando(false);
-        return;
-      }
-      if (formVenda.destino_id) {
-        const produtoDeOutraCidade = recibos.some((r) => {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          return prod?.cidade_id && prod.cidade_id !== formVenda.destino_id;
-        });
-        if (produtoDeOutraCidade) {
-          setErro("Todos os produtos precisam pertencer à cidade selecionada ou ser globais.");
-          setSalvando(false);
-          return;
+      async function resolverProdutoId(recibo) {
+        const atualId = recibo.produto_id;
+        const existente = produtos.find((p) => p.id === atualId);
+        if (existente && !existente.isVirtual) return existente.id;
+        const tipoId = existente?.tipo_produto || (atualId?.startsWith("virtual-") ? atualId.replace("virtual-", "") : existente?.tipo_produto);
+        if (!tipoId) throw new Error("Produto inválido. Selecione novamente.");
+        const cidadeDestino = formVenda.destino_id;
+        if (!cidadeDestino) throw new Error("Selecione a cidade de destino para usar produtos globais.");
+        const produtoDaCidade = produtos.find((p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino);
+        if (produtoDaCidade) return produtoDaCidade.id;
+        const tipoInfo = tipos.find((t) => t.id === tipoId);
+        const nomeProd = tipoInfo?.nome || "Produto";
+        const { data: novo, error } = await supabase.from("produtos").insert({
+          nome: nomeProd,
+          destino: nomeProd,
+          cidade_id: cidadeDestino,
+          tipo_produto: tipoId,
+          ativo: true
+        }).select("id").single();
+        if (error) throw error;
+        const novoId = novo?.id;
+        if (novoId) {
+          setProdutos((prev) => [
+            ...prev,
+            {
+              id: novoId,
+              nome: nomeProd,
+              cidade_id: cidadeDestino,
+              tipo_produto: tipoId,
+              tipo_info: { disponivel_todas_cidades: tipoInfo?.disponivel_todas_cidades }
+            }
+          ]);
+          return novoId;
         }
+        throw new Error("Não foi possível criar produto global.");
       }
-      if (!produtoDestino.tipo_produto) {
-        setErro("O produto selecionado não possui tipo vinculado. Cadastre um tipo de produto para ele.");
-        setSalvando(false);
-        return;
+      const produtoIdsResolvidos = [];
+      for (const r of recibos) {
+        const idResolvido = await resolverProdutoId(r);
+        produtoIdsResolvidos.push(idResolvido);
       }
+      const produtoDestinoId = produtoIdsResolvidos[0];
       let vendaId = editId;
       if (editId) {
         const { error: vendaErr } = await supabase.from("vendas").update({
@@ -299,18 +379,29 @@ function VendasCadastroIsland() {
         }).eq("id", editId);
         if (vendaErr) throw vendaErr;
         await supabase.from("vendas_recibos").delete().eq("venda_id", editId);
-        for (const r of recibos) {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          if (!prod?.tipo_produto) {
+        for (let idx = 0; idx < recibos.length; idx++) {
+          const r = recibos[idx];
+          const resolvedId = produtoIdsResolvidos[idx];
+          const prod = produtos.find((p) => p.id === resolvedId);
+          const tipoId = prod?.tipo_produto || (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+          if (!tipoId) {
             throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
+          const valTotalNum = moedaParaNumero(r.valor_total);
+          const valTaxasNum = moedaParaNumero(r.valor_taxas);
+          if (Number.isNaN(valTotalNum)) {
+            throw new Error("Valor total inválido. Digite um valor monetário.");
+          }
+          if (Number.isNaN(valTaxasNum)) {
+            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
           }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: editId,
-            produto_id: prod.tipo_produto,
+            produto_id: tipoId,
             // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
-            valor_total: Number(r.valor_total),
-            valor_taxas: Number(r.valor_taxas)
+            valor_total: valTotalNum,
+            valor_taxas: valTaxasNum
           });
           if (error) throw error;
         }
@@ -332,18 +423,29 @@ function VendasCadastroIsland() {
         }).select().single();
         if (vendaErr) throw vendaErr;
         vendaId = vendaData.id;
-        for (const r of recibos) {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          if (!prod?.tipo_produto) {
+        for (let idx = 0; idx < recibos.length; idx++) {
+          const r = recibos[idx];
+          const resolvedId = produtoIdsResolvidos[idx];
+          const prod = produtos.find((p) => p.id === resolvedId);
+          const tipoId = prod?.tipo_produto || (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+          if (!tipoId) {
             throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
+          const valTotalNum = moedaParaNumero(r.valor_total);
+          const valTaxasNum = moedaParaNumero(r.valor_taxas);
+          if (Number.isNaN(valTotalNum)) {
+            throw new Error("Valor total inválido. Digite um valor monetário.");
+          }
+          if (Number.isNaN(valTaxasNum)) {
+            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
           }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: vendaId,
-            produto_id: prod.tipo_produto,
+            produto_id: tipoId,
             // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
-            valor_total: Number(r.valor_total),
-            valor_taxas: Number(r.valor_taxas)
+            valor_total: valTotalNum,
+            valor_taxas: valTaxasNum
           });
           if (error) throw error;
         }
@@ -419,7 +521,6 @@ function VendasCadastroIsland() {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade de Destino *" }),
-          existeProdutoGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { display: "block", color: "#475569", marginBottom: 4 }, children: "Obrigatório apenas se o recibo tiver produto vinculado a uma cidade." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -548,10 +649,12 @@ function VendasCadastroIsland() {
             "input",
             {
               className: "form-input",
-              type: "number",
-              step: "0.01",
+              type: "text",
+              inputMode: "decimal",
+              pattern: "[0-9,.]*",
+              placeholder: "0,00",
               value: r.valor_total,
-              onChange: (e) => updateRecibo(i, "valor_total", e.target.value),
+              onChange: (e) => updateReciboMonetario(i, "valor_total", e.target.value),
               required: true
             }
           )
@@ -562,10 +665,12 @@ function VendasCadastroIsland() {
             "input",
             {
               className: "form-input",
-              type: "number",
-              step: "0.01",
+              type: "text",
+              inputMode: "decimal",
+              pattern: "[0-9,.]*",
+              placeholder: "0,00",
               value: r.valor_taxas,
-              onChange: (e) => updateRecibo(i, "valor_taxas", e.target.value)
+              onChange: (e) => updateReciboMonetario(i, "valor_taxas", e.target.value)
             }
           )
         ] }),

@@ -12,7 +12,6 @@ const initialForm = {
   destino: "",
   cidade_id: "",
   tipo_produto: "",
-  global: false,
   atracao_principal: "",
   melhor_epoca: "",
   duracao_sugerida: "",
@@ -179,7 +178,7 @@ function ProdutosIsland() {
       const tipo = p.tipo_produto ? tipoMap.get(p.tipo_produto) : void 0;
       return {
         ...p,
-        cidade_nome: cidade?.nome || (!p.cidade_id ? "Todas as cidades" : ""),
+        cidade_nome: cidade?.nome || "",
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipoLabel(tipo)
@@ -221,7 +220,6 @@ function ProdutosIsland() {
       nome: produto.nome,
       cidade_id: produto.cidade_id,
       tipo_produto: produto.tipo_produto || "",
-      global: !produto.cidade_id,
       atracao_principal: produto.atracao_principal || "",
       melhor_epoca: produto.melhor_epoca || "",
       duracao_sugerida: produto.duracao_sugerida || "",
@@ -231,7 +229,7 @@ function ProdutosIsland() {
       ativo: produto.ativo ?? true,
       destino: produto.destino || ""
     });
-    setCidadeBusca(produto.cidade_id ? formatarCidadeNome(produto.cidade_id) || cidade?.nome || "" : "");
+    setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
   }
   reactExports.useEffect(() => {
@@ -288,7 +286,7 @@ function ProdutosIsland() {
       setErro("Destino e obrigatorio.");
       return;
     }
-    if (!form.global && !form.cidade_id) {
+    if (!form.cidade_id) {
       setErro("Cidade e obrigatoria.");
       return;
     }
@@ -299,12 +297,18 @@ function ProdutosIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      const erroSupabaseMsg = (err) => {
+        const msg = err?.message || err?.error?.message || "";
+        const det = err?.details || err?.error?.details || "";
+        const hint = err?.hint || err?.error?.hint || "";
+        return [msg, det, hint].filter(Boolean).join(" | ");
+      };
       const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const destinoNormalizado = titleCaseWithExceptions(form.destino);
       const payload = {
         nome: nomeNormalizado,
         destino: destinoNormalizado,
-        cidade_id: form.global ? null : form.cidade_id,
+        cidade_id: form.cidade_id,
         tipo_produto: form.tipo_produto,
         atracao_principal: form.atracao_principal.trim() || null,
         melhor_epoca: form.melhor_epoca.trim() || null,
@@ -316,16 +320,23 @@ function ProdutosIsland() {
       };
       if (editandoId) {
         const { error } = await supabase.from("produtos").update(payload).eq("id", editandoId);
-        if (error) throw error;
+        if (error) {
+          const msg = erroSupabaseMsg(error);
+          throw new Error(msg || error.message);
+        }
       } else {
         const { error } = await supabase.from("produtos").insert(payload);
-        if (error) throw error;
+        if (error) {
+          const msg = erroSupabaseMsg(error);
+          throw new Error(msg || error.message);
+        }
       }
       iniciarNovo();
       await carregarDados(carregouTodos);
     } catch (e2) {
       console.error(e2);
-      setErro("Erro ao salvar produto. Verifique os dados e tente novamente.");
+      const msg = e2?.message || e2?.error?.message || "";
+      setErro(`Erro ao salvar produto.${msg ? ` Detalhes: ${msg}` : ""}`);
     } finally {
       setSalvando(false);
     }
@@ -411,7 +422,7 @@ function ProdutosIsland() {
               onChange: (e) => handleCidadeBusca(e.target.value),
               onFocus: () => setMostrarSugestoes(true),
               onBlur: () => setTimeout(() => setMostrarSugestoes(false), 150),
-              disabled: permissao === "view" || form.global,
+              disabled: permissao === "view",
               style: { marginBottom: 6 }
             }
           ),
@@ -464,31 +475,7 @@ function ProdutosIsland() {
                 })
               ]
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 6 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: "#0f172a" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: form.global,
-                  onChange: (e) => {
-                    const marcado = e.target.checked;
-                    handleChange("global", marcado);
-                    if (marcado) {
-                      handleChange("cidade_id", "");
-                      setCidadeBusca("");
-                      setResultadosCidade([]);
-                      setMostrarSugestoes(false);
-                    }
-                  },
-                  disabled: permissao === "view"
-                }
-              ),
-              "Produto disponível para todas as cidades"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#475569" }, children: "Marque para produtos comuns (ex.: seguro viagem, chip) que devem aparecer em qualquer destino." })
-          ] })
+          )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [

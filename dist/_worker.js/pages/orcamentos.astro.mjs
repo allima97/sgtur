@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B4UzsGdb.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CwEMmlUN.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -62,6 +62,7 @@ function OrcamentosCadastroIsland() {
       const { error } = await supabase.from("orcamentos").insert(payload);
       if (error) throw error;
       setSucesso("Orçamento criado.");
+      window.dispatchEvent(new CustomEvent("orcamento-criado"));
       setClienteId("");
       setDestinoId("");
       setProdutoId("");
@@ -80,9 +81,9 @@ function OrcamentosCadastroIsland() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Novo Orçamento" }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
-    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", children: sucesso }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", style: { color: "#0f172a", fontWeight: 700 }, children: sucesso }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, style: { display: "flex", flexDirection: "column", gap: 14 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { gap: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente *" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -131,7 +132,7 @@ function OrcamentosCadastroIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { gap: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -190,16 +191,28 @@ function OrcamentosCadastroIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "submit",
-          className: "btn btn-primary",
-          disabled: salvando,
-          style: { marginTop: 12 },
-          children: salvando ? "Salvando..." : "Criar orçamento"
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : "Criar orçamento" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-light",
+            onClick: () => {
+              setClienteId("");
+              setDestinoId("");
+              setProdutoId("");
+              setStatus("novo");
+              setValor("");
+              setDataViagem("");
+              setNotas("");
+              setErro(null);
+              setSucesso(null);
+            },
+            children: "Limpar"
+          }
+        )
+      ] })
     ] })
   ] });
 }
@@ -228,17 +241,21 @@ function OrcamentosConsultaIsland() {
   const [clienteSelecionado, setClienteSelecionado] = reactExports.useState("");
   const [destinoSelecionado, setDestinoSelecionado] = reactExports.useState("");
   const [produtoSelecionado, setProdutoSelecionado] = reactExports.useState("");
-  const [novaInteracao, setNovaInteracao] = reactExports.useState("");
   const [clientes, setClientes] = reactExports.useState([]);
   const [destinos, setDestinos] = reactExports.useState([]);
   const [produtos, setProdutos] = reactExports.useState([]);
   const statuses = ["novo", "enviado", "negociando", "fechado", "perdido"];
   const statusCores = {
-    novo: { bg: "#f8fafc", border: "#e2e8f0" },
-    enviado: { bg: "#f1f5f9", border: "#cbd5e1" },
-    negociando: { bg: "#eff6ff", border: "#bfdbfe" },
-    fechado: { bg: "#ecfdf3", border: "#bbf7d0" },
-    perdido: { bg: "#fef2f2", border: "#fecaca" }
+    novo: { bg: "#e0f2fe", border: "#1d4ed8" },
+    // azul solicitado (#1d4ed8)
+    enviado: { bg: "#fef9c3", border: "#facc15" },
+    // amarelo
+    negociando: { bg: "#fff7ed", border: "#fdba74" },
+    // laranja
+    fechado: { bg: "#ecfdf3", border: "#16a34a" },
+    // verde mais escuro na borda
+    perdido: { bg: "#fee2e2", border: "#fca5a5" }
+    // vermelho mais evidente
   };
   const [draggingId, setDraggingId] = reactExports.useState(null);
   const [draggingStatus, setDraggingStatus] = reactExports.useState(null);
@@ -249,6 +266,11 @@ function OrcamentosConsultaIsland() {
   reactExports.useEffect(() => {
     carregar();
     carregarListas();
+  }, []);
+  reactExports.useEffect(() => {
+    const handler = () => carregar();
+    window.addEventListener("orcamento-criado", handler);
+    return () => window.removeEventListener("orcamento-criado", handler);
   }, []);
   async function carregar() {
     try {
@@ -266,11 +288,8 @@ function OrcamentosConsultaIsland() {
             cliente_id,
             destino_id,
             produto_id,
-            venda_id,
             numero_venda,
             venda_criada,
-            numero_venda_url,
-            interacoes,
             clientes:cliente_id (nome),
             destinos:produtos!destino_id (nome),
             produtos:tipo_produtos!produto_id (nome, tipo)
@@ -302,7 +321,7 @@ function OrcamentosConsultaIsland() {
     }
   }
   const filtrados = reactExports.useMemo(() => lista, [lista]);
-  const porColuna = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     const mapa = {
       novo: [],
       enviado: [],
@@ -366,22 +385,6 @@ function OrcamentosConsultaIsland() {
     a.click();
     URL.revokeObjectURL(url);
   }
-  function handleDragStart(id) {
-    setDraggingId(id);
-    const item = lista.find((o) => o.id === id);
-    if (item?.status) setDraggingStatus(item.status);
-  }
-  async function handleDrop(status) {
-    if (!draggingId) return;
-    if (status === "fechado" || status === "perdido") {
-      setDraggingId(null);
-      setDraggingStatus(null);
-      return;
-    }
-    await alterarStatus(draggingId, status);
-    setDraggingId(null);
-    setDraggingStatus(null);
-  }
   async function carregarListas() {
     try {
       const [c, d, p] = await Promise.all([
@@ -435,11 +438,7 @@ function OrcamentosConsultaIsland() {
         notas: notasEdit || null,
         cliente_id: clienteSelecionado || editando.cliente_id || null,
         destino_id: destinoSelecionado || editando.destino_id || null,
-        produto_id: produtoSelecionado || editando.produto_id || null,
-        interacoes: novaInteracao.trim() ? [
-          ...editando.interacoes || [],
-          { criado_em: (/* @__PURE__ */ new Date()).toISOString(), texto: novaInteracao.trim() }
-        ] : editando.interacoes || []
+        produto_id: produtoSelecionado || editando.produto_id || null
       }).eq("id", editando.id);
       if (error) throw error;
       setSucesso("Orçamento atualizado.");
@@ -499,308 +498,110 @@ function OrcamentosConsultaIsland() {
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "page-header", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Orçamentos" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle", children: "Consulta rápida dos orçamentos cadastrados." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6", style: { marginTop: 12 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                className: "form-select",
-                value: statusFiltro,
-                onChange: (e) => setStatusFiltro(e.target.value),
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos" }),
-                  statuses.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: s, children: s }, s))
-                ]
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "date",
-                value: periodoIni,
-                onChange: (e) => setPeriodoIni(e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "date",
-                value: periodoFim,
-                onChange: (e) => setPeriodoFim(e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor min" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "number",
-                value: valorMin,
-                onChange: (e) => setValorMin(e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor max" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "number",
-                value: valorMax,
-                onChange: (e) => setValorMax(e.target.value)
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: carregar, children: "Atualizar" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", onClick: exportarCSV, children: "Exportar CSV" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              className: "btn btn-light",
-              onClick: () => {
-                setStatusFiltro("");
-                setPeriodoIni("");
-                setPeriodoFim("");
-                setValorMin("");
-                setValorMax("");
-                carregar();
-              },
-              children: "Limpar filtros"
-            }
-          )
-        ] })
-      ] }),
-      erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
-      sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", children: sucesso }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[1100px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Venda" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data viagem" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Notas" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Carregando..." }) }),
-          !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Nenhum orçamento encontrado." }) }),
-          !carregando && filtrados.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_orcamento?.slice(0, 10) || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.clientes?.nome || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.destinos?.nome || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.produtos?.nome || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textTransform: "capitalize" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                className: "form-select",
-                value: o.status || "",
-                onChange: (e) => alterarStatus(o.id, e.target.value),
-                disabled: salvandoStatus === o.id,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "novo", children: "Novo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "enviado", children: "Enviado" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "negociando", children: "Negociando" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "fechado", children: "Fechado" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "perdido", children: "Perdido" })
-                ]
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.venda_id ? /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: o.numero_venda_url || "/vendas/consulta", title: "Ver venda", children: o.numero_venda || `${o.venda_id.slice(0, 6)}...` }) : "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.valor ? o.valor.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            }) : "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_viagem || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.notas || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  className: "btn-icon",
-                  onClick: () => iniciarEdicao(o),
-                  style: { marginRight: 6 },
-                  disabled: o.status === "fechado" || o.status === "perdido",
-                  title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar",
-                  children: "✏️"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  className: "btn btn-primary",
-                  onClick: () => converterParaVenda(o),
-                  style: { padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 },
-                  disabled: !o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido",
-                  title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : !o.cliente_id || !o.destino_id ? "Selecione cliente e destino para converter" : "Converter em venda",
-                  children: "Converter"
-                }
-              )
-            ] })
-          ] }, o.id))
-        ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "page-header", style: { marginBottom: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Orçamentos" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle", children: "Consulta rápida dos orçamentos cadastrados." })
       ] }) }),
-      editando && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 500 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-title", children: "Editar orçamento" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.85rem", color: "#475569" }, children: [
-              "Cliente: ",
-              editando.clientes?.nome || "—",
-              " | Destino: ",
-              editando.destinos?.nome || "—"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: () => setEditando(null), children: "✖" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvarEdicao, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "grid w-full",
+          style: {
+            marginTop: 12,
+            gap: 10,
+            gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
+            alignItems: "end"
+          },
+          children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor (R$)" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
                 {
-                  className: "form-input",
-                  type: "number",
-                  value: valorEdit,
-                  onChange: (e) => setValorEdit(e.target.value),
-                  min: 0,
-                  step: "0.01"
+                  className: "form-select",
+                  value: statusFiltro,
+                  onChange: (e) => setStatusFiltro(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos" }),
+                    statuses.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: s, children: s }, s))
+                  ]
                 }
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data da viagem" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   className: "form-input",
                   type: "date",
-                  value: dataViagemEdit,
-                  onChange: (e) => setDataViagemEdit(e.target.value)
+                  value: periodoIni,
+                  onChange: (e) => setPeriodoIni(e.target.value)
                 }
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  className: "form-select",
-                  value: clienteSelecionado,
-                  onChange: (e) => setClienteSelecionado(e.target.value),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
-                    clientes.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c.id, children: c.nome }, c.id))
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Destino" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  className: "form-select",
-                  value: destinoSelecionado,
-                  onChange: (e) => setDestinoSelecionado(e.target.value),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
-                    destinos.map((d) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: d.id, children: d.nome }, d.id))
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  className: "form-select",
-                  value: produtoSelecionado,
-                  onChange: (e) => setProdutoSelecionado(e.target.value),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "(Opcional)" }),
-                    produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome }, p.id))
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Notas" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "textarea",
+                "input",
                 {
                   className: "form-input",
-                  rows: 3,
-                  value: notasEdit,
-                  onChange: (e) => setNotasEdit(e.target.value)
+                  type: "date",
+                  value: periodoFim,
+                  onChange: (e) => setPeriodoFim(e.target.value)
                 }
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Adicionar interação" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor min" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "textarea",
+                "input",
                 {
                   className: "form-input",
-                  rows: 2,
-                  value: novaInteracao,
-                  onChange: (e) => setNovaInteracao(e.target.value),
-                  placeholder: "Ex: Ligação com cliente, próxima ação..."
+                  type: "number",
+                  value: valorMin,
+                  onChange: (e) => setValorMin(e.target.value)
                 }
               )
             ] }),
-            editando.interacoes && editando.interacoes.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Histórico" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor max" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
+                "input",
                 {
-                  style: {
-                    maxHeight: 120,
-                    overflowY: "auto",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 8,
-                    padding: 8,
-                    background: "#f8fafc"
-                  },
-                  children: editando.interacoes.slice().reverse().map((i, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 6, fontSize: "0.9rem" }, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#64748b", fontSize: "0.8rem" }, children: i.criado_em?.slice(0, 16).replace("T", " ") }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: i.texto })
-                  ] }, idx))
+                  className: "form-input",
+                  type: "number",
+                  value: valorMax,
+                  onChange: (e) => setValorMax(e.target.value)
                 }
               )
             ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-footer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setEditando(null), children: "Cancelar" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", children: "Salvar" })
-          ] })
-        ] })
-      ] }) })
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: carregar, style: { minWidth: 120 }, children: "Atualizar" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", onClick: exportarCSV, style: { minWidth: 140 }, children: "Exportar CSV" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            className: "btn btn-light",
+            onClick: () => {
+              setStatusFiltro("");
+              setPeriodoIni("");
+              setPeriodoFim("");
+              setValorMin("");
+              setValorMax("");
+              carregar();
+            },
+            style: { minWidth: 140 },
+            children: "Limpar filtros"
+          }
+        )
+      ] })
     ] }),
+    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
+    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", style: { color: "#0f172a", fontWeight: 700 }, children: sucesso }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "card-title", children: "Situação do Orçamento" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -808,10 +609,9 @@ function OrcamentosConsultaIsland() {
         {
           style: {
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
             gap: 10,
-            alignItems: "stretch",
-            marginBottom: 10
+            alignItems: "stretch"
           },
           children: statuses.map((status) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
@@ -819,15 +619,21 @@ function OrcamentosConsultaIsland() {
               className: "kpi-card",
               style: {
                 background: statusCores[status].bg,
-                border: `1px solid ${statusCores[status].border}`
+                border: `1px solid ${statusCores[status].border}`,
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                justifyContent: "center"
               },
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", style: { textTransform: "capitalize" }, children: status }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", style: { fontSize: "1.1rem" }, children: [
-                  totais[status].qtd,
-                  " itens"
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-label", style: { textTransform: "capitalize", fontWeight: 700 }, children: [
+                  status,
+                  " - ",
+                  String(totais[status].qtd).padStart(2, "0"),
+                  " Itens"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem", color: "#0f172a" }, children: totais[status].valor.toLocaleString("pt-BR", {
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", style: { fontSize: "1.3rem", fontWeight: 800 }, children: totais[status].valor.toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL"
                 }) })
@@ -836,133 +642,182 @@ function OrcamentosConsultaIsland() {
             `kpi-${status}`
           ))
         }
-      ),
-      statuses.some((s) => porColuna[s].length > 0) ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 sm:grid-cols-2 xl:grid-cols-4", children: statuses.filter((s) => porColuna[s].length > 0).map((status) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          style: {
-            background: statusCores[status].bg,
-            border: `1px solid ${statusCores[status].border}`,
-            borderRadius: 10,
-            padding: 10,
-            transition: "transform 0.1s ease, box-shadow 0.1s ease",
-            boxShadow: draggingStatus && draggingStatus === status ? "0 0 0 2px rgba(59,130,246,0.4)" : "none",
-            transform: draggingStatus && draggingStatus === status ? "scale(1.01)" : "none"
-          },
-          onDragOver: (e) => e.preventDefault(),
-          onDrop: () => handleDrop(status),
-          children: [
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base", style: { marginTop: 16 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[1100px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data viagem" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Notas" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+        carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Carregando..." }) }),
+        !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Nenhum orçamento encontrado." }) }),
+        !carregando && filtrados.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_orcamento?.slice(0, 10) || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.clientes?.nome || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.destinos?.nome || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.produtos?.nome || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textTransform: "capitalize" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              className: "form-select",
+              value: o.status || "",
+              onChange: (e) => alterarStatus(o.id, e.target.value),
+              disabled: salvandoStatus === o.id,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "novo", children: "Novo" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "enviado", children: "Enviado" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "negociando", children: "Negociando" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "fechado", children: "Fechado" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "perdido", children: "Perdido" })
+              ]
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.valor ? o.valor.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          }) : "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_viagem || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.notas || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "div",
+              "button",
               {
-                style: {
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8
-                },
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 700, textTransform: "capitalize" }, children: status })
+                className: "btn-icon",
+                onClick: () => iniciarEdicao(o),
+                style: { marginRight: 6 },
+                disabled: o.status === "fechado" || o.status === "perdido",
+                title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar",
+                children: "✏️"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: porColuna[status].map((o) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
               {
-                style: {
-                  background: "white",
-                  borderRadius: 8,
-                  border: draggingId === o.id ? "1px solid #3b82f6" : "1px solid #e2e8f0",
-                  padding: "8px 10px",
-                  boxShadow: draggingId === o.id ? "0 8px 16px rgba(59,130,246,0.15)" : "0 1px 2px rgba(0,0,0,0.05)",
-                  position: "relative"
-                },
-                draggable: o.status !== "fechado" && o.status !== "perdido",
-                onDragStart: () => {
-                  if (o.status === "fechado" || o.status === "perdido") return;
-                  handleDragStart(o.id);
-                },
-                onDragEnd: () => setDraggingId(null),
-                title: `Cliente: ${o.clientes?.nome || "—"}
-Destino: ${o.destinos?.nome || "—"}
-Valor: ${o.valor ? o.valor.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL"
-                }) : "—"}
-Data orçamento: ${o.data_orcamento?.slice(0, 10) || "—"}
-Data viagem: ${o.data_viagem || "—"}
-Venda: ${o.numero_venda || "—"}`,
+                className: "btn btn-primary",
+                onClick: () => converterParaVenda(o),
+                style: { padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 },
+                disabled: !o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido",
+                title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : !o.cliente_id || !o.destino_id ? "Selecione cliente e destino para converter" : "Converter em venda",
+                children: "Converter"
+              }
+            )
+          ] })
+        ] }, o.id))
+      ] })
+    ] }) }) }),
+    editando && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 500 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-title", children: "Editar orçamento" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.85rem", color: "#475569" }, children: [
+            "Cliente: ",
+            editando.clientes?.nome || "—",
+            " | Destino: ",
+            editando.destinos?.nome || "—"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: () => setEditando(null), children: "✖" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvarEdicao, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor (R$)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "number",
+                value: valorEdit,
+                onChange: (e) => setValorEdit(e.target.value),
+                min: 0,
+                step: "0.01"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data da viagem" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "date",
+                value: dataViagemEdit,
+                onChange: (e) => setDataViagemEdit(e.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: clienteSelecionado,
+                onChange: (e) => setClienteSelecionado(e.target.value),
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: o.clientes?.nome || "Cliente" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.85rem", color: "#64748b" }, children: o.destinos?.nome || "—" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.85rem", color: "#475569" }, children: [
-                    "Valor:",
-                    " ",
-                    o.valor ? o.valor.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL"
-                    }) : "—"
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.8rem", color: "#94a3b8" }, children: [
-                    "Orcamento: ",
-                    o.data_orcamento?.slice(0, 10) || "—",
-                    " | Viagem:",
-                    " ",
-                    o.data_viagem || "—"
-                  ] }),
-                  o.venda_id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.8rem", color: "#22c55e" }, children: [
-                    "Venda: ",
-                    o.numero_venda || o.venda_id.slice(0, 6)
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }, children: [
-                    status !== "negociando" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn btn-light",
-                        style: { padding: "4px 8px", fontSize: "0.8rem" },
-                        onClick: () => alterarStatus(o.id, "negociando"),
-                        disabled: salvandoStatus === o.id,
-                        children: "Mover p/ negociando"
-                      }
-                    ),
-                    status !== "enviado" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn btn-light",
-                        style: { padding: "4px 8px", fontSize: "0.8rem" },
-                        onClick: () => alterarStatus(o.id, "enviado"),
-                        disabled: salvandoStatus === o.id,
-                        children: "Enviar"
-                      }
-                    ),
-                    status !== "perdido" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn btn-light",
-                        style: { padding: "4px 8px", fontSize: "0.8rem" },
-                        onClick: () => alterarStatus(o.id, "perdido"),
-                        disabled: salvandoStatus === o.id,
-                        children: "Marcar perdido"
-                      }
-                    ),
-                    status !== "fechado" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn btn-primary",
-                        style: { padding: "4px 8px", fontSize: "0.8rem" },
-                        onClick: () => converterParaVenda(o),
-                        disabled: !o.cliente_id || !o.destino_id,
-                        children: "Fechar (Venda)"
-                      }
-                    )
-                  ] })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                  clientes.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c.id, children: c.nome }, c.id))
                 ]
-              },
-              o.id
-            )) })
-          ]
-        },
-        status
-      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", style: { marginTop: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Nenhum orçamento para exibir no Kanban." }) })
-    ] })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Destino" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: destinoSelecionado,
+                onChange: (e) => setDestinoSelecionado(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                  destinos.map((d) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: d.id, children: d.nome }, d.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: produtoSelecionado,
+                onChange: (e) => setProdutoSelecionado(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "(Opcional)" }),
+                  produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome }, p.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Notas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                className: "form-input",
+                rows: 3,
+                value: notasEdit,
+                onChange: (e) => setNotasEdit(e.target.value)
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-footer", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setEditando(null), children: "Cancelar" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", children: "Salvar" })
+        ] })
+      ] })
+    ] }) })
   ] });
 }
 

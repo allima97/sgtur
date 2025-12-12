@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B4UzsGdb.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CwEMmlUN.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -30,6 +30,7 @@ function TipoProdutosIsland() {
     tipo: "",
     regra_comissionamento: "geral",
     soma_na_meta: true,
+    disponivel_todas_cidades: false,
     ativo: true
   });
   function handleChange(campo, valor) {
@@ -79,6 +80,7 @@ function TipoProdutosIsland() {
       tipo: "",
       regra_comissionamento: "geral",
       soma_na_meta: true,
+      disponivel_todas_cidades: false,
       ativo: true
     });
     setRegraSelecionada("");
@@ -95,6 +97,7 @@ function TipoProdutosIsland() {
       tipo: tipoProd.tipo || tipoProd.nome || "",
       regra_comissionamento: tipoProd.regra_comissionamento,
       soma_na_meta: tipoProd.soma_na_meta,
+      disponivel_todas_cidades: !!tipoProd.disponivel_todas_cidades,
       ativo: tipoProd.ativo
     });
     const comissao = produtoRegraMap[tipoProd.id] || {};
@@ -143,6 +146,7 @@ function TipoProdutosIsland() {
         tipo,
         regra_comissionamento: form.regra_comissionamento,
         soma_na_meta: form.soma_na_meta,
+        disponivel_todas_cidades: form.disponivel_todas_cidades,
         ativo: form.ativo
       };
       let tipoId = editandoId;
@@ -284,6 +288,22 @@ function TipoProdutosIsland() {
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Disponível para todas as cidades?" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              className: "form-input",
+              value: form.disponivel_todas_cidades ? "1" : "0",
+              onChange: (e) => handleChange("disponivel_todas_cidades", e.target.value === "1"),
+              disabled: permissao === "view",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "0", children: "Não" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "Sim" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo?" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -390,6 +410,7 @@ function TipoProdutosIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Regra" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Regra vinculada" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Soma meta" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Todas cidades" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
@@ -402,6 +423,7 @@ function TipoProdutosIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.regra_comissionamento }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtoRegraMap[p.id]?.rule_id ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-" : produtoRegraMap[p.id]?.fix_meta_atingida ? "Comissão fixa" : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.soma_na_meta ? "Sim" : "Não" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.disponivel_todas_cidades ? "Sim" : "Não" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { color: p.ativo ? "#22c55e" : "#ef4444" }, children: p.ativo ? "Ativo" : "Inativo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
