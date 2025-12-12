@@ -159,7 +159,7 @@ export default function VendasConsultaIsland() {
           destinos:produtos!destino_id (
             nome,
             cidade_id,
-            cidades:cidades!cidade_id (nome)
+            cidades (id, nome)
           )
         `)
         .order("data_lancamento", { ascending: false });
