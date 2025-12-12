@@ -10,6 +10,7 @@ function normalizeText(value: string) {
 type Cliente = { id: string; nome: string; cpf?: string | null };
 type Cidade = { id: string; nome: string };
 type CidadeSugestao = { id: string; nome: string; subdivisao_nome?: string | null; pais_nome?: string | null };
+type CidadePrefill = { id: string; nome: string };
 type Produto = {
   id: string;
   nome: string;
@@ -92,6 +93,7 @@ export default function VendasCadastroIsland() {
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
 
   const [editId, setEditId] = useState<string | null>(null);
+  const [cidadePrefill, setCidadePrefill] = useState<CidadePrefill>({ id: "", nome: "" });
 
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -111,7 +113,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   // =======================================================
   // CARREGAR DADOS INICIAIS
   // =======================================================
-  async function carregarDados(vendaId?: string) {
+  async function carregarDados(vendaId?: string, cidadePrefillParam?: CidadePrefill) {
     try {
       setLoading(true);
 
@@ -145,7 +147,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       setTipos(tiposLista as any);
 
       if (vendaId) {
-        await carregarVenda(vendaId, cidadesLista, produtosLista);
+        await carregarVenda(vendaId, cidadesLista, produtosLista, cidadePrefillParam);
       }
     } catch (e) {
       console.error(e);
@@ -155,7 +157,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     }
   }
 
-  async function carregarVenda(id: string, cidadesBase?: Cidade[], produtosBase?: Produto[]) {
+  async function carregarVenda(
+    id: string,
+    cidadesBase?: Cidade[],
+    produtosBase?: Produto[],
+    cidadePrefillParam?: CidadePrefill
+  ) {
     try {
       setLoadingVenda(true);
 
@@ -185,6 +192,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         const cidadeSelecionada = lista.find((c) => c.id === cidadeId);
         if (cidadeSelecionada) cidadeNome = cidadeSelecionada.nome;
       }
+      if (!cidadeId && cidadePrefillParam?.id) {
+        cidadeId = cidadePrefillParam.id;
+      }
+      if (!cidadeNome && cidadePrefillParam?.nome) {
+        cidadeNome = cidadePrefillParam.nome;
+      }
 
       setFormVenda({
         cliente_id: vendaData.cliente_id,
@@ -192,8 +205,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         data_lancamento: vendaData.data_lancamento,
         data_embarque: vendaData.data_embarque || "",
       });
-      setBuscaDestino(cidadeNome);
-      setBuscaCidadeSelecionada(cidadeNome);
+      setBuscaDestino(cidadeNome || cidadeId || "");
+      setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
 
       const { data: recibosData, error: recErr } = await supabase
         .from("vendas_recibos")
@@ -227,11 +240,16 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     const params = new URLSearchParams(window.location.search);
     const idParam = params.get("id");
     if (idParam) setEditId(idParam);
+    const cidadeIdParam = params.get("cidadeId") || "";
+    const cidadeNomeParam = params.get("cidadeNome") || "";
+    if (cidadeIdParam || cidadeNomeParam) {
+      setCidadePrefill({ id: cidadeIdParam, nome: cidadeNomeParam });
+    }
   }, []);
 
   useEffect(() => {
-    if (!loadPerm && ativo) carregarDados(editId || undefined);
-  }, [loadPerm, ativo, editId]);
+    if (!loadPerm && ativo) carregarDados(editId || undefined, cidadePrefill);
+  }, [loadPerm, ativo, editId, cidadePrefill]);
 
   // Busca cidade (autocomplete)
   useEffect(() => {

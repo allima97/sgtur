@@ -12,10 +12,12 @@ type Venda = {
   vendedor_id?: string | null;
   cliente_id: string;
   destino_id: string;
+  destino_cidade_id?: string | null;
   data_lancamento: string;
   data_embarque: string | null;
   cliente_nome?: string;
   destino_nome?: string;
+  destino_cidade_nome?: string;
 };
 
 type Recibo = {
@@ -154,7 +156,11 @@ export default function VendasConsultaIsland() {
           data_lancamento,
           data_embarque,
           clientes(nome),
-          destinos:produtos!destino_id (nome)
+          destinos:produtos!destino_id (
+            nome,
+            cidade_id,
+            cidades:cidades!cidade_id (nome)
+          )
         `)
         .order("data_lancamento", { ascending: false });
 
@@ -170,10 +176,12 @@ export default function VendasConsultaIsland() {
         vendedor_id: row.vendedor_id,
         cliente_id: row.cliente_id,
         destino_id: row.destino_id,
+        destino_cidade_id: row.destinos?.cidade_id || "",
         data_lancamento: row.data_lancamento,
         data_embarque: row.data_embarque,
         cliente_nome: row.clientes?.nome || "",
         destino_nome: row.destinos?.nome || "",
+        destino_cidade_nome: (row.destinos as any)?.cidades?.nome || "",
       }));
 
       setVendas(v);
@@ -471,6 +479,9 @@ export default function VendasConsultaIsland() {
 
             <div className="modal-body">
               <div className="mb-2" style={{ lineHeight: 1.5 }}>
+                <strong>Cidade:</strong>{" "}
+                {modalVenda.destino_cidade_nome || "Não informada"}
+                <br />
                 <strong>Lançada em:</strong>{" "}
                 {new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")}
                 <br />
@@ -522,13 +533,19 @@ export default function VendasConsultaIsland() {
             {(podeEditar || podeExcluir) && (
               <div className="modal-footer">
                 {podeEditar && (
-                  <>
-                    <a
-                      className="btn btn-outline"
-                      href={`/vendas/cadastro?id=${modalVenda.id}`}
-                    >
-                      Editar
-                    </a>
+                    <>
+                      <a
+                        className="btn btn-outline"
+                        href={`/vendas/cadastro?id=${modalVenda.id}${
+                          modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
+                        }${
+                          modalVenda.destino_cidade_nome
+                            ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}`
+                            : ""
+                        }`}
+                      >
+                        Editar
+                      </a>
                     <button
                       className="btn btn-primary"
                       onClick={() => {
