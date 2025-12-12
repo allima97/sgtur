@@ -12,11 +12,8 @@ type Orcamento = {
   cliente_id?: string | null;
   destino_id?: string | null;
   produto_id?: string | null;
-  venda_id?: string | null;
   numero_venda?: string | null;
   venda_criada?: boolean | null;
-  numero_venda_url?: string | null;
-  interacoes?: { criado_em: string; texto: string }[] | null;
   clientes?: { nome: string } | null;
   destinos?: { nome: string } | null;
   produtos?: { nome: string; tipo?: string } | null;
@@ -49,17 +46,16 @@ export default function OrcamentosConsultaIsland() {
   const [clienteSelecionado, setClienteSelecionado] = useState<string>("");
   const [destinoSelecionado, setDestinoSelecionado] = useState<string>("");
   const [produtoSelecionado, setProdutoSelecionado] = useState<string>("");
-  const [novaInteracao, setNovaInteracao] = useState<string>("");
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [destinos, setDestinos] = useState<{ id: string; nome: string }[]>([]);
   const [produtos, setProdutos] = useState<{ id: string; nome: string | null; tipo?: string }[]>([]);
   const statuses: StatusOrcamento[] = ["novo", "enviado", "negociando", "fechado", "perdido"];
   const statusCores: Record<StatusOrcamento, { bg: string; border: string }> = {
-    novo: { bg: "#f8fafc", border: "#e2e8f0" },
-    enviado: { bg: "#f1f5f9", border: "#cbd5e1" },
-    negociando: { bg: "#eff6ff", border: "#bfdbfe" },
-    fechado: { bg: "#ecfdf3", border: "#bbf7d0" },
-    perdido: { bg: "#fef2f2", border: "#fecaca" },
+    novo: { bg: "#e0f2fe", border: "#1d4ed8" }, // azul solicitado (#1d4ed8)
+    enviado: { bg: "#fef9c3", border: "#facc15" }, // amarelo
+    negociando: { bg: "#fff7ed", border: "#fdba74" }, // laranja
+    fechado: { bg: "#ecfdf3", border: "#16a34a" }, // verde mais escuro na borda
+    perdido: { bg: "#fee2e2", border: "#fca5a5" }, // vermelho mais evidente
   };
   const statusTotal: Record<StatusOrcamento, { qtd: number; valor: number }> = {
     novo: { qtd: 0, valor: 0 },
@@ -78,6 +74,12 @@ export default function OrcamentosConsultaIsland() {
   useEffect(() => {
     carregar();
     carregarListas();
+  }, []);
+
+  useEffect(() => {
+    const handler = () => carregar();
+    window.addEventListener("orcamento-criado", handler);
+    return () => window.removeEventListener("orcamento-criado", handler);
   }, []);
 
   async function carregar() {
@@ -99,11 +101,8 @@ export default function OrcamentosConsultaIsland() {
             cliente_id,
             destino_id,
             produto_id,
-            venda_id,
             numero_venda,
             venda_criada,
-            numero_venda_url,
-            interacoes,
             clientes:cliente_id (nome),
             destinos:produtos!destino_id (nome),
             produtos:tipo_produtos!produto_id (nome, tipo)
@@ -286,12 +285,6 @@ export default function OrcamentosConsultaIsland() {
           cliente_id: clienteSelecionado || editando.cliente_id || null,
           destino_id: destinoSelecionado || editando.destino_id || null,
           produto_id: produtoSelecionado || editando.produto_id || null,
-          interacoes: novaInteracao.trim()
-            ? [
-                ...(editando.interacoes || []),
-                { criado_em: new Date().toISOString(), texto: novaInteracao.trim() },
-              ]
-            : editando.interacoes || [],
         })
         .eq("id", editando.id);
       if (error) throw error;
@@ -369,12 +362,21 @@ export default function OrcamentosConsultaIsland() {
   return (
     <>
       <div className="card-base">
-        <div className="page-header">
+        <div className="page-header" style={{ marginBottom: 8 }}>
           <div>
             <h2 className="card-title">Orçamentos</h2>
             <p className="page-subtitle">Consulta rápida dos orçamentos cadastrados.</p>
           </div>
-        <div className="grid gap-3 w-full sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6" style={{ marginTop: 12 }}>
+        </div>
+        <div
+          className="grid w-full"
+          style={{
+            marginTop: 12,
+            gap: 10,
+            gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
+            alignItems: "end",
+          }}
+        >
           <div className="form-group">
             <label className="form-label">Status</label>
             <select
@@ -427,11 +429,11 @@ export default function OrcamentosConsultaIsland() {
             />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary" onClick={carregar}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          <button className="btn btn-secondary" onClick={carregar} style={{ minWidth: 120 }}>
             Atualizar
           </button>
-          <button className="btn btn-light" onClick={exportarCSV}>
+          <button className="btn btn-light" onClick={exportarCSV} style={{ minWidth: 140 }}>
             Exportar CSV
           </button>
           <button
@@ -444,6 +446,7 @@ export default function OrcamentosConsultaIsland() {
               setValorMax("");
               carregar();
             }}
+            style={{ minWidth: 140 }}
           >
             Limpar filtros
           </button>
@@ -451,108 +454,142 @@ export default function OrcamentosConsultaIsland() {
       </div>
 
       {erro && <div className="auth-error">{erro}</div>}
-      {sucesso && <div className="auth-success">{sucesso}</div>}
+      {sucesso && (
+        <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
+          {sucesso}
+        </div>
+      )}
 
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[1100px]">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Cliente</th>
-              <th>Destino</th>
-              <th>Produto</th>
-              <th>Status</th>
-              <th>Venda</th>
-              <th>Valor</th>
-              <th>Data viagem</th>
-              <th>Notas</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {carregando && (
-              <tr>
-                <td colSpan={9}>Carregando...</td>
-              </tr>
-            )}
-            {!carregando && filtrados.length === 0 && (
-              <tr>
-                <td colSpan={9}>Nenhum orçamento encontrado.</td>
-              </tr>
-            )}
-
-            {!carregando &&
-              filtrados.map((o) => (
-                <tr key={o.id}>
-                  <td>{o.data_orcamento?.slice(0, 10) || "—"}</td>
-                  <td>{o.clientes?.nome || "—"}</td>
-              <td>{o.destinos?.nome || "—"}</td>
-              <td>{o.produtos?.nome || "—"}</td>
-              <td style={{ textTransform: "capitalize" }}>
-                <select
-                  className="form-select"
-                  value={o.status || ""}
-                  onChange={(e) =>
-                    alterarStatus(o.id, e.target.value as StatusOrcamento)
-                  }
-                  disabled={salvandoStatus === o.id}
-                >
-                  <option value="novo">Novo</option>
-                  <option value="enviado">Enviado</option>
-                  <option value="negociando">Negociando</option>
-                  <option value="fechado">Fechado</option>
-                  <option value="perdido">Perdido</option>
-                </select>
-              </td>
-              <td>
-                {o.venda_id ? (
-                  <a href={o.numero_venda_url || "/vendas/consulta"} title="Ver venda">
-                    {o.numero_venda || `${o.venda_id.slice(0, 6)}...`}
-                  </a>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td>
-                {o.valor
-                  ? o.valor.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })
-                  : "—"}
-              </td>
-              <td>{o.data_viagem || "—"}</td>
-              <td>{o.notas || "—"}</td>
-              <td>
-                <button
-                  className="btn-icon"
-                  onClick={() => iniciarEdicao(o)}
-                  style={{ marginRight: 6 }}
-                  disabled={o.status === "fechado" || o.status === "perdido"}
-                  title={o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar"}
-                >
-                  ✏️
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => converterParaVenda(o)}
-                  style={{ padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 }}
-                  disabled={!o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido"}
-                  title={
-                    o.status === "fechado" || o.status === "perdido"
-                      ? "Orçamento encerrado"
-                      : !o.cliente_id || !o.destino_id
-                        ? "Selecione cliente e destino para converter"
-                        : "Converter em venda"
-                  }
-                >
-                  Converter
-                </button>
-              </td>
-            </tr>
+      <div className="card-base card-blue" style={{ marginTop: 12 }}>
+        <h3 className="card-title">Situação do Orçamento</h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 10,
+            alignItems: "stretch",
+          }}
+        >
+          {statuses.map((status) => (
+            <div
+              key={`kpi-${status}`}
+              className="kpi-card"
+              style={{
+                background: statusCores[status].bg,
+                border: `1px solid ${statusCores[status].border}`,
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                justifyContent: "center",
+              }}
+            >
+              <div className="kpi-label" style={{ textTransform: "capitalize", fontWeight: 700 }}>
+                {status} - {String(totais[status].qtd).padStart(2, "0")} Itens
+              </div>
+              <div className="kpi-value" style={{ fontSize: "1.3rem", fontWeight: 800 }}>
+                {totais[status].valor.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+              </div>
+            </div>
           ))}
-      </tbody>
-    </table>
+        </div>
+      </div>
+
+      <div className="card-base" style={{ marginTop: 16 }}>
+        <div className="table-container overflow-x-auto">
+          <table className="table-default table-header-blue min-w-[1100px]">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Destino</th>
+                <th>Produto</th>
+                <th>Status</th>
+                <th>Valor</th>
+                <th>Data viagem</th>
+                <th>Notas</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carregando && (
+                <tr>
+                  <td colSpan={9}>Carregando...</td>
+                </tr>
+              )}
+              {!carregando && filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={9}>Nenhum orçamento encontrado.</td>
+                </tr>
+              )}
+
+              {!carregando &&
+                filtrados.map((o) => (
+                  <tr key={o.id}>
+                    <td>{o.data_orcamento?.slice(0, 10) || "—"}</td>
+                    <td>{o.clientes?.nome || "—"}</td>
+                <td>{o.destinos?.nome || "—"}</td>
+                <td>{o.produtos?.nome || "—"}</td>
+                <td style={{ textTransform: "capitalize" }}>
+                  <select
+                    className="form-select"
+                    value={o.status || ""}
+                    onChange={(e) =>
+                      alterarStatus(o.id, e.target.value as StatusOrcamento)
+                    }
+                    disabled={salvandoStatus === o.id}
+                  >
+                    <option value="novo">Novo</option>
+                    <option value="enviado">Enviado</option>
+                    <option value="negociando">Negociando</option>
+                    <option value="fechado">Fechado</option>
+                    <option value="perdido">Perdido</option>
+                  </select>
+                </td>
+                <td>
+                  {o.valor
+                    ? o.valor.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })
+                    : "—"}
+                </td>
+                <td>{o.data_viagem || "—"}</td>
+                <td>{o.notas || "—"}</td>
+                <td>
+                  <button
+                    className="btn-icon"
+                    onClick={() => iniciarEdicao(o)}
+                    style={{ marginRight: 6 }}
+                    disabled={o.status === "fechado" || o.status === "perdido"}
+                    title={o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar"}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => converterParaVenda(o)}
+                    style={{ padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 }}
+                    disabled={!o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido"}
+                    title={
+                      o.status === "fechado" || o.status === "perdido"
+                        ? "Orçamento encerrado"
+                        : !o.cliente_id || !o.destino_id
+                          ? "Selecione cliente e destino para converter"
+                          : "Converter em venda"
+                    }
+                  >
+                    Converter
+                  </button>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   {editando && (
@@ -643,43 +680,6 @@ export default function OrcamentosConsultaIsland() {
                 onChange={(e) => setNotasEdit(e.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Adicionar interação</label>
-              <textarea
-                className="form-input"
-                rows={2}
-                value={novaInteracao}
-                onChange={(e) => setNovaInteracao(e.target.value)}
-                placeholder="Ex: Ligação com cliente, próxima ação..."
-              />
-            </div>
-            {editando.interacoes && editando.interacoes.length > 0 && (
-              <div className="form-group">
-                <label className="form-label">Histórico</label>
-                <div
-                  style={{
-                    maxHeight: 120,
-                    overflowY: "auto",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 8,
-                    padding: 8,
-                    background: "#f8fafc",
-                  }}
-                >
-                  {editando.interacoes
-                    .slice()
-                    .reverse()
-                    .map((i, idx) => (
-                      <div key={idx} style={{ marginBottom: 6, fontSize: "0.9rem" }}>
-                        <div style={{ color: "#64748b", fontSize: "0.8rem" }}>
-                          {i.criado_em?.slice(0, 16).replace("T", " ")}
-                        </div>
-                        <div>{i.texto}</div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-light" onClick={() => setEditando(null)}>
@@ -693,184 +693,6 @@ export default function OrcamentosConsultaIsland() {
       </div>
     </div>
   )}
-      </div>
-
-      {/* KANBAN SIMPLES */}
-      <div className="card-base card-blue" style={{ marginTop: 12 }}>
-        <h3 className="card-title">Situação do Orçamento</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 10,
-            alignItems: "stretch",
-            marginBottom: 10,
-          }}
-        >
-          {statuses.map((status) => (
-            <div
-              key={`kpi-${status}`}
-              className="kpi-card"
-              style={{
-                background: statusCores[status].bg,
-                border: `1px solid ${statusCores[status].border}`,
-              }}
-            >
-              <div className="kpi-label" style={{ textTransform: "capitalize" }}>
-                {status}
-              </div>
-              <div className="kpi-value" style={{ fontSize: "1.1rem" }}>
-                {totais[status].qtd} itens
-              </div>
-              <div style={{ fontSize: "0.9rem", color: "#0f172a" }}>
-                {totais[status].valor.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-        {statuses.some((s) => porColuna[s].length > 0) ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {statuses
-              .filter((s) => porColuna[s].length > 0)
-              .map((status) => (
-                <div
-                  key={status}
-                  style={{
-                    background: statusCores[status].bg,
-                    border: `1px solid ${statusCores[status].border}`,
-                    borderRadius: 10,
-                    padding: 10,
-                    transition: "transform 0.1s ease, box-shadow 0.1s ease",
-                    boxShadow:
-                      draggingStatus && draggingStatus === status
-                        ? "0 0 0 2px rgba(59,130,246,0.4)"
-                        : "none",
-                    transform: draggingStatus && draggingStatus === status ? "scale(1.01)" : "none",
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleDrop(status)}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, textTransform: "capitalize" }}>{status}</div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {porColuna[status].map((o) => (
-                      <div
-                        key={o.id}
-                        style={{
-                          background: "white",
-                          borderRadius: 8,
-                          border: draggingId === o.id ? "1px solid #3b82f6" : "1px solid #e2e8f0",
-                          padding: "8px 10px",
-                          boxShadow:
-                            draggingId === o.id
-                              ? "0 8px 16px rgba(59,130,246,0.15)"
-                              : "0 1px 2px rgba(0,0,0,0.05)",
-                          position: "relative",
-                        }}
-                        draggable={o.status !== "fechado" && o.status !== "perdido"}
-                        onDragStart={() => {
-                          if (o.status === "fechado" || o.status === "perdido") return;
-                          handleDragStart(o.id);
-                        }}
-                        onDragEnd={() => setDraggingId(null)}
-                        title={`Cliente: ${o.clientes?.nome || "—"}\nDestino: ${o.destinos?.nome || "—"}\nValor: ${
-                          o.valor
-                            ? o.valor.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })
-                            : "—"
-                        }\nData orçamento: ${o.data_orcamento?.slice(0, 10) || "—"}\nData viagem: ${
-                          o.data_viagem || "—"
-                        }\nVenda: ${o.numero_venda || "—"}`}
-                      >
-                        <div style={{ fontWeight: 600 }}>{o.clientes?.nome || "Cliente"}</div>
-                        <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                          {o.destinos?.nome || "—"}
-                        </div>
-                        <div style={{ fontSize: "0.85rem", color: "#475569" }}>
-                          Valor:{" "}
-                          {o.valor
-                            ? o.valor.toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })
-                            : "—"}
-                        </div>
-                        <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                          Orcamento: {o.data_orcamento?.slice(0, 10) || "—"} | Viagem:{" "}
-                          {o.data_viagem || "—"}
-                        </div>
-                        {o.venda_id && (
-                          <div style={{ fontSize: "0.8rem", color: "#22c55e" }}>
-                            Venda: {o.numero_venda || o.venda_id.slice(0, 6)}
-                          </div>
-                        )}
-                        <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {status !== "negociando" && (
-                            <button
-                              className="btn btn-light"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem" }}
-                              onClick={() => alterarStatus(o.id, "negociando")}
-                              disabled={salvandoStatus === o.id}
-                            >
-                              Mover p/ negociando
-                            </button>
-                          )}
-                          {status !== "enviado" && (
-                            <button
-                              className="btn btn-light"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem" }}
-                              onClick={() => alterarStatus(o.id, "enviado")}
-                              disabled={salvandoStatus === o.id}
-                            >
-                              Enviar
-                            </button>
-                          )}
-                          {status !== "perdido" && (
-                            <button
-                              className="btn btn-light"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem" }}
-                              onClick={() => alterarStatus(o.id, "perdido")}
-                              disabled={salvandoStatus === o.id}
-                            >
-                              Marcar perdido
-                            </button>
-                          )}
-                          {status !== "fechado" && (
-                            <button
-                              className="btn btn-primary"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem" }}
-                              onClick={() => converterParaVenda(o)}
-                              disabled={!o.cliente_id || !o.destino_id}
-                            >
-                              Fechar (Venda)
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-          </div>
-        ) : (
-          <div className="card-base card-config" style={{ marginTop: 8 }}>
-            <strong>Nenhum orçamento para exibir no Kanban.</strong>
-          </div>
-        )}
-      </div>
 
     </>
   );

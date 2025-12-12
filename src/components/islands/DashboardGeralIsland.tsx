@@ -672,7 +672,7 @@ const DashboardGeralIsland: React.FC = () => {
 
   // ----------------- DERIVADOS: GRÁFICOS -----------------
 
-  const vendasPorDestino = useMemo(() => {
+  const vendasPorDestinoFull = useMemo(() => {
     const map = new Map<string, number>();
 
     vendas.forEach((v) => {
@@ -684,11 +684,15 @@ const DashboardGeralIsland: React.FC = () => {
       map.set(destino, (map.get(destino) || 0) + totalVenda);
     });
 
-    return Array.from(map.entries()).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    return Array.from(map.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [vendas]);
+
+  const vendasPorDestinoTop5 = useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
 
   const vendasPorProduto = useMemo(() => {
     const map = new Map<string, number>();
@@ -908,10 +912,12 @@ const DashboardGeralIsland: React.FC = () => {
           </div>
         );
       case "vendas_destino":
+        const tituloDestino =
+          chartPrefs.vendas_destino === "bar" ? "Vendas por Destino (Visão Completa)" : "Vendas por destino (Top 5)";
         return (
           <div className="card-base card-purple mb-3">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ marginBottom: 8 }}>Vendas por destino</h3>
+              <h3 style={{ marginBottom: 8 }}>{tituloDestino}</h3>
               <select
                 className="form-select"
                 style={{ maxWidth: 160 }}
@@ -923,16 +929,16 @@ const DashboardGeralIsland: React.FC = () => {
               </select>
             </div>
             <div style={{ width: "100%", height: 260 }}>
-              {vendasPorDestino.length === 0 ? (
+              {vendasPorDestinoFull.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefs.vendas_destino === "bar" ? (
                 <ResponsiveContainer>
-                  <BarChart data={vendasPorDestino}>
+                  <BarChart data={vendasPorDestinoFull}>
                     <XAxis dataKey="name" hide />
                     <YAxis />
                     <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
                     <Bar dataKey="value">
-                      {vendasPorDestino.map((entry, index) => (
+                      {vendasPorDestinoFull.map((entry, index) => (
                         <Cell key={`cell-dest-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
                       ))}
                     </Bar>
@@ -944,14 +950,14 @@ const DashboardGeralIsland: React.FC = () => {
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie
-                          data={vendasPorDestino}
+                          data={vendasPorDestinoTop5}
                           dataKey="value"
                           nameKey="name"
                           outerRadius={90}
                           label={false}
                           labelLine={false}
                         >
-                          {vendasPorDestino.map((entry, index) => (
+                          {vendasPorDestinoTop5.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
                           ))}
                         </Pie>
@@ -960,7 +966,7 @@ const DashboardGeralIsland: React.FC = () => {
                     </ResponsiveContainer>
                   </div>
                   <div style={{ minWidth: 220, maxHeight: "100%", overflowY: "auto" }}>
-                    {renderPieLegendList(vendasPorDestino)}
+                    {renderPieLegendList(vendasPorDestinoTop5)}
                   </div>
                 </div>
               )}

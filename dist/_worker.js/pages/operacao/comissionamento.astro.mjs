@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B4UzsGdb.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -163,9 +163,11 @@ function ComissionamentoIsland() {
       metasProdutoMap[m.produto_id] = m.valor;
     });
     const baseMetaPorProduto = {};
+    const brutoPorProduto = {};
     const liquidoPorProduto = {};
     let baseMeta = 0;
-    let valorLiquido = 0;
+    let totalBruto = 0;
+    let totalTaxas = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
     const comissaoDifDetalhe = {};
@@ -181,27 +183,32 @@ function ComissionamentoIsland() {
         const prodId = r.tipo_produtos?.id || r.produto_id || "";
         const prod = produtos[prodId];
         if (!prod) return;
-        const valTotal = Number(r.valor_total || 0);
+        const valTotalBruto = Number(r.valor_total || 0);
         const valTaxas = Number(r.valor_taxas || 0);
-        const valParaMeta = parametros.foco_valor === "liquido" ? valTotal : parametros.usar_taxas_na_meta ? valTotal + valTaxas : valTotal;
-        liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + valTotal;
+        const valLiquido = valTotalBruto - valTaxas;
+        const valParaMeta = parametros.usar_taxas_na_meta ? valTotalBruto : valLiquido;
+        brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + valTotalBruto;
+        liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + valLiquido;
         baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
         if (prod.soma_na_meta) baseMeta += valParaMeta;
-        valorLiquido += valTotal;
+        totalBruto += valTotalBruto;
+        totalTaxas += valTaxas;
       });
     });
+    const valorLiquido = totalBruto - totalTaxas;
     const pctMetaGeral = metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? baseMeta / metaGeral.meta_geral * 100 : 0;
-    Object.keys(liquidoPorProduto).forEach((prodId) => {
+    Object.keys(brutoPorProduto).forEach((prodId) => {
       const prod = produtos[prodId];
       if (!prod) return;
-      const baseCom = liquidoPorProduto[prodId] || 0;
+      const baseCom = parametros.foco_valor === "liquido" ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
         const metaProd = metasProdutoMap[prodId] || 0;
         const baseMetaProd = baseMetaPorProduto[prodId] || 0;
-        const pctMetaProd = metaProd > 0 ? baseMetaProd / metaProd * 100 : 0;
-        const pctCom = pctMetaProd >= 120 ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : pctMetaProd >= 100 ? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_nao_atingida ?? 0;
+        const temMetaProd = metaProd > 0;
+        const pctMetaProd = temMetaProd ? baseMetaProd / metaProd * 100 : 0;
+        const pctCom = temMetaProd ? baseMetaProd < metaProd ? 0 : pctMetaProd >= 120 ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
         comissaoDif += val;
         comissaoDifDetalhe[prodId] = val;
@@ -219,6 +226,8 @@ function ComissionamentoIsland() {
     });
     return {
       baseMeta,
+      totalBruto,
+      totalTaxas,
       valorLiquido,
       pctMetaGeral,
       comissaoGeral,
@@ -261,7 +270,7 @@ function ComissionamentoIsland() {
             className: "kpi-grid",
             style: {
               display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(180px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
               gap: 12,
               marginBottom: 4
             },
@@ -271,8 +280,16 @@ function ComissionamentoIsland() {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (metaGeral?.meta_geral || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#ca8a04" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas do mês" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.baseMeta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Bruto" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#c2410c" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Taxas" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalTaxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#0ea5e9" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Valor Liquido" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#2563eb" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta atingida" }),
@@ -280,10 +297,6 @@ function ComissionamentoIsland() {
                   resumo.pctMetaGeral.toFixed(1),
                   "%"
                 ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#c2410c" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Base para comissionamento" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] })
             ]
           }
@@ -302,10 +315,7 @@ function ComissionamentoIsland() {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
               (resumo.produtosDiferenciados || []).map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-label", children: [
-                  "Comissão ",
-                  produtos[pid]?.nome || "(produto)"
-                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL"

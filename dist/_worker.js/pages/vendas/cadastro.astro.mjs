@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B4UzsGdb.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -55,9 +55,10 @@ function VendasCadastroIsland() {
       setClientes(c.data || []);
       const cidadesLista = d.data || [];
       setCidades(cidadesLista);
-      setProdutos(p.data || []);
+      const produtosLista = p.data || [];
+      setProdutos(produtosLista);
       if (vendaId) {
-        await carregarVenda(vendaId, cidadesLista);
+        await carregarVenda(vendaId, cidadesLista, produtosLista);
       }
     } catch (e) {
       console.error(e);
@@ -66,7 +67,7 @@ function VendasCadastroIsland() {
       setLoading(false);
     }
   }
-  async function carregarVenda(id, cidadesBase) {
+  async function carregarVenda(id, cidadesBase, produtosBase) {
     try {
       setLoadingVenda(true);
       const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, data_lancamento, data_embarque").eq("id", id).maybeSingle();
@@ -94,10 +95,13 @@ function VendasCadastroIsland() {
       setBuscaCidadeSelecionada(cidadeNome);
       const { data: recibosData, error: recErr } = await supabase.from("vendas_recibos").select("*").eq("venda_id", id);
       if (recErr) throw recErr;
+      const produtosLista = produtosBase || produtos;
       setRecibos(
         (recibosData || []).map((r) => ({
           id: r.id,
-          produto_id: produtos.find((p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId))?.id || "",
+          produto_id: produtosLista.find(
+            (p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId || !p.cidade_id)
+          )?.id || "",
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? String(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? String(r.valor_taxas) : "0"
@@ -173,11 +177,19 @@ function VendasCadastroIsland() {
     return cidades.filter((c) => normalizeText(c.nome).includes(t));
   }, [cidades, buscaDestino]);
   const produtosFiltrados = reactExports.useMemo(() => {
-    const base = formVenda.destino_id ? produtos.filter((p) => p.cidade_id === formVenda.destino_id) : [];
+    const base = formVenda.destino_id ? produtos.filter((p) => !p.cidade_id || p.cidade_id === formVenda.destino_id) : produtos.filter((p) => !p.cidade_id);
     if (!buscaProduto.trim()) return base;
     const t = normalizeText(buscaProduto);
     return base.filter((c) => normalizeText(c.nome).includes(t));
   }, [produtos, buscaProduto, formVenda.destino_id]);
+  const existeProdutoGlobal = reactExports.useMemo(() => produtos.some((p) => !p.cidade_id), [produtos]);
+  const cidadeObrigatoria = reactExports.useMemo(() => {
+    if (recibos.length === 0) return false;
+    return recibos.some((r) => {
+      const prod = produtos.find((p) => p.id === r.produto_id);
+      return prod?.cidade_id;
+    });
+  }, [recibos, produtos]);
   function handleCidadeDestino(valor) {
     setBuscaDestino(valor);
     const cidadeAtual = cidades.find((c) => c.id === formVenda.destino_id);
@@ -201,7 +213,7 @@ function VendasCadastroIsland() {
     setRecibos(
       (prev) => prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        if (prod && prod.cidade_id === formVenda.destino_id) return r;
+        if (prod && (!prod.cidade_id || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
     );
@@ -241,10 +253,35 @@ function VendasCadastroIsland() {
         return;
       }
       const produtoDestino = produtos.find((p) => p.id === produtoDestinoId);
-      if (!produtoDestino || produtoDestino.cidade_id !== formVenda.destino_id) {
+      const possuiProdutoLocal = recibos.some((r) => {
+        const prod = produtos.find((p) => p.id === r.produto_id);
+        return prod?.cidade_id;
+      });
+      if (possuiProdutoLocal && !formVenda.destino_id) {
+        setErro("Selecione a cidade de destino para vendas com produtos vinculados a cidade.");
+        setSalvando(false);
+        return;
+      }
+      if (!produtoDestino) {
+        setErro("O produto do recibo precisa ser válido.");
+        setSalvando(false);
+        return;
+      }
+      if (produtoDestino.cidade_id && formVenda.destino_id && produtoDestino.cidade_id !== formVenda.destino_id) {
         setErro("O produto do recibo precisa pertencer à cidade de destino selecionada.");
         setSalvando(false);
         return;
+      }
+      if (formVenda.destino_id) {
+        const produtoDeOutraCidade = recibos.some((r) => {
+          const prod = produtos.find((p) => p.id === r.produto_id);
+          return prod?.cidade_id && prod.cidade_id !== formVenda.destino_id;
+        });
+        if (produtoDeOutraCidade) {
+          setErro("Todos os produtos precisam pertencer à cidade selecionada ou ser globais.");
+          setSalvando(false);
+          return;
+        }
       }
       if (!produtoDestino.tipo_produto) {
         setErro("O produto selecionado não possui tipo vinculado. Cadastre um tipo de produto para ele.");
@@ -283,7 +320,7 @@ function VendasCadastroIsland() {
           detalhes: { id: editId, venda: formVenda, recibos }
         });
         alert("Venda atualizada com sucesso!");
-        await carregarVenda(editId);
+        await carregarVenda(editId, cidades, produtos);
       } else {
         const { data: vendaData, error: vendaErr } = await supabase.from("vendas").insert({
           vendedor_id: userId,
@@ -382,6 +419,7 @@ function VendasCadastroIsland() {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade de Destino *" }),
+          existeProdutoGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { display: "block", color: "#475569", marginBottom: 4 }, children: "Obrigatório apenas se o recibo tiver produto vinculado a uma cidade." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -391,7 +429,7 @@ function VendasCadastroIsland() {
               onChange: (e) => handleCidadeDestino(e.target.value),
               onFocus: () => setMostrarSugestoesCidade(true),
               onBlur: () => setTimeout(() => setMostrarSugestoesCidade(false), 150),
-              required: true,
+              required: cidadeObrigatoria,
               style: { marginBottom: 6 }
             }
           ),
@@ -475,7 +513,7 @@ function VendasCadastroIsland() {
             {
               className: "form-input",
               list: `listaProdutos-${i}`,
-              placeholder: "Selecione uma cidade primeiro e busque o produto...",
+              placeholder: existeProdutoGlobal ? "Escolha uma cidade ou selecione um produto global..." : "Selecione uma cidade primeiro e busque o produto...",
               value: produtos.find((p) => p.id === r.produto_id)?.nome || buscaProduto,
               onChange: (e) => setBuscaProduto(e.target.value),
               onBlur: () => {
@@ -487,7 +525,7 @@ function VendasCadastroIsland() {
                 }
               },
               required: true,
-              disabled: !formVenda.destino_id
+              disabled: !formVenda.destino_id && !existeProdutoGlobal
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `listaProdutos-${i}`, children: produtosFiltrados.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.nome }, p.id)) })

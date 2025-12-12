@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_G6itN-OC.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B4UzsGdb.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
-import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_Dz5DhtCL.mjs';
+import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_BXJtniqq.mjs';
 
 function formatCurrency(v) {
   return v.toLocaleString("pt-BR", {

@@ -10,7 +10,14 @@ function normalizeText(value: string) {
 type Cliente = { id: string; nome: string; cpf?: string | null };
 type Cidade = { id: string; nome: string };
 type CidadeSugestao = { id: string; nome: string; subdivisao_nome?: string | null; pais_nome?: string | null };
-type Produto = { id: string; nome: string; cidade_id: string | null; tipo_produto: string | null };
+type Produto = {
+  id: string;
+  nome: string;
+  cidade_id: string | null;
+  tipo_produto: string | null;
+  tipo_info?: { disponivel_todas_cidades?: boolean | null } | null;
+  isVirtual?: boolean;
+};
 
 type FormVenda = {
   cliente_id: string;
@@ -41,6 +48,26 @@ const initialRecibo: FormRecibo = {
   valor_taxas: "0",
 };
 
+function formatarValorDigitado(valor: string) {
+  const apenasDigitos = valor.replace(/\D/g, "");
+  if (!apenasDigitos) return "";
+  const num = Number(apenasDigitos) / 100;
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatarNumeroComoMoeda(valor: number | string | null | undefined) {
+  const num = Number(valor);
+  if (Number.isNaN(num)) return "";
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function moedaParaNumero(valor: string) {
+  if (!valor) return NaN;
+  const limpo = valor.replace(/\./g, "").replace(",", ".");
+  const num = Number(limpo);
+  return num;
+}
+
 export default function VendasCadastroIsland() {
   // =======================================================
   // PERMISSÕES
@@ -57,6 +84,9 @@ export default function VendasCadastroIsland() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [tipos, setTipos] = useState<{ id: string; nome: string | null; disponivel_todas_cidades?: boolean | null }[]>(
+    []
+  );
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
@@ -85,17 +115,34 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     try {
       setLoading(true);
 
-      const [c, d, p] = await Promise.all([
+      const [c, d, p, tiposResp] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
         supabase.from("cidades").select("id, nome").order("nome"),
-        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto").order("nome"),
+        supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .order("nome"),
+        supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades"),
       ]);
 
       setClientes(c.data || []);
       const cidadesLista = (d.data || []) as Cidade[];
       setCidades(cidadesLista);
-      const produtosLista = (p.data || []) as Produto[];
+      const tiposLista = (tiposResp.data as any[]) || [];
+      const tiposMap = new Map(tiposLista.map((t) => [t.id, t]));
+      const produtosLista = ((p.data as any[]) || []).map((prod) => {
+        const tipoInfo = (prod as any).tipo_produtos;
+        return {
+          ...prod,
+          tipo_info: tipoInfo
+            ? { disponivel_todas_cidades: tipoInfo.disponivel_todas_cidades }
+            : tiposMap.has(prod.tipo_produto)
+            ? { disponivel_todas_cidades: tiposMap.get(prod.tipo_produto || "")?.disponivel_todas_cidades }
+            : undefined,
+        } as Produto;
+      });
       setProdutos(produtosLista);
+      setTipos(tiposLista as any);
 
       if (vendaId) {
         await carregarVenda(vendaId, cidadesLista, produtosLista);
@@ -159,12 +206,13 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         (recibosData || []).map((r: any) => ({
           id: r.id,
           produto_id:
-            produtosLista.find(
-              (p) => p.tipo_produto === r.produto_id && (!cidadeId || p.cidade_id === cidadeId || !p.cidade_id)
-            )?.id || "",
+            produtosLista.find((p) => {
+              const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+              return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
+            })?.id || "",
           numero_recibo: r.numero_recibo || "",
-          valor_total: r.valor_total != null ? String(r.valor_total) : "",
-          valor_taxas: r.valor_taxas != null ? String(r.valor_taxas) : "0",
+          valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
+          valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
         }))
       );
     } catch (e) {
@@ -257,23 +305,56 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   }, [cidades, buscaDestino]);
 
   const produtosFiltrados = useMemo(() => {
-    const base = formVenda.destino_id
-      ? produtos.filter((p) => !p.cidade_id || p.cidade_id === formVenda.destino_id)
-      : produtos.filter((p) => !p.cidade_id); // sem cidade definida, mostra globais
+    const globalTypes = tipos.filter((t) => t.disponivel_todas_cidades);
+    let base: Produto[] = [];
+
+    if (formVenda.destino_id) {
+      const baseProd = produtos.filter((p) => {
+        const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+        return ehGlobal || p.cidade_id === formVenda.destino_id;
+      });
+
+      const existentesTipo = new Set(
+        baseProd.filter((p) => p.cidade_id === formVenda.destino_id).map((p) => p.tipo_produto)
+      );
+
+      const virtuais: Produto[] = globalTypes
+        .filter((t) => !existentesTipo.has(t.id))
+        .map((t) => ({
+          id: `virtual-${t.id}`,
+          nome: t.nome || "Produto global",
+          cidade_id: formVenda.destino_id,
+          tipo_produto: t.id,
+          tipo_info: { disponivel_todas_cidades: true },
+          isVirtual: true,
+        }));
+
+      base = [...baseProd, ...virtuais];
+    } else {
+      base = [
+        ...produtos.filter((p) => !!p.tipo_info?.disponivel_todas_cidades),
+        ...globalTypes.map((t) => ({
+          id: `virtual-${t.id}`,
+          nome: t.nome || "Produto global",
+          cidade_id: null,
+          tipo_produto: t.id,
+          tipo_info: { disponivel_todas_cidades: true },
+          isVirtual: true,
+        })),
+      ];
+    }
+
     if (!buscaProduto.trim()) return base;
     const t = normalizeText(buscaProduto);
     return base.filter((c) => normalizeText(c.nome).includes(t));
-  }, [produtos, buscaProduto, formVenda.destino_id]);
+  }, [produtos, tipos, buscaProduto, formVenda.destino_id]);
 
-  const existeProdutoGlobal = useMemo(() => produtos.some((p) => !p.cidade_id), [produtos]);
+  const existeProdutoGlobal = useMemo(
+    () => produtos.some((p) => p.tipo_info?.disponivel_todas_cidades),
+    [produtos]
+  );
 
-  const cidadeObrigatoria = useMemo(() => {
-    if (recibos.length === 0) return false;
-    return recibos.some((r) => {
-      const prod = produtos.find((p) => p.id === r.produto_id);
-      return prod?.cidade_id;
-    });
-  }, [recibos, produtos]);
+  const cidadeObrigatoria = useMemo(() => recibos.length > 0, [recibos.length]);
 
   function handleCidadeDestino(valor: string) {
     setBuscaDestino(valor);
@@ -299,13 +380,19 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     });
   }
 
+  function updateReciboMonetario(index: number, campo: "valor_total" | "valor_taxas", valor: string) {
+    const formatado = formatarValorDigitado(valor);
+    updateRecibo(index, campo, formatado);
+  }
+
   useEffect(() => {
     // Ao trocar a cidade, limpa buscas e produtos que não pertencem a ela
     setBuscaProduto("");
     setRecibos((prev) =>
       prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        if (prod && (!prod.cidade_id || prod.cidade_id === formVenda.destino_id)) return r;
+        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades;
+        if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
     );
@@ -349,17 +436,17 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         return;
       }
 
-      const produtoDestinoId = recibos[0]?.produto_id;
-      if (!produtoDestinoId) {
+      const produtoDestinoIdRaw = recibos[0]?.produto_id;
+      if (!produtoDestinoIdRaw) {
         setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
         setSalvando(false);
         return;
       }
 
-      const produtoDestino = produtos.find((p) => p.id === produtoDestinoId);
       const possuiProdutoLocal = recibos.some((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        return prod?.cidade_id;
+        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades || (r.produto_id || "").startsWith("virtual-");
+        return prod?.cidade_id && !ehGlobal;
       });
 
       if (possuiProdutoLocal && !formVenda.destino_id) {
@@ -368,34 +455,61 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         return;
       }
 
-      if (!produtoDestino) {
-        setErro("O produto do recibo precisa ser válido.");
-        setSalvando(false);
-        return;
-      }
+      async function resolverProdutoId(recibo: FormRecibo): Promise<string> {
+        const atualId = recibo.produto_id;
+        const existente = produtos.find((p) => p.id === atualId);
+        if (existente && !existente.isVirtual) return existente.id;
 
-      if (produtoDestino.cidade_id && formVenda.destino_id && produtoDestino.cidade_id !== formVenda.destino_id) {
-        setErro("O produto do recibo precisa pertencer à cidade de destino selecionada.");
-        setSalvando(false);
-        return;
-      }
+        const tipoId =
+          existente?.tipo_produto ||
+          (atualId?.startsWith("virtual-") ? atualId.replace("virtual-", "") : existente?.tipo_produto);
 
-      if (formVenda.destino_id) {
-        const produtoDeOutraCidade = recibos.some((r) => {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          return prod?.cidade_id && prod.cidade_id !== formVenda.destino_id;
-        });
-        if (produtoDeOutraCidade) {
-          setErro("Todos os produtos precisam pertencer à cidade selecionada ou ser globais.");
-          setSalvando(false);
-          return;
+        if (!tipoId) throw new Error("Produto inválido. Selecione novamente.");
+
+        const cidadeDestino = formVenda.destino_id;
+        if (!cidadeDestino) throw new Error("Selecione a cidade de destino para usar produtos globais.");
+
+        const produtoDaCidade = produtos.find((p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino);
+        if (produtoDaCidade) return produtoDaCidade.id;
+
+        const tipoInfo = tipos.find((t) => t.id === tipoId);
+        const nomeProd = tipoInfo?.nome || "Produto";
+        const { data: novo, error } = await supabase
+          .from("produtos")
+          .insert({
+            nome: nomeProd,
+            destino: nomeProd,
+            cidade_id: cidadeDestino,
+            tipo_produto: tipoId,
+            ativo: true,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        const novoId = (novo as any)?.id;
+        if (novoId) {
+          setProdutos((prev) => [
+            ...prev,
+            {
+              id: novoId,
+              nome: nomeProd,
+              cidade_id: cidadeDestino,
+              tipo_produto: tipoId,
+              tipo_info: { disponivel_todas_cidades: tipoInfo?.disponivel_todas_cidades },
+            },
+          ]);
+          return novoId;
         }
+        throw new Error("Não foi possível criar produto global.");
       }
-      if (!produtoDestino.tipo_produto) {
-        setErro("O produto selecionado não possui tipo vinculado. Cadastre um tipo de produto para ele.");
-        setSalvando(false);
-        return;
+
+      const produtoIdsResolvidos: string[] = [];
+      for (const r of recibos) {
+        const idResolvido = await resolverProdutoId(r);
+        produtoIdsResolvidos.push(idResolvido);
       }
+
+      const produtoDestinoId = produtoIdsResolvidos[0];
 
       let vendaId = editId;
 
@@ -415,17 +529,30 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         // substitui recibos para manter consistência
         await supabase.from("vendas_recibos").delete().eq("venda_id", editId);
 
-        for (const r of recibos) {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          if (!prod?.tipo_produto) {
+        for (let idx = 0; idx < recibos.length; idx++) {
+          const r = recibos[idx];
+          const resolvedId = produtoIdsResolvidos[idx];
+          const prod = produtos.find((p) => p.id === resolvedId);
+          const tipoId =
+            prod?.tipo_produto ||
+            (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+          if (!tipoId) {
             throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
+          const valTotalNum = moedaParaNumero(r.valor_total);
+          const valTaxasNum = moedaParaNumero(r.valor_taxas);
+          if (Number.isNaN(valTotalNum)) {
+            throw new Error("Valor total inválido. Digite um valor monetário.");
+          }
+          if (Number.isNaN(valTaxasNum)) {
+            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
           }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: editId,
-            produto_id: prod.tipo_produto, // FK espera tipo_produtos
+            produto_id: tipoId, // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
-            valor_total: Number(r.valor_total),
-            valor_taxas: Number(r.valor_taxas),
+            valor_total: valTotalNum,
+            valor_taxas: valTaxasNum,
           });
           if (error) throw error;
         }
@@ -457,17 +584,30 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         vendaId = vendaData.id;
 
         // 2) INSERE RECIBOS
-        for (const r of recibos) {
-          const prod = produtos.find((p) => p.id === r.produto_id);
-          if (!prod?.tipo_produto) {
+        for (let idx = 0; idx < recibos.length; idx++) {
+          const r = recibos[idx];
+          const resolvedId = produtoIdsResolvidos[idx];
+          const prod = produtos.find((p) => p.id === resolvedId);
+          const tipoId =
+            prod?.tipo_produto ||
+            (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+          if (!tipoId) {
             throw new Error("Produto do recibo não possui tipo vinculado.");
+          }
+          const valTotalNum = moedaParaNumero(r.valor_total);
+          const valTaxasNum = moedaParaNumero(r.valor_taxas);
+          if (Number.isNaN(valTotalNum)) {
+            throw new Error("Valor total inválido. Digite um valor monetário.");
+          }
+          if (Number.isNaN(valTaxasNum)) {
+            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
           }
           const { error } = await supabase.from("vendas_recibos").insert({
             venda_id: vendaId,
-            produto_id: prod.tipo_produto, // FK espera tipo_produtos
+            produto_id: tipoId, // FK espera tipo_produtos
             numero_recibo: r.numero_recibo.trim(),
-            valor_total: Number(r.valor_total),
-            valor_taxas: Number(r.valor_taxas),
+            valor_total: valTotalNum,
+            valor_taxas: valTaxasNum,
           });
 
           if (error) throw error;
@@ -585,11 +725,6 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             {/* CIDADE DE DESTINO */}
             <div className="form-group" style={{ position: "relative" }}>
               <label className="form-label">Cidade de Destino *</label>
-              {existeProdutoGlobal && (
-                <small style={{ display: "block", color: "#475569", marginBottom: 4 }}>
-                  Obrigatório apenas se o recibo tiver produto vinculado a uma cidade.
-                </small>
-              )}
               <input
                 className="form-input"
                 placeholder="Digite o nome da cidade"
@@ -725,12 +860,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                   <label className="form-label">Valor total *</label>
                   <input
                     className="form-input"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
                     value={r.valor_total}
-                    onChange={(e) =>
-                      updateRecibo(i, "valor_total", e.target.value)
-                    }
+                    onChange={(e) => updateReciboMonetario(i, "valor_total", e.target.value)}
                     required
                   />
                 </div>
@@ -740,12 +875,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                   <label className="form-label">Taxas</label>
                   <input
                     className="form-input"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9,.]*"
+                    placeholder="0,00"
                     value={r.valor_taxas}
-                    onChange={(e) =>
-                      updateRecibo(i, "valor_taxas", e.target.value)
-                    }
+                    onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
                   />
                 </div>
 

@@ -13,6 +13,7 @@ type TipoProduto = {
   tipo: string;
   regra_comissionamento: string;
   soma_na_meta: boolean;
+  disponivel_todas_cidades?: boolean | null;
   ativo: boolean;
   created_at: string | null;
 };
@@ -52,6 +53,7 @@ export default function TipoProdutosIsland() {
     tipo: "",
     regra_comissionamento: "geral",
     soma_na_meta: true,
+    disponivel_todas_cidades: false,
     ativo: true,
   });
 
@@ -113,6 +115,7 @@ export default function TipoProdutosIsland() {
       tipo: "",
       regra_comissionamento: "geral",
       soma_na_meta: true,
+      disponivel_todas_cidades: false,
       ativo: true,
     });
     setRegraSelecionada("");
@@ -130,6 +133,7 @@ export default function TipoProdutosIsland() {
       tipo: tipoProd.tipo || tipoProd.nome || "",
       regra_comissionamento: tipoProd.regra_comissionamento,
       soma_na_meta: tipoProd.soma_na_meta,
+      disponivel_todas_cidades: !!tipoProd.disponivel_todas_cidades,
       ativo: tipoProd.ativo,
     });
     const comissao = produtoRegraMap[tipoProd.id] || {};
@@ -188,6 +192,7 @@ export default function TipoProdutosIsland() {
         tipo,
         regra_comissionamento: form.regra_comissionamento,
         soma_na_meta: form.soma_na_meta,
+        disponivel_todas_cidades: form.disponivel_todas_cidades,
         ativo: form.ativo,
       };
 
@@ -362,6 +367,19 @@ export default function TipoProdutosIsland() {
             </div>
 
             <div className="form-group">
+              <label className="form-label">Disponível para todas as cidades?</label>
+              <select
+                className="form-input"
+                value={form.disponivel_todas_cidades ? "1" : "0"}
+                onChange={(e) => handleChange("disponivel_todas_cidades", e.target.value === "1")}
+                disabled={permissao === "view"}
+              >
+                <option value="0">Não</option>
+                <option value="1">Sim</option>
+              </select>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Ativo?</label>
               <select
                 className="form-input"
@@ -473,6 +491,7 @@ export default function TipoProdutosIsland() {
               <th>Regra</th>
               <th>Regra vinculada</th>
               <th>Soma meta</th>
+              <th>Todas cidades</th>
               <th>Ativo</th>
               <th>Criado em</th>
               <th className="th-actions">Ações</th>
@@ -505,6 +524,7 @@ export default function TipoProdutosIsland() {
                         : "-"}
                   </td>
                   <td>{p.soma_na_meta ? "Sim" : "Não"}</td>
+                  <td>{p.disponivel_todas_cidades ? "Sim" : "Não"}</td>
                   <td style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
                     {p.ativo ? "Ativo" : "Inativo"}
                   </td>

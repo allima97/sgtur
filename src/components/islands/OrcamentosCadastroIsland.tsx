@@ -76,6 +76,7 @@ export default function OrcamentosCadastroIsland() {
       if (error) throw error;
 
       setSucesso("Orçamento criado.");
+      window.dispatchEvent(new CustomEvent("orcamento-criado"));
       setClienteId("");
       setDestinoId("");
       setProdutoId("");
@@ -98,10 +99,14 @@ export default function OrcamentosCadastroIsland() {
       <h2 className="card-title">Novo Orçamento</h2>
 
       {erro && <div className="auth-error">{erro}</div>}
-      {sucesso && <div className="auth-success">{sucesso}</div>}
+      {sucesso && (
+        <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
+          {sucesso}
+        </div>
+      )}
 
-      <form onSubmit={salvar}>
-        <div className="form-row">
+      <form onSubmit={salvar} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="form-row" style={{ gap: 12 }}>
           <div className="form-group">
             <label className="form-label">Cliente *</label>
             <select
@@ -153,7 +158,7 @@ export default function OrcamentosCadastroIsland() {
           </div>
         </div>
 
-        <div className="form-row">
+        <div className="form-row" style={{ gap: 12 }}>
           <div className="form-group">
             <label className="form-label">Status</label>
             <select
@@ -203,14 +208,28 @@ export default function OrcamentosCadastroIsland() {
           />
         </div>
 
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={salvando}
-          style={{ marginTop: 12 }}
-        >
-          {salvando ? "Salvando..." : "Criar orçamento"}
-        </button>
+        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="submit" className="btn btn-primary" disabled={salvando}>
+            {salvando ? "Salvando..." : "Criar orçamento"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => {
+              setClienteId("");
+              setDestinoId("");
+              setProdutoId("");
+              setStatus("novo");
+              setValor("");
+              setDataViagem("");
+              setNotas("");
+              setErro(null);
+              setSucesso(null);
+            }}
+          >
+            Limpar
+          </button>
+        </div>
       </form>
     </div>
   );

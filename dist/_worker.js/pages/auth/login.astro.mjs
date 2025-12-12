@@ -171,6 +171,10 @@ function AuthLoginIsland() {
           }
         )
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-links auth-links-forgot", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("a", { href: "/auth/recover", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-unlock-keyhole" }),
+        "Esqueceu a senha? Redefinir"
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-actions", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
