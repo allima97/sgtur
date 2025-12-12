@@ -504,8 +504,13 @@ Tecnologias possíveis:
   - Painel admin específico (`BillingAdminIsland`)
 
 ---
+### 3.8 Cadastro de fornecedores / campo de fornecedores no cadastro de produtos, linkado aos fornecedores
 
-### 3.8 Marketing & Pós-Venda
+- Criar formulário de cadastro de fornecedores dos produtos (cadastro completo)
+- linkar aos formulários de produtos, podendo ou não ter forcenedor (aceita null no banco de dados se o usuário não tiver acesso ao módulo de fornecedores, caso contrário ele é obrigado a cadastrar o fornecedor)
+
+
+### 3.9 Marketing & Pós-Venda
 
 - Fluxos automáticos:
   - Lembrete antes da viagem
@@ -518,10 +523,6 @@ Tecnologias possíveis:
 
 ---
 
-### 3.9 Cadastro de fornecedores / campo de fornecedores no cadastro de produtos, linkado aos fornecedores
-
-- Criar formulário de cadastro de fornecedores dos produtos (cadastro completo)
-- linkar aos formulários de produtos, podendo ou não ter forcenedor (aceita null no banco de dados se o usuário não tiver acesso ao módulo de fornecedores, caso contrário ele é obrigado a cadastrar o fornecedor)
 
 
 ## 4. Melhorias Gerais Recomendadas
