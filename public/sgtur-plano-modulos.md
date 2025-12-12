@@ -518,6 +518,12 @@ Tecnologias possíveis:
 
 ---
 
+### 3.9 Cadastro de fornecedores / campo de fornecedores no cadastro de produtos, linkado aos fornecedores
+
+- Criar formulário de cadastro de fornecedores dos produtos (cadastro completo)
+- linkar aos formulários de produtos, podendo ou não ter forcenedor (aceita null no banco de dados se o usuário não tiver acesso ao módulo de fornecedores, caso contrário ele é obrigado a cadastrar o fornecedor)
+
+
 ## 4. Melhorias Gerais Recomendadas
 
 ### 4.1 UX / UI
