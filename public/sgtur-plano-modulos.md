@@ -229,6 +229,9 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     - Vendas por destino
     - Vendas por produto
     - Evolução mensal
+  - Ajustes atuais:
+    - Pizza: **Vendas por destino (Top 5)** mostra apenas os cinco mais vendidos (título atualizado).
+    - Barras: **Vendas por Destino (Visão Completa)** mantém todos os itens.
 - Tecnologias:
   - React + Recharts
   - Islands para gráficos (Astro client:load)
@@ -315,45 +318,49 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 - Funcionalidades:
   - Filtro rápido de período (mês atual/anteriores, 3/6/12 meses)
   - KPIs separados em dois cards:
-    - **Como está seu Progresso**: Meta do mês, Vendas do mês, Meta atingida, Base para comissionamento (cores verde/amarelo/azul/laranja, texto centralizado)
+    - **Como está seu Progresso**: Meta do mês, Total Bruto, Total Taxas, Valor Líquido, Meta atingida (texto centralizado, cores por status)
     - **Seus Valores a Receber**: Comissão geral, comissão por cada produto diferenciado (cards individuais automáticos) e comissão total
   - Cálculo considera:
-    - Parâmetros do sistema (`foco_valor`, `usar_taxas_na_meta`)
+    - Parâmetros do sistema (`foco_valor`, `usar_taxas_na_meta`) para decidir se a meta é avaliada sobre bruto ou líquido (com/sem taxas)
     - Metas gerais (`metas_vendedor`) e metas por produto (`metas_vendedor_produto`)
     - Regras gerais (`commission_rule`) e regras/percentuais fixos por produto (`product_commission_rule`)
     - Recebíveis da venda (`vendas` + `vendas_recibos`) filtrando `cancelada = false`
-    - Produtos diferenciados: pagam comissão fixa; se `soma_na_meta = true` contribuem para atingimento; KPIs exibem um card por produto
+    - Produtos diferenciados: pagam comissão fixa; se `soma_na_meta = true` contribuem para atingimento; KPIs exibem um card por produto (somente o nome do produto) e zeram comissão se a meta específica não for atingida
     - Comissão sempre calculada sobre o líquido (`valor_total`), atingimento de meta pode usar bruto ou líquido conforme parâmetros
+    - Valores e taxas formatados como moeda nos inputs e nos KPIs
 - Tecnologias:
   - React Island (`ComissionamentoIsland`)
   - Supabase queries paralelas
   - Layout em cards/KPIs alinhados e centralizados
 
+### 2.10 Orçamentos (CRM)
+
+- Página: `/orcamentos` com islands `OrcamentosCadastroIsland` e `OrcamentosConsultaIsland`.
+- Consulta:
+  - Filtros em uma linha (Status, Datas, Valores) e botões padronizados: Atualizar, Exportar CSV, Limpar filtros.
+  - Card **Situação do Orçamento** com KPIs por status (Novo/Enviado/Negociando/Fechado/Perdido), mostrando quantidade (`XX Itens`) e valor total; cores ajustadas (#1d4ed8 azul, amarelo, laranja, verde, vermelho).
+  - Tabela dentro de card, espaçada dos KPIs, com status editável inline, modal de edição e conversão para venda.
+  - Mensagens de sucesso/erro legíveis; autoatualização ao receber o evento `orcamento-criado`.
+- Cadastro:
+  - Formulário com espaçamento vertical maior, botão “Criar orçamento” no padrão do sistema e ação “Limpar”.
+  - Ao criar: dispara o evento `orcamento-criado`, exibe sucesso em preto/negrito.
+- Conversão:
+  - Converter cria venda + recibo, encerra o orçamento e registra nota de referência.
+- Observações:
+  - Kanban removido (foco atual em lista + KPIs).
+  - Exportação CSV disponível na consulta.
+
 ---
 
 ## 3. Módulos Que Faltam (Essenciais para um Sistema Profissional)
 
-### 3.1 Módulo de Orçamentos (CRM)
+### 3.1 Orçamentos (próximos incrementos)
 
-**Objetivo:** Gerir oportunidades antes de virarem vendas.
-
-- Tabela: `orcamentos`
-- Funcionalidades:
-  - Criar orçamento a partir de cliente e destino
-  - Adicionar produtos e valores (similar a recibos)
-  - Status:
-    - novo, enviado, negociando, fechado, perdido
-  - Conversão de orçamento → venda (transformar em venda com 1 clique)
-  - Histórico de interações (logs)
-
-**Tecnologias:**
-
-- Nova página: `/orcamentos`
-- Islands:
-  - `OrcamentosCadastroIsland`
-  - `OrcamentosConsultaIsland`
-- Supabase CRUD + transações lógicas
-- Integração com `clientes`, `destinos`, `produtos`
+- Histórico de interações mais rico (timeline, responsável, anexos).
+- Envio/compartilhamento do orçamento (PDF/WhatsApp/e-mail) com template.
+- Alertas/lembranças automáticas por status ou data de viagem.
+- Kanban opcional (drag-and-drop) se voltarmos a usar um funil visual.
+- Relacionar interações diretamente a vendas criadas a partir do orçamento.
 
 ---
 
@@ -421,30 +428,6 @@ Tecnologias:
 - Preferências salvas em `dashboard_widgets` (quando a tabela existir; fallback em localStorage). Mantém layout responsivo via grid CSS/Tailwind utilitário.
 - Botão “Personalizar dashboard” abre modal para toggles e reorder (↑↓). Ordem padrão é a sequência atual caso não haja preferências.
 - Widgets de gráficos permitem escolher tipo (pizza/barras para destino/produto; linha/barras para timeline). Preferências de gráficos em `settings` (coluna opcional) ou localStorage (`dashboard_charts`).
-
-### 3.1 Módulo de Orçamentos (CRM) — Em andamento
-
-- Páginas/Islands criados:
-  - `/orcamentos`
-  - `OrcamentosCadastroIsland` (criar orçamento com cliente, destino, produto opcional, status, valor, data viagem, notas)
-  - `OrcamentosConsultaIsland` (listar orçamentos com nomes de cliente/destino/produto, filtros por status, atualização de status inline, edição em modal, conversão em venda)
-    - Conversão cria venda/recibo com número `VND-YYYYMMDD-HHMM-RAND`, confirma antes e fecha o orçamento com nota de referência.
-    - Kanban: drag-and-drop por status, cards mostram datas/valor/venda, colunas exibem contagem e total de valor, cores por status.
-    - Título do quadro alterado para “Situação do Orçamento” para refletir contexto do funil.
-    - Para persistir `numero_venda`/`venda_criada` no banco, rodar no Supabase:
-      ```sql
-      ALTER TABLE public.orcamentos
-        ADD COLUMN IF NOT EXISTS numero_venda text,
-        ADD COLUMN IF NOT EXISTS venda_criada boolean DEFAULT false;
-      ```
-    - Exportação: botão “Exportar CSV” na consulta, usa filtros atuais (status, período, faixa de valor).
-    - Conversão redireciona diretamente para a tela de vendas com `venda_id` na URL (`numero_venda_url`).
-    - Formulário de criação: botão “Criar orçamento” com espaçamento adicional para não colar na linha anterior.
-- Permissões: usa módulo `Vendas` (middleware mapeia `/orcamentos` → `Vendas`).
-- Menu: item “Orçamentos” em Vendas.
-- Banco: usa tabela existente `orcamentos`.
-
----
 
 ### 3.4 Dashboard Premium (Gestor / Vendedor / Admin)
 
