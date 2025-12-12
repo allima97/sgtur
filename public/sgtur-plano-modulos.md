@@ -523,8 +523,6 @@ Tecnologias possíveis:
 
 ---
 
-
-
 ## 4. Melhorias Gerais Recomendadas
 
 ### 4.1 UX / UI
@@ -582,6 +580,16 @@ Tecnologias possíveis:
 
 ---
 
+### 4.5 Checklist para não quebrar a lógica atual
+
+- **Banco alinhado**: `metas_vendedor_produto`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos` — garantir colunas e FKs existentes.
+- **Parâmetros como fonte única**: `usar_taxas_na_meta` + `foco_valor` guiam tanto o atingimento de meta quanto a base de comissão (bruto x líquido).
+- **Produtos globais**: produtos marcados como “Disponível para todas as cidades” vêm de `tipo_produtos`; seleção de produtos não exige cadastro por cidade, mas a cidade da venda deve ser salva.
+- **Orçamentos**: lista + KPIs (sem Kanban), filtros em linha, tabela dentro de card; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
+- **UI padrão**: tabelas sempre em `card-base`, botões primários/secondary/light padronizados, espaçamentos consistentes (filtros, formulários e KPIs).
+
+---
+
 ## 5. Tecnologias-Chave Resumidas (Sugestão Final)
 
 **Frontend**
@@ -607,21 +615,12 @@ Tecnologias possíveis:
 
 ## 6. Ordem Recomendada dos Próximos Passos
 
-1. **Fechar completamente o fluxo operacional**:
-   - Orçamentos → Conversão em Venda
-   - Relatórios de vendas consolidados e confiáveis
-
-2. **Fechar completamente o fluxo financeiro**:
-   - Metas & comissionamento
-   - Fechamento mensal + relatórios de comissão
-
-3. **Dashboards Premium (Vendedor / Gestor / Admin)**
-
-4. **Parâmetros do sistema + multi-empresa**
-
-5. **Exportações (PDF/Excel) + Marketing Automatizado**
-
-6. **Billing / Planos (se for virar SaaS comercial)**
+1. **Orçamentos**: histórico/interações, envio (PDF/WhatsApp/e-mail), alertas; manter lista+KPIs e autoatualização; Kanban só se necessário.
+2. **Comissionamento**: validar cálculos com `usar_taxas_na_meta`/`foco_valor`; consolidar metas diferenciadas (schema `metas_vendedor_produto`), testes de atingimento (comissão zero quando não bate meta diferenciada).
+3. **Segurança/Dados**: revisar RLS (vendas, metas, orçamentos), garantir colunas/FKs alinhadas; logs dos principais eventos.
+4. **Relatórios/Exportações**: PDFs/Excel para vendas, comissionamento e orçamentos; gráficos já padronizados (Top 5 destino em pizza, visão completa em barras).
+5. **Dashboards Premium**: preferências por perfil (vendedor/gestor/admin) e widgets adicionais.
+6. **Billing/Planos**: apenas quando fluxo operacional/financeiro estiver sólido.
 
 ---
 
