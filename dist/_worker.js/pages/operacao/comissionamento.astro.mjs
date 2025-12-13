@@ -58,6 +58,7 @@ function ComissionamentoIsland() {
   const [regraProdutoMap, setRegraProdutoMap] = reactExports.useState({});
   const [produtos, setProdutos] = reactExports.useState({});
   const [vendas, setVendas] = reactExports.useState([]);
+  const [suportaExibeKpi, setSuportaExibeKpi] = reactExports.useState(true);
   const [loading, setLoading] = reactExports.useState(true);
   const [erro, setErro] = reactExports.useState(null);
   const [preset, setPreset] = reactExports.useState("mes_atual");
@@ -83,14 +84,35 @@ function ComissionamentoIsland() {
       const periodoAtual = calcPeriodo(preset);
       const { data: paramsData } = await supabase.from("parametros_comissao").select("usar_taxas_na_meta, foco_valor").maybeSingle();
       const { data: metaData } = await supabase.from("metas_vendedor").select("id, meta_geral").eq("vendedor_id", userId).eq("periodo", periodoAtual.inicio.slice(0, 7) + "-01").maybeSingle();
-      const [metasProdDataRes, regrasDataRes, regrasProdDataRes, produtosDataRes, vendasDataRes] = await Promise.all([
-        supabase.from("metas_vendedor_produto").select("produto_id, valor").eq("meta_vendedor_id", metaData?.id || ""),
-        supabase.from("commission_rule").select("id, tipo, meta_nao_atingida, meta_atingida, super_meta"),
-        supabase.from("product_commission_rule").select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
-        supabase.from("tipo_produtos").select(
-          "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral"
-        ),
-        supabase.from("vendas").select(
+      const tipoProdBaseCols = "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
+      const tentarSelectProdutos = async (incluiExibe) => {
+        const cols = incluiExibe ? `${tipoProdBaseCols}, exibe_kpi_comissao` : tipoProdBaseCols;
+        return supabase.from("tipo_produtos").select(cols);
+      };
+      let produtosDataRes = await tentarSelectProdutos(true);
+      let suportaKpi = true;
+      if (produtosDataRes.error && produtosDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
+        suportaKpi = false;
+        produtosDataRes = await tentarSelectProdutos(false);
+      }
+      const nestedTipoProdCols = suportaKpi ? "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao" : "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
+      let vendasDataRes = await supabase.from("vendas").select(
+        `
+          id,
+          data_lancamento,
+          cancelada,
+          vendas_recibos (
+            valor_total,
+            valor_taxas,
+            produto_id,
+            tipo_produtos (
+              ${nestedTipoProdCols}
+            )
+          )
+        `
+      ).eq("cancelada", false).gte("data_lancamento", periodoAtual.inicio).lte("data_lancamento", periodoAtual.fim);
+      if (vendasDataRes.error && vendasDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
+        vendasDataRes = await supabase.from("vendas").select(
           `
           id,
           data_lancamento,
@@ -100,17 +122,24 @@ function ComissionamentoIsland() {
             valor_taxas,
             produto_id,
             tipo_produtos (
-              id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral
+              ${tipoProdBaseCols}
             )
           )
         `
-        ).eq("cancelada", false).gte("data_lancamento", periodoAtual.inicio).lte("data_lancamento", periodoAtual.fim)
+        ).eq("cancelada", false).gte("data_lancamento", periodoAtual.inicio).lte("data_lancamento", periodoAtual.fim);
+        suportaKpi = false;
+      }
+      const [metasProdDataRes, regrasDataRes, regrasProdDataRes] = await Promise.all([
+        supabase.from("metas_vendedor_produto").select("produto_id, valor").eq("meta_vendedor_id", metaData?.id || ""),
+        supabase.from("commission_rule").select("id, tipo, meta_nao_atingida, meta_atingida, super_meta"),
+        supabase.from("product_commission_rule").select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta")
       ]);
       const metasProdData = metasProdDataRes.data;
       const regrasData = regrasDataRes.data;
       const regrasProdData = regrasProdDataRes.data;
       const produtosData = produtosDataRes.data;
       const vendasData = vendasDataRes.data;
+      setSuportaExibeKpi(suportaKpi);
       const regrasMap = {};
       (regrasData || []).forEach((r) => {
         regrasMap[r.id] = {
@@ -137,7 +166,12 @@ function ComissionamentoIsland() {
           id: p.id,
           nome: p.nome,
           regra_comissionamento: p.regra_comissionamento,
-          soma_na_meta: p.soma_na_meta
+          soma_na_meta: p.soma_na_meta,
+          usa_meta_produto: p.usa_meta_produto,
+          meta_produto_valor: p.meta_produto_valor,
+          comissao_produto_meta_pct: p.comissao_produto_meta_pct,
+          descontar_meta_geral: p.descontar_meta_geral,
+          exibe_kpi_comissao: suportaKpi ? p.exibe_kpi_comissao : void 0
         };
       });
       setParametros(
@@ -218,7 +252,12 @@ function ComissionamentoIsland() {
         const pctMetaProd = temMetaProd ? baseMetaProd / metaProd * 100 : 0;
         const pctCom = temMetaProd ? baseMetaProd < metaProd ? 0 : pctMetaProd >= 120 ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
-        comissaoDif += val;
+        const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
+        if (jogaParaGeral) {
+          comissaoGeral += val;
+        } else {
+          comissaoDif += val;
+        }
         comissaoDifDetalhe[prodId] = val;
       } else {
         const ruleId = regraProdutoMap[prodId]?.rule_id;
@@ -266,6 +305,10 @@ function ComissionamentoIsland() {
     alignItems: "center",
     textAlign: "center"
   };
+  const metaProdEntries = metaProdEnabled && resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
+    ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
+  ) : [];
+  const difProdutos = resumo && resumo.produtosDiferenciados ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false) : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { background: "transparent", boxShadow: "none", padding: 0 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base", style: { marginBottom: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginBottom: 0 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
@@ -326,6 +369,7 @@ function ComissionamentoIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }, children: "Seus Valores a Receber" }),
+        metaProdEnabled && metaProdEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com meta específica" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -336,16 +380,18 @@ function ComissionamentoIsland() {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão (geral)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
-              metaProdEnabled && resumo.comissaoMetaProd > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta específica (produtos)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoMetaProd.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
-              ] }),
-              (resumo.produtosDiferenciados || []).map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
+              metaProdEnabled && metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) }),
+                val === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Meta não atingida" })
+              ] }, `meta-${pid}`)),
+              difProdutos.map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL"
-                }) })
+                }) }),
+                (resumo.comissaoDifDetalhe?.[pid] || 0) === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Sem comissão" })
               ] }, pid)),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card kpi-highlight", style: cardColStyle, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão total" }),

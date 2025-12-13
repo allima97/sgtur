@@ -29,6 +29,8 @@ function TipoProdutosIsland() {
   const [metaProdutoValor, setMetaProdutoValor] = reactExports.useState("");
   const [comissaoProdutoMetaPct, setComissaoProdutoMetaPct] = reactExports.useState("");
   const [descontarMetaGeral, setDescontarMetaGeral] = reactExports.useState(true);
+  const [exibeKpiComissao, setExibeKpiComissao] = reactExports.useState(true);
+  const [suportaExibeKpi, setSuportaExibeKpi] = reactExports.useState(true);
   const [form, setForm] = reactExports.useState({
     nome: "",
     tipo: "",
@@ -50,12 +52,15 @@ function TipoProdutosIsland() {
     try {
       setLoading(true);
       setErro(null);
-      const [{ data, error }, regrasData, mapData] = await Promise.all([
+      const [{ data, error }, regrasData, mapData, colExibeKpi] = await Promise.all([
         supabase.from("tipo_produtos").select("*").order("nome", { ascending: true }),
         supabase.from("commission_rule").select("id, nome, tipo").eq("ativo", true).order("nome"),
-        supabase.from("product_commission_rule").select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta")
+        supabase.from("product_commission_rule").select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
+        supabase.from("tipo_produtos").select("exibe_kpi_comissao").limit(1)
       ]);
       if (error) throw error;
+      const suporta = !colExibeKpi.error;
+      setSuportaExibeKpi(suporta);
       setTipos(data || []);
       setRegras(regrasData.data || []);
       const map = {};
@@ -91,6 +96,7 @@ function TipoProdutosIsland() {
     setMetaProdutoValor("");
     setComissaoProdutoMetaPct("");
     setDescontarMetaGeral(true);
+    setExibeKpiComissao(true);
     setRegraSelecionada("");
     setFixMetaNao("");
     setFixMetaAtingida("");
@@ -117,6 +123,9 @@ function TipoProdutosIsland() {
     );
     setDescontarMetaGeral(
       tipoProd.descontar_meta_geral !== null && tipoProd.descontar_meta_geral !== void 0 ? !!tipoProd.descontar_meta_geral : true
+    );
+    setExibeKpiComissao(
+      tipoProd.exibe_kpi_comissao !== null && tipoProd.exibe_kpi_comissao !== void 0 ? !!tipoProd.exibe_kpi_comissao : true
     );
     const comissao = produtoRegraMap[tipoProd.id] || {};
     setRegraSelecionada(comissao.rule_id || "");
@@ -173,6 +182,9 @@ function TipoProdutosIsland() {
         comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
         descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true
       };
+      if (suportaExibeKpi) {
+        payload.exibe_kpi_comissao = exibeKpiComissao;
+      }
       let tipoId = editandoId;
       if (editandoId) {
         const { error } = await supabase.from("tipo_produtos").update(payload).eq("id", editandoId);
@@ -227,7 +239,7 @@ function TipoProdutosIsland() {
       await carregar();
     } catch (e2) {
       console.error(e2);
-      setErro("Erro ao salvar tipo de produto.");
+      setErro(e2 instanceof Error ? `Erro ao salvar tipo de produto: ${e2.message}` : "Erro ao salvar tipo de produto.");
     }
   }
   async function excluir(id) {
@@ -361,6 +373,22 @@ function TipoProdutosIsland() {
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
             ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Exibe KPI com comissão específica?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: exibeKpiComissao,
+                  onChange: (e) => setExibeKpiComissao(e.target.checked),
+                  disabled: permissao === "view" || !suportaExibeKpi
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
+            ] }),
+            !suportaExibeKpi && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Adicione a coluna exibe_kpi_comissao em tipo_produtos para ativar este controle." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta do produto (R$)" }),

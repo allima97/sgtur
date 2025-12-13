@@ -43,8 +43,15 @@ type Venda = {
       id: string;
       nome: string | null;
       regra_comissionamento: string | null;
+      exibe_kpi_comissao?: boolean | null;
     } | null;
   }[];
+};
+
+type TipoProdutoKpi = {
+  id: string;
+  nome: string | null;
+  exibe_kpi_comissao?: boolean | null;
 };
 
 type Orcamento = {
@@ -84,15 +91,7 @@ type WidgetId =
   | "orcamentos"
   | "aniversariantes";
 
-type KpiId =
-  | "kpi_vendas_total"
-  | "kpi_qtd_vendas"
-  | "kpi_ticket_medio"
-  | "kpi_diferenciado"
-  | "kpi_orcamentos"
-  | "kpi_conversao"
-  | "kpi_meta"
-  | "kpi_atingimento";
+type KpiId = string;
 
 type ChartType = "pie" | "bar" | "line";
 
@@ -105,11 +104,10 @@ const ALL_WIDGETS: { id: WidgetId; titulo: string }[] = [
   { id: "aniversariantes", titulo: "Aniversariantes" },
 ];
 
-const ALL_KPIS: { id: KpiId; titulo: string }[] = [
+const BASE_KPIS: { id: KpiId; titulo: string }[] = [
   { id: "kpi_vendas_total", titulo: "Vendas no período" },
   { id: "kpi_qtd_vendas", titulo: "Qtd. vendas" },
   { id: "kpi_ticket_medio", titulo: "Ticket médio" },
-  { id: "kpi_diferenciado", titulo: "Comissão Diferenciada" },
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
   { id: "kpi_meta", titulo: "Meta somada (R$)" },
@@ -172,6 +170,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [metas, setMetas] = useState<MetaVendedor[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [kpiProdutos, setKpiProdutos] = useState<{ id: KpiId; titulo: string; produtoId: string }[]>([]);
   const [loadingDados, setLoadingDados] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(ALL_WIDGETS.map((w) => w.id));
@@ -179,10 +178,24 @@ const DashboardGeralIsland: React.FC = () => {
     ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: true }), {} as Record<WidgetId, boolean>)
   );
   const [showCustomize, setShowCustomize] = useState(false);
-  const [kpiOrder, setKpiOrder] = useState<KpiId[]>(ALL_KPIS.map((k) => k.id));
+  const [kpiOrder, setKpiOrder] = useState<KpiId[]>(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = useState<Record<KpiId, boolean>>(() =>
-    ALL_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {} as Record<KpiId, boolean>)
+    BASE_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {} as Record<KpiId, boolean>)
   );
+  const allKpis = useMemo(() => [...BASE_KPIS, ...kpiProdutos], [kpiProdutos]);
+  const kpiOrderEffective = useMemo(() => {
+    const ids = allKpis.map((k) => k.id);
+    const filtered = kpiOrder.filter((id) => ids.includes(id));
+    const missing = ids.filter((id) => !filtered.includes(id));
+    return [...filtered, ...missing];
+  }, [kpiOrder, allKpis]);
+  const kpiVisibleEffective = useMemo(() => {
+    const vis: Record<KpiId, boolean> = {};
+    allKpis.forEach((k) => {
+      vis[k.id] = kpiVisible[k.id] !== false;
+    });
+    return vis;
+  }, [kpiVisible, allKpis]);
   const [chartPrefs, setChartPrefs] = useState<Record<WidgetId, ChartType>>({
     vendas_destino: "pie",
     vendas_produto: "bar",
@@ -192,13 +205,13 @@ const DashboardGeralIsland: React.FC = () => {
   const toggleWidget = (id: WidgetId) => {
     const updated = { ...widgetVisible, [id]: !widgetVisible[id] };
     setWidgetVisible(updated);
-    salvarPreferencias(widgetOrder, updated, { order: kpiOrder, visible: kpiVisible });
+    salvarPreferencias(widgetOrder, updated, { order: kpiOrderEffective, visible: kpiVisibleEffective });
   };
 
   const toggleKpi = (id: KpiId) => {
-    const updated = { ...kpiVisible, [id]: !kpiVisible[id] };
+    const updated = { ...kpiVisibleEffective, [id]: !kpiVisibleEffective[id] };
     setKpiVisible(updated);
-    salvarPreferencias(widgetOrder, widgetVisible, { order: kpiOrder, visible: updated });
+    salvarPreferencias(widgetOrder, widgetVisible, { order: kpiOrderEffective, visible: updated });
   };
 
   const moverWidget = (id: WidgetId, direction: "up" | "down") => {
@@ -412,6 +425,26 @@ const DashboardGeralIsland: React.FC = () => {
     carregarContexto();
   }, []);
 
+  // Ajusta ordem/visibilidade quando KPIs dinâmicos de produto mudam
+  useEffect(() => {
+    const ids = allKpis.map((k) => k.id);
+    setKpiOrder((prev) => {
+      const filtered = prev.filter((id) => ids.includes(id));
+      const missing = ids.filter((id) => !filtered.includes(id));
+      return [...filtered, ...missing];
+    });
+    setKpiVisible((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => {
+        if (next[id] === undefined) next[id] = true;
+      });
+      Object.keys(next).forEach((id) => {
+        if (!ids.includes(id)) delete next[id];
+      });
+      return next;
+    });
+  }, [allKpis]);
+
   // ----------------- CARREGAR DADOS DO DASHBOARD -----------------
 
   useEffect(() => {
@@ -421,6 +454,11 @@ const DashboardGeralIsland: React.FC = () => {
       try {
         setLoadingDados(true);
         setErro(null);
+
+        // ----- TIPO PRODUTOS (para KPIs dinâmicos) -----
+        const { data: tiposData } = await supabase
+          .from("tipo_produtos")
+          .select("id, nome, exibe_kpi_comissao");
 
         // ----- VENDAS + RECIBOS -----
         let vendasQuery = supabase
@@ -438,7 +476,7 @@ const DashboardGeralIsland: React.FC = () => {
             id,
             valor_total,
             valor_taxas,
-            produtos:tipo_produtos!produto_id (id, nome, regra_comissionamento)
+            produtos:tipo_produtos!produto_id (id, nome, regra_comissionamento, exibe_kpi_comissao)
           )
         `
           )
@@ -499,6 +537,15 @@ const DashboardGeralIsland: React.FC = () => {
 
         if (clientesErr) throw clientesErr;
 
+        const produtosKpi =
+          (tiposData || [])
+            .filter((p: any) => p.exibe_kpi_comissao !== false)
+            .map((p: any) => ({
+              id: `kpi_prod_${p.id}` as KpiId,
+              titulo: p.nome || "Produto",
+              produtoId: p.id as string,
+            })) || [];
+        setKpiProdutos(produtosKpi);
         setVendas((vendasData || []) as Venda[]);
         setOrcamentos((orcData || []) as Orcamento[]);
         setMetas((metasData || []) as MetaVendedor[]);
@@ -512,6 +559,7 @@ const DashboardGeralIsland: React.FC = () => {
             .eq("usuario_id", userCtx.usuarioId)
             .order("ordem", { ascending: true });
           if (!prefErr && prefData && prefData.length > 0) {
+            const allKpiIds = new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
             const ordem = prefData
               .map((p: any) => p.widget as WidgetId)
               .filter((id) => ALL_WIDGETS.some((w) => w.id === id));
@@ -525,12 +573,14 @@ const DashboardGeralIsland: React.FC = () => {
               }
               if (id === "kpis" && p.settings?.kpis) {
                 if (Array.isArray(p.settings.kpis.order)) {
-                  kpiFromDb.order = p.settings.kpis.order.filter((kid: any) =>
-                    ALL_KPIS.some((k) => k.id === kid)
-                  );
+                  kpiFromDb.order = p.settings.kpis.order.filter((kid: any) => allKpiIds.has(kid));
                 }
                 if (p.settings.kpis.visible) {
-                  kpiFromDb.visible = { ...kpiVisible, ...p.settings.kpis.visible };
+                  const filtered: Record<KpiId, boolean> = {};
+                  Object.entries(p.settings.kpis.visible).forEach(([kid, val]) => {
+                    if (allKpiIds.has(kid)) filtered[kid] = val as boolean;
+                  });
+                  kpiFromDb.visible = { ...kpiVisible, ...filtered };
                 }
               }
               if (p.settings?.charts) {
@@ -543,6 +593,7 @@ const DashboardGeralIsland: React.FC = () => {
             if (kpiFromDb.visible) setKpiVisible(kpiFromDb.visible);
             if (chartsFromDb) setChartPrefs((prev) => ({ ...prev, ...chartsFromDb }));
           } else {
+            const allKpiIds = new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
             const local = typeof window !== "undefined"
               ? window.localStorage.getItem("dashboard_widgets")
               : null;
@@ -558,8 +609,14 @@ const DashboardGeralIsland: React.FC = () => {
               : null;
             if (localKpi) {
               const parsed = JSON.parse(localKpi);
-              if (parsed.order) setKpiOrder(parsed.order);
-              if (parsed.visible) setKpiVisible(parsed.visible);
+              if (parsed.order) setKpiOrder(parsed.order.filter((kid: string) => allKpiIds.has(kid)));
+              if (parsed.visible) {
+                const filtered: Record<KpiId, boolean> = {};
+                Object.entries(parsed.visible).forEach(([kid, val]) => {
+                  if (allKpiIds.has(kid)) filtered[kid] = val as boolean;
+                });
+                setKpiVisible((prev) => ({ ...prev, ...filtered }));
+              }
             }
             const localCharts = typeof window !== "undefined"
               ? window.localStorage.getItem("dashboard_charts")
@@ -571,6 +628,7 @@ const DashboardGeralIsland: React.FC = () => {
           }
         } catch (e) {
           console.warn("Preferências do dashboard não carregadas, usando padrão.", e);
+          const allKpiIds = new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
           const local = typeof window !== "undefined"
             ? window.localStorage.getItem("dashboard_widgets")
             : null;
@@ -586,8 +644,14 @@ const DashboardGeralIsland: React.FC = () => {
             : null;
           if (localKpi) {
             const parsed = JSON.parse(localKpi);
-            if (parsed.order) setKpiOrder(parsed.order);
-            if (parsed.visible) setKpiVisible(parsed.visible);
+            if (parsed.order) setKpiOrder(parsed.order.filter((kid: string) => allKpiIds.has(kid)));
+            if (parsed.visible) {
+              const filtered: Record<KpiId, boolean> = {};
+              Object.entries(parsed.visible).forEach(([kid, val]) => {
+                if (allKpiIds.has(kid)) filtered[kid] = val as boolean;
+              });
+              setKpiVisible((prev) => ({ ...prev, ...filtered }));
+            }
           }
           const localCharts = typeof window !== "undefined"
             ? window.localStorage.getItem("dashboard_charts")
@@ -614,15 +678,15 @@ const DashboardGeralIsland: React.FC = () => {
     totalVendas,
     qtdVendas,
     ticketMedio,
-    totalDiferenciado,
     totalOrcamentos,
     conversao,
     metaSomada,
     atingimentoMeta,
+    valorPorProduto,
   } = useMemo(() => {
     let totalVendas = 0;
     let qtdVendas = vendas.length;
-    let totalDiferenciado = 0;
+    const valorPorProduto: Record<string, number> = {};
 
     vendas.forEach((v) => {
       const recibos = v.vendas_recibos || [];
@@ -631,10 +695,9 @@ const DashboardGeralIsland: React.FC = () => {
       recibos.forEach((r) => {
         const valor = Number(r.valor_total || 0);
         somaVenda += valor;
-        const regra =
-          r.produtos?.regra_comissionamento?.toLowerCase() || "";
-        if (regra === "diferenciado") {
-          totalDiferenciado += valor;
+        const pid = r.produtos?.id || "";
+        if (pid) {
+          valorPorProduto[pid] = (valorPorProduto[pid] || 0) + valor;
         }
       });
 
@@ -662,11 +725,11 @@ const DashboardGeralIsland: React.FC = () => {
       totalVendas,
       qtdVendas,
       ticketMedio,
-      totalDiferenciado,
       totalOrcamentos,
       conversao,
       metaSomada,
       atingimentoMeta,
+      valorPorProduto,
     };
   }, [vendas, orcamentos, metas]);
 
@@ -812,101 +875,108 @@ const DashboardGeralIsland: React.FC = () => {
                 gap: 10,
               }}
             >
-              {kpiOrder
-                .filter((id) => kpiVisible[id] !== false)
+              {kpiOrderEffective
+                .filter((id) => kpiVisibleEffective[id] !== false)
                 .map((id) => {
-                  switch (id) {
-                    case "kpi_vendas_total":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Vendas no período</div>
-                          <div className="kpi-value">{formatCurrency(totalVendas)}</div>
-                        </div>
-                      );
-                    case "kpi_qtd_vendas":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Qtd. vendas</div>
-                          <div className="kpi-value">{qtdVendas}</div>
-                        </div>
-                      );
-                    case "kpi_ticket_medio":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Ticket médio</div>
-                          <div className="kpi-value">{formatCurrency(ticketMedio)}</div>
-                        </div>
-                      );
-                    case "kpi_diferenciado":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Comissão Diferenciada</div>
-                          <div className="kpi-value">{formatCurrency(totalDiferenciado)}</div>
-                        </div>
-                      );
-                    case "kpi_orcamentos":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Orçamentos</div>
-                          <div className="kpi-value">{totalOrcamentos}</div>
-                        </div>
-                      );
-                    case "kpi_conversao":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Conv. Orç → Vendas</div>
-                          <div className="kpi-value">{conversao.toFixed(1)}%</div>
-                        </div>
-                      );
-                    case "kpi_meta":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Meta somada (R$)</div>
-                          <div className="kpi-value">{formatCurrency(metaSomada)}</div>
-                        </div>
-                      );
-                    case "kpi_atingimento":
-                      return (
-                        <div
-                          className="kpi-card"
-                          key={id}
-                          style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                        >
-                          <div className="kpi-label">Atingimento da meta</div>
-                          <div className="kpi-value">{atingimentoMeta.toFixed(1)}%</div>
-                        </div>
-                      );
-                    default:
-                      return null;
+                  if (id === "kpi_vendas_total") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Vendas no período</div>
+                        <div className="kpi-value">{formatCurrency(totalVendas)}</div>
+                      </div>
+                    );
                   }
+                  if (id === "kpi_qtd_vendas") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Qtd. vendas</div>
+                        <div className="kpi-value">{qtdVendas}</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_ticket_medio") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Ticket médio</div>
+                        <div className="kpi-value">{formatCurrency(ticketMedio)}</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_orcamentos") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Orçamentos</div>
+                        <div className="kpi-value">{totalOrcamentos}</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_conversao") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Conv. Orç → Vendas</div>
+                        <div className="kpi-value">{conversao.toFixed(1)}%</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_meta") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Meta somada (R$)</div>
+                        <div className="kpi-value">{formatCurrency(metaSomada)}</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_atingimento") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Atingimento da meta</div>
+                        <div className="kpi-value">{atingimentoMeta.toFixed(1)}%</div>
+                      </div>
+                    );
+                  }
+                  if (id.startsWith("kpi_prod_")) {
+                    const prod = kpiProdutos.find((k) => k.id === id);
+                    const valor = prod ? valorPorProduto[prod.produtoId] || 0 : 0;
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">{prod?.titulo || "Produto"}</div>
+                        <div className="kpi-value">{formatCurrency(valor)}</div>
+                      </div>
+                    );
+                  }
+                  return null;
                 })}
             </div>
           </div>
@@ -1406,8 +1476,8 @@ const DashboardGeralIsland: React.FC = () => {
                         <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
                           KPIs visíveis e ordem
                         </div>
-                        {kpiOrder.map((kid, kidx) => {
-                          const metaKpi = ALL_KPIS.find((k) => k.id === kid);
+                        {kpiOrderEffective.map((kid, kidx) => {
+                          const metaKpi = allKpis.find((k) => k.id === kid);
                           if (!metaKpi) return null;
                           return (
                             <div
@@ -1420,7 +1490,7 @@ const DashboardGeralIsland: React.FC = () => {
                             >
                               <input
                                 type="checkbox"
-                                checked={kpiVisible[kid] !== false}
+                                checked={kpiVisibleEffective[kid] !== false}
                                 onChange={() => toggleKpi(kid)}
                               />
                               <div style={{ flex: 1 }}>{metaKpi.titulo}</div>
@@ -1437,7 +1507,7 @@ const DashboardGeralIsland: React.FC = () => {
                                   type="button"
                                   className="btn btn-light"
                                   onClick={() => moverKpi(kid, "down")}
-                                  disabled={kidx === kpiOrder.length - 1}
+                                  disabled={kidx === kpiOrderEffective.length - 1}
                                 >
                                   ↓
                                 </button>

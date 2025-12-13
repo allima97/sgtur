@@ -57,6 +57,7 @@ export default function TipoProdutosIsland() {
   const [comissaoProdutoMetaPct, setComissaoProdutoMetaPct] = useState<string>("");
   const [descontarMetaGeral, setDescontarMetaGeral] = useState(true);
   const [exibeKpiComissao, setExibeKpiComissao] = useState(true);
+  const [suportaExibeKpi, setSuportaExibeKpi] = useState(true);
 
   const [form, setForm] = useState({
     nome: "",
@@ -82,7 +83,7 @@ export default function TipoProdutosIsland() {
       setLoading(true);
       setErro(null);
 
-      const [{ data, error }, regrasData, mapData] = await Promise.all([
+      const [{ data, error }, regrasData, mapData, colExibeKpi] = await Promise.all([
         supabase.from("tipo_produtos").select("*").order("nome", { ascending: true }),
         supabase
           .from("commission_rule")
@@ -92,9 +93,12 @@ export default function TipoProdutosIsland() {
         supabase
           .from("product_commission_rule")
           .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
+        supabase.from("tipo_produtos").select("exibe_kpi_comissao").limit(1),
       ]);
 
       if (error) throw error;
+      const suporta = !colExibeKpi.error;
+      setSuportaExibeKpi(suporta);
       setTipos((data || []) as TipoProduto[]);
       setRegras((regrasData.data as any) || []);
       const map: Record<string, ComissaoProduto> = {};
@@ -225,19 +229,21 @@ export default function TipoProdutosIsland() {
 
       try {
         setErro(null);
-        const payload = {
+        const payload: Record<string, any> = {
           nome,
           tipo,
           regra_comissionamento: form.regra_comissionamento,
-      soma_na_meta: form.soma_na_meta,
-      disponivel_todas_cidades: form.disponivel_todas_cidades,
-      ativo: form.ativo,
-      usa_meta_produto: usaMetaProduto,
-      meta_produto_valor: usaMetaProduto ? metaProdValor : null,
-      comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
-      descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
-      exibe_kpi_comissao: exibeKpiComissao,
-    };
+          soma_na_meta: form.soma_na_meta,
+          disponivel_todas_cidades: form.disponivel_todas_cidades,
+          ativo: form.ativo,
+          usa_meta_produto: usaMetaProduto,
+          meta_produto_valor: usaMetaProduto ? metaProdValor : null,
+          comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
+          descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
+        };
+        if (suportaExibeKpi) {
+          payload.exibe_kpi_comissao = exibeKpiComissao;
+        }
 
       let tipoId = editandoId;
       if (editandoId) {
@@ -323,7 +329,7 @@ export default function TipoProdutosIsland() {
       await carregar();
     } catch (e) {
       console.error(e);
-      setErro("Erro ao salvar tipo de produto.");
+      setErro(e instanceof Error ? `Erro ao salvar tipo de produto: ${e.message}` : "Erro ao salvar tipo de produto.");
     }
   }
 
@@ -458,10 +464,15 @@ export default function TipoProdutosIsland() {
                     type="checkbox"
                     checked={exibeKpiComissao}
                     onChange={(e) => setExibeKpiComissao(e.target.checked)}
-                    disabled={permissao === "view"}
+                    disabled={permissao === "view" || !suportaExibeKpi}
                   />
                   <span>Sim</span>
                 </label>
+                {!suportaExibeKpi && (
+                  <small style={{ color: "#dc2626" }}>
+                    Adicione a coluna exibe_kpi_comissao em tipo_produtos para ativar este controle.
+                  </small>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Meta do produto (R$)</label>

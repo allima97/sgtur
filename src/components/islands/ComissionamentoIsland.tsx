@@ -120,6 +120,7 @@ export default function ComissionamentoIsland() {
   const [regraProdutoMap, setRegraProdutoMap] = useState<Record<string, RegraProduto>>({});
   const [produtos, setProdutos] = useState<Record<string, Produto>>({});
   const [vendas, setVendas] = useState<Venda[]>([]);
+  const [suportaExibeKpi, setSuportaExibeKpi] = useState(true);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [preset, setPreset] = useState<string>("mes_atual");
@@ -160,7 +161,71 @@ export default function ComissionamentoIsland() {
         .eq("periodo", periodoAtual.inicio.slice(0, 7) + "-01")
         .maybeSingle();
 
-      const [metasProdDataRes, regrasDataRes, regrasProdDataRes, produtosDataRes, vendasDataRes] = await Promise.all([
+      const tipoProdBaseCols =
+        "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
+
+      const tentarSelectProdutos = async (incluiExibe: boolean) => {
+        const cols = incluiExibe ? `${tipoProdBaseCols}, exibe_kpi_comissao` : tipoProdBaseCols;
+        return supabase.from("tipo_produtos").select(cols);
+      };
+
+      let produtosDataRes = await tentarSelectProdutos(true);
+      let suportaKpi = true;
+      if (produtosDataRes.error && produtosDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
+        suportaKpi = false;
+        produtosDataRes = await tentarSelectProdutos(false);
+      }
+
+      const nestedTipoProdCols = suportaKpi
+        ? "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao"
+        : "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
+
+      let vendasDataRes = await supabase
+        .from("vendas")
+        .select(
+          `
+          id,
+          data_lancamento,
+          cancelada,
+          vendas_recibos (
+            valor_total,
+            valor_taxas,
+            produto_id,
+            tipo_produtos (
+              ${nestedTipoProdCols}
+            )
+          )
+        `
+        )
+        .eq("cancelada", false)
+        .gte("data_lancamento", periodoAtual.inicio)
+        .lte("data_lancamento", periodoAtual.fim);
+
+      if (vendasDataRes.error && vendasDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
+        vendasDataRes = await supabase
+          .from("vendas")
+          .select(
+            `
+          id,
+          data_lancamento,
+          cancelada,
+          vendas_recibos (
+            valor_total,
+            valor_taxas,
+            produto_id,
+            tipo_produtos (
+              ${tipoProdBaseCols}
+            )
+          )
+        `
+          )
+          .eq("cancelada", false)
+          .gte("data_lancamento", periodoAtual.inicio)
+          .lte("data_lancamento", periodoAtual.fim);
+        suportaKpi = false;
+      }
+
+      const [metasProdDataRes, regrasDataRes, regrasProdDataRes] = await Promise.all([
         supabase
           .from("metas_vendedor_produto")
           .select("produto_id, valor")
@@ -169,31 +234,6 @@ export default function ComissionamentoIsland() {
         supabase
           .from("product_commission_rule")
           .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
-        supabase
-          .from("tipo_produtos")
-          .select(
-            "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao"
-          ),
-        supabase
-          .from("vendas")
-          .select(
-            `
-          id,
-          data_lancamento,
-          cancelada,
-            vendas_recibos (
-              valor_total,
-              valor_taxas,
-              produto_id,
-              tipo_produtos (
-              id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao
-            )
-          )
-        `
-          )
-          .eq("cancelada", false)
-          .gte("data_lancamento", periodoAtual.inicio)
-          .lte("data_lancamento", periodoAtual.fim),
       ]);
 
       const metasProdData = metasProdDataRes.data;
@@ -201,6 +241,8 @@ export default function ComissionamentoIsland() {
       const regrasProdData = regrasProdDataRes.data;
       const produtosData = produtosDataRes.data;
       const vendasData = vendasDataRes.data;
+
+      setSuportaExibeKpi(suportaKpi);
 
       const regrasMap: Record<string, Regra> = {};
       (regrasData || []).forEach((r: any) => {
@@ -235,7 +277,7 @@ export default function ComissionamentoIsland() {
           meta_produto_valor: p.meta_produto_valor,
           comissao_produto_meta_pct: p.comissao_produto_meta_pct,
           descontar_meta_geral: p.descontar_meta_geral,
-          exibe_kpi_comissao: p.exibe_kpi_comissao,
+          exibe_kpi_comissao: suportaKpi ? p.exibe_kpi_comissao : undefined,
         };
       });
 
