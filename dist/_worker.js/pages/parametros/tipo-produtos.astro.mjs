@@ -25,6 +25,10 @@ function TipoProdutosIsland() {
   const [fixMetaNao, setFixMetaNao] = reactExports.useState("");
   const [fixMetaAtingida, setFixMetaAtingida] = reactExports.useState("");
   const [fixSuperMeta, setFixSuperMeta] = reactExports.useState("");
+  const [usaMetaProduto, setUsaMetaProduto] = reactExports.useState(false);
+  const [metaProdutoValor, setMetaProdutoValor] = reactExports.useState("");
+  const [comissaoProdutoMetaPct, setComissaoProdutoMetaPct] = reactExports.useState("");
+  const [descontarMetaGeral, setDescontarMetaGeral] = reactExports.useState(true);
   const [form, setForm] = reactExports.useState({
     nome: "",
     tipo: "",
@@ -83,6 +87,10 @@ function TipoProdutosIsland() {
       disponivel_todas_cidades: false,
       ativo: true
     });
+    setUsaMetaProduto(false);
+    setMetaProdutoValor("");
+    setComissaoProdutoMetaPct("");
+    setDescontarMetaGeral(true);
     setRegraSelecionada("");
     setFixMetaNao("");
     setFixMetaAtingida("");
@@ -100,6 +108,16 @@ function TipoProdutosIsland() {
       disponivel_todas_cidades: !!tipoProd.disponivel_todas_cidades,
       ativo: tipoProd.ativo
     });
+    setUsaMetaProduto(!!tipoProd.usa_meta_produto);
+    setMetaProdutoValor(
+      tipoProd.meta_produto_valor !== null && tipoProd.meta_produto_valor !== void 0 ? String(tipoProd.meta_produto_valor) : ""
+    );
+    setComissaoProdutoMetaPct(
+      tipoProd.comissao_produto_meta_pct !== null && tipoProd.comissao_produto_meta_pct !== void 0 ? String(tipoProd.comissao_produto_meta_pct) : ""
+    );
+    setDescontarMetaGeral(
+      tipoProd.descontar_meta_geral !== null && tipoProd.descontar_meta_geral !== void 0 ? !!tipoProd.descontar_meta_geral : true
+    );
     const comissao = produtoRegraMap[tipoProd.id] || {};
     setRegraSelecionada(comissao.rule_id || "");
     setFixMetaNao(
@@ -129,6 +147,8 @@ function TipoProdutosIsland() {
       return;
     }
     const toNumberOrNull = (v) => v.trim() === "" ? null : Number(v);
+    const metaProdValor = toNumberOrNull(metaProdutoValor);
+    const comissaoMetaPct = toNumberOrNull(comissaoProdutoMetaPct);
     if (form.regra_comissionamento === "diferenciado") {
       const fixNaoNum = toNumberOrNull(fixMetaNao);
       const fixAtNum = toNumberOrNull(fixMetaAtingida);
@@ -147,7 +167,11 @@ function TipoProdutosIsland() {
         regra_comissionamento: form.regra_comissionamento,
         soma_na_meta: form.soma_na_meta,
         disponivel_todas_cidades: form.disponivel_todas_cidades,
-        ativo: form.ativo
+        ativo: form.ativo,
+        usa_meta_produto: usaMetaProduto,
+        meta_produto_valor: usaMetaProduto ? metaProdValor : null,
+        comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
+        descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true
       };
       let tipoId = editandoId;
       if (editandoId) {
@@ -319,6 +343,74 @@ function TipoProdutosIsland() {
             }
           )
         ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Meta específica do produto (opcional)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Usar meta específica?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: usaMetaProduto,
+                  onChange: (e) => setUsaMetaProduto(e.target.checked),
+                  disabled: permissao === "view"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta do produto (R$)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "number",
+                step: "0.01",
+                min: "0",
+                value: metaProdutoValor,
+                onChange: (e) => setMetaProdutoValor(e.target.value),
+                disabled: !usaMetaProduto || permissao === "view",
+                placeholder: "Ex: 1000"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "% ao bater a meta do produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "number",
+                step: "0.01",
+                min: "0",
+                value: comissaoProdutoMetaPct,
+                onChange: (e) => setComissaoProdutoMetaPct(e.target.value),
+                disabled: !usaMetaProduto || permissao === "view",
+                placeholder: "Ex: 10 (para 10%)"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Descontar comissão da meta geral?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: descontarMetaGeral,
+                  onChange: (e) => setDescontarMetaGeral(e.target.checked),
+                  disabled: !usaMetaProduto || permissao === "view"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#475569" }, children: 'Se ativado, o produto paga a comissão da meta própria (ex.: 10%); se "Descontar meta geral" estiver ligado, subtrai o que já foi pago pela meta geral para evitar duplicidade.' })
       ] }),
       form.regra_comissionamento === "geral" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 8 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Regra de Comissão *" }),

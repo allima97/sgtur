@@ -116,6 +116,34 @@ function ClientesIsland() {
           }
         }
         const { data: recs } = await supabase.from("vendas_recibos").select("venda_id, valor_total, valor_taxas, produto_id").in("venda_id", vendaIds);
+        (recs || []).forEach((r) => {
+          if (r.produto_id) produtoIdsSet.add(r.produto_id);
+        });
+        let produtosLista = [];
+        let tipoProdMap2 = {};
+        if (produtoIdsSet.size > 0) {
+          const idsArr = Array.from(produtoIdsSet);
+          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", idsArr);
+          if (!prodErr && produtosData) produtosLista = produtosData;
+          else if (prodErr) console.error(prodErr);
+          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", idsArr);
+          if (!tipoErr && tiposData) {
+            tipoProdMap2 = Object.fromEntries(
+              tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            );
+          } else if (tipoErr) {
+            console.error(tipoErr);
+          }
+        }
+        const resolveProdutoNome2 = (produtoId, cidadeVenda) => {
+          if (!produtoId) return "";
+          const candidato = produtosLista.find((p) => {
+            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+          });
+          const tipoInfo = tipoProdMap2[produtoId] || {};
+          return candidato?.nome || tipoInfo.nome || "Produto";
+        };
         vendasFmt = vendasData.map((v) => {
           const recForVenda = (recs || []).filter((r) => r.venda_id === v.id);
           const total = recForVenda.reduce(
@@ -126,6 +154,7 @@ function ClientesIsland() {
             (acc, r) => acc + (r.valor_taxas || 0),
             0
           );
+          const produtosVenda = recForVenda.map((r) => resolveProdutoNome2(r.produto_id, v.destinos?.cidade_id)).filter(Boolean);
           return {
             id: v.id,
             data_lancamento: v.data_lancamento,
@@ -134,7 +163,8 @@ function ClientesIsland() {
             destino_cidade_id: v.destinos?.cidade_id || null,
             destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap2[v.destinos?.cidade_id] || "" : "",
             valor_total: total,
-            valor_taxas: taxas
+            valor_taxas: taxas,
+            produtos: produtosVenda
           };
         });
       }

@@ -43,6 +43,10 @@ type Produto = {
   nome: string | null;
   regra_comissionamento: string;
   soma_na_meta: boolean;
+  usa_meta_produto?: boolean | null;
+  meta_produto_valor?: number | null;
+  comissao_produto_meta_pct?: number | null;
+  descontar_meta_geral?: boolean | null;
 };
 
 type Recibo = {
@@ -111,6 +115,7 @@ function calcPeriodo(preset: string) {
 
 export default function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
+  const metaProdEnabled = (import.meta as any)?.env?.PUBLIC_META_PRODUTO_ENABLED !== "false";
   const [user, setUser] = useState<UserCtx | null>(null);
   const [parametros, setParametros] = useState<Parametros | null>(null);
   const [metaGeral, setMetaGeral] = useState<MetaVendedor | null>(null);
@@ -168,7 +173,11 @@ export default function ComissionamentoIsland() {
         supabase
           .from("product_commission_rule")
           .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
-        supabase.from("tipo_produtos").select("id, nome, regra_comissionamento, soma_na_meta"),
+        supabase
+          .from("tipo_produtos")
+          .select(
+            "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral"
+          ),
         supabase
           .from("vendas")
           .select(
@@ -181,7 +190,7 @@ export default function ComissionamentoIsland() {
             valor_taxas,
             produto_id,
             tipo_produtos (
-              id, nome, regra_comissionamento, soma_na_meta
+              id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral
             )
           )
         `
@@ -272,11 +281,16 @@ export default function ComissionamentoIsland() {
     let comissaoDif = 0;
     const comissaoDifDetalhe: Record<string, number> = {};
     const produtosDiferenciados: string[] = [];
+    let comissaoMetaProd = 0;
+    const comissaoMetaProdDetalhe: Record<string, number> = {};
 
     Object.values(produtos).forEach((p) => {
       if (p.regra_comissionamento === "diferenciado") {
         produtosDiferenciados.push(p.id);
         comissaoDifDetalhe[p.id] = 0; // garante cartão mesmo sem recibos
+      }
+      if (p.usa_meta_produto) {
+        comissaoMetaProdDetalhe[p.id] = 0;
       }
     });
 
@@ -338,7 +352,20 @@ export default function ComissionamentoIsland() {
           else if (pctMetaGeral >= 120) pctCom = reg.super_meta ?? reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
           else pctCom = reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
         }
-        comissaoGeral += baseCom * (pctCom / 100);
+        const valGeral = baseCom * (pctCom / 100);
+        comissaoGeral += valGeral;
+
+        if (metaProdEnabled && prod.usa_meta_produto && prod.meta_produto_valor && prod.comissao_produto_meta_pct) {
+          const baseMetaProd = baseMetaPorProduto[prodId] || 0;
+          const pctMetaProd = (baseMetaProd / prod.meta_produto_valor) * 100;
+          const atingiuMetaProd = pctMetaProd >= 100;
+          if (atingiuMetaProd) {
+            const valMetaProd = baseCom * ((prod.comissao_produto_meta_pct || 0) / 100);
+            const diff = prod.descontar_meta_geral === false ? valMetaProd : Math.max(valMetaProd - valGeral, 0);
+            comissaoMetaProd += diff;
+            comissaoMetaProdDetalhe[prodId] = (comissaoMetaProdDetalhe[prodId] || 0) + diff;
+          }
+        }
       }
     });
 
@@ -350,11 +377,13 @@ export default function ComissionamentoIsland() {
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
-      totalComissao: comissaoGeral + comissaoDif,
+      comissaoMetaProd: metaProdEnabled ? comissaoMetaProd : 0,
+      totalComissao: metaProdEnabled ? comissaoGeral + comissaoDif + comissaoMetaProd : comissaoGeral + comissaoDif,
       comissaoDifDetalhe,
+      comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
       produtosDiferenciados,
     };
-  }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras]);
+  }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
 
   if (loadingPerm) return <div>Carregando permissões...</div>;
   if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
@@ -458,6 +487,14 @@ export default function ComissionamentoIsland() {
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
+              {metaProdEnabled && resumo.comissaoMetaProd > 0 && (
+                <div className="kpi-card" style={cardColStyle}>
+                  <div className="kpi-label">Meta específica (produtos)</div>
+                  <div className="kpi-value">
+                    {resumo.comissaoMetaProd.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </div>
+                </div>
+              )}
               {(resumo.produtosDiferenciados || []).map((pid) => (
                 <div key={pid} className="kpi-card" style={cardColStyle}>
                   <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>

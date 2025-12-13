@@ -16,6 +16,10 @@ type TipoProduto = {
   disponivel_todas_cidades?: boolean | null;
   ativo: boolean;
   created_at: string | null;
+  usa_meta_produto?: boolean | null;
+  meta_produto_valor?: number | null;
+  comissao_produto_meta_pct?: number | null;
+  descontar_meta_geral?: boolean | null;
 };
 
 type Regra = {
@@ -47,6 +51,10 @@ export default function TipoProdutosIsland() {
   const [fixMetaNao, setFixMetaNao] = useState<string>("");
   const [fixMetaAtingida, setFixMetaAtingida] = useState<string>("");
   const [fixSuperMeta, setFixSuperMeta] = useState<string>("");
+  const [usaMetaProduto, setUsaMetaProduto] = useState(false);
+  const [metaProdutoValor, setMetaProdutoValor] = useState<string>("");
+  const [comissaoProdutoMetaPct, setComissaoProdutoMetaPct] = useState<string>("");
+  const [descontarMetaGeral, setDescontarMetaGeral] = useState(true);
 
   const [form, setForm] = useState({
     nome: "",
@@ -118,6 +126,10 @@ export default function TipoProdutosIsland() {
       disponivel_todas_cidades: false,
       ativo: true,
     });
+    setUsaMetaProduto(false);
+    setMetaProdutoValor("");
+    setComissaoProdutoMetaPct("");
+    setDescontarMetaGeral(true);
     setRegraSelecionada("");
     setFixMetaNao("");
     setFixMetaAtingida("");
@@ -136,6 +148,22 @@ export default function TipoProdutosIsland() {
       disponivel_todas_cidades: !!tipoProd.disponivel_todas_cidades,
       ativo: tipoProd.ativo,
     });
+    setUsaMetaProduto(!!tipoProd.usa_meta_produto);
+    setMetaProdutoValor(
+      tipoProd.meta_produto_valor !== null && tipoProd.meta_produto_valor !== undefined
+        ? String(tipoProd.meta_produto_valor)
+        : ""
+    );
+    setComissaoProdutoMetaPct(
+      tipoProd.comissao_produto_meta_pct !== null && tipoProd.comissao_produto_meta_pct !== undefined
+        ? String(tipoProd.comissao_produto_meta_pct)
+        : ""
+    );
+    setDescontarMetaGeral(
+      tipoProd.descontar_meta_geral !== null && tipoProd.descontar_meta_geral !== undefined
+        ? !!tipoProd.descontar_meta_geral
+        : true
+    );
     const comissao = produtoRegraMap[tipoProd.id] || {};
     setRegraSelecionada(comissao.rule_id || "");
     setFixMetaNao(
@@ -173,6 +201,8 @@ export default function TipoProdutosIsland() {
       return;
     }
     const toNumberOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
+    const metaProdValor = toNumberOrNull(metaProdutoValor);
+    const comissaoMetaPct = toNumberOrNull(comissaoProdutoMetaPct);
     if (form.regra_comissionamento === "diferenciado") {
       const fixNaoNum = toNumberOrNull(fixMetaNao);
       const fixAtNum = toNumberOrNull(fixMetaAtingida);
@@ -185,16 +215,20 @@ export default function TipoProdutosIsland() {
       }
     }
 
-    try {
-      setErro(null);
-      const payload = {
-        nome,
-        tipo,
-        regra_comissionamento: form.regra_comissionamento,
-        soma_na_meta: form.soma_na_meta,
-        disponivel_todas_cidades: form.disponivel_todas_cidades,
-        ativo: form.ativo,
-      };
+      try {
+        setErro(null);
+        const payload = {
+          nome,
+          tipo,
+          regra_comissionamento: form.regra_comissionamento,
+          soma_na_meta: form.soma_na_meta,
+          disponivel_todas_cidades: form.disponivel_todas_cidades,
+          ativo: form.ativo,
+          usa_meta_produto: usaMetaProduto,
+          meta_produto_valor: usaMetaProduto ? metaProdValor : null,
+          comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
+          descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
+        };
 
       let tipoId = editandoId;
       if (editandoId) {
@@ -257,20 +291,20 @@ export default function TipoProdutosIsland() {
         }
 
         if (regraSelecionada || form.regra_comissionamento === "diferenciado") {
-          const { error: upsertErr } = await supabase
-            .from("product_commission_rule")
-            .upsert(
-              {
-                produto_id: tipoId,
-                rule_id: ruleIdToUse,
-                ativo: true,
-                fix_meta_nao_atingida: fixNao,
-                fix_meta_atingida: fixAt,
-                fix_super_meta: fixSup,
-              },
-              { onConflict: "produto_id" }
-            );
-          if (upsertErr) throw upsertErr;
+        const { error: upsertErr } = await supabase
+          .from("product_commission_rule")
+          .upsert(
+            {
+              produto_id: tipoId,
+              rule_id: ruleIdToUse,
+              ativo: true,
+              fix_meta_nao_atingida: fixNao,
+              fix_meta_atingida: fixAt,
+              fix_super_meta: fixSup,
+            },
+            { onConflict: "produto_id" }
+          );
+        if (upsertErr) throw upsertErr;
         } else {
           await supabase.from("product_commission_rule").delete().eq("produto_id", tipoId);
         }
@@ -391,6 +425,66 @@ export default function TipoProdutosIsland() {
                 <option value="0">Não</option>
               </select>
             </div>
+          </div>
+
+          <div className="card-base card-blue" style={{ marginTop: 12 }}>
+            <h4 style={{ marginBottom: 8 }}>Meta específica do produto (opcional)</h4>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Usar meta específica?</label>
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={usaMetaProduto}
+                    onChange={(e) => setUsaMetaProduto(e.target.checked)}
+                    disabled={permissao === "view"}
+                  />
+                  <span>Sim</span>
+                </label>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Meta do produto (R$)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={metaProdutoValor}
+                  onChange={(e) => setMetaProdutoValor(e.target.value)}
+                  disabled={!usaMetaProduto || permissao === "view"}
+                  placeholder="Ex: 1000"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">% ao bater a meta do produto</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={comissaoProdutoMetaPct}
+                  onChange={(e) => setComissaoProdutoMetaPct(e.target.value)}
+                  disabled={!usaMetaProduto || permissao === "view"}
+                  placeholder="Ex: 10 (para 10%)"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Descontar comissão da meta geral?</label>
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={descontarMetaGeral}
+                    onChange={(e) => setDescontarMetaGeral(e.target.checked)}
+                    disabled={!usaMetaProduto || permissao === "view"}
+                  />
+                  <span>Sim</span>
+                </label>
+              </div>
+            </div>
+            <small style={{ color: "#475569" }}>
+              Se ativado, o produto paga a comissão da meta própria (ex.: 10%); se "Descontar meta geral" estiver ligado,
+              subtrai o que já foi pago pela meta geral para evitar duplicidade.
+            </small>
           </div>
 
           {form.regra_comissionamento === "geral" && (

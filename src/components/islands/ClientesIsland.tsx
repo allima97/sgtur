@@ -245,6 +245,44 @@ export default function ClientesIsland() {
           .select("venda_id, valor_total, valor_taxas, produto_id")
           .in("venda_id", vendaIds);
 
+        (recs || []).forEach((r: any) => {
+          if (r.produto_id) produtoIdsSet.add(r.produto_id);
+        });
+
+        let produtosLista: any[] = [];
+        let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+        if (produtoIdsSet.size > 0) {
+          const idsArr = Array.from(produtoIdsSet);
+          const { data: produtosData, error: prodErr } = await supabase
+            .from("produtos")
+            .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+            .in("tipo_produto", idsArr);
+          if (!prodErr && produtosData) produtosLista = produtosData as any[];
+          else if (prodErr) console.error(prodErr);
+
+          const { data: tiposData, error: tipoErr } = await supabase
+            .from("tipo_produtos")
+            .select("id, nome, disponivel_todas_cidades")
+            .in("id", idsArr);
+          if (!tipoErr && tiposData) {
+            tipoProdMap = Object.fromEntries(
+              (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            );
+          } else if (tipoErr) {
+            console.error(tipoErr);
+          }
+        }
+
+        const resolveProdutoNome = (produtoId?: string | null, cidadeVenda?: string | null) => {
+          if (!produtoId) return "";
+          const candidato = produtosLista.find((p) => {
+            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+          });
+          const tipoInfo = tipoProdMap[produtoId] || {};
+          return candidato?.nome || tipoInfo.nome || "Produto";
+        };
+
         vendasFmt = vendasData.map((v: any) => {
           const recForVenda = (recs || []).filter((r: any) => r.venda_id === v.id);
           const total = recForVenda.reduce(
@@ -255,6 +293,9 @@ export default function ClientesIsland() {
             (acc, r: any) => acc + (r.valor_taxas || 0),
             0
           );
+          const produtosVenda = recForVenda
+            .map((r: any) => resolveProdutoNome(r.produto_id, v.destinos?.cidade_id))
+            .filter(Boolean);
           return {
             id: v.id,
             data_lancamento: v.data_lancamento,
@@ -264,6 +305,7 @@ export default function ClientesIsland() {
             destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap[v.destinos?.cidade_id] || "" : "",
             valor_total: total,
             valor_taxas: taxas,
+            produtos: produtosVenda,
           };
         });
       }
