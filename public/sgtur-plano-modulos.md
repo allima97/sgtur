@@ -425,9 +425,15 @@ Tecnologias:
   - Produtos diferenciados que `soma_na_meta = true` somam a comissão calculada na meta geral; detalhamento por produto segue como KPI individual.
 - **product_commission_rule**: correção no upsert para produtos diferenciados criando regra fixa automática quando faltar `rule_id` e garantindo persistência dos campos `fix_meta_*`.
 
+**Perfil do Usuário (refatorado)**
+- Card de Dados Pessoais ocupa 100% da largura; Dados de Acesso e Empresa ficam abaixo, lado a lado (50/50).
+- Campos adicionais em `users`: `rg`, `whatsapp`, `cep`, `endereco`, `numero`, `complemento`; labels reorganizados (Data Nascimento, Estado etc.).
+- Campo CEP integrado ao ViaCEP (sem autenticação) para preencher endereço/cidade/estado automaticamente.
+
 **Próximos passos imediatos:**
 - Garantir no Supabase a tabela `metas_vendedor_produto` (FK para `metas_vendedor` e `produtos`) para evitar erros 42703 no CRUD de metas diferenciadas.
 - Garantir no Supabase a coluna `exibe_kpi_comissao boolean default true` em `tipo_produtos` para habilitar o toggle de KPI por produto.
+- Garantir no Supabase as colunas extras do perfil em `users`: `rg text`, `whatsapp text`, `cep text`, `endereco text`, `numero text`, `complemento text`.
 - Se `template_id` em `metas_vendedor` não for mais usado, avaliar remoção/ignorar nas consultas e policies.
 - Ajustar fechamento para, futuramente, ponderar comissão por produto usando `metas_vendedor_produto` (hoje usa apenas `meta_geral`).
 
