@@ -27,6 +27,7 @@ type Recibo = {
   numero_recibo: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
+  produto_nome?: string | null;
 };
 
 type Papel = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
@@ -158,8 +159,7 @@ export default function VendasConsultaIsland() {
           clientes(nome),
           destinos:produtos!destino_id (
             nome,
-            cidade_id,
-            cidades (id, nome)
+            cidade_id
           )
         `)
         .order("data_lancamento", { ascending: false });
@@ -171,18 +171,44 @@ export default function VendasConsultaIsland() {
       const { data: vendasData, error } = await query;
       if (error) throw error;
 
-      const v = (vendasData || []).map((row: any) => ({
-        id: row.id,
-        vendedor_id: row.vendedor_id,
-        cliente_id: row.cliente_id,
-        destino_id: row.destino_id,
-        destino_cidade_id: row.destinos?.cidade_id || "",
-        data_lancamento: row.data_lancamento,
-        data_embarque: row.data_embarque,
-        cliente_nome: row.clientes?.nome || "",
-        destino_nome: row.destinos?.nome || "",
-        destino_cidade_nome: (row.destinos as any)?.cidades?.nome || "",
-      }));
+      const cidadeIds = Array.from(
+        new Set(
+          (vendasData || [])
+            .map((row: any) => row.destinos?.cidade_id)
+            .filter((id: string | null | undefined): id is string => Boolean(id))
+        )
+      );
+
+      let cidadesMap: Record<string, string> = {};
+      if (cidadeIds.length > 0) {
+        const { data: cidadesData, error: cidadesError } = await supabase
+          .from("cidades")
+          .select("id, nome")
+          .in("id", cidadeIds);
+        if (cidadesError) {
+          console.error(cidadesError);
+        } else {
+          cidadesMap = Object.fromEntries(
+            (cidadesData || []).map((c: any) => [c.id, c.nome])
+          );
+        }
+      }
+
+      const v = (vendasData || []).map((row: any) => {
+        const cidadeId = row.destinos?.cidade_id || "";
+        return {
+          id: row.id,
+          vendedor_id: row.vendedor_id,
+          cliente_id: row.cliente_id,
+          destino_id: row.destino_id,
+          destino_cidade_id: cidadeId,
+          data_lancamento: row.data_lancamento,
+          data_embarque: row.data_embarque,
+          cliente_nome: row.clientes?.nome || "",
+          destino_nome: row.destinos?.nome || "",
+          destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : "",
+        };
+      });
 
       setVendas(v);
 
@@ -194,7 +220,59 @@ export default function VendasConsultaIsland() {
           .from("vendas_recibos")
           .select("*")
           .in("venda_id", vendaIds);
-        setRecibos(recibosData || []);
+
+        const produtoIds = Array.from(
+          new Set(
+            (recibosData || [])
+              .map((r: any) => r.produto_id)
+              .filter((id: string | null | undefined): id is string => Boolean(id))
+          )
+        );
+
+        const vendaCidadeMap = v.reduce<Record<string, string>>((acc, vendaItem) => {
+          if (vendaItem.destino_cidade_id) acc[vendaItem.id] = vendaItem.destino_cidade_id;
+          return acc;
+        }, {});
+
+        let produtosLista: any[] = [];
+        let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+
+        if (produtoIds.length > 0) {
+          const { data: produtosData, error: prodErr } = await supabase
+            .from("produtos")
+            .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+            .in("tipo_produto", produtoIds);
+          if (!prodErr && produtosData) produtosLista = produtosData as any[];
+          else if (prodErr) console.error(prodErr);
+
+          const { data: tiposData, error: tipoErr } = await supabase
+            .from("tipo_produtos")
+            .select("id, nome, disponivel_todas_cidades")
+            .in("id", produtoIds);
+          if (!tipoErr && tiposData) {
+            tipoProdMap = Object.fromEntries(
+              (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            );
+          } else if (tipoErr) {
+            console.error(tipoErr);
+          }
+        }
+
+        const recibosEnriquecidos =
+          (recibosData || []).map((r: any) => {
+            const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
+            const candidato = produtosLista.find((p) => {
+              const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+              return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+            });
+            const tipoInfo = tipoProdMap[r.produto_id as string] || {};
+            return {
+              ...r,
+              produto_nome: candidato?.nome || tipoInfo.nome || "",
+            };
+          }) || [];
+
+        setRecibos(recibosEnriquecidos);
       }
 
       if (pendingOpenId) {
@@ -403,11 +481,11 @@ export default function VendasConsultaIsland() {
             <tr>
               <th>Cliente</th>
               <th>Destino</th>
-              <th>Lançamento</th>
-              <th>Embarque</th>
+              <th>Produto</th>
+              <th style={{ textAlign: "center" }}>Embarque</th>
               <th>Valor</th>
               <th>Taxas</th>
-              {podeVer && <th className="th-actions">Ações</th>}
+              {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -424,37 +502,57 @@ export default function VendasConsultaIsland() {
             )}
 
             {!loading &&
-              vendasFiltradas.map((v) => (
-                <tr key={v.id}>
-                  <td>{v.cliente_nome}</td>
-                  <td>{v.destino_nome}</td>
-                  <td>
-                    {new Date(v.data_lancamento).toLocaleDateString("pt-BR")}
-                  </td>
-                  <td>
-                    {v.data_embarque
-                      ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td>
-                    R$
-                    {(recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0)).toLocaleString("pt-BR")}
-                  </td>
-                  <td>
-                    R$
-                    {(recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0)).toLocaleString("pt-BR")}
-                  </td>
-                  <td className="th-actions">
-                    <button
-                      className="btn-icon"
-                      title="Ver detalhes"
-                      onClick={() => setModalVenda(v)}
-                    >
-                      👁️
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              vendasFiltradas.map((v) => {
+                const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
+                const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
+                const produtosVenda = recibosDaVenda(v.id)
+                  .map((r) => r.produto_nome || "")
+                  .filter(Boolean);
+
+                return (
+                  <tr key={v.id}>
+                    <td>{v.cliente_nome}</td>
+                    <td>{v.destino_cidade_nome || "-"}</td>
+                    <td>
+                      {produtosVenda.length === 0 ? (
+                        "-"
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          {produtosVenda.map((p, idx) => (
+                            <span key={`${v.id}-prod-${idx}`}>{p}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      {v.data_embarque
+                        ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
+                    <td>
+                      R${" "}
+                      {totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      {totalTaxas === 0
+                        ? "-"
+                        : `R$ ${totalTaxas.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`}
+                    </td>
+                    <td className="th-actions" style={{ textAlign: "center" }}>
+                      <button
+                        className="btn-icon"
+                        title="Ver detalhes"
+                        onClick={() => setModalVenda(v)}
+                      >
+                        👁️
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
@@ -467,10 +565,12 @@ export default function VendasConsultaIsland() {
           <div className="modal-panel" style={{ maxWidth: "820px" }}>
             <div className="modal-header">
               <div>
-                <div className="modal-title">Detalhes da venda</div>
-                <small style={{ color: "#64748b" }}>
-                  {modalVenda.cliente_nome} • {modalVenda.destino_nome}
-                </small>
+                <div
+                  className="modal-title"
+                  style={{ color: "#16a34a", fontSize: "1.15rem", fontWeight: 800 }}
+                >
+                  Detalhes da venda
+                </div>
               </div>
               <button className="btn-ghost" onClick={() => setModalVenda(null)}>
                 ✕
@@ -478,21 +578,30 @@ export default function VendasConsultaIsland() {
             </div>
 
             <div className="modal-body">
-              <div className="mb-2" style={{ lineHeight: 1.5 }}>
-                <strong>Cidade:</strong>{" "}
-                {modalVenda.destino_cidade_nome || "Não informada"}
-                <br />
-                <strong>Lançada em:</strong>{" "}
-                {new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")}
-                <br />
-                <strong>Embarque:</strong>{" "}
-                {modalVenda.data_embarque
-                  ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR")
-                  : "-"}
+              <div
+                className="mb-3"
+                style={{ display: "grid", gap: 6, lineHeight: 1.4 }}
+              >
+                <div>
+                  <strong>Cliente:</strong> {modalVenda.cliente_nome || "-"}
+                </div>
+                <div>
+                  <strong>Cidade:</strong> {modalVenda.destino_cidade_nome || "Não informada"}
+                </div>
+                <div>
+                  <strong>Lançada em:</strong>{" "}
+                  {new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")}
+                </div>
+                <div>
+                  <strong>Embarque:</strong>{" "}
+                  {modalVenda.data_embarque
+                    ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR")
+                    : "-"}
+                </div>
               </div>
 
               {/* RECIBOS */}
-              <h4 style={{ marginBottom: 8 }}>Recibos</h4>
+              <h4 style={{ marginBottom: 8, textAlign: "center" }}>Recibos</h4>
               <div className="table-container overflow-x-auto">
                 <table
                   className="table-default table-header-green"
@@ -501,30 +610,47 @@ export default function VendasConsultaIsland() {
                   <thead>
                     <tr>
                       <th>Número</th>
+                      <th>Produto</th>
                       <th>Valor</th>
                       <th>Taxas</th>
                       {podeExcluir && <th>Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {recibosDaVenda(modalVenda.id).map((r) => (
-                      <tr key={r.id}>
-                        <td>{r.numero_recibo || "-"}</td>
-                        <td>R${(r.valor_total || 0).toLocaleString("pt-BR")}</td>
-                        <td>R${(r.valor_taxas || 0).toLocaleString("pt-BR")}</td>
-                        {podeExcluir && (
-                          <td>
-                            <button
-                              className="btn-icon btn-danger"
-                              disabled={excluindoRecibo === r.id}
-                              onClick={() => excluirRecibo(r.id, modalVenda.id)}
-                            >
-                              {excluindoRecibo === r.id ? "…" : "🗑️"}
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
+                    {recibosDaVenda(modalVenda.id).map((r) => {
+                      const valorFmt = (r.valor_total || 0).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      });
+                      const taxasNum = r.valor_taxas || 0;
+                      const taxasFmt =
+                        taxasNum === 0
+                          ? "-"
+                          : `R$ ${taxasNum.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}`;
+
+                      return (
+                        <tr key={r.id}>
+                          <td>{r.numero_recibo || "-"}</td>
+                          <td>{r.produto_nome || "-"}</td>
+                          <td>R$ {valorFmt}</td>
+                          <td>{taxasFmt}</td>
+                          {podeExcluir && (
+                            <td>
+                              <button
+                                className="btn-icon btn-danger"
+                                disabled={excluindoRecibo === r.id}
+                                onClick={() => excluirRecibo(r.id, modalVenda.id)}
+                              >
+                                {excluindoRecibo === r.id ? "…" : "🗑️"}
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -534,20 +660,25 @@ export default function VendasConsultaIsland() {
               <div className="modal-footer">
                 {podeEditar && (
                     <>
-                      <a
+                      <button
                         className="btn btn-outline"
-                        href={`/vendas/cadastro?id=${modalVenda.id}${
-                          modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
-                        }${
-                          modalVenda.destino_cidade_nome
-                            ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}`
-                            : ""
-                        }`}
+                        style={{ minWidth: 130, backgroundColor: "#f3f4f6", color: "#1f2937" }}
+                        onClick={() => {
+                          const url = `/vendas/cadastro?id=${modalVenda.id}${
+                            modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
+                          }${
+                            modalVenda.destino_cidade_nome
+                              ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}`
+                              : ""
+                          }`;
+                          window.location.href = url;
+                        }}
                       >
                         Editar
-                      </a>
+                      </button>
                     <button
                       className="btn btn-primary"
+                      style={{ minWidth: 130 }}
                       onClick={() => {
                         const nova = prompt(
                           "Nova data de embarque (AAAA-MM-DD):",
@@ -565,6 +696,7 @@ export default function VendasConsultaIsland() {
                 {podeExcluir && (
                   <button
                     className="btn btn-danger"
+                    style={{ minWidth: 130 }}
                     onClick={() => cancelarVenda(modalVenda)}
                     disabled={cancelando}
                   >

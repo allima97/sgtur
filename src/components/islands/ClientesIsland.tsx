@@ -82,8 +82,11 @@ export default function ClientesIsland() {
       data_lancamento: string;
       data_embarque: string | null;
       destino_nome: string;
+      destino_cidade_id?: string | null;
+      destino_cidade_nome?: string;
       valor_total: number;
       valor_taxas: number;
+      produtos?: string[];
     }[]
   >([]);
   const [historicoOrcamentos, setHistoricoOrcamentos] = useState<
@@ -94,6 +97,8 @@ export default function ClientesIsland() {
       valor: number | null;
       numero_venda: string | null;
       destino_nome: string | null;
+      destino_cidade_nome?: string | null;
+      produto_nome?: string | null;
     }[]
   >([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
@@ -102,11 +107,20 @@ export default function ClientesIsland() {
     data_lancamento: string;
     data_embarque: string | null;
     destino_nome: string;
+    destino_cidade_id?: string | null;
+    destino_cidade_nome?: string;
     valor_total: number;
     valor_taxas: number;
   } | null>(null);
   const [detalheRecibos, setDetalheRecibos] = useState<
-    { numero_recibo: string | null; valor_total: number | null; valor_taxas: number | null; produto_nome: string | null }[]
+    {
+      id?: string;
+      numero_recibo: string | null;
+      valor_total: number | null;
+      valor_taxas: number | null;
+      produto_nome: string | null;
+      produto_id?: string | null;
+    }[]
   >([]);
   const [carregandoRecibos, setCarregandoRecibos] = useState(false);
   const [detalheOrcamento, setDetalheOrcamento] = useState<{
@@ -178,6 +192,8 @@ export default function ClientesIsland() {
   async function abrirHistorico(cliente: Cliente) {
     setHistoricoCliente(cliente);
     setLoadingHistorico(true);
+    const cidadesMap: Record<string, string> = {};
+    const produtoIdsSet: Set<string> = new Set();
     try {
       const { data: viagens } = await supabase
         .from("historico_viagens_real")
@@ -197,26 +213,36 @@ export default function ClientesIsland() {
       // Vendas e recibos
       const { data: vendasData } = await supabase
         .from("vendas")
-        .select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome)")
+        .select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome, cidade_id)")
         .eq("cliente_id", cliente.id)
         .order("data_lancamento", { ascending: false });
 
-      let vendasFmt:
-        | {
-            id: string;
-            data_lancamento: string;
-            data_embarque: string | null;
-            destino_nome: string;
-            valor_total: number;
-            valor_taxas: number;
-          }[]
-        | [] = [];
+      let vendasFmt = [];
+      let cidadesMap: Record<string, string> = {};
 
       if (vendasData && vendasData.length > 0) {
         const vendaIds = vendasData.map((v: any) => v.id);
+        const cidadeIds = Array.from(
+          new Set(
+            vendasData
+              .map((v: any) => v.destinos?.cidade_id)
+              .filter((id: string | null | undefined): id is string => Boolean(id))
+          )
+        );
+        if (cidadeIds.length > 0) {
+          const { data: cidadesData, error: cidadesErr } = await supabase
+            .from("cidades")
+            .select("id, nome")
+            .in("id", cidadeIds);
+          if (!cidadesErr) {
+            cidadesMap = Object.fromEntries((cidadesData || []).map((c: any) => [c.id, c.nome || ""]));
+          } else {
+            console.error(cidadesErr);
+          }
+        }
         const { data: recs } = await supabase
           .from("vendas_recibos")
-          .select("venda_id, valor_total, valor_taxas")
+          .select("venda_id, valor_total, valor_taxas, produto_id")
           .in("venda_id", vendaIds);
 
         vendasFmt = vendasData.map((v: any) => {
@@ -234,6 +260,8 @@ export default function ClientesIsland() {
             data_lancamento: v.data_lancamento,
             data_embarque: v.data_embarque,
             destino_nome: v.destinos?.nome || "",
+            destino_cidade_id: v.destinos?.cidade_id || null,
+            destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap[v.destinos?.cidade_id] || "" : "",
             valor_total: total,
             valor_taxas: taxas,
           };
@@ -242,9 +270,107 @@ export default function ClientesIsland() {
 
       const { data: orc } = await supabase
         .from("orcamentos")
-        .select("id, data_orcamento, status, valor, numero_venda, destinos:produtos!destino_id (nome)")
+        .select("id, data_orcamento, status, valor, numero_venda, produto_id, destinos:produtos!destino_id (nome, cidade_id)")
         .eq("cliente_id", cliente.id)
         .order("data_orcamento", { ascending: false });
+
+      const extraCidadeIds =
+        orc
+          ?.map((o: any) => o.destinos?.cidade_id)
+          .filter((id: string | null | undefined): id is string => Boolean(id)) || [];
+      const novasCidades = extraCidadeIds.filter((id) => !(id in (cidadesMap || {})));
+      if (novasCidades.length > 0) {
+        const { data: cidadesExtras, error: cidadeExtraErr } = await supabase
+          .from("cidades")
+          .select("id, nome")
+          .in("id", novasCidades);
+        if (!cidadeExtraErr) {
+          (cidadesExtras || []).forEach((c: any) => {
+            cidadesMap[c.id] = c.nome || "";
+          });
+        } else {
+          console.error(cidadeExtraErr);
+        }
+      }
+
+      const produtoIdsOrc =
+        orc
+          ?.map((o: any) => o.produto_id)
+          .filter((id: string | null | undefined): id is string => Boolean(id)) || [];
+      produtoIdsOrc.forEach((id) => produtoIdsSet.add(id as string));
+
+      let produtosListaPorTipo: any[] = [];
+      let produtosListaPorId: any[] = [];
+      const produtoByIdMap: Record<string, string> = {};
+      const produtoObjById: Record<string, any> = {};
+      const tipoIdsSet: Set<string> = new Set();
+      let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+      if (produtoIdsSet.size > 0) {
+        const idsArr = Array.from(produtoIdsSet);
+        const { data: produtosData, error: prodErr } = await supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .in("tipo_produto", idsArr);
+        if (!prodErr && produtosData) produtosListaPorTipo = produtosData as any[];
+        else if (prodErr) console.error(prodErr);
+
+        const { data: produtosPorId, error: prodIdErr } = await supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .in("id", idsArr);
+        if (!prodIdErr && produtosPorId) {
+          produtosListaPorId = produtosPorId as any[];
+          produtosPorId.forEach((p: any) => {
+            if (p.id) {
+              produtoByIdMap[p.id] = p.nome || "Produto";
+              produtoObjById[p.id] = p;
+            }
+            if (p.tipo_produto) tipoIdsSet.add(p.tipo_produto);
+          });
+        } else if (prodIdErr) {
+          console.error(prodIdErr);
+        }
+
+        produtosListaPorTipo.forEach((p: any) => {
+          if (p.tipo_produto) tipoIdsSet.add(p.tipo_produto);
+        });
+        idsArr.forEach((id) => tipoIdsSet.add(id)); // cobre caso o recibo guarde o id do tipo direto
+
+        const { data: tiposData, error: tipoErr } = await supabase
+          .from("tipo_produtos")
+          .select("id, nome, disponivel_todas_cidades")
+          .in("id", Array.from(tipoIdsSet));
+        if (!tipoErr && tiposData) {
+          tipoProdMap = Object.fromEntries(
+            (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+          );
+        } else if (tipoErr) {
+          console.error(tipoErr);
+        }
+      }
+
+      const resolveProdutoNome = (produtoId?: string | null, cidadeVenda?: string | null) => {
+        if (!produtoId) return "";
+        if (produtoObjById[produtoId]) {
+          const p = produtoObjById[produtoId];
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          if (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda) return p.nome || "Produto";
+        }
+        if (produtoByIdMap[produtoId]) return produtoByIdMap[produtoId];
+        const candidato = produtosListaPorTipo.find((p) => {
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+        });
+        const tipoInfo = tipoProdMap[produtoId] || {};
+        return candidato?.nome || tipoInfo.nome || "Produto";
+      };
+
+      if (vendasFmt.length > 0) {
+        vendasFmt = vendasFmt.map((v) => ({
+          ...v,
+          produtos: (v.produtos || []).map((pid) => resolveProdutoNome(pid, v.destino_cidade_id)).filter(Boolean),
+        }));
+      }
 
       const orcFmt =
         orc?.map((o: any) => ({
@@ -254,6 +380,8 @@ export default function ClientesIsland() {
           valor: o.valor ?? null,
           numero_venda: o.numero_venda ?? null,
           destino_nome: o.destinos?.nome || null,
+          destino_cidade_nome: o.destinos?.cidade_id ? cidadesMap[o.destinos?.cidade_id] || "" : null,
+          produto_nome: resolveProdutoNome(o.produto_id, o.destinos?.cidade_id),
         })) || [];
 
       setHistoricoVendas(vendasFmt);
@@ -280,22 +408,76 @@ export default function ClientesIsland() {
     data_lancamento: string;
     data_embarque: string | null;
     destino_nome: string;
+    destino_cidade_id?: string | null;
+    destino_cidade_nome?: string;
     valor_total: number;
     valor_taxas: number;
   }) {
     setDetalheVenda(v);
     setCarregandoRecibos(true);
+    setDetalheRecibos([]);
     try {
       const { data } = await supabase
         .from("vendas_recibos")
-        .select("numero_recibo, valor_total, valor_taxas, produtos(nome)")
+        .select("id, numero_recibo, valor_total, valor_taxas, produto_id")
         .eq("venda_id", v.id);
-      setDetalheRecibos(
+      const recsBase =
         (data || []).map((r: any) => ({
+          id: r.id,
           numero_recibo: r.numero_recibo,
           valor_total: r.valor_total,
           valor_taxas: r.valor_taxas,
-          produto_nome: r.produtos?.nome || null,
+          produto_id: r.produto_id,
+          produto_nome: null as string | null,
+        })) || [];
+
+      const produtoIds = Array.from(
+        new Set(
+          recsBase
+            .map((r) => r.produto_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      const cidadeVenda = v.destino_cidade_id || "";
+      let produtosListaPorTipo: any[] = [];
+      let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+
+      if (produtoIds.length > 0) {
+        const { data: produtosData, error: prodErr } = await supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .in("tipo_produto", produtoIds);
+        if (!prodErr && produtosData) produtosListaPorTipo = produtosData as any[];
+        else if (prodErr) console.error(prodErr);
+
+        const { data: tiposData, error: tipoErr } = await supabase
+          .from("tipo_produtos")
+          .select("id, nome, disponivel_todas_cidades")
+          .in("id", produtoIds);
+        if (!tipoErr && tiposData) {
+          tipoProdMap = Object.fromEntries(
+            (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+          );
+        } else if (tipoErr) {
+          console.error(tipoErr);
+        }
+      }
+
+      const resolveProdutoNome = (produtoId?: string | null) => {
+        if (!produtoId) return "";
+        const candidato = produtosListaPorTipo.find((p) => {
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+        });
+        const tipoInfo = tipoProdMap[produtoId] || {};
+        return candidato?.nome || tipoInfo.nome || "Produto";
+      };
+
+      setDetalheRecibos(
+        recsBase.map((r) => ({
+          ...r,
+          produto_nome: resolveProdutoNome(r.produto_id),
         }))
       );
     } catch (e) {
@@ -594,8 +776,8 @@ export default function ClientesIsland() {
               <th>CPF</th>
               <th>Telefone</th>
               <th>E-mail</th>
-              <th>Ativo</th>
-              {(podeEditar || podeExcluir) && <th className="th-actions">Ações</th>}
+              <th style={{ textAlign: "center" }}>Ativo</th>
+              {(podeEditar || podeExcluir) && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -618,10 +800,10 @@ export default function ClientesIsland() {
                   <td>{c.cpf}</td>
                   <td>{c.telefone}</td>
                   <td>{c.email || "-"}</td>
-                  <td>{c.active ? "Sim" : "Não"}</td>
+                  <td style={{ textAlign: "center" }}>{c.active ? "Sim" : "Não"}</td>
 
                   {(podeEditar || podeExcluir) && (
-                    <td className="th-actions">
+                    <td className="th-actions" style={{ textAlign: "center" }}>
                       <button
                         className="btn-icon"
                         onClick={() => abrirHistorico(c)}
@@ -662,7 +844,12 @@ export default function ClientesIsland() {
         <div className="modal-panel" style={{ maxWidth: 1100, width: "95vw" }}>
           <div className="modal-header">
             <div>
-              <div className="modal-title">Histórico de {historicoCliente.nome}</div>
+              <div
+                className="modal-title"
+                style={{ color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 }}
+              >
+                Histórico de {historicoCliente.nome}
+              </div>
               <small style={{ color: "#64748b" }}>Vendas e orçamentos do cliente</small>
             </div>
             <button className="btn-ghost" onClick={fecharHistorico}>✕</button>
@@ -679,18 +866,18 @@ export default function ClientesIsland() {
                     <table className="table-default table-header-blue min-w-[820px]">
                       <thead>
                         <tr>
-                          <th>Data lançamento</th>
-                          <th>Embarque</th>
+                          <th>Data Lançamento</th>
                           <th>Destino</th>
+                          <th>Embarque</th>
                           <th>Valor</th>
                           <th>Taxas</th>
-                          <th className="th-actions">Ações</th>
+                          <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
                         {historicoVendas.length === 0 && (
                           <tr>
-                            <td colSpan={5}>Nenhuma venda encontrada.</td>
+                            <td colSpan={6}>Nenhuma venda encontrada.</td>
                           </tr>
                         )}
                         {historicoVendas.map((v) => (
@@ -700,12 +887,12 @@ export default function ClientesIsland() {
                                 ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
+                            <td>{v.destino_cidade_nome || "-"}</td>
                             <td>
                               {v.data_embarque
                                 ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>{v.destino_nome || "-"}</td>
                             <td>
                               {v.valor_total.toLocaleString("pt-BR", {
                                 style: "currency",
@@ -718,7 +905,7 @@ export default function ClientesIsland() {
                                 currency: "BRL",
                               })}
                             </td>
-                            <td className="th-actions">
+                            <td className="th-actions" style={{ textAlign: "center" }}>
                               <button
                                 className="btn-icon"
                                 type="button"
@@ -744,22 +931,28 @@ export default function ClientesIsland() {
                           <th>Data</th>
                           <th>Status</th>
                           <th>Destino</th>
+                          <th>Produto</th>
                           <th>Valor</th>
                           <th>Venda</th>
-                          <th className="th-actions">Ações</th>
+                          <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                         </tr>
                       </thead>
                       <tbody>
                         {historicoOrcamentos.length === 0 && (
                           <tr>
-                            <td colSpan={5}>Nenhum orçamento encontrado.</td>
+                            <td colSpan={7}>Nenhum orçamento encontrado.</td>
                           </tr>
                         )}
                         {historicoOrcamentos.map((o) => (
                           <tr key={o.id}>
-                            <td>{o.data_orcamento?.slice(0, 10) || "-"}</td>
+                            <td>
+                              {o.data_orcamento
+                                ? new Date(o.data_orcamento).toLocaleDateString("pt-BR").replaceAll("/", "-")
+                                : "-"}
+                            </td>
                             <td style={{ textTransform: "capitalize" }}>{o.status || "-"}</td>
-                            <td>{o.destino_nome || "-"}</td>
+                            <td>{o.destino_cidade_nome || "-"}</td>
+                            <td>{o.produto_nome || "-"}</td>
                             <td>
                               {(o.valor ?? 0).toLocaleString("pt-BR", {
                                 style: "currency",
@@ -767,7 +960,7 @@ export default function ClientesIsland() {
                               })}
                             </td>
                             <td>{o.numero_venda || "-"}</td>
-                            <td className="th-actions">
+                            <td className="th-actions" style={{ textAlign: "center" }}>
                               <button
                                 className="btn-icon"
                                 type="button"
@@ -802,21 +995,39 @@ export default function ClientesIsland() {
         <div className="modal-panel" style={{ maxWidth: 720 }}>
           <div className="modal-header">
             <div>
-              <div className="modal-title">Detalhes da venda</div>
-              <small style={{ color: "#64748b" }}>
-                Destino: {detalheVenda.destino_nome || "-"}
-              </small>
+              <div
+                className="modal-title"
+                style={{ color: "#16a34a", fontSize: "1.15rem", fontWeight: 800 }}
+              >
+                Detalhes da venda
+              </div>
             </div>
             <button className="btn-ghost" onClick={() => { setDetalheVenda(null); setDetalheRecibos([]); }}>
               ✕
             </button>
           </div>
           <div className="modal-body">
-            <div style={{ marginBottom: 12, lineHeight: 1.5 }}>
-              <div>
-                <strong>Lançamento:</strong>{" "}
-                {new Date(detalheVenda.data_lancamento).toLocaleDateString("pt-BR")}
-              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  lineHeight: 1.4,
+                marginBottom: 8,
+              }}
+              >
+                <div>
+                  <strong>Recibo:</strong>{" "}
+                  {detalheRecibos.length > 0
+                    ? detalheRecibos.map((r) => r.numero_recibo || "-").join(", ")
+                    : "—"}
+                </div>
+                <div>
+                  <strong>Destino:</strong> {detalheVenda.destino_cidade_nome || "-"}
+                </div>
+                <div>
+                  <strong>Lançamento:</strong>{" "}
+                  {new Date(detalheVenda.data_lancamento).toLocaleDateString("pt-BR")}
+                </div>
               <div>
                 <strong>Embarque:</strong>{" "}
                 {detalheVenda.data_embarque
@@ -832,14 +1043,16 @@ export default function ClientesIsland() {
               </div>
               <div>
                 <strong>Taxas:</strong>{" "}
-                {detalheVenda.valor_taxas.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                {detalheVenda.valor_taxas === 0
+                  ? "-"
+                  : detalheVenda.valor_taxas.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
               </div>
             </div>
 
-            <h4 style={{ marginBottom: 8 }}>Recibos</h4>
+            <h4 style={{ marginBottom: 8, textAlign: "center" }}>Recibos</h4>
             {carregandoRecibos ? (
               <p>Carregando recibos...</p>
             ) : (
@@ -900,7 +1113,12 @@ export default function ClientesIsland() {
         <div className="modal-panel" style={{ maxWidth: 640 }}>
           <div className="modal-header">
             <div>
-              <div className="modal-title">Detalhes do orçamento</div>
+              <div
+                className="modal-title"
+                style={{ color: "#1d4ed8", fontSize: "1.15rem", fontWeight: 800 }}
+              >
+                Detalhes do orçamento
+              </div>
               <small style={{ color: "#64748b" }}>
                 Destino: {detalheOrcamento.destino_nome || "-"}
               </small>
@@ -910,7 +1128,14 @@ export default function ClientesIsland() {
             </button>
           </div>
           <div className="modal-body">
-            <div style={{ lineHeight: 1.5 }}>
+            <div
+              style={{
+                display: "grid",
+                gap: 6,
+                lineHeight: 1.4,
+                marginBottom: 4,
+              }}
+            >
               <div>
                 <strong>Data:</strong>{" "}
                 {detalheOrcamento.data_orcamento
@@ -928,8 +1153,7 @@ export default function ClientesIsland() {
                 })}
               </div>
               <div>
-                <strong>Venda vinculada:</strong>{" "}
-                {detalheOrcamento.numero_venda || "-"}
+                <strong>Venda vinculada:</strong> {detalheOrcamento.numero_venda || "-"}
               </div>
             </div>
           </div>

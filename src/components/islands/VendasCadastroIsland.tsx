@@ -420,6 +420,37 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     setRecibos((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function resetFormAndGoToConsulta() {
+    setFormVenda({
+      ...initialVenda,
+      data_lancamento: new Date().toISOString().substring(0, 10),
+    });
+    setRecibos([]);
+    setEditId(null);
+    setCidadePrefill({ id: "", nome: "" });
+    setBuscaCliente("");
+    setBuscaDestino("");
+    setBuscaProduto("");
+    setBuscaCidadeSelecionada("");
+    setResultadosCidade([]);
+    setErro(null);
+    window.location.href = "/vendas/consulta";
+  }
+
+  function cancelarCadastro() {
+    setFormVenda(initialVenda);
+    setRecibos([]);
+    setEditId(null);
+    setCidadePrefill({ id: "", nome: "" });
+    setBuscaCliente("");
+    setBuscaDestino("");
+    setBuscaProduto("");
+    setBuscaCidadeSelecionada("");
+    setResultadosCidade([]);
+    setErro(null);
+    window.location.href = "/vendas/consulta";
+  }
+
   // =======================================================
   // SALVAR VENDA COMPLETA (VENDA + RECIBOS)
   // =======================================================
@@ -582,7 +613,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         });
 
         alert("Venda atualizada com sucesso!");
-        await carregarVenda(editId, cidades, produtos);
+        resetFormAndGoToConsulta();
       } else {
         // 1) INSERE VENDA
         const { data: vendaData, error: vendaErr } = await supabase
@@ -643,8 +674,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         });
 
         alert("Venda cadastrada com sucesso!");
-        setFormVenda(initialVenda);
-        setRecibos([]);
+        resetFormAndGoToConsulta();
       }
     } catch (e: any) {
       console.error(e);
@@ -931,6 +961,14 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
               disabled={salvando}
             >
               {salvando ? "Salvando..." : "Salvar venda"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={cancelarCadastro}
+              style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}
+            >
+              Cancelar
             </button>
           </div>
         </form>

@@ -507,22 +507,21 @@ export default function OrcamentosConsultaIsland() {
                 <th>Cliente</th>
                 <th>Destino</th>
                 <th>Produto</th>
-                <th>Status</th>
-                <th>Valor</th>
-                <th>Data viagem</th>
-                <th>Notas</th>
-                <th>Ações</th>
+                <th style={{ textAlign: "center" }}>Status</th>
+                <th style={{ textAlign: "center" }}>Valor</th>
+                <th style={{ textAlign: "center" }}>Data viagem</th>
+                <th style={{ textAlign: "center" }}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {carregando && (
                 <tr>
-                  <td colSpan={9}>Carregando...</td>
+                  <td colSpan={8}>Carregando...</td>
                 </tr>
               )}
               {!carregando && filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={9}>Nenhum orçamento encontrado.</td>
+                  <td colSpan={8}>Nenhum orçamento encontrado.</td>
                 </tr>
               )}
 
@@ -533,7 +532,7 @@ export default function OrcamentosConsultaIsland() {
                     <td>{o.clientes?.nome || "—"}</td>
                 <td>{o.destinos?.nome || "—"}</td>
                 <td>{o.produtos?.nome || "—"}</td>
-                <td style={{ textTransform: "capitalize" }}>
+                <td style={{ textTransform: "capitalize", textAlign: "center" }}>
                   <select
                     className="form-select"
                     value={o.status || ""}
@@ -546,20 +545,19 @@ export default function OrcamentosConsultaIsland() {
                     <option value="enviado">Enviado</option>
                     <option value="negociando">Negociando</option>
                     <option value="fechado">Fechado</option>
-                    <option value="perdido">Perdido</option>
-                  </select>
-                </td>
-                <td>
+                      <option value="perdido">Perdido</option>
+                    </select>
+                  </td>
+                <td style={{ textAlign: "center" }}>
                   {o.valor
                     ? o.valor.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL",
                       })
                     : "—"}
-                </td>
-                <td>{o.data_viagem || "—"}</td>
-                <td>{o.notas || "—"}</td>
-                <td>
+                  </td>
+                <td style={{ textAlign: "center" }}>{o.data_viagem || "—"}</td>
+                <td style={{ textAlign: "center" }}>
                   <button
                     className="btn-icon"
                     onClick={() => iniciarEdicao(o)}
@@ -571,8 +569,9 @@ export default function OrcamentosConsultaIsland() {
                   </button>
                   <button
                     className="btn btn-primary"
+                    aria-label="Converter em venda"
                     onClick={() => converterParaVenda(o)}
-                    style={{ padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 }}
+                    style={{ padding: "4px 8px", fontSize: "0.95rem", marginLeft: 6 }}
                     disabled={!o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido"}
                     title={
                       o.status === "fechado" || o.status === "perdido"
@@ -582,7 +581,7 @@ export default function OrcamentosConsultaIsland() {
                           : "Converter em venda"
                     }
                   >
-                    Converter
+                    $
                   </button>
                 </td>
               </tr>
