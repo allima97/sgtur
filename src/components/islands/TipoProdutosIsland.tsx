@@ -239,7 +239,7 @@ export default function TipoProdutosIsland() {
           usa_meta_produto: usaMetaProduto,
           meta_produto_valor: usaMetaProduto ? metaProdValor : null,
           comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
-          descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
+          descontar_meta_geral: descontarMetaGeral,
         };
         if (suportaExibeKpi) {
           payload.exibe_kpi_comissao = exibeKpiComissao;
@@ -507,7 +507,7 @@ export default function TipoProdutosIsland() {
                     type="checkbox"
                     checked={descontarMetaGeral}
                     onChange={(e) => setDescontarMetaGeral(e.target.checked)}
-                    disabled={!usaMetaProduto || permissao === "view"}
+                    disabled={permissao === "view"}
                   />
                   <span>Sim</span>
                 </label>

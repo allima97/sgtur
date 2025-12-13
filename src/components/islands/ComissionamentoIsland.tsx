@@ -28,6 +28,7 @@ type Regra = {
   meta_nao_atingida: number | null;
   meta_atingida: number | null;
   super_meta: number | null;
+  commission_tier?: Tier[];
 };
 
 type RegraProduto = {
@@ -56,6 +57,14 @@ type Recibo = {
   produto_id: string | null;
   tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
+};
+
+type Tier = {
+  faixa: "PRE" | "POS";
+  de_pct: number;
+  ate_pct: number;
+  inc_pct_meta: number;
+  inc_pct_comissao: number;
 };
 
 type Venda = {
@@ -230,7 +239,9 @@ export default function ComissionamentoIsland() {
           .from("metas_vendedor_produto")
           .select("produto_id, valor")
           .eq("meta_vendedor_id", metaData?.id || ""),
-        supabase.from("commission_rule").select("id, tipo, meta_nao_atingida, meta_atingida, super_meta"),
+        supabase
+          .from("commission_rule")
+          .select("id, tipo, meta_nao_atingida, meta_atingida, super_meta, commission_tier (faixa, de_pct, ate_pct, inc_pct_meta, inc_pct_comissao)"),
         supabase
           .from("product_commission_rule")
           .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
@@ -252,6 +263,7 @@ export default function ComissionamentoIsland() {
           meta_nao_atingida: r.meta_nao_atingida,
           meta_atingida: r.meta_atingida,
           super_meta: r.super_meta,
+          commission_tier: r.commission_tier || [],
         };
       });
 
@@ -301,6 +313,37 @@ export default function ComissionamentoIsland() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function calcularPctEscalonavel(regra: Regra, pctMeta: number) {
+    const faixa = pctMeta < 100 ? "PRE" : "POS";
+    const tiers = (regra.commission_tier || []).filter((t) => t.faixa === faixa);
+    const tier = tiers.find((t) => pctMeta >= Number(t.de_pct) && pctMeta <= Number(t.ate_pct));
+
+    const base =
+      faixa === "PRE"
+        ? regra.meta_nao_atingida ?? regra.meta_atingida ?? 0
+        : regra.meta_atingida ?? regra.meta_nao_atingida ?? 0;
+
+    if (!tier) {
+      // fallback para fora das faixas: usa base/super_meta
+      if (faixa === "POS" && pctMeta >= 120) {
+        return regra.super_meta ?? base;
+      }
+      return base;
+    }
+
+    const incMeta = Number(tier.inc_pct_meta || 0);
+    const incCom = Number(tier.inc_pct_comissao || 0); // em pontos percentuais
+
+    if (incMeta <= 0) {
+      // se não houver incremento definido, usa o inc_pct_comissao como valor absoluto
+      return incCom || base;
+    }
+
+    const steps = Math.max(0, Math.floor((pctMeta - Number(tier.de_pct)) / incMeta));
+    const pct = base + steps * (incCom / 100);
+    return pct;
   }
 
   const resumo = useMemo(() => {
@@ -396,9 +439,13 @@ export default function ComissionamentoIsland() {
         const reg = ruleId ? regras[ruleId] : undefined;
         let pctCom = 0;
         if (reg) {
-          if (pctMetaGeral < 100) pctCom = reg.meta_nao_atingida || 0;
-          else if (pctMetaGeral >= 120) pctCom = reg.super_meta ?? reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
-          else pctCom = reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
+          if (reg.tipo === "ESCALONAVEL") {
+            pctCom = calcularPctEscalonavel(reg, pctMetaGeral);
+          } else {
+            if (pctMetaGeral < 100) pctCom = reg.meta_nao_atingida || 0;
+            else if (pctMetaGeral >= 120) pctCom = reg.super_meta ?? reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
+            else pctCom = reg.meta_atingida ?? reg.meta_nao_atingida ?? 0;
+          }
         }
         const valGeral = baseCom * (pctCom / 100);
         comissaoGeral += valGeral;
