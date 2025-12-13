@@ -20,6 +20,7 @@ type TipoProduto = {
   meta_produto_valor?: number | null;
   comissao_produto_meta_pct?: number | null;
   descontar_meta_geral?: boolean | null;
+  exibe_kpi_comissao?: boolean | null;
 };
 
 type Regra = {
@@ -55,6 +56,7 @@ export default function TipoProdutosIsland() {
   const [metaProdutoValor, setMetaProdutoValor] = useState<string>("");
   const [comissaoProdutoMetaPct, setComissaoProdutoMetaPct] = useState<string>("");
   const [descontarMetaGeral, setDescontarMetaGeral] = useState(true);
+  const [exibeKpiComissao, setExibeKpiComissao] = useState(true);
 
   const [form, setForm] = useState({
     nome: "",
@@ -130,6 +132,7 @@ export default function TipoProdutosIsland() {
     setMetaProdutoValor("");
     setComissaoProdutoMetaPct("");
     setDescontarMetaGeral(true);
+    setExibeKpiComissao(true);
     setRegraSelecionada("");
     setFixMetaNao("");
     setFixMetaAtingida("");
@@ -162,6 +165,11 @@ export default function TipoProdutosIsland() {
     setDescontarMetaGeral(
       tipoProd.descontar_meta_geral !== null && tipoProd.descontar_meta_geral !== undefined
         ? !!tipoProd.descontar_meta_geral
+        : true
+    );
+    setExibeKpiComissao(
+      tipoProd.exibe_kpi_comissao !== null && tipoProd.exibe_kpi_comissao !== undefined
+        ? !!tipoProd.exibe_kpi_comissao
         : true
     );
     const comissao = produtoRegraMap[tipoProd.id] || {};
@@ -221,14 +229,15 @@ export default function TipoProdutosIsland() {
           nome,
           tipo,
           regra_comissionamento: form.regra_comissionamento,
-          soma_na_meta: form.soma_na_meta,
-          disponivel_todas_cidades: form.disponivel_todas_cidades,
-          ativo: form.ativo,
-          usa_meta_produto: usaMetaProduto,
-          meta_produto_valor: usaMetaProduto ? metaProdValor : null,
-          comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
-          descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
-        };
+      soma_na_meta: form.soma_na_meta,
+      disponivel_todas_cidades: form.disponivel_todas_cidades,
+      ativo: form.ativo,
+      usa_meta_produto: usaMetaProduto,
+      meta_produto_valor: usaMetaProduto ? metaProdValor : null,
+      comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
+      descontar_meta_geral: usaMetaProduto ? descontarMetaGeral : true,
+      exibe_kpi_comissao: exibeKpiComissao,
+    };
 
       let tipoId = editandoId;
       if (editandoId) {
@@ -430,13 +439,25 @@ export default function TipoProdutosIsland() {
           <div className="card-base card-blue" style={{ marginTop: 12 }}>
             <h4 style={{ marginBottom: 8 }}>Meta específica do produto (opcional)</h4>
             <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Usar meta específica?</label>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                    checked={usaMetaProduto}
+                    onChange={(e) => setUsaMetaProduto(e.target.checked)}
+                    disabled={permissao === "view"}
+                  />
+                  <span>Sim</span>
+                </label>
+              </div>
               <div className="form-group">
-                <label className="form-label">Usar meta específica?</label>
+                <label className="form-label">Exibe KPI com comissão específica?</label>
                 <label className="checkbox">
                   <input
                     type="checkbox"
-                    checked={usaMetaProduto}
-                    onChange={(e) => setUsaMetaProduto(e.target.checked)}
+                    checked={exibeKpiComissao}
+                    onChange={(e) => setExibeKpiComissao(e.target.checked)}
                     disabled={permissao === "view"}
                   />
                   <span>Sim</span>

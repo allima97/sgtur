@@ -47,18 +47,14 @@ type Produto = {
   meta_produto_valor?: number | null;
   comissao_produto_meta_pct?: number | null;
   descontar_meta_geral?: boolean | null;
+  exibe_kpi_comissao?: boolean | null;
 };
 
 type Recibo = {
   valor_total: number | null;
   valor_taxas: number | null;
   produto_id: string | null;
-  produto?: {
-    id: string;
-    nome: string | null;
-    regra_comissionamento: string;
-    soma_na_meta: boolean;
-  } | null;
+  tipo_produtos?: Produto | null;
   regra_produto?: RegraProduto | null;
 };
 
@@ -176,7 +172,7 @@ export default function ComissionamentoIsland() {
         supabase
           .from("tipo_produtos")
           .select(
-            "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral"
+            "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao"
           ),
         supabase
           .from("vendas")
@@ -185,12 +181,12 @@ export default function ComissionamentoIsland() {
           id,
           data_lancamento,
           cancelada,
-          vendas_recibos (
-            valor_total,
-            valor_taxas,
-            produto_id,
-            tipo_produtos (
-              id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral
+            vendas_recibos (
+              valor_total,
+              valor_taxas,
+              produto_id,
+              tipo_produtos (
+              id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao
             )
           )
         `
@@ -235,6 +231,11 @@ export default function ComissionamentoIsland() {
           nome: p.nome,
           regra_comissionamento: p.regra_comissionamento,
           soma_na_meta: p.soma_na_meta,
+          usa_meta_produto: p.usa_meta_produto,
+          meta_produto_valor: p.meta_produto_valor,
+          comissao_produto_meta_pct: p.comissao_produto_meta_pct,
+          descontar_meta_geral: p.descontar_meta_geral,
+          exibe_kpi_comissao: p.exibe_kpi_comissao,
         };
       });
 
@@ -341,7 +342,12 @@ export default function ComissionamentoIsland() {
             : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
           : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
-        comissaoDif += val;
+        const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
+        if (jogaParaGeral) {
+          comissaoGeral += val;
+        } else {
+          comissaoDif += val;
+        }
         comissaoDifDetalhe[prodId] = val;
       } else {
         const ruleId = regraProdutoMap[prodId]?.rule_id;
@@ -393,6 +399,17 @@ export default function ComissionamentoIsland() {
     alignItems: "center" as const,
     textAlign: "center" as const,
   };
+
+  const metaProdEntries =
+    metaProdEnabled && resumo
+      ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
+          ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
+        )
+      : [];
+  const difProdutos =
+    resumo && resumo.produtosDiferenciados
+      ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false)
+      : [];
 
   return (
     <div className="card-base" style={{ background: "transparent", boxShadow: "none", padding: 0 }}>
@@ -477,6 +494,11 @@ export default function ComissionamentoIsland() {
             <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
               Seus Valores a Receber
             </div>
+            {metaProdEnabled && metaProdEntries.length > 0 && (
+              <div style={{ textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }}>
+                Produtos com meta específica
+              </div>
+            )}
             <div
               className="kpi-grid"
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
@@ -487,15 +509,17 @@ export default function ComissionamentoIsland() {
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
-              {metaProdEnabled && resumo.comissaoMetaProd > 0 && (
-                <div className="kpi-card" style={cardColStyle}>
-                  <div className="kpi-label">Meta específica (produtos)</div>
-                  <div className="kpi-value">
-                    {resumo.comissaoMetaProd.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {metaProdEnabled &&
+                metaProdEntries.map(([pid, val]) => (
+                  <div key={`meta-${pid}`} className="kpi-card" style={cardColStyle}>
+                    <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
+                    <div className="kpi-value">
+                      {val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </div>
+                    {val === 0 && <small style={{ color: "#dc2626" }}>Meta não atingida</small>}
                   </div>
-                </div>
-              )}
-              {(resumo.produtosDiferenciados || []).map((pid) => (
+                ))}
+              {difProdutos.map((pid) => (
                 <div key={pid} className="kpi-card" style={cardColStyle}>
                   <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
                   <div className="kpi-value">
@@ -504,6 +528,9 @@ export default function ComissionamentoIsland() {
                       currency: "BRL",
                     })}
                   </div>
+                  {(resumo.comissaoDifDetalhe?.[pid] || 0) === 0 && (
+                    <small style={{ color: "#dc2626" }}>Sem comissão</small>
+                  )}
                 </div>
               ))}
               <div className="kpi-card kpi-highlight" style={cardColStyle}>
