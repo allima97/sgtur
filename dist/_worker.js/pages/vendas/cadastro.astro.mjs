@@ -52,6 +52,7 @@ function VendasCadastroIsland() {
   const [formVenda, setFormVenda] = reactExports.useState(initialVenda);
   const [recibos, setRecibos] = reactExports.useState([]);
   const [editId, setEditId] = reactExports.useState(null);
+  const [cidadePrefill, setCidadePrefill] = reactExports.useState({ id: "", nome: "" });
   const [erro, setErro] = reactExports.useState(null);
   const [salvando, setSalvando] = reactExports.useState(false);
   const [loading, setLoading] = reactExports.useState(true);
@@ -64,7 +65,7 @@ function VendasCadastroIsland() {
   const [buscandoCidade, setBuscandoCidade] = reactExports.useState(false);
   const [erroCidade, setErroCidade] = reactExports.useState(null);
   const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = reactExports.useState("");
-  async function carregarDados(vendaId) {
+  async function carregarDados(vendaId, cidadePrefillParam) {
     try {
       setLoading(true);
       const [c, d, p, tiposResp] = await Promise.all([
@@ -88,7 +89,7 @@ function VendasCadastroIsland() {
       setProdutos(produtosLista);
       setTipos(tiposLista);
       if (vendaId) {
-        await carregarVenda(vendaId, cidadesLista, produtosLista);
+        await carregarVenda(vendaId, cidadesLista, produtosLista, cidadePrefillParam);
       }
     } catch (e) {
       console.error(e);
@@ -97,7 +98,7 @@ function VendasCadastroIsland() {
       setLoading(false);
     }
   }
-  async function carregarVenda(id, cidadesBase, produtosBase) {
+  async function carregarVenda(id, cidadesBase, produtosBase, cidadePrefillParam) {
     try {
       setLoadingVenda(true);
       const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, data_lancamento, data_embarque").eq("id", id).maybeSingle();
@@ -115,14 +116,20 @@ function VendasCadastroIsland() {
         const cidadeSelecionada = lista.find((c) => c.id === cidadeId);
         if (cidadeSelecionada) cidadeNome = cidadeSelecionada.nome;
       }
+      if (!cidadeId && cidadePrefillParam?.id) {
+        cidadeId = cidadePrefillParam.id;
+      }
+      if (!cidadeNome && cidadePrefillParam?.nome) {
+        cidadeNome = cidadePrefillParam.nome;
+      }
       setFormVenda({
         cliente_id: vendaData.cliente_id,
         destino_id: cidadeId,
         data_lancamento: vendaData.data_lancamento,
         data_embarque: vendaData.data_embarque || ""
       });
-      setBuscaDestino(cidadeNome);
-      setBuscaCidadeSelecionada(cidadeNome);
+      setBuscaDestino(cidadeNome || cidadeId || "");
+      setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
       const { data: recibosData, error: recErr } = await supabase.from("vendas_recibos").select("*").eq("venda_id", id);
       if (recErr) throw recErr;
       const produtosLista = produtosBase || produtos;
@@ -149,10 +156,15 @@ function VendasCadastroIsland() {
     const params = new URLSearchParams(window.location.search);
     const idParam = params.get("id");
     if (idParam) setEditId(idParam);
+    const cidadeIdParam = params.get("cidadeId") || "";
+    const cidadeNomeParam = params.get("cidadeNome") || "";
+    if (cidadeIdParam || cidadeNomeParam) {
+      setCidadePrefill({ id: cidadeIdParam, nome: cidadeNomeParam });
+    }
   }, []);
   reactExports.useEffect(() => {
-    if (!loadPerm && ativo) carregarDados(editId || void 0);
-  }, [loadPerm, ativo, editId]);
+    if (!loadPerm && ativo) carregarDados(editId || void 0, cidadePrefill);
+  }, [loadPerm, ativo, editId, cidadePrefill]);
   reactExports.useEffect(() => {
     if (buscaDestino.trim().length < 2) {
       setResultadosCidade([]);
@@ -285,6 +297,35 @@ function VendasCadastroIsland() {
   function removerRecibo(index) {
     setRecibos((prev) => prev.filter((_, i) => i !== index));
   }
+  function resetFormAndGoToConsulta() {
+    setFormVenda({
+      ...initialVenda,
+      data_lancamento: (/* @__PURE__ */ new Date()).toISOString().substring(0, 10)
+    });
+    setRecibos([]);
+    setEditId(null);
+    setCidadePrefill({ id: "", nome: "" });
+    setBuscaCliente("");
+    setBuscaDestino("");
+    setBuscaProduto("");
+    setBuscaCidadeSelecionada("");
+    setResultadosCidade([]);
+    setErro(null);
+    window.location.href = "/vendas/consulta";
+  }
+  function cancelarCadastro() {
+    setFormVenda(initialVenda);
+    setRecibos([]);
+    setEditId(null);
+    setCidadePrefill({ id: "", nome: "" });
+    setBuscaCliente("");
+    setBuscaDestino("");
+    setBuscaProduto("");
+    setBuscaCidadeSelecionada("");
+    setResultadosCidade([]);
+    setErro(null);
+    window.location.href = "/vendas/consulta";
+  }
   async function salvarVenda(e) {
     e.preventDefault();
     if (!podeCriar && !isAdmin) {
@@ -411,7 +452,7 @@ function VendasCadastroIsland() {
           detalhes: { id: editId, venda: formVenda, recibos }
         });
         alert("Venda atualizada com sucesso!");
-        await carregarVenda(editId, cidades, produtos);
+        resetFormAndGoToConsulta();
       } else {
         const { data: vendaData, error: vendaErr } = await supabase.from("vendas").insert({
           vendedor_id: userId,
@@ -459,8 +500,7 @@ function VendasCadastroIsland() {
           }
         });
         alert("Venda cadastrada com sucesso!");
-        setFormVenda(initialVenda);
-        setRecibos([]);
+        resetFormAndGoToConsulta();
       }
     } catch (e2) {
       console.error(e2);
@@ -701,6 +741,16 @@ function VendasCadastroIsland() {
             className: "btn btn-success",
             disabled: salvando,
             children: salvando ? "Salvando..." : "Salvar venda"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-outline",
+            onClick: cancelarCadastro,
+            style: { backgroundColor: "#f3f4f6", color: "#1f2937" },
+            children: "Cancelar"
           }
         )
       ] })

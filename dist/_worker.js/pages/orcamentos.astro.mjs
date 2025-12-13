@@ -650,21 +650,20 @@ function OrcamentosConsultaIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data viagem" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Notas" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Status" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Valor" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Data viagem" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Ações" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Carregando..." }) }),
-        !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, children: "Nenhum orçamento encontrado." }) }),
+        carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, children: "Carregando..." }) }),
+        !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, children: "Nenhum orçamento encontrado." }) }),
         !carregando && filtrados.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_orcamento?.slice(0, 10) || "—" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.clientes?.nome || "—" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.destinos?.nome || "—" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.produtos?.nome || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textTransform: "capitalize" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textTransform: "capitalize", textAlign: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               className: "form-select",
@@ -680,13 +679,12 @@ function OrcamentosConsultaIsland() {
               ]
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.valor ? o.valor.toLocaleString("pt-BR", {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: o.valor ? o.valor.toLocaleString("pt-BR", {
             style: "currency",
             currency: "BRL"
           }) : "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_viagem || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.notas || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: o.data_viagem || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { style: { textAlign: "center" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -702,11 +700,12 @@ function OrcamentosConsultaIsland() {
               "button",
               {
                 className: "btn btn-primary",
+                "aria-label": "Converter em venda",
                 onClick: () => converterParaVenda(o),
-                style: { padding: "4px 8px", fontSize: "0.85rem", marginLeft: 6 },
+                style: { padding: "4px 8px", fontSize: "0.95rem", marginLeft: 6 },
                 disabled: !o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido",
                 title: o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : !o.cliente_id || !o.destino_id ? "Selecione cliente e destino para converter" : "Converter em venda",
-                children: "Converter"
+                children: "$"
               }
             )
           ] })

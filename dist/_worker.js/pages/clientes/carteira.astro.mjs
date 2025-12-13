@@ -87,6 +87,7 @@ function ClientesIsland() {
   async function abrirHistorico(cliente) {
     setHistoricoCliente(cliente);
     setLoadingHistorico(true);
+    const produtoIdsSet = /* @__PURE__ */ new Set();
     try {
       const { data: viagens } = await supabase.from("historico_viagens_real").select("id, data_viagem, valor_total, notas, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_viagem", { ascending: false });
       const viagensFmt = viagens?.map((v) => ({
@@ -96,11 +97,25 @@ function ClientesIsland() {
         valor_total: v.valor_total ?? null,
         notas: v.notas || null
       })) || [];
-      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
+      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome, cidade_id)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
       let vendasFmt = [];
+      let cidadesMap2 = {};
       if (vendasData && vendasData.length > 0) {
         const vendaIds = vendasData.map((v) => v.id);
-        const { data: recs } = await supabase.from("vendas_recibos").select("venda_id, valor_total, valor_taxas").in("venda_id", vendaIds);
+        const cidadeIds = Array.from(
+          new Set(
+            vendasData.map((v) => v.destinos?.cidade_id).filter((id) => Boolean(id))
+          )
+        );
+        if (cidadeIds.length > 0) {
+          const { data: cidadesData, error: cidadesErr } = await supabase.from("cidades").select("id, nome").in("id", cidadeIds);
+          if (!cidadesErr) {
+            cidadesMap2 = Object.fromEntries((cidadesData || []).map((c) => [c.id, c.nome || ""]));
+          } else {
+            console.error(cidadesErr);
+          }
+        }
+        const { data: recs } = await supabase.from("vendas_recibos").select("venda_id, valor_total, valor_taxas, produto_id").in("venda_id", vendaIds);
         vendasFmt = vendasData.map((v) => {
           const recForVenda = (recs || []).filter((r) => r.venda_id === v.id);
           const total = recForVenda.reduce(
@@ -116,19 +131,95 @@ function ClientesIsland() {
             data_lancamento: v.data_lancamento,
             data_embarque: v.data_embarque,
             destino_nome: v.destinos?.nome || "",
+            destino_cidade_id: v.destinos?.cidade_id || null,
+            destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap2[v.destinos?.cidade_id] || "" : "",
             valor_total: total,
             valor_taxas: taxas
           };
         });
       }
-      const { data: orc } = await supabase.from("orcamentos").select("id, data_orcamento, status, valor, numero_venda, destinos:produtos!destino_id (nome)").eq("cliente_id", cliente.id).order("data_orcamento", { ascending: false });
+      const { data: orc } = await supabase.from("orcamentos").select("id, data_orcamento, status, valor, numero_venda, produto_id, destinos:produtos!destino_id (nome, cidade_id)").eq("cliente_id", cliente.id).order("data_orcamento", { ascending: false });
+      const extraCidadeIds = orc?.map((o) => o.destinos?.cidade_id).filter((id) => Boolean(id)) || [];
+      const novasCidades = extraCidadeIds.filter((id) => !(id in (cidadesMap2 || {})));
+      if (novasCidades.length > 0) {
+        const { data: cidadesExtras, error: cidadeExtraErr } = await supabase.from("cidades").select("id, nome").in("id", novasCidades);
+        if (!cidadeExtraErr) {
+          (cidadesExtras || []).forEach((c) => {
+            cidadesMap2[c.id] = c.nome || "";
+          });
+        } else {
+          console.error(cidadeExtraErr);
+        }
+      }
+      const produtoIdsOrc = orc?.map((o) => o.produto_id).filter((id) => Boolean(id)) || [];
+      produtoIdsOrc.forEach((id) => produtoIdsSet.add(id));
+      let produtosListaPorTipo = [];
+      let produtosListaPorId = [];
+      const produtoByIdMap = {};
+      const produtoObjById = {};
+      const tipoIdsSet = /* @__PURE__ */ new Set();
+      let tipoProdMap = {};
+      if (produtoIdsSet.size > 0) {
+        const idsArr = Array.from(produtoIdsSet);
+        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", idsArr);
+        if (!prodErr && produtosData) produtosListaPorTipo = produtosData;
+        else if (prodErr) console.error(prodErr);
+        const { data: produtosPorId, error: prodIdErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("id", idsArr);
+        if (!prodIdErr && produtosPorId) {
+          produtosListaPorId = produtosPorId;
+          produtosPorId.forEach((p) => {
+            if (p.id) {
+              produtoByIdMap[p.id] = p.nome || "Produto";
+              produtoObjById[p.id] = p;
+            }
+            if (p.tipo_produto) tipoIdsSet.add(p.tipo_produto);
+          });
+        } else if (prodIdErr) {
+          console.error(prodIdErr);
+        }
+        produtosListaPorTipo.forEach((p) => {
+          if (p.tipo_produto) tipoIdsSet.add(p.tipo_produto);
+        });
+        idsArr.forEach((id) => tipoIdsSet.add(id));
+        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", Array.from(tipoIdsSet));
+        if (!tipoErr && tiposData) {
+          tipoProdMap = Object.fromEntries(
+            tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+          );
+        } else if (tipoErr) {
+          console.error(tipoErr);
+        }
+      }
+      const resolveProdutoNome = (produtoId, cidadeVenda) => {
+        if (!produtoId) return "";
+        if (produtoObjById[produtoId]) {
+          const p = produtoObjById[produtoId];
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          if (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda) return p.nome || "Produto";
+        }
+        if (produtoByIdMap[produtoId]) return produtoByIdMap[produtoId];
+        const candidato = produtosListaPorTipo.find((p) => {
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+        });
+        const tipoInfo = tipoProdMap[produtoId] || {};
+        return candidato?.nome || tipoInfo.nome || "Produto";
+      };
+      if (vendasFmt.length > 0) {
+        vendasFmt = vendasFmt.map((v) => ({
+          ...v,
+          produtos: (v.produtos || []).map((pid) => resolveProdutoNome(pid, v.destino_cidade_id)).filter(Boolean)
+        }));
+      }
       const orcFmt = orc?.map((o) => ({
         id: o.id,
         data_orcamento: o.data_orcamento,
         status: o.status,
         valor: o.valor ?? null,
         numero_venda: o.numero_venda ?? null,
-        destino_nome: o.destinos?.nome || null
+        destino_nome: o.destinos?.nome || null,
+        destino_cidade_nome: o.destinos?.cidade_id ? cidadesMap2[o.destinos?.cidade_id] || "" : null,
+        produto_nome: resolveProdutoNome(o.produto_id, o.destinos?.cidade_id)
       })) || [];
       setHistoricoVendas(vendasFmt);
       setHistoricoOrcamentos(orcFmt);
@@ -150,14 +241,51 @@ function ClientesIsland() {
   async function verDetalheVenda(v) {
     setDetalheVenda(v);
     setCarregandoRecibos(true);
+    setDetalheRecibos([]);
     try {
-      const { data } = await supabase.from("vendas_recibos").select("numero_recibo, valor_total, valor_taxas, produtos(nome)").eq("venda_id", v.id);
+      const { data } = await supabase.from("vendas_recibos").select("id, numero_recibo, valor_total, valor_taxas, produto_id").eq("venda_id", v.id);
+      const recsBase = (data || []).map((r) => ({
+        id: r.id,
+        numero_recibo: r.numero_recibo,
+        valor_total: r.valor_total,
+        valor_taxas: r.valor_taxas,
+        produto_id: r.produto_id,
+        produto_nome: null
+      })) || [];
+      const produtoIds = Array.from(
+        new Set(
+          recsBase.map((r) => r.produto_id).filter((id) => Boolean(id))
+        )
+      );
+      const cidadeVenda = v.destino_cidade_id || "";
+      let produtosListaPorTipo = [];
+      let tipoProdMap = {};
+      if (produtoIds.length > 0) {
+        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", produtoIds);
+        if (!prodErr && produtosData) produtosListaPorTipo = produtosData;
+        else if (prodErr) console.error(prodErr);
+        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", produtoIds);
+        if (!tipoErr && tiposData) {
+          tipoProdMap = Object.fromEntries(
+            tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+          );
+        } else if (tipoErr) {
+          console.error(tipoErr);
+        }
+      }
+      const resolveProdutoNome = (produtoId) => {
+        if (!produtoId) return "";
+        const candidato = produtosListaPorTipo.find((p) => {
+          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+        });
+        const tipoInfo = tipoProdMap[produtoId] || {};
+        return candidato?.nome || tipoInfo.nome || "Produto";
+      };
       setDetalheRecibos(
-        (data || []).map((r) => ({
-          numero_recibo: r.numero_recibo,
-          valor_total: r.valor_total,
-          valor_taxas: r.valor_taxas,
-          produto_nome: r.produtos?.nome || null
+        recsBase.map((r) => ({
+          ...r,
+          produto_nome: resolveProdutoNome(r.produto_id)
         }))
       );
     } catch (e) {
@@ -389,8 +517,8 @@ function ClientesIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "E-mail" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
-          (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Ativo" }),
+          (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
           loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando..." }) }),
@@ -400,8 +528,8 @@ function ClientesIsland() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.cpf }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.telefone }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.email || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.active ? "Sim" : "Não" }),
-            (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: c.active ? "Sim" : "Não" }),
+            (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", style: { textAlign: "center" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -438,10 +566,17 @@ function ClientesIsland() {
     historicoCliente && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 1100, width: "95vw" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-title", children: [
-            "Histórico de ",
-            historicoCliente.nome
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "modal-title",
+              style: { color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 },
+              children: [
+                "Histórico de ",
+                historicoCliente.nome
+              ]
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#64748b" }, children: "Vendas e orçamentos do cliente" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: fecharHistorico, children: "✕" })
@@ -453,19 +588,19 @@ function ClientesIsland() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Vendas" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[820px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data lançamento" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Embarque" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data Lançamento" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Embarque" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-                historicoVendas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma venda encontrada." }) }),
+                historicoVendas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhuma venda encontrada." }) }),
                 historicoVendas.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_lancamento ? new Date(v.data_lancamento).toLocaleDateString("pt-BR") : "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_cidade_nome || "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_embarque ? new Date(v.data_embarque).toLocaleDateString("pt-BR") : "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_nome || "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.valor_total.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL"
@@ -474,7 +609,7 @@ function ClientesIsland() {
                     style: "currency",
                     currency: "BRL"
                   }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       className: "btn-icon",
@@ -495,22 +630,24 @@ function ClientesIsland() {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Venda" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-                historicoOrcamentos.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhum orçamento encontrado." }) }),
+                historicoOrcamentos.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Nenhum orçamento encontrado." }) }),
                 historicoOrcamentos.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_orcamento?.slice(0, 10) || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.data_orcamento ? new Date(o.data_orcamento).toLocaleDateString("pt-BR").replaceAll("/", "-") : "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textTransform: "capitalize" }, children: o.status || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.destino_nome || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.destino_cidade_nome || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.produto_nome || "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: (o.valor ?? 0).toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL"
                   }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: o.numero_venda || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       className: "btn-icon",
@@ -530,48 +667,70 @@ function ClientesIsland() {
     ] }) }),
     detalheVenda && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 720 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-title", children: "Detalhes da venda" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
-            "Destino: ",
-            detalheVenda.destino_nome || "-"
-          ] })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "modal-title",
+            style: { color: "#16a34a", fontSize: "1.15rem", fontWeight: 800 },
+            children: "Detalhes da venda"
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: () => {
           setDetalheVenda(null);
           setDetalheRecibos([]);
         }, children: "✕" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 12, lineHeight: 1.5 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Lançamento:" }),
-            " ",
-            new Date(detalheVenda.data_lancamento).toLocaleDateString("pt-BR")
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Embarque:" }),
-            " ",
-            detalheVenda.data_embarque ? new Date(detalheVenda.data_embarque).toLocaleDateString("pt-BR") : "-"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Valor:" }),
-            " ",
-            detalheVenda.valor_total.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Taxas:" }),
-            " ",
-            detalheVenda.valor_taxas.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Recibos" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            style: {
+              display: "grid",
+              gap: 6,
+              lineHeight: 1.4,
+              marginBottom: 8
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Recibo:" }),
+                " ",
+                detalheRecibos.length > 0 ? detalheRecibos.map((r) => r.numero_recibo || "-").join(", ") : "—"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Destino:" }),
+                " ",
+                detalheVenda.destino_cidade_nome || "-"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Lançamento:" }),
+                " ",
+                new Date(detalheVenda.data_lancamento).toLocaleDateString("pt-BR")
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Embarque:" }),
+                " ",
+                detalheVenda.data_embarque ? new Date(detalheVenda.data_embarque).toLocaleDateString("pt-BR") : "-"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Valor:" }),
+                " ",
+                detalheVenda.valor_total.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Taxas:" }),
+                " ",
+                detalheVenda.valor_taxas === 0 ? "-" : detalheVenda.valor_taxas.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                })
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8, textAlign: "center" }, children: "Recibos" }),
         carregandoRecibos ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Carregando recibos..." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue", style: { minWidth: 520 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Número" }),
@@ -611,7 +770,14 @@ function ClientesIsland() {
     detalheOrcamento && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 640 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-title", children: "Detalhes do orçamento" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "modal-title",
+              style: { color: "#1d4ed8", fontSize: "1.15rem", fontWeight: 800 },
+              children: "Detalhes do orçamento"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
             "Destino: ",
             detalheOrcamento.destino_nome || "-"
@@ -619,31 +785,42 @@ function ClientesIsland() {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: () => setDetalheOrcamento(null), children: "✕" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-body", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { lineHeight: 1.5 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Data:" }),
-          " ",
-          detalheOrcamento.data_orcamento ? new Date(detalheOrcamento.data_orcamento).toLocaleDateString("pt-BR") : "-"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Status:" }),
-          " ",
-          detalheOrcamento.status || "-"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Valor:" }),
-          " ",
-          (detalheOrcamento.valor || 0).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Venda vinculada:" }),
-          " ",
-          detalheOrcamento.numero_venda || "-"
-        ] })
-      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-body", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gap: 6,
+            lineHeight: 1.4,
+            marginBottom: 4
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Data:" }),
+              " ",
+              detalheOrcamento.data_orcamento ? new Date(detalheOrcamento.data_orcamento).toLocaleDateString("pt-BR") : "-"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Status:" }),
+              " ",
+              detalheOrcamento.status || "-"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Valor:" }),
+              " ",
+              (detalheOrcamento.valor || 0).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL"
+              })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Venda vinculada:" }),
+              " ",
+              detalheOrcamento.numero_venda || "-"
+            ] })
+          ]
+        }
+      ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-footer", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-outline", onClick: () => setDetalheOrcamento(null), children: "Fechar" }) })
     ] }) })
   ] });

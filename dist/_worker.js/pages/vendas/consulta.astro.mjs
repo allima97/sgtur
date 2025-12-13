@@ -83,30 +83,90 @@ function VendasConsultaIsland() {
           data_lancamento,
           data_embarque,
           clientes(nome),
-          destinos:produtos!destino_id (nome)
+          destinos:produtos!destino_id (
+            nome,
+            cidade_id
+          )
         `).order("data_lancamento", { ascending: false });
       if (userCtx.papel !== "ADMIN") {
         query = query.in("vendedor_id", userCtx.vendedorIds);
       }
       const { data: vendasData, error } = await query;
       if (error) throw error;
-      const v = (vendasData || []).map((row) => ({
-        id: row.id,
-        vendedor_id: row.vendedor_id,
-        cliente_id: row.cliente_id,
-        destino_id: row.destino_id,
-        data_lancamento: row.data_lancamento,
-        data_embarque: row.data_embarque,
-        cliente_nome: row.clientes?.nome || "",
-        destino_nome: row.destinos?.nome || ""
-      }));
+      const cidadeIds = Array.from(
+        new Set(
+          (vendasData || []).map((row) => row.destinos?.cidade_id).filter((id) => Boolean(id))
+        )
+      );
+      let cidadesMap = {};
+      if (cidadeIds.length > 0) {
+        const { data: cidadesData, error: cidadesError } = await supabase.from("cidades").select("id, nome").in("id", cidadeIds);
+        if (cidadesError) {
+          console.error(cidadesError);
+        } else {
+          cidadesMap = Object.fromEntries(
+            (cidadesData || []).map((c) => [c.id, c.nome])
+          );
+        }
+      }
+      const v = (vendasData || []).map((row) => {
+        const cidadeId = row.destinos?.cidade_id || "";
+        return {
+          id: row.id,
+          vendedor_id: row.vendedor_id,
+          cliente_id: row.cliente_id,
+          destino_id: row.destino_id,
+          destino_cidade_id: cidadeId,
+          data_lancamento: row.data_lancamento,
+          data_embarque: row.data_embarque,
+          cliente_nome: row.clientes?.nome || "",
+          destino_nome: row.destinos?.nome || "",
+          destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : ""
+        };
+      });
       setVendas(v);
       const vendaIds = v.map((i) => i.id);
       if (vendaIds.length === 0) {
         setRecibos([]);
       } else {
         const { data: recibosData } = await supabase.from("vendas_recibos").select("*").in("venda_id", vendaIds);
-        setRecibos(recibosData || []);
+        const produtoIds = Array.from(
+          new Set(
+            (recibosData || []).map((r) => r.produto_id).filter((id) => Boolean(id))
+          )
+        );
+        const vendaCidadeMap = v.reduce((acc, vendaItem) => {
+          if (vendaItem.destino_cidade_id) acc[vendaItem.id] = vendaItem.destino_cidade_id;
+          return acc;
+        }, {});
+        let produtosLista = [];
+        let tipoProdMap = {};
+        if (produtoIds.length > 0) {
+          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", produtoIds);
+          if (!prodErr && produtosData) produtosLista = produtosData;
+          else if (prodErr) console.error(prodErr);
+          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", produtoIds);
+          if (!tipoErr && tiposData) {
+            tipoProdMap = Object.fromEntries(
+              tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            );
+          } else if (tipoErr) {
+            console.error(tipoErr);
+          }
+        }
+        const recibosEnriquecidos = (recibosData || []).map((r) => {
+          const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
+          const candidato = produtosLista.find((p) => {
+            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
+          });
+          const tipoInfo = tipoProdMap[r.produto_id] || {};
+          return {
+            ...r,
+            produto_nome: candidato?.nome || tipoInfo.nome || ""
+          };
+        }) || [];
+        setRecibos(recibosEnriquecidos);
       }
       if (pendingOpenId) {
         const alvo = v.find((i) => i.id === pendingOpenId);
@@ -232,63 +292,89 @@ function VendasConsultaIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Lançamento" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Embarque" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Embarque" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas" }),
-        podeVer && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+        podeVer && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
         loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Carregando..." }) }),
         !loading && vendasFiltradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Nenhuma venda encontrada." }) }),
-        !loading && vendasFiltradas.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.cliente_nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: new Date(v.data_lancamento).toLocaleDateString("pt-BR") }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_embarque ? new Date(v.data_embarque).toLocaleDateString("pt-BR") : "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-            "R$",
-            recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0).toLocaleString("pt-BR")
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-            "R$",
-            recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0).toLocaleString("pt-BR")
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              className: "btn-icon",
-              title: "Ver detalhes",
-              onClick: () => setModalVenda(v),
-              children: "👁️"
-            }
-          ) })
-        ] }, v.id))
+        !loading && vendasFiltradas.map((v) => {
+          const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
+          const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
+          const produtosVenda = recibosDaVenda(v.id).map((r) => r.produto_nome || "").filter(Boolean);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.cliente_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_cidade_nome || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtosVenda.length === 0 ? "-" : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: produtosVenda.map((p, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: p }, `${v.id}-prod-${idx}`)) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: v.data_embarque ? new Date(v.data_embarque).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+              "R$",
+              " ",
+              totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: totalTaxas === 0 ? "-" : `R$ ${totalTaxas.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn-icon",
+                title: "Ver detalhes",
+                onClick: () => setModalVenda(v),
+                children: "👁️"
+              }
+            ) })
+          ] }, v.id);
+        })
       ] })
     ] }) }),
     modalVenda && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: "820px" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-title", children: "Detalhes da venda" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
-            modalVenda.cliente_nome,
-            " • ",
-            modalVenda.destino_nome
-          ] })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "modal-title",
+            style: { color: "#16a34a", fontSize: "1.15rem", fontWeight: 800 },
+            children: "Detalhes da venda"
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-ghost", onClick: () => setModalVenda(null), children: "✕" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", style: { lineHeight: 1.5 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Lançada em:" }),
-          " ",
-          new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Embarque:" }),
-          " ",
-          modalVenda.data_embarque ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR") : "-"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Recibos" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "mb-3",
+            style: { display: "grid", gap: 6, lineHeight: 1.4 },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Cliente:" }),
+                " ",
+                modalVenda.cliente_nome || "-"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Cidade:" }),
+                " ",
+                modalVenda.destino_cidade_nome || "Não informada"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Lançada em:" }),
+                " ",
+                new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Embarque:" }),
+                " ",
+                modalVenda.data_embarque ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR") : "-"
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8, textAlign: "center" }, children: "Recibos" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "table",
           {
@@ -297,30 +383,40 @@ function VendasConsultaIsland() {
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Número" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas" }),
                 podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
               ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: recibosDaVenda(modalVenda.id).map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.numero_recibo || "-" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-                  "R$",
-                  (r.valor_total || 0).toLocaleString("pt-BR")
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-                  "R$",
-                  (r.valor_taxas || 0).toLocaleString("pt-BR")
-                ] }),
-                podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    className: "btn-icon btn-danger",
-                    disabled: excluindoRecibo === r.id,
-                    onClick: () => excluirRecibo(r.id, modalVenda.id),
-                    children: excluindoRecibo === r.id ? "…" : "🗑️"
-                  }
-                ) })
-              ] }, r.id)) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: recibosDaVenda(modalVenda.id).map((r) => {
+                const valorFmt = (r.valor_total || 0).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                });
+                const taxasNum = r.valor_taxas || 0;
+                const taxasFmt = taxasNum === 0 ? "-" : `R$ ${taxasNum.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}`;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.numero_recibo || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.produto_nome || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+                    "R$ ",
+                    valorFmt
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: taxasFmt }),
+                  podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      className: "btn-icon btn-danger",
+                      disabled: excluindoRecibo === r.id,
+                      onClick: () => excluirRecibo(r.id, modalVenda.id),
+                      children: excluindoRecibo === r.id ? "…" : "🗑️"
+                    }
+                  ) })
+                ] }, r.id);
+              }) })
             ]
           }
         ) })
@@ -328,10 +424,14 @@ function VendasConsultaIsland() {
       (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-footer", children: [
         podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "a",
+            "button",
             {
               className: "btn btn-outline",
-              href: `/vendas/cadastro?id=${modalVenda.id}`,
+              style: { minWidth: 130, backgroundColor: "#f3f4f6", color: "#1f2937" },
+              onClick: () => {
+                const url = `/vendas/cadastro?id=${modalVenda.id}${modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""}${modalVenda.destino_cidade_nome ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}` : ""}`;
+                window.location.href = url;
+              },
               children: "Editar"
             }
           ),
@@ -339,6 +439,7 @@ function VendasConsultaIsland() {
             "button",
             {
               className: "btn btn-primary",
+              style: { minWidth: 130 },
               onClick: () => {
                 const nova = prompt(
                   "Nova data de embarque (AAAA-MM-DD):",
@@ -355,6 +456,7 @@ function VendasConsultaIsland() {
           "button",
           {
             className: "btn btn-danger",
+            style: { minWidth: 130 },
             onClick: () => cancelarVenda(modalVenda),
             disabled: cancelando,
             children: cancelando ? "Cancelando..." : "Cancelar Venda"
