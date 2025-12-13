@@ -319,13 +319,17 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Filtro rápido de período (mês atual/anteriores, 3/6/12 meses)
   - KPIs separados em dois cards:
     - **Como está seu Progresso**: Meta do mês, Total Bruto, Total Taxas, Valor Líquido, Meta atingida (texto centralizado, cores por status)
-    - **Seus Valores a Receber**: Comissão geral, comissão por cada produto diferenciado (cards individuais automáticos) e comissão total
+    - **Seus Valores a Receber**: Comissão geral, cards por produto diferenciado e cards por produto com meta específica (apenas quando a flag `exibe_kpi_comissao` está ligada no tipo de produto); comissão total consolida geral + diferenciados + metas de produto (se atingidas)
   - Cálculo considera:
     - Parâmetros do sistema (`foco_valor`, `usar_taxas_na_meta`) para decidir se a meta é avaliada sobre bruto ou líquido (com/sem taxas)
-    - Metas gerais (`metas_vendedor`) e metas por produto (`metas_vendedor_produto`)
+    - Metas gerais (`metas_vendedor`) e metas por produto (`metas_vendedor_produto` ou meta específica por tipo de produto)
     - Regras gerais (`commission_rule`) e regras/percentuais fixos por produto (`product_commission_rule`)
     - Recebíveis da venda (`vendas` + `vendas_recibos`) filtrando `cancelada = false`
     - Produtos diferenciados: pagam comissão fixa; se `soma_na_meta = true` contribuem para atingimento; KPIs exibem um card por produto (somente o nome do produto) e zeram comissão se a meta específica não for atingida
+    - Produtos com meta específica (`usa_meta_produto`, `meta_produto_valor`, `comissao_produto_meta_pct`, `descontar_meta_geral`, `exibe_kpi_comissao`):
+      - Se a meta do produto não for atingida, o card aparece zerado (“Meta não atingida”)
+      - Se atingir, paga `comissao_produto_meta_pct` sobre o foco (bruto ou líquido); quando `descontar_meta_geral = true`, desconta o que já foi pago na meta geral para evitar duplicidade
+      - A flag `exibe_kpi_comissao` liga/desliga a exibição do KPI na tela e no Dashboard
     - Comissão sempre calculada sobre o líquido (`valor_total`), atingimento de meta pode usar bruto ou líquido conforme parâmetros
     - Valores e taxas formatados como moeda nos inputs e nos KPIs
 - Tecnologias:
@@ -416,10 +420,14 @@ Tecnologias:
 - `MetasVendedorIsland` segue escopo “vendedor/equipe”, status ativo/inativo e validação com `parametros_comissao` (foco líquido exige metas diferenciadas > 0).
 - `CommissionTemplatesIsland` mantém validações de modo fixo/escalonado; templates continuam no fluxo de regras, mas não são mais selecionados em metas.
 - **Comissionamento (novo)**: página `/operacao/comissionamento` mostra KPIs de progresso e valores a receber, calcula comissão geral e por produto diferenciado com base em parâmetros, metas e recebíveis do período.
+- **Comissionamento & Produtos**:
+  - Campos novos em `tipo_produtos`: `usa_meta_produto`, `meta_produto_valor`, `comissao_produto_meta_pct`, `descontar_meta_geral`, `exibe_kpi_comissao` (controla exibição dos KPIs por produto tanto na tela de Comissionamento quanto no Dashboard).
+  - Produtos diferenciados que `soma_na_meta = true` somam a comissão calculada na meta geral; detalhamento por produto segue como KPI individual.
 - **product_commission_rule**: correção no upsert para produtos diferenciados criando regra fixa automática quando faltar `rule_id` e garantindo persistência dos campos `fix_meta_*`.
 
 **Próximos passos imediatos:**
 - Garantir no Supabase a tabela `metas_vendedor_produto` (FK para `metas_vendedor` e `produtos`) para evitar erros 42703 no CRUD de metas diferenciadas.
+- Garantir no Supabase a coluna `exibe_kpi_comissao boolean default true` em `tipo_produtos` para habilitar o toggle de KPI por produto.
 - Se `template_id` em `metas_vendedor` não for mais usado, avaliar remoção/ignorar nas consultas e policies.
 - Ajustar fechamento para, futuramente, ponderar comissão por produto usando `metas_vendedor_produto` (hoje usa apenas `meta_geral`).
 
@@ -428,6 +436,7 @@ Tecnologias:
 - Preferências salvas em `dashboard_widgets` (quando a tabela existir; fallback em localStorage). Mantém layout responsivo via grid CSS/Tailwind utilitário.
 - Botão “Personalizar dashboard” abre modal para toggles e reorder (↑↓). Ordem padrão é a sequência atual caso não haja preferências.
 - Widgets de gráficos permitem escolher tipo (pizza/barras para destino/produto; linha/barras para timeline). Preferências de gráficos em `settings` (coluna opcional) ou localStorage (`dashboard_charts`).
+- KPIs de produto: se o tipo de produto estiver com `exibe_kpi_comissao = true`, o dashboard adiciona um KPI com o nome do produto (valor vendido no período) e ele aparece no painel de personalização para ligar/desligar e reordenar.
 
 ### 3.4 Dashboard Premium (Gestor / Vendedor / Admin)
 

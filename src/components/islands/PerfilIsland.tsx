@@ -7,6 +7,12 @@ type Perfil = {
   cpf: string | null;
   data_nascimento: string | null;
   telefone: string | null;
+  whatsapp: string | null;
+  rg: string | null;
+  cep: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
   cidade: string | null;
   estado: string | null;
   email: string;
@@ -29,6 +35,8 @@ export default function PerfilIsland() {
   const [usoIndividual, setUsoIndividual] = useState<boolean | null>(null);
   const [novoCnpj, setNovoCnpj] = useState("");
   const [empresaAtual, setEmpresaAtual] = useState<{ nome?: string | null; cnpj?: string | null } | null>(null);
+  const [camposExtrasOk, setCamposExtrasOk] = useState(true);
+  const [cepStatus, setCepStatus] = useState<string | null>(null);
 
   const cidadeEstado = useMemo(() => {
     if (!perfil) return "";
@@ -55,19 +63,36 @@ export default function PerfilIsland() {
           return;
         }
 
-        const { data, error } = await supabase
-          .from("users")
-          .select("nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)")
-          .eq("id", user.id)
-          .maybeSingle();
+        const colsExtras =
+          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+        const colsBasicos =
+          "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+
+        let extrasDisponiveis = true;
+        let { data, error } = await supabase.from("users").select(colsExtras).eq("id", user.id).maybeSingle();
+
+        if (error && (error as any).code === "PGRST204") {
+          // Colunas novas ausentes: refaz consulta sem campos extras
+          extrasDisponiveis = false;
+          const fallback = await supabase.from("users").select(colsBasicos).eq("id", user.id).maybeSingle();
+          data = fallback.data;
+          error = fallback.error;
+        }
 
         if (error) throw error;
 
+        setCamposExtrasOk(extrasDisponiveis);
         setPerfil({
           nome_completo: data?.nome_completo || "",
           cpf: data?.cpf || "",
           data_nascimento: data?.data_nascimento || "",
           telefone: data?.telefone || "",
+          whatsapp: extrasDisponiveis ? data?.whatsapp || "" : "",
+          rg: extrasDisponiveis ? data?.rg || "" : "",
+          cep: extrasDisponiveis ? data?.cep || "" : "",
+          endereco: extrasDisponiveis ? data?.endereco || "" : "",
+          numero: extrasDisponiveis ? data?.numero || "" : "",
+          complemento: extrasDisponiveis ? data?.complemento || "" : "",
           cidade: data?.cidade || "",
           estado: data?.estado || "",
           email: data?.email || user.email || "",
@@ -93,9 +118,9 @@ export default function PerfilIsland() {
     carregar();
   }, []);
 
-function atualizarCampo(campo: keyof Perfil, valor: string) {
-  setPerfil((prev) => (prev ? { ...prev, [campo]: valor } : prev));
-}
+  function atualizarCampo(campo: keyof Perfil, valor: string) {
+    setPerfil((prev) => (prev ? { ...prev, [campo]: valor } : prev));
+  }
 
 function formatCpf(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -115,6 +140,11 @@ function formatTelefone(value: string) {
   return digits
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function formatCep(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  return digits.replace(/(\d{5})(\d)/, "$1-$2");
 }
 
   async function salvarPerfil() {
@@ -139,6 +169,16 @@ function formatTelefone(value: string) {
           estado: perfil.estado || null,
           data_nascimento: perfil.data_nascimento || null,
           uso_individual: usoIndividual,
+          ...(camposExtrasOk
+            ? {
+                whatsapp: perfil.whatsapp || null,
+                rg: perfil.rg || null,
+                cep: perfil.cep || null,
+                endereco: perfil.endereco || null,
+                numero: perfil.numero || null,
+                complemento: perfil.complemento || null,
+              }
+            : {}),
         })
         .eq("id", user.id);
 
@@ -246,6 +286,42 @@ function formatTelefone(value: string) {
     }
   }
 
+  // Função precisa estar dentro do componente para acessar o estado corretamente
+  async function buscarCepIfNeeded(cepRaw: string) {
+    if (!camposExtrasOk) return;
+    const digits = (cepRaw || "").replace(/\D/g, "");
+    console.log("[CEP] Valor recebido:", cepRaw, "| Somente dígitos:", digits);
+    if (digits.length !== 8) {
+      setCepStatus(null);
+      console.log("[CEP] Menos de 8 dígitos, abortando busca");
+      return;
+    }
+    try {
+      setCepStatus("Buscando endereço...");
+      const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { mode: "cors" });
+      if (!resp.ok) throw new Error("CEP inválido ou indisponível.");
+      const data = await resp.json();
+      console.log("[CEP] Resposta ViaCEP:", data);
+      if (data.erro) throw new Error("CEP não encontrado.");
+      setPerfil((prev) =>
+        prev
+          ? {
+              ...prev,
+              cep: formatCep(digits),
+              endereco: data.logradouro || "",
+              cidade: data.localidade || "",
+              estado: data.uf || "",
+            }
+          : prev
+      );
+      setCepStatus("Endereço carregado pelo CEP.");
+      console.log("[CEP] Perfil atualizado com endereço, cidade e estado do ViaCEP");
+    } catch (e: any) {
+      console.error("Erro ao buscar CEP:", e);
+      setCepStatus("Não foi possível carregar o CEP.");
+    }
+  }
+
   if (loading) return <div className="card-base card-config">Carregando perfil...</div>;
   if (!perfil) return <div className="card-base card-config">Perfil não encontrado.</div>;
 
@@ -268,9 +344,14 @@ function formatTelefone(value: string) {
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="flex flex-col gap-3">
         <div className="card-base card-blue" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
           <h3>👤 Dados pessoais</h3>
+          {!camposExtrasOk && (
+            <small style={{ color: "#b91c1c", marginBottom: 8 }}>
+              Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
+            </small>
+          )}
           <div className="form-group">
             <label>Uso do sistema</label>
             <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
@@ -298,7 +379,7 @@ function formatTelefone(value: string) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "3.8fr 0.8fr 1fr",
+              gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr)",
               gap: 12,
               marginTop: 16,
             }}
@@ -322,7 +403,17 @@ function formatTelefone(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>Data de nascimento</label>
+              <label>RG</label>
+              <input
+                className="form-input"
+                value={perfil.rg || ""}
+                onChange={(e) => atualizarCampo("rg", e.target.value)}
+                placeholder="Documento"
+                disabled={!camposExtrasOk}
+              />
+            </div>
+            <div className="form-group">
+              <label>Data Nascimento</label>
               <input
                 className="form-input"
                 type="date"
@@ -335,11 +426,86 @@ function formatTelefone(value: string) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 2fr 1fr",
+              gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr)",
               gap: 12,
               marginTop: 12,
             }}
           >
+            <div className="form-group">
+              <label>CEP</label>
+              <input
+                className="form-input"
+                value={formatCep(perfil.cep || "")}
+                onChange={(e) => {
+                  const val = formatCep(e.target.value);
+                  atualizarCampo("cep", val);
+                }}
+                onBlur={(e) => {
+                  const val = formatCep(e.target.value);
+                  if (val.replace(/\D/g, "").length === 8) {
+                    buscarCepIfNeeded(val);
+                  }
+                }}
+                placeholder="00000-000"
+                disabled={!camposExtrasOk}
+              />
+              <small style={{ color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }}>
+                {cepStatus || "Preencha para auto-preencher endereço."}
+              </small>
+            </div>
+            <div className="form-group">
+              <label>Endereço</label>
+              <input
+                className="form-input"
+                value={perfil.endereco || ""}
+                onChange={(e) => atualizarCampo("endereco", e.target.value)}
+                placeholder="Rua / Avenida"
+                disabled={!camposExtrasOk}
+              />
+            </div>
+            <div className="form-group">
+              <label>Número</label>
+              <input
+                className="form-input"
+                value={perfil.numero || ""}
+                onChange={(e) => atualizarCampo("numero", e.target.value)}
+                placeholder="Nº"
+                disabled={!camposExtrasOk}
+              />
+            </div>
+            <div className="form-group">
+              <label>Complemento</label>
+              <input
+                className="form-input"
+                value={perfil.complemento || ""}
+                onChange={(e) => atualizarCampo("complemento", e.target.value)}
+                placeholder="Opcional"
+                disabled={!camposExtrasOk}
+              />
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr)",
+              gap: 12,
+              marginTop: 12,
+            }}
+          >
+            <div className="form-group">
+              <label>E-mail</label>
+              <input
+                className="form-input"
+                type="email"
+                value={perfil.email}
+                onChange={(e) => {
+                  atualizarCampo("email", e.target.value);
+                  setNovoEmail(e.target.value);
+                }}
+                placeholder="seu@email.com"
+              />
+            </div>
             <div className="form-group">
               <label>Telefone</label>
               <input
@@ -347,6 +513,16 @@ function formatTelefone(value: string) {
                 value={formatTelefone(perfil.telefone || "")}
                 onChange={(e) => atualizarCampo("telefone", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="form-group">
+              <label>WhatsApp</label>
+              <input
+                className="form-input"
+                value={formatTelefone(perfil.whatsapp || "")}
+                onChange={(e) => atualizarCampo("whatsapp", formatTelefone(e.target.value))}
+                placeholder="(00) 00000-0000"
+                disabled={!camposExtrasOk}
               />
             </div>
             <div className="form-group">
@@ -358,95 +534,98 @@ function formatTelefone(value: string) {
               />
             </div>
             <div className="form-group">
-              <label>UF</label>
+              <label>Estado</label>
               <input
                 className="form-input"
                 value={perfil.estado || ""}
                 maxLength={2}
                 onChange={(e) => atualizarCampo("estado", e.target.value.toUpperCase())}
+                placeholder="UF"
               />
             </div>
           </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }}>
             <button className="btn btn-primary" onClick={salvarPerfil} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar dados"}
             </button>
           </div>
         </div>
 
-        <div className="card-base card-config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-          <h3>🔐 Dados de acesso</h3>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label>E-mail de login</label>
+        <div className="grid md:grid-cols-2 gap-3">
+          <div className="card-base card-config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+            <h3>🔐 Dados de acesso</h3>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>E-mail de login</label>
+                <input
+                  className="form-input"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value)}
+                  type="email"
+                />
+                <small>Será necessário confirmar o novo e-mail.</small>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <button className="btn btn-secondary" onClick={alterarEmail} disabled={salvando}>
+                  Atualizar e-mail
+                </button>
+              </div>
+            </div>
+
+            <h4 style={{ marginTop: 6, marginBottom: 4 }}>Alterar senha</h4>
+            <div className="form-group" style={{ marginTop: 0 }}>
+              <label>Nova senha</label>
               <input
                 className="form-input"
-                value={novoEmail}
-                onChange={(e) => setNovoEmail(e.target.value)}
-                type="email"
+                type="password"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
               />
-              <small>Será necessário confirmar o novo e-mail.</small>
             </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <button className="btn btn-secondary" onClick={alterarEmail} disabled={salvando}>
-                Atualizar e-mail
+            <div className="form-group" style={{ marginTop: 6 }}>
+              <label>Confirmar senha</label>
+              <input
+                className="form-input"
+                type="password"
+                value={confirmaSenha}
+                onChange={(e) => setConfirmaSenha(e.target.value)}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }}>
+              <button className="btn btn-primary" onClick={alterarSenha} disabled={salvando}>
+                Alterar senha
               </button>
             </div>
           </div>
 
-          <h4 style={{ marginTop: 6, marginBottom: 4 }}>Alterar senha</h4>
-          <div className="form-group" style={{ marginTop: 0 }}>
-            <label>Nova senha</label>
-            <input
-              className="form-input"
-              type="password"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-          <div className="form-group" style={{ marginTop: 6 }}>
-            <label>Confirmar senha</label>
-            <input
-              className="form-input"
-              type="password"
-              value={confirmaSenha}
-              onChange={(e) => setConfirmaSenha(e.target.value)}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }}>
-            <button className="btn btn-primary" onClick={alterarSenha} disabled={salvando}>
-              Alterar senha
-            </button>
-          </div>
-        </div>
-
-        <div className="card-base" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-          <h3>🏢 Empresa</h3>
-          {empresaAtual ? (
-            <p style={{ marginBottom: 12, lineHeight: 1.5 }}>
-              <strong>Empresa:</strong> {empresaAtual.nome || "-"}<br />
-              <strong>CNPJ:</strong> {empresaAtual.cnpj || "-"}<br />
-              <strong>Endereço:</strong> {perfil.company?.endereco || "-"}<br />
-              <strong>Telefone:</strong> {perfil.company?.telefone || "-"}<br />
-              <strong>Cargo:</strong> {perfil.cargo || "-"}
-            </p>
-          ) : (
-            <p style={{ marginBottom: 12 }}>Nenhuma empresa vinculada.</p>
-          )}
-          <div className="form-group">
-            <label>Trocar empresa (CNPJ)</label>
-            <input
-              className="form-input"
-              value={novoCnpj}
-              onChange={(e) => setNovoCnpj(e.target.value)}
-              placeholder="00.000.000/0000-00"
-            />
-          </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }}>
-            <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando}>
-              Trocar empresa
-            </button>
+          <div className="card-base" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+            <h3>🏢 Empresa</h3>
+            {empresaAtual ? (
+              <p style={{ marginBottom: 12, lineHeight: 1.5 }}>
+                <strong>Empresa:</strong> {empresaAtual.nome || "-"}<br />
+                <strong>CNPJ:</strong> {empresaAtual.cnpj || "-"}<br />
+                <strong>Endereço:</strong> {perfil.company?.endereco || "-"}<br />
+                <strong>Telefone:</strong> {perfil.company?.telefone || "-"}<br />
+                <strong>Cargo:</strong> {perfil.cargo || "-"}
+              </p>
+            ) : (
+              <p style={{ marginBottom: 12 }}>Nenhuma empresa vinculada.</p>
+            )}
+            <div className="form-group">
+              <label>Trocar empresa (CNPJ)</label>
+              <input
+                className="form-input"
+                value={novoCnpj}
+                onChange={(e) => setNovoCnpj(e.target.value)}
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }}>
+              <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando}>
+                Trocar empresa
+              </button>
+            </div>
           </div>
         </div>
       </div>

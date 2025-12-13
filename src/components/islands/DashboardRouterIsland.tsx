@@ -40,19 +40,24 @@ const DashboardRouterIsland: React.FC = () => {
         }
 
         const typed = data as UserWithType;
-        const tipo = (typed.user_types?.name || "").toLowerCase();
+        const tipoRaw =
+          typed.user_types?.name ||
+          (user.user_metadata as any)?.tipo_usuario ||
+          (user.user_metadata as any)?.role ||
+          "";
+        const tipoNorm = tipoRaw.trim().toUpperCase();
 
-        if (tipo === "administrador") {
+        if (tipoNorm.includes("ADMIN")) {
           window.location.href = "/dashboard/admin";
           return;
         }
 
-        if (tipo === "gestor") {
+        if (tipoNorm.includes("GESTOR")) {
           window.location.href = "/dashboard/gestor";
           return;
         }
 
-        if (tipo === "vendedor") {
+        if (tipoNorm.includes("VENDEDOR")) {
           window.location.href = "/dashboard/vendedor";
           return;
         }

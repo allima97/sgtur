@@ -2,7 +2,7 @@ globalThis.process ??= {}; globalThis.process.env ??= {};
 import { j as jsxRuntimeExports, s as supabase } from './supabase_CtqDhMax.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from './usePermissao_CncspAO2.mjs';
-import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_DCls3pID.mjs';
+import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_DXLpwJ9l.mjs';
 import { j as clsx } from './astro/server_C6IdV9ex.mjs';
 
 /**
@@ -1883,11 +1883,10 @@ const ALL_WIDGETS = [
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "aniversariantes", titulo: "Aniversariantes" }
 ];
-const ALL_KPIS = [
+const BASE_KPIS = [
   { id: "kpi_vendas_total", titulo: "Vendas no período" },
   { id: "kpi_qtd_vendas", titulo: "Qtd. vendas" },
   { id: "kpi_ticket_medio", titulo: "Ticket médio" },
-  { id: "kpi_diferenciado", titulo: "Comissão Diferenciada" },
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
   { id: "kpi_meta", titulo: "Meta somada (R$)" },
@@ -1937,6 +1936,7 @@ const DashboardGeralIsland = () => {
   const [orcamentos, setOrcamentos] = reactExports.useState([]);
   const [metas, setMetas] = reactExports.useState([]);
   const [clientes, setClientes] = reactExports.useState([]);
+  const [kpiProdutos, setKpiProdutos] = reactExports.useState([]);
   const [loadingDados, setLoadingDados] = reactExports.useState(true);
   const [erro, setErro] = reactExports.useState(null);
   const [widgetOrder, setWidgetOrder] = reactExports.useState(ALL_WIDGETS.map((w) => w.id));
@@ -1944,10 +1944,24 @@ const DashboardGeralIsland = () => {
     () => ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: true }), {})
   );
   const [showCustomize, setShowCustomize] = reactExports.useState(false);
-  const [kpiOrder, setKpiOrder] = reactExports.useState(ALL_KPIS.map((k) => k.id));
+  const [kpiOrder, setKpiOrder] = reactExports.useState(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = reactExports.useState(
-    () => ALL_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {})
+    () => BASE_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {})
   );
+  const allKpis = reactExports.useMemo(() => [...BASE_KPIS, ...kpiProdutos], [kpiProdutos]);
+  const kpiOrderEffective = reactExports.useMemo(() => {
+    const ids = allKpis.map((k) => k.id);
+    const filtered = kpiOrder.filter((id) => ids.includes(id));
+    const missing = ids.filter((id) => !filtered.includes(id));
+    return [...filtered, ...missing];
+  }, [kpiOrder, allKpis]);
+  const kpiVisibleEffective = reactExports.useMemo(() => {
+    const vis = {};
+    allKpis.forEach((k) => {
+      vis[k.id] = kpiVisible[k.id] !== false;
+    });
+    return vis;
+  }, [kpiVisible, allKpis]);
   const [chartPrefs, setChartPrefs] = reactExports.useState({
     vendas_destino: "pie",
     vendas_produto: "bar",
@@ -1956,12 +1970,12 @@ const DashboardGeralIsland = () => {
   const toggleWidget = (id) => {
     const updated = { ...widgetVisible, [id]: !widgetVisible[id] };
     setWidgetVisible(updated);
-    salvarPreferencias(widgetOrder, updated, { order: kpiOrder, visible: kpiVisible });
+    salvarPreferencias(widgetOrder, updated, { order: kpiOrderEffective, visible: kpiVisibleEffective });
   };
   const toggleKpi = (id) => {
-    const updated = { ...kpiVisible, [id]: !kpiVisible[id] };
+    const updated = { ...kpiVisibleEffective, [id]: !kpiVisibleEffective[id] };
     setKpiVisible(updated);
-    salvarPreferencias(widgetOrder, widgetVisible, { order: kpiOrder, visible: updated });
+    salvarPreferencias(widgetOrder, widgetVisible, { order: kpiOrderEffective, visible: updated });
   };
   const moverWidget = (id, direction) => {
     const idx = widgetOrder.indexOf(id);
@@ -2119,11 +2133,30 @@ const DashboardGeralIsland = () => {
     carregarContexto();
   }, []);
   reactExports.useEffect(() => {
+    const ids = allKpis.map((k) => k.id);
+    setKpiOrder((prev) => {
+      const filtered = prev.filter((id) => ids.includes(id));
+      const missing = ids.filter((id) => !filtered.includes(id));
+      return [...filtered, ...missing];
+    });
+    setKpiVisible((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => {
+        if (next[id] === void 0) next[id] = true;
+      });
+      Object.keys(next).forEach((id) => {
+        if (!ids.includes(id)) delete next[id];
+      });
+      return next;
+    });
+  }, [allKpis]);
+  reactExports.useEffect(() => {
     if (!userCtx || !inicio || !fim) return;
     async function carregarDashboard() {
       try {
         setLoadingDados(true);
         setErro(null);
+        const { data: tiposData } = await supabase.from("tipo_produtos").select("id, nome, exibe_kpi_comissao");
         let vendasQuery = supabase.from("vendas").select(
           `
           id,
@@ -2137,7 +2170,7 @@ const DashboardGeralIsland = () => {
             id,
             valor_total,
             valor_taxas,
-            produtos:tipo_produtos!produto_id (id, nome, regra_comissionamento)
+            produtos:tipo_produtos!produto_id (id, nome, regra_comissionamento, exibe_kpi_comissao)
           )
         `
         ).gte("data_lancamento", inicio).lte("data_lancamento", fim).eq("cancelada", false);
@@ -2169,6 +2202,12 @@ const DashboardGeralIsland = () => {
         if (metasErr) throw metasErr;
         const { data: clientesData, error: clientesErr } = await supabase.from("clientes").select("id, nome, nascimento, telefone");
         if (clientesErr) throw clientesErr;
+        const produtosKpi = (tiposData || []).filter((p) => p.exibe_kpi_comissao !== false).map((p) => ({
+          id: `kpi_prod_${p.id}`,
+          titulo: p.nome || "Produto",
+          produtoId: p.id
+        })) || [];
+        setKpiProdutos(produtosKpi);
         setVendas(vendasData || []);
         setOrcamentos(orcData || []);
         setMetas(metasData || []);
@@ -2176,6 +2215,7 @@ const DashboardGeralIsland = () => {
         try {
           const { data: prefData, error: prefErr } = await supabase.from("dashboard_widgets").select("widget, ordem, visivel, settings").eq("usuario_id", userCtx.usuarioId).order("ordem", { ascending: true });
           if (!prefErr && prefData && prefData.length > 0) {
+            const allKpiIds = /* @__PURE__ */ new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
             const ordem = prefData.map((p) => p.widget).filter((id) => ALL_WIDGETS.some((w) => w.id === id));
             const vis = { ...widgetVisible };
             let kpiFromDb = {};
@@ -2187,12 +2227,14 @@ const DashboardGeralIsland = () => {
               }
               if (id === "kpis" && p.settings?.kpis) {
                 if (Array.isArray(p.settings.kpis.order)) {
-                  kpiFromDb.order = p.settings.kpis.order.filter(
-                    (kid) => ALL_KPIS.some((k) => k.id === kid)
-                  );
+                  kpiFromDb.order = p.settings.kpis.order.filter((kid) => allKpiIds.has(kid));
                 }
                 if (p.settings.kpis.visible) {
-                  kpiFromDb.visible = { ...kpiVisible, ...p.settings.kpis.visible };
+                  const filtered = {};
+                  Object.entries(p.settings.kpis.visible).forEach(([kid, val]) => {
+                    if (allKpiIds.has(kid)) filtered[kid] = val;
+                  });
+                  kpiFromDb.visible = { ...kpiVisible, ...filtered };
                 }
               }
               if (p.settings?.charts) {
@@ -2205,6 +2247,7 @@ const DashboardGeralIsland = () => {
             if (kpiFromDb.visible) setKpiVisible(kpiFromDb.visible);
             if (chartsFromDb) setChartPrefs((prev) => ({ ...prev, ...chartsFromDb }));
           } else {
+            const allKpiIds = /* @__PURE__ */ new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
             const local = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_widgets") : null;
             if (local) {
               const parsed = JSON.parse(local);
@@ -2216,8 +2259,14 @@ const DashboardGeralIsland = () => {
             const localKpi = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_kpis") : null;
             if (localKpi) {
               const parsed = JSON.parse(localKpi);
-              if (parsed.order) setKpiOrder(parsed.order);
-              if (parsed.visible) setKpiVisible(parsed.visible);
+              if (parsed.order) setKpiOrder(parsed.order.filter((kid) => allKpiIds.has(kid)));
+              if (parsed.visible) {
+                const filtered = {};
+                Object.entries(parsed.visible).forEach(([kid, val]) => {
+                  if (allKpiIds.has(kid)) filtered[kid] = val;
+                });
+                setKpiVisible((prev) => ({ ...prev, ...filtered }));
+              }
             }
             const localCharts = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_charts") : null;
             if (localCharts) {
@@ -2227,6 +2276,7 @@ const DashboardGeralIsland = () => {
           }
         } catch (e) {
           console.warn("Preferências do dashboard não carregadas, usando padrão.", e);
+          const allKpiIds = /* @__PURE__ */ new Set([...BASE_KPIS.map((k) => k.id), ...produtosKpi.map((k) => k.id)]);
           const local = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_widgets") : null;
           if (local) {
             const parsed = JSON.parse(local);
@@ -2238,8 +2288,14 @@ const DashboardGeralIsland = () => {
           const localKpi = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_kpis") : null;
           if (localKpi) {
             const parsed = JSON.parse(localKpi);
-            if (parsed.order) setKpiOrder(parsed.order);
-            if (parsed.visible) setKpiVisible(parsed.visible);
+            if (parsed.order) setKpiOrder(parsed.order.filter((kid) => allKpiIds.has(kid)));
+            if (parsed.visible) {
+              const filtered = {};
+              Object.entries(parsed.visible).forEach(([kid, val]) => {
+                if (allKpiIds.has(kid)) filtered[kid] = val;
+              });
+              setKpiVisible((prev) => ({ ...prev, ...filtered }));
+            }
           }
           const localCharts = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_charts") : null;
           if (localCharts) {
@@ -2260,24 +2316,24 @@ const DashboardGeralIsland = () => {
     totalVendas,
     qtdVendas,
     ticketMedio,
-    totalDiferenciado,
     totalOrcamentos,
     conversao,
     metaSomada,
-    atingimentoMeta
+    atingimentoMeta,
+    valorPorProduto
   } = reactExports.useMemo(() => {
     let totalVendas2 = 0;
     let qtdVendas2 = vendas.length;
-    let totalDiferenciado2 = 0;
+    const valorPorProduto2 = {};
     vendas.forEach((v) => {
       const recibos = v.vendas_recibos || [];
       let somaVenda = 0;
       recibos.forEach((r) => {
         const valor = Number(r.valor_total || 0);
         somaVenda += valor;
-        const regra = r.produtos?.regra_comissionamento?.toLowerCase() || "";
-        if (regra === "diferenciado") {
-          totalDiferenciado2 += valor;
+        const pid = r.produtos?.id || "";
+        if (pid) {
+          valorPorProduto2[pid] = (valorPorProduto2[pid] || 0) + valor;
         }
       });
       totalVendas2 += somaVenda;
@@ -2294,11 +2350,11 @@ const DashboardGeralIsland = () => {
       totalVendas: totalVendas2,
       qtdVendas: qtdVendas2,
       ticketMedio: ticketMedio2,
-      totalDiferenciado: totalDiferenciado2,
       totalOrcamentos: totalOrcamentos2,
       conversao: conversao2,
       metaSomada: metaSomada2,
-      atingimentoMeta: atingimentoMeta2
+      atingimentoMeta: atingimentoMeta2,
+      valorPorProduto: valorPorProduto2
     };
   }, [vendas, orcamentos, metas]);
   const vendasPorDestinoFull = reactExports.useMemo(() => {
@@ -2403,121 +2459,128 @@ const DashboardGeralIsland = () => {
               gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
               gap: 10
             },
-            children: kpiOrder.filter((id2) => kpiVisible[id2] !== false).map((id2) => {
-              switch (id2) {
-                case "kpi_vendas_total":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas no período" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(totalVendas) })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_qtd_vendas":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Qtd. vendas" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: qtdVendas })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_ticket_medio":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Ticket médio" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(ticketMedio) })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_diferenciado":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão Diferenciada" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(totalDiferenciado) })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_orcamentos":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Orçamentos" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: totalOrcamentos })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_conversao":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Conv. Orç → Vendas" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
-                          conversao.toFixed(1),
-                          "%"
-                        ] })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_meta":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta somada (R$)" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(metaSomada) })
-                      ]
-                    },
-                    id2
-                  );
-                case "kpi_atingimento":
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "kpi-card",
-                      style: { display: "flex", flexDirection: "column", gap: 4 },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Atingimento da meta" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
-                          atingimentoMeta.toFixed(1),
-                          "%"
-                        ] })
-                      ]
-                    },
-                    id2
-                  );
-                default:
-                  return null;
+            children: kpiOrderEffective.filter((id2) => kpiVisibleEffective[id2] !== false).map((id2) => {
+              if (id2 === "kpi_vendas_total") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas no período" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(totalVendas) })
+                    ]
+                  },
+                  id2
+                );
               }
+              if (id2 === "kpi_qtd_vendas") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Qtd. vendas" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: qtdVendas })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_ticket_medio") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Ticket médio" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(ticketMedio) })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_orcamentos") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Orçamentos" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: totalOrcamentos })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_conversao") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Conv. Orç → Vendas" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
+                        conversao.toFixed(1),
+                        "%"
+                      ] })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_meta") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta somada (R$)" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(metaSomada) })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_atingimento") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Atingimento da meta" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
+                        atingimentoMeta.toFixed(1),
+                        "%"
+                      ] })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2.startsWith("kpi_prod_")) {
+                const prod = kpiProdutos.find((k) => k.id === id2);
+                const valor = prod ? valorPorProduto[prod.produtoId] || 0 : 0;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: prod?.titulo || "Produto" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(valor) })
+                    ]
+                  },
+                  id2
+                );
+              }
+              return null;
             })
           }
         ) });
@@ -2925,8 +2988,8 @@ const DashboardGeralIsland = () => {
                           },
                           children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, fontSize: "0.9rem" }, children: "KPIs visíveis e ordem" }),
-                            kpiOrder.map((kid, kidx) => {
-                              const metaKpi = ALL_KPIS.find((k) => k.id === kid);
+                            kpiOrderEffective.map((kid, kidx) => {
+                              const metaKpi = allKpis.find((k) => k.id === kid);
                               if (!metaKpi) return null;
                               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                                 "div",
@@ -2941,7 +3004,7 @@ const DashboardGeralIsland = () => {
                                       "input",
                                       {
                                         type: "checkbox",
-                                        checked: kpiVisible[kid] !== false,
+                                        checked: kpiVisibleEffective[kid] !== false,
                                         onChange: () => toggleKpi(kid)
                                       }
                                     ),
@@ -2963,7 +3026,7 @@ const DashboardGeralIsland = () => {
                                           type: "button",
                                           className: "btn btn-light",
                                           onClick: () => moverKpi(kid, "down"),
-                                          disabled: kidx === kpiOrder.length - 1,
+                                          disabled: kidx === kpiOrderEffective.length - 1,
                                           children: "↓"
                                         }
                                       )

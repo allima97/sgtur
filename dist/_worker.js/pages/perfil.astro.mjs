@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CwEMmlUN.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_SPVKIhmk.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -20,6 +20,8 @@ function PerfilIsland() {
   const [usoIndividual, setUsoIndividual] = reactExports.useState(null);
   const [novoCnpj, setNovoCnpj] = reactExports.useState("");
   const [empresaAtual, setEmpresaAtual] = reactExports.useState(null);
+  const [camposExtrasOk, setCamposExtrasOk] = reactExports.useState(true);
+  const [cepStatus, setCepStatus] = reactExports.useState(null);
   reactExports.useMemo(() => {
     if (!perfil) return "";
     const c = perfil.cidade || "";
@@ -41,13 +43,29 @@ function PerfilIsland() {
           window.location.href = "/auth/login";
           return;
         }
-        const { data, error } = await supabase.from("users").select("nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)").eq("id", user.id).maybeSingle();
+        const colsExtras = "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+        const colsBasicos = "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+        let extrasDisponiveis = true;
+        let { data, error } = await supabase.from("users").select(colsExtras).eq("id", user.id).maybeSingle();
+        if (error && error.code === "PGRST204") {
+          extrasDisponiveis = false;
+          const fallback = await supabase.from("users").select(colsBasicos).eq("id", user.id).maybeSingle();
+          data = fallback.data;
+          error = fallback.error;
+        }
         if (error) throw error;
+        setCamposExtrasOk(extrasDisponiveis);
         setPerfil({
           nome_completo: data?.nome_completo || "",
           cpf: data?.cpf || "",
           data_nascimento: data?.data_nascimento || "",
           telefone: data?.telefone || "",
+          whatsapp: extrasDisponiveis ? data?.whatsapp || "" : "",
+          rg: extrasDisponiveis ? data?.rg || "" : "",
+          cep: extrasDisponiveis ? data?.cep || "" : "",
+          endereco: extrasDisponiveis ? data?.endereco || "" : "",
+          numero: extrasDisponiveis ? data?.numero || "" : "",
+          complemento: extrasDisponiveis ? data?.complemento || "" : "",
           cidade: data?.cidade || "",
           estado: data?.estado || "",
           email: data?.email || user.email || "",
@@ -85,6 +103,10 @@ function PerfilIsland() {
     }
     return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
   }
+  function formatCep(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    return digits.replace(/(\d{5})(\d)/, "$1-$2");
+  }
   async function salvarPerfil() {
     if (!perfil) return;
     setErro(null);
@@ -103,7 +125,15 @@ function PerfilIsland() {
         cidade: perfil.cidade || null,
         estado: perfil.estado || null,
         data_nascimento: perfil.data_nascimento || null,
-        uso_individual: usoIndividual
+        uso_individual: usoIndividual,
+        ...camposExtrasOk ? {
+          whatsapp: perfil.whatsapp || null,
+          rg: perfil.rg || null,
+          cep: perfil.cep || null,
+          endereco: perfil.endereco || null,
+          numero: perfil.numero || null,
+          complemento: perfil.complemento || null
+        } : {}
       }).eq("id", user.id);
       await registrarLog({
         user_id: user.id,
@@ -197,15 +227,48 @@ function PerfilIsland() {
       setSalvando(false);
     }
   }
+  async function buscarCepIfNeeded(cepRaw) {
+    if (!camposExtrasOk) return;
+    const digits = (cepRaw || "").replace(/\D/g, "");
+    console.log("[CEP] Valor recebido:", cepRaw, "| Somente dígitos:", digits);
+    if (digits.length !== 8) {
+      setCepStatus(null);
+      console.log("[CEP] Menos de 8 dígitos, abortando busca");
+      return;
+    }
+    try {
+      setCepStatus("Buscando endereço...");
+      const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { mode: "cors" });
+      if (!resp.ok) throw new Error("CEP inválido ou indisponível.");
+      const data = await resp.json();
+      console.log("[CEP] Resposta ViaCEP:", data);
+      if (data.erro) throw new Error("CEP não encontrado.");
+      setPerfil(
+        (prev) => prev ? {
+          ...prev,
+          cep: formatCep(digits),
+          endereco: data.logradouro || "",
+          cidade: data.localidade || "",
+          estado: data.uf || ""
+        } : prev
+      );
+      setCepStatus("Endereço carregado pelo CEP.");
+      console.log("[CEP] Perfil atualizado com endereço, cidade e estado do ViaCEP");
+    } catch (e) {
+      console.error("Erro ao buscar CEP:", e);
+      setCepStatus("Não foi possível carregar o CEP.");
+    }
+  }
   if (loading) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: "Carregando perfil..." });
   if (!perfil) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: "Perfil não encontrado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "perfil-page", children: [
     onboarding && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Complete os dados para finalizar seu primeiro acesso." }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: erro }),
     msg && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-green mb-3", children: msg }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid md:grid-cols-3 gap-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "👤 Dados pessoais" }),
+        !camposExtrasOk && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#b91c1c", marginBottom: 8 }, children: 'Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.' }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Uso do sistema" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", style: { marginTop: 6 }, children: [
@@ -241,7 +304,7 @@ function PerfilIsland() {
           {
             style: {
               display: "grid",
-              gridTemplateColumns: "3.8fr 0.8fr 1fr",
+              gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr)",
               gap: 12,
               marginTop: 16
             },
@@ -271,7 +334,20 @@ function PerfilIsland() {
                 )
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Data de nascimento" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "RG" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: perfil.rg || "",
+                    onChange: (e) => atualizarCampo("rg", e.target.value),
+                    placeholder: "Documento",
+                    disabled: !camposExtrasOk
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Data Nascimento" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
@@ -290,11 +366,102 @@ function PerfilIsland() {
           {
             style: {
               display: "grid",
-              gridTemplateColumns: "1fr 2fr 1fr",
+              gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr)",
               gap: 12,
               marginTop: 12
             },
             children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "CEP" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: formatCep(perfil.cep || ""),
+                    onChange: (e) => {
+                      const val = formatCep(e.target.value);
+                      atualizarCampo("cep", val);
+                    },
+                    onBlur: (e) => {
+                      const val = formatCep(e.target.value);
+                      if (val.replace(/\D/g, "").length === 8) {
+                        buscarCepIfNeeded(val);
+                      }
+                    },
+                    placeholder: "00000-000",
+                    disabled: !camposExtrasOk
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }, children: cepStatus || "Preencha para auto-preencher endereço." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Endereço" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: perfil.endereco || "",
+                    onChange: (e) => atualizarCampo("endereco", e.target.value),
+                    placeholder: "Rua / Avenida",
+                    disabled: !camposExtrasOk
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Número" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: perfil.numero || "",
+                    onChange: (e) => atualizarCampo("numero", e.target.value),
+                    placeholder: "Nº",
+                    disabled: !camposExtrasOk
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Complemento" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: perfil.complemento || "",
+                    onChange: (e) => atualizarCampo("complemento", e.target.value),
+                    placeholder: "Opcional",
+                    disabled: !camposExtrasOk
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            style: {
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr)",
+              gap: 12,
+              marginTop: 12
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "E-mail" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    type: "email",
+                    value: perfil.email,
+                    onChange: (e) => {
+                      atualizarCampo("email", e.target.value);
+                      setNovoEmail(e.target.value);
+                    },
+                    placeholder: "seu@email.com"
+                  }
+                )
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Telefone" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -304,6 +471,19 @@ function PerfilIsland() {
                     value: formatTelefone(perfil.telefone || ""),
                     onChange: (e) => atualizarCampo("telefone", formatTelefone(e.target.value)),
                     placeholder: "(00) 00000-0000"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "WhatsApp" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: formatTelefone(perfil.whatsapp || ""),
+                    onChange: (e) => atualizarCampo("whatsapp", formatTelefone(e.target.value)),
+                    placeholder: "(00) 00000-0000",
+                    disabled: !camposExtrasOk
                   }
                 )
               ] }),
@@ -319,14 +499,15 @@ function PerfilIsland() {
                 )
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "UF" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Estado" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
                     className: "form-input",
                     value: perfil.estado || "",
                     maxLength: 2,
-                    onChange: (e) => atualizarCampo("estado", e.target.value.toUpperCase())
+                    onChange: (e) => atualizarCampo("estado", e.target.value.toUpperCase()),
+                    placeholder: "UF"
                   }
                 )
               ] })
@@ -335,88 +516,90 @@ function PerfilIsland() {
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: salvarPerfil, disabled: salvando, children: salvando ? "Salvando..." : "Salvar dados" }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🔐 Dados de acesso" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "E-mail de login" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid md:grid-cols-2 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🔐 Dados de acesso" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "E-mail de login" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  value: novoEmail,
+                  onChange: (e) => setNovoEmail(e.target.value),
+                  type: "email"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: "Será necessário confirmar o novo e-mail." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: alterarEmail, disabled: salvando, children: "Atualizar e-mail" }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginTop: 6, marginBottom: 4 }, children: "Alterar senha" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 0 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Nova senha" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
                 className: "form-input",
-                value: novoEmail,
-                onChange: (e) => setNovoEmail(e.target.value),
-                type: "email"
+                type: "password",
+                value: novaSenha,
+                onChange: (e) => setNovaSenha(e.target.value),
+                placeholder: "Mínimo 6 caracteres"
               }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: "Será necessário confirmar o novo e-mail." })
+            )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: alterarEmail, disabled: salvando, children: "Atualizar e-mail" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 6 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Confirmar senha" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "password",
+                value: confirmaSenha,
+                onChange: (e) => setConfirmaSenha(e.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: alterarSenha, disabled: salvando, children: "Alterar senha" }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginTop: 6, marginBottom: 4 }, children: "Alterar senha" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 0 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Nova senha" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              type: "password",
-              value: novaSenha,
-              onChange: (e) => setNovaSenha(e.target.value),
-              placeholder: "Mínimo 6 caracteres"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 6 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Confirmar senha" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              type: "password",
-              value: confirmaSenha,
-              onChange: (e) => setConfirmaSenha(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: alterarSenha, disabled: salvando, children: "Alterar senha" }) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🏢 Empresa" }),
-        empresaAtual ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { marginBottom: 12, lineHeight: 1.5 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Empresa:" }),
-          " ",
-          empresaAtual.nome || "-",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "CNPJ:" }),
-          " ",
-          empresaAtual.cnpj || "-",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Endereço:" }),
-          " ",
-          perfil.company?.endereco || "-",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Telefone:" }),
-          " ",
-          perfil.company?.telefone || "-",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Cargo:" }),
-          " ",
-          perfil.cargo || "-"
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginBottom: 12 }, children: "Nenhuma empresa vinculada." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Trocar empresa (CNPJ)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              value: novoCnpj,
-              onChange: (e) => setNovoCnpj(e.target.value),
-              placeholder: "00.000.000/0000-00"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: trocarEmpresa, disabled: salvando, children: "Trocar empresa" }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🏢 Empresa" }),
+          empresaAtual ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { marginBottom: 12, lineHeight: 1.5 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Empresa:" }),
+            " ",
+            empresaAtual.nome || "-",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "CNPJ:" }),
+            " ",
+            empresaAtual.cnpj || "-",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Endereço:" }),
+            " ",
+            perfil.company?.endereco || "-",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Telefone:" }),
+            " ",
+            perfil.company?.telefone || "-",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Cargo:" }),
+            " ",
+            perfil.cargo || "-"
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginBottom: 12 }, children: "Nenhuma empresa vinculada." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "Trocar empresa (CNPJ)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: novoCnpj,
+                onChange: (e) => setNovoCnpj(e.target.value),
+                placeholder: "00.000.000/0000-00"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: trocarEmpresa, disabled: salvando, children: "Trocar empresa" }) })
+        ] })
       ] })
     ] })
   ] });
