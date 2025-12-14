@@ -360,6 +360,18 @@ export default function MenuIsland({ activePage }) {
             </li>
           )}
 
+          {/* Apenas gestor/admin pode importar vendas */}
+          {isAdminFinal && (
+            <li>
+              <a
+                className={`sidebar-link ${activePage === "importar-vendas" ? "active" : ""}`}
+                href="/gestor/importar-vendas"
+                onClick={handleNavClick}
+              >
+                <span>⬆️</span>Importar Vendas
+              </a>
+            </li>
+          )}
           {can("Clientes") && (
             <li>
               <a
