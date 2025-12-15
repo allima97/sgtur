@@ -39,6 +39,13 @@ type Produto = {
   created_at: string | null;
 };
 
+type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
+
+function formatFornecedorLabel(fornecedor: FornecedorOption | null | undefined) {
+  if (!fornecedor) return "";
+  return (fornecedor.nome_fantasia?.trim() || fornecedor.nome_completo?.trim() || "").trim();
+}
+
 type FormState = {
   nome: string;
   destino: string;
@@ -51,6 +58,8 @@ type FormState = {
   imagem_url: string;
   informacoes_importantes: string;
   ativo: boolean;
+  fornecedor_id: string;
+  fornecedor_label: string;
 };
 
 const initialForm: FormState = {
@@ -65,6 +74,8 @@ const initialForm: FormState = {
   imagem_url: "",
   informacoes_importantes: "",
   ativo: true,
+  fornecedor_id: "",
+  fornecedor_label: "",
 };
 
 export default function ProdutosIsland() {
