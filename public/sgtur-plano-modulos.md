@@ -617,6 +617,7 @@ CREATE TABLE IF NOT EXISTS public.viagens (
   venda_id uuid REFERENCES public.vendas(id) ON DELETE SET NULL,
   orcamento_id uuid REFERENCES public.orcamentos(id) ON DELETE SET NULL,
   company_id uuid NOT NULL REFERENCES public.companies(id),
+  cliente_id uuid REFERENCES public.clientes(id),
   responsavel_user_id uuid REFERENCES public.users(id),
   origem text,
   destino text,

@@ -10,6 +10,8 @@ type Viagem = {
   origem: string | null;
   destino: string | null;
   responsavel_user_id: string | null;
+  cliente_id: string | null;
+  clientes?: { nome: string | null } | null;
 };
 
 const STATUS_OPCOES = [
@@ -45,6 +47,7 @@ export default function ViagensListaIsland() {
     data_inicio: "",
     data_fim: "",
     status: "planejada",
+    cliente_id: "",
   });
   type CidadeSugestao = {
     nome: string;
@@ -54,6 +57,8 @@ export default function ViagensListaIsland() {
   const [cidades, setCidades] = useState<CidadeSugestao[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [clientes, setClientes] = useState<{ id: string; nome: string; cpf?: string | null }[]>([]);
+  const [clientesErro, setClientesErro] = useState<string | null>(null);
   const [buscandoCidades, setBuscandoCidades] = useState(false);
   const [erroCidades, setErroCidades] = useState<string | null>(null);
   const cidadesAbort = useRef<AbortController | null>(null);
@@ -97,6 +102,27 @@ export default function ViagensListaIsland() {
     }
     resolveUser();
   }, []);
+
+  useEffect(() => {
+    if (!companyId) return;
+    async function carregarClientes() {
+      try {
+        const { data, error } = await supabase
+          .from("clientes")
+          .select("id, nome, cpf")
+          .eq("company_id", companyId)
+          .order("nome", { ascending: true })
+          .limit(200);
+        if (error) throw error;
+        setClientes((data || []) as { id: string; nome: string; cpf?: string | null }[]);
+        setClientesErro(null);
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+        setClientesErro("Não foi possível carregar os clientes.");
+      }
+    }
+    carregarClientes();
+  }, [companyId]);
 
   useEffect(() => {
     carregarSugestoes("");
@@ -183,7 +209,7 @@ export default function ViagensListaIsland() {
 
       let query = supabase
         .from("viagens")
-        .select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id")
+        .select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome)")
         .order("data_inicio", { ascending: true });
 
       if (statusFiltro) {
@@ -213,6 +239,10 @@ export default function ViagensListaIsland() {
       setFormError("Não foi possível determinar sua empresa.");
       return;
     }
+    if (!cadastroForm.cliente_id) {
+      setFormError("Selecione o cliente responsável.");
+      return;
+    }
     if (!cadastroForm.origem || !cadastroForm.destino || !cadastroForm.data_inicio) {
       setFormError("Origem, destino e data de início são obrigatórios.");
       return;
@@ -223,6 +253,7 @@ export default function ViagensListaIsland() {
       const payload = {
         company_id: companyId,
         responsavel_user_id: userId,
+        cliente_id: cadastroForm.cliente_id,
         origem: cadastroForm.origem.trim(),
         destino: cadastroForm.destino.trim(),
         data_inicio: cadastroForm.data_inicio,
@@ -237,6 +268,7 @@ export default function ViagensListaIsland() {
         data_inicio: "",
         data_fim: "",
         status: "planejada",
+        cliente_id: "",
       });
       setShowForm(false);
       buscar();
@@ -291,6 +323,27 @@ export default function ViagensListaIsland() {
               </datalist>
               {buscandoCidades && <small style={{ color: "#6366f1" }}>Buscando cidades...</small>}
               {erroCidades && <small style={{ color: "red" }}>{erroCidades}</small>}
+              <div className="form-group">
+                <label className="form-label">Cliente</label>
+                <select
+                  className="form-select"
+                  value={cadastroForm.cliente_id}
+                  onChange={(e) =>
+                    setCadastroForm((prev) => ({ ...prev, cliente_id: e.target.value }))
+                  }
+                >
+                  <option value="">Selecione um cliente</option>
+                  {clientes.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                      {cliente.cpf ? ` (${cliente.cpf})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {clientesErro && (
+                  <small style={{ color: "red" }}>{clientesErro}</small>
+                )}
+              </div>
               <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Origem</label>
@@ -411,17 +464,18 @@ export default function ViagensListaIsland() {
 
         <div className="table-container overflow-x-auto">
           <table className="table-default min-w-[760px]">
-            <thead>
-              <tr>
-                <th>Início</th>
-                <th>Fim</th>
-                <th>Status</th>
-                <th>Origem</th>
-                <th>Destino</th>
-                <th>Responsável</th>
-                <th>Ver</th>
-              </tr>
-            </thead>
+              <thead>
+                <tr>
+                  <th>Início</th>
+                  <th>Fim</th>
+                  <th>Status</th>
+                  <th>Origem</th>
+                  <th>Destino</th>
+                  <th>Cliente</th>
+                  <th>Responsável</th>
+                  <th>Ver</th>
+                </tr>
+              </thead>
             <tbody>
               {loading && (
                 <tr>
@@ -440,6 +494,7 @@ export default function ViagensListaIsland() {
                   <td>{v.status || "-"}</td>
                   <td>{v.origem || "-"}</td>
                   <td>{v.destino || "-"}</td>
+                  <td>{v.clientes?.nome || "-"}</td>
                   <td>{v.responsavel_user_id || "-"}</td>
                   <td>
                     <a className="btn btn-light" href={`/operacao/viagens/${v.id}`}>
