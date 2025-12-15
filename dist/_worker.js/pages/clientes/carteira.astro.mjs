@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CSIK3GDu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -51,14 +51,32 @@ function ClientesIsland() {
   const [detalheRecibos, setDetalheRecibos] = reactExports.useState([]);
   const [carregandoRecibos, setCarregandoRecibos] = reactExports.useState(false);
   const [detalheOrcamento, setDetalheOrcamento] = reactExports.useState(null);
+  const [acompanhantes, setAcompanhantes] = reactExports.useState([]);
+  const [acompLoading, setAcompLoading] = reactExports.useState(false);
+  const [acompErro, setAcompErro] = reactExports.useState(null);
+  const [acompForm, setAcompForm] = reactExports.useState({
+    nome_completo: "",
+    cpf: "",
+    telefone: "",
+    grau_parentesco: "",
+    rg: "",
+    data_nascimento: "",
+    observacoes: "",
+    ativo: true
+  });
+  const [acompEditId, setAcompEditId] = reactExports.useState(null);
+  const [acompSalvando, setAcompSalvando] = reactExports.useState(false);
+  const [acompExcluindo, setAcompExcluindo] = reactExports.useState(null);
   async function carregar() {
     if (!podeVer) return;
     try {
       setLoading(true);
       setErro(null);
-      const { data, error } = await supabase.from("clientes").select("*").order("nome", { ascending: true });
+      const { data, error } = await supabase.from("clientes").select("*, company_id").order("nome", { ascending: true });
       if (error) throw error;
       setClientes(data || []);
+      setAcompanhantes([]);
+      setAcompErro(null);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar clientes.");
@@ -83,6 +101,9 @@ function ClientesIsland() {
     if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    setAcompEditId(null);
   }
   async function abrirHistorico(cliente) {
     setHistoricoCliente(cliente);
@@ -258,6 +279,22 @@ function ClientesIsland() {
       setErro("Erro ao carregar histórico do cliente.");
     } finally {
       setLoadingHistorico(false);
+      carregarAcompanhantes(cliente.id);
+    }
+  }
+  async function carregarAcompanhantes(clienteId) {
+    try {
+      setAcompLoading(true);
+      setAcompErro(null);
+      const { data, error } = await supabase.from("cliente_acompanhantes").select("*").eq("cliente_id", clienteId).order("nome_completo", { ascending: true });
+      if (error) throw error;
+      setAcompanhantes(data || []);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao carregar acompanhantes.");
+      setAcompanhantes([]);
+    } finally {
+      setAcompLoading(false);
     }
   }
   function fecharHistorico() {
@@ -267,6 +304,19 @@ function ClientesIsland() {
     setDetalheVenda(null);
     setDetalheRecibos([]);
     setDetalheOrcamento(null);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    setAcompEditId(null);
+    setAcompForm({
+      nome_completo: "",
+      cpf: "",
+      telefone: "",
+      grau_parentesco: "",
+      rg: "",
+      data_nascimento: "",
+      observacoes: "",
+      ativo: true
+    });
   }
   async function verDetalheVenda(v) {
     setDetalheVenda(v);
@@ -351,6 +401,7 @@ function ClientesIsland() {
       notas: c.notas || "",
       active: c.active
     });
+    carregarAcompanhantes(c.id);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -379,6 +430,9 @@ function ClientesIsland() {
         notas: form.notas || null,
         active: form.active
       };
+      if (historicoCliente?.company_id) {
+        payload.company_id = historicoCliente.company_id;
+      }
       if (editId) {
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
         if (error) throw error;
@@ -423,6 +477,94 @@ function ClientesIsland() {
       setErro("Não foi possível excluir este cliente.");
     } finally {
       setExcluindoId(null);
+    }
+  }
+  function resetAcompForm() {
+    setAcompForm({
+      nome_completo: "",
+      cpf: "",
+      telefone: "",
+      grau_parentesco: "",
+      rg: "",
+      data_nascimento: "",
+      observacoes: "",
+      ativo: true
+    });
+    setAcompEditId(null);
+  }
+  function iniciarEdicaoAcomp(a) {
+    setAcompEditId(a.id);
+    setAcompForm({
+      nome_completo: a.nome_completo || "",
+      cpf: a.cpf || "",
+      telefone: a.telefone || "",
+      grau_parentesco: a.grau_parentesco || "",
+      rg: a.rg || "",
+      data_nascimento: a.data_nascimento || "",
+      observacoes: a.observacoes || "",
+      ativo: a.ativo
+    });
+  }
+  async function salvarAcompanhante() {
+    if (!historicoCliente) {
+      setAcompErro("Selecione um cliente antes de salvar acompanhante.");
+      return;
+    }
+    const companyId = historicoCliente.company_id || null;
+    if (!companyId) {
+      setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
+      return;
+    }
+    const payload = {
+      cliente_id: historicoCliente.id,
+      company_id: companyId,
+      nome_completo: acompForm.nome_completo.trim(),
+      cpf: acompForm.cpf?.trim() || null,
+      telefone: acompForm.telefone?.trim() || null,
+      grau_parentesco: acompForm.grau_parentesco?.trim() || null,
+      rg: acompForm.rg?.trim() || null,
+      data_nascimento: acompForm.data_nascimento || null,
+      observacoes: acompForm.observacoes?.trim() || null,
+      ativo: acompForm.ativo
+    };
+    if (!payload.nome_completo) {
+      setAcompErro("Informe o nome completo do acompanhante.");
+      return;
+    }
+    try {
+      setAcompSalvando(true);
+      setAcompErro(null);
+      if (acompEditId) {
+        const { error } = await supabase.from("cliente_acompanhantes").update(payload).eq("id", acompEditId).eq("cliente_id", historicoCliente.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("cliente_acompanhantes").insert(payload);
+        if (error) throw error;
+      }
+      resetAcompForm();
+      await carregarAcompanhantes(historicoCliente.id);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao salvar acompanhante.");
+    } finally {
+      setAcompSalvando(false);
+    }
+  }
+  async function excluirAcompanhante(id) {
+    if (!podeExcluir || !historicoCliente) return;
+    if (!window.confirm("Remover acompanhante?")) return;
+    try {
+      setAcompExcluindo(id);
+      setAcompErro(null);
+      const { error } = await supabase.from("cliente_acompanhantes").delete().eq("id", id).eq("cliente_id", historicoCliente.id);
+      if (error) throw error;
+      if (acompEditId === id) resetAcompForm();
+      await carregarAcompanhantes(historicoCliente.id);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao remover acompanhante.");
+    } finally {
+      setAcompExcluindo(null);
     }
   }
   if (!ativo) {
@@ -614,6 +756,146 @@ function ClientesIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
         loadingHistorico && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Carregando histórico..." }),
         !loadingHistorico && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Acompanhantes do cliente" }),
+            acompErro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginBottom: 8 }, children: acompErro }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Parentesco" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
+                (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+                acompLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando acompanhantes..." }) }),
+                !acompLoading && acompanhantes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum acompanhante cadastrado." }) }),
+                !acompLoading && acompanhantes.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.nome_completo }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.cpf || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.telefone || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.grau_parentesco || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.ativo ? "Sim" : "Não" }),
+                  (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", style: { textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }, children: [
+                    podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", type: "button", onClick: () => iniciarEdicaoAcomp(a), title: "Editar", children: "✏️" }),
+                    podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        className: "btn-icon btn-danger",
+                        type: "button",
+                        onClick: () => excluirAcompanhante(a.id),
+                        disabled: acompExcluindo === a.id,
+                        title: "Excluir",
+                        children: acompExcluindo === a.id ? "..." : "🗑️"
+                      }
+                    )
+                  ] })
+                ] }, a.id))
+              ] })
+            ] }) }),
+            podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: acompEditId ? "Editar acompanhante" : "Adicionar acompanhante" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.nome_completo,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.cpf,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.telefone,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.grau_parentesco,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value })),
+                      placeholder: "Ex: Esposa, Filho"
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.rg,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "date",
+                      className: "form-input",
+                      value: acompForm.data_nascimento,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: acompForm.observacoes,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: acompForm.ativo,
+                      onChange: (e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarAcompanhante, disabled: acompSalvando, children: acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Adicionar acompanhante" }),
+                acompEditId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", type: "button", onClick: resetAcompForm, disabled: acompSalvando, children: "Cancelar edição" })
+              ] })
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Vendas" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[820px]", children: [

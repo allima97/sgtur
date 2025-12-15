@@ -47,7 +47,10 @@ const MAPA_MODULOS: Record<string, string> = {
   Admin: "admin",
   AdminDashboard: "admin_dashboard",
   AdminUsers: "admin_users",
-  AdminLogs: "admin_logs"
+  AdminLogs: "admin_logs",
+
+  Operacao: "operacao",
+  Viagens: "operacao_viagens"
 };
 
 export default function MenuIsland({ activePage }) {
@@ -356,6 +359,18 @@ export default function MenuIsland({ activePage }) {
                 onClick={handleNavClick}
               >
                 <span>💰</span>Comissionamento
+              </a>
+            </li>
+          )}
+
+          {can("Operacao") && (
+            <li>
+              <a
+                className={`sidebar-link ${activePage === "operacao_viagens" ? "active" : ""}`}
+                href="/operacao/viagens"
+                onClick={handleNavClick}
+              >
+                <span>✈️</span>Viagens
               </a>
             </li>
           )}

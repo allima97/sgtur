@@ -430,7 +430,9 @@ const MAPA_MODULOS = {
   Admin: "admin",
   AdminDashboard: "admin_dashboard",
   AdminUsers: "admin_users",
-  AdminLogs: "admin_logs"
+  AdminLogs: "admin_logs",
+  Operacao: "operacao",
+  Viagens: "operacao_viagens"
 };
 function MenuIsland({ activePage }) {
   const [userId, setUserId] = reactExports.useState(null);
@@ -659,6 +661,18 @@ function MenuIsland({ activePage }) {
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "💰" }),
                 "Comissionamento"
+              ]
+            }
+          ) }),
+          can("Operacao") && /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "a",
+            {
+              className: `sidebar-link ${activePage === "operacao_viagens" ? "active" : ""}`,
+              href: "/operacao/viagens",
+              onClick: handleNavClick,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "✈️" }),
+                "Viagens"
               ]
             }
           ) }),

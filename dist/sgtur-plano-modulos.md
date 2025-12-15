@@ -160,6 +160,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Múltiplos recibos por venda:
     - produto, número, valor total, valor taxas
   - Salvamento atômico (venda + recibos)
+  - UX: toasts de sucesso/erro e validações explícitas
   - Auditoria:
     - `venda_criada`
 - Tecnologias:
@@ -199,6 +200,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     - Remarcar venda (alterar data de embarque)
     - Cancelar venda (exclui recibos + venda)
     - Excluir recibo individual
+  - UX: toasts padronizados para operações, tabela com header fixo em scroll
   - Auditoria:
     - `venda_cancelada`, `venda_remarcada`, `recibo_excluido`
 - Tecnologias:
@@ -345,13 +347,14 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Card **Situação do Orçamento** com KPIs por status (Novo/Enviado/Negociando/Fechado/Perdido), mostrando quantidade (`XX Itens`) e valor total; cores ajustadas (#1d4ed8 azul, amarelo, laranja, verde, vermelho).
   - Tabela dentro de card, espaçada dos KPIs, com status editável inline, modal de edição e conversão para venda.
   - Mensagens de sucesso/erro legíveis; autoatualização ao receber o evento `orcamento-criado`.
+  - Timeline de interações por orçamento (mensagem, responsável), envio/compartilhamento (link + e-mail), alerta/flag de follow-up, filtro “Só pendentes de follow-up” e badge “Sem interação”.
+  - Kanban opcional (ativável) para visão por etapa.
 - Cadastro:
   - Formulário com espaçamento vertical maior, botão “Criar orçamento” no padrão do sistema e ação “Limpar”.
   - Ao criar: dispara o evento `orcamento-criado`, exibe sucesso em preto/negrito.
 - Conversão:
   - Converter cria venda + recibo, encerra o orçamento e registra nota de referência.
 - Observações:
-  - Kanban removido (foco atual em lista + KPIs).
   - Exportação CSV disponível na consulta.
 
 ---
@@ -360,10 +363,10 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 
 ### 3.1 Orçamentos (próximos incrementos)
 
-- Histórico de interações mais rico (timeline, responsável, anexos).
-- Envio/compartilhamento do orçamento (PDF/WhatsApp/e-mail) com template.
-- Alertas/lembranças automáticas por status ou data de viagem.
-- Kanban opcional (drag-and-drop) se voltarmos a usar um funil visual.
+- PDF/WhatsApp/e-mail com template (hoje link + e-mail simples).
+- Anexos nas interações (hoje só texto).
+- Alertas/lembranças com templates por status ou data de viagem (cron já existe; falta parametrização de mensagens e liga/desliga por status).
+- Kanban com drag-and-drop (hoje leitura).
 - Relacionar interações diretamente a vendas criadas a partir do orçamento.
 
 ---
@@ -524,7 +527,6 @@ Tecnologias possíveis:
 - Criar formulário de cadastro de fornecedores dos produtos (cadastro completo)
 - linkar aos formulários de produtos, podendo ou não ter forcenedor (aceita null no banco de dados se o usuário não tiver acesso ao módulo de fornecedores, caso contrário ele é obrigado a cadastrar o fornecedor)
 
-
 ### 3.9 Marketing & Pós-Venda
 
 - Fluxos automáticos:
@@ -537,6 +539,172 @@ Tecnologias possíveis:
   - Tabela de templates de mensagens
 
 ---
+
+### 3.10 Automação / Crons
+
+- **Cron Alerta Orçamentos** (`/api/cron-alerta-orcamentos`): envia lembretes por status com `diasStatus`, suporta webhook + e-mail (Resend/SendGrid) e dry-run, grava log opcional em `cron_log_alertas`.
+- **Cron Alerta Comissão** (`/api/cron-alerta-comissao`): calcula atingimento mensal vs metas (`metas_vendedor`/`vendas`), envia resumo por canal e registra log.
+- Ambiente: `CRON_SECRET[_ALERTAS]`, `CRON_SECRET_COMISSAO`, Resend/SendGrid (opcional), webhook (opcional), `SUPABASE_SERVICE_ROLE_KEY`.
+- Próximos: painel para templates/mensagens por status e liga/desliga por canal; monitoramento via `cron_log_alertas`.
+
+---
+
+### 3.11 Viagens / Dossiê de Viagem
+
+- Objetivo: consolidar o pós-venda (serviços, vouchers, documentos, alertas ao passageiro).
+- Tabelas sugeridas:
+  - `viagens` (FK `venda_id` ou `orcamento_id`, status: planejada/confirmada/em_viagem/concluida/cancelada, datas de início/fim, origem/destino, responsável interno).
+  - `viagem_passageiros` (FK `cliente_id`, `viagem_id`, papel: passageiro/responsável).
+  - `viagem_servicos` (tipo: aéreo/hotel/terrestre/seguro/passeio; dados de reserva/PNR, `fornecedor_id`, valores, datas, anotações).
+  - `viagem_documentos` (tipo: voucher, bilhete, seguro, roteiro; URL em storage com `expires_at`, `assinado_por`).
+  - `viagem_checklist` opcional (tarefas pré/pós-viagem).
+- Funcionalidades:
+  - Tela `/operacao/viagens` com filtros por status, período e responsável; card com resumo e botão “Abrir dossiê”.
+  - Dossiê mostra timeline da viagem, passageiros, serviços (voos/hotel/transfer) e anexos; permite upload para Supabase Storage e geração de links assinados.
+  - Geração de dossiê PDF (roteiro + documentos) para envio por e-mail/WhatsApp; opção de compartilhar link temporário.
+  - Alertas automáticos (cron) X dias antes da viagem com checklist e documentos principais; logar em `cron_log_alertas`.
+  - Permissões: novo módulo `Operacao` ou reaproveitar `Vendas` com níveis de edição.
+- Tecnologias:
+  - Islands dedicados: `ViagensListaIsland`, `DossieViagemIsland`.
+  - Supabase Storage para anexos + geração de URLs assinadas.
+  - Cron usando a mesma estrutura dos alertas de orçamentos.
+
+### 3.12 Financeiro Operacional (Recebíveis/Pagamentos)
+
+- Objetivo: ligar vendas/recibos ao fluxo de caixa, conciliando recebimentos de clientes e pagamentos a fornecedores.
+- Tabelas sugeridas:
+  - `financeiro_contas_receber` (FK `venda_id`, `recibo_id`, `cliente_id`, `vencimento`, `valor_bruto`, `taxas`, `valor_liquido`, `forma_pagamento`, `status`, `comprovante_url`).
+  - `financeiro_contas_pagar` (FK `fornecedor_id`, `viagem_servico_id` ou `venda_id`, `vencimento`, `valor`, `status`).
+  - `financeiro_baixas` (vincula recebimento/pagamento à conciliação; armazena data, valor pago, quem registrou).
+  - Views para `fluxo_caixa` e `dre` (mês atual/anterior).
+- Funcionalidades:
+  - Tela `/financeiro/receber` com filtros (status, vencimento, vendedor) e ações de baixa parcial/total; exportação CSV/Excel.
+  - Tela `/financeiro/pagar` para compromissos com fornecedores, alerta de vencimento e upload de comprovantes.
+  - Conciliação automática opcional: webhook de pagamento (Stripe/MercadoPago) marca `contas_receber` como pago; manual via modal.
+  - Integração com comissionamento: comissão só considera recibos baixados (configurável).
+  - Auditoria: logs para baixas, alterações de vencimento e exclusões.
+- Tecnologias:
+  - Islands: `FinanceiroReceberIsland`, `FinanceiroPagarIsland`, `ConciliaPagamentoIsland`.
+  - Supabase Storage para comprovantes; policies alinhadas a `usePermissao("Vendas")`/`"Admin"`.
+  - Possível uso de Edge Functions para conciliação automática e reconciliação de split de pagamento.
+
+---
+
+### 3.13 Cadastro de Acompanhantes (Cliente/Viagem)
+
+- Objetivo: registrar acompanhantes de cada cliente e vinculá-los às viagens (pós-venda).
+- Tabelas sugeridas:
+  - `cliente_acompanhantes` (FK `cliente_id`; campos: `nome_completo`, `cpf`, `rg`, `telefone`, `grau_parentesco`, `data_nascimento`, `observacoes`, `ativo boolean default true`, `created_by`).
+  - `viagem_acompanhantes` (FK `viagem_id`, `acompanhante_id`, papel: acompanhante/passageiro principal, campos de documento/observação por viagem).
+- Funcionalidades:
+  - No cadastro de clientes: card “Acompanhantes” com CRUD inline (adicionar, editar, inativar); validações leves (CPF opcional, mas evitar duplicidade quando preenchido).
+  - No dossiê de viagem: seleção de passageiros inclui acompanhantes cadastrados; permite anexar documentos específicos para a viagem (ex: autorização de menor).
+  - Busca de acompanhantes por nome/CPF dentro do cliente; exibição no histórico do cliente.
+- Permissões:
+  - CRUD em clientes exige `usePermissao("Clientes")`; vínculo na viagem exige `usePermissao("Operacao")` ou `Vendas` conforme módulo escolhido.
+- Tecnologias:
+  - Islands: `ClienteAcompanhantesIsland` (embed no formulário de cliente) e reuso dentro de `DossieViagemIsland`.
+  - Supabase Storage opcional para documentos por viagem; RLS seguindo o escopo do cliente/viagem.
+
+---
+
+#### SQL de validação/ajuste (Supabase)
+
+```sql
+-- Viagens (criar primeiro para não quebrar FKs de viagem_acompanhantes)
+CREATE TABLE IF NOT EXISTS public.viagens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  venda_id uuid REFERENCES public.vendas(id) ON DELETE SET NULL,
+  orcamento_id uuid REFERENCES public.orcamentos(id) ON DELETE SET NULL,
+  company_id uuid NOT NULL REFERENCES public.companies(id),
+  responsavel_user_id uuid REFERENCES public.users(id),
+  origem text,
+  destino text,
+  data_inicio date,
+  data_fim date,
+  status text NOT NULL DEFAULT 'planejada' CHECK (status IN ('planejada','confirmada','em_viagem','concluida','cancelada')),
+  observacoes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_viagens_ref CHECK (venda_id IS NOT NULL OR orcamento_id IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_viagens_company_status ON public.viagens (company_id, status);
+
+-- Acompanhantes do cliente
+CREATE TABLE IF NOT EXISTS public.cliente_acompanhantes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id uuid NOT NULL REFERENCES public.clientes(id) ON DELETE CASCADE,
+  company_id uuid NOT NULL REFERENCES public.companies(id),
+  nome_completo text NOT NULL,
+  cpf text,
+  rg text,
+  telefone text,
+  grau_parentesco text,
+  data_nascimento date,
+  observacoes text,
+  ativo boolean NOT NULL DEFAULT true,
+  created_by uuid REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cliente_acompanhantes_cpf_cliente
+  ON public.cliente_acompanhantes (cliente_id, cpf) WHERE cpf IS NOT NULL;
+
+-- Acompanhantes vinculados à viagem (depois de viagens + cliente_acompanhantes)
+CREATE TABLE IF NOT EXISTS public.viagem_acompanhantes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  viagem_id uuid NOT NULL REFERENCES public.viagens(id) ON DELETE CASCADE,
+  acompanhante_id uuid NOT NULL REFERENCES public.cliente_acompanhantes(id) ON DELETE CASCADE,
+  company_id uuid NOT NULL REFERENCES public.companies(id),
+  papel text CHECK (papel IN ('passageiro', 'responsavel')),
+  documento_url text,
+  observacoes text,
+  created_by uuid REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_viagem_acompanhantes_viagem ON public.viagem_acompanhantes (viagem_id);
+```
+
+#### RLS sugeridas (ajustar ao modelo de tenancy)
+
+```sql
+-- Alinhar com o modelo atual: se company_id vem de claim, troque o join por current_setting('request.jwt.claims.company_id', true)
+ALTER TABLE public.cliente_acompanhantes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY cliente_acompanhantes_select ON public.cliente_acompanhantes
+  FOR SELECT USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY cliente_acompanhantes_ins ON public.cliente_acompanhantes
+  FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY cliente_acompanhantes_upd ON public.cliente_acompanhantes
+  FOR UPDATE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()))
+  WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY cliente_acompanhantes_del ON public.cliente_acompanhantes
+  FOR DELETE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+
+ALTER TABLE public.viagem_acompanhantes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY viagem_acompanhantes_select ON public.viagem_acompanhantes
+  FOR SELECT USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagem_acompanhantes_ins ON public.viagem_acompanhantes
+  FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagem_acompanhantes_upd ON public.viagem_acompanhantes
+  FOR UPDATE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()))
+  WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagem_acompanhantes_del ON public.viagem_acompanhantes
+  FOR DELETE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+
+ALTER TABLE public.viagens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY viagens_select ON public.viagens
+  FOR SELECT USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagens_ins ON public.viagens
+  FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagens_upd ON public.viagens
+  FOR UPDATE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()))
+  WITH CHECK (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+CREATE POLICY viagens_del ON public.viagens
+  FOR DELETE USING (company_id IN (SELECT company_id FROM public.users u WHERE u.id = auth.uid()));
+```
+
+> Ajuste as políticas se o multi-tenant for por claim (`current_setting('request.jwt.claims.company_id')`) ou por tabela intermediária (ex: `user_companies`); se não houver multi-tenant, simplifique para permissões baseadas em role/admin.
 
 ## 4. Melhorias Gerais Recomendadas
 
@@ -597,10 +765,10 @@ Tecnologias possíveis:
 
 ### 4.5 Checklist para não quebrar a lógica atual
 
-- **Banco alinhado**: `metas_vendedor_produto`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos` — garantir colunas e FKs existentes.
+- **Banco alinhado**: `metas_vendedor_produto`, `orcamentos.vendedor_id`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos`, `cron_log_alertas` — garantir colunas e FKs existentes.
 - **Parâmetros como fonte única**: `usar_taxas_na_meta` + `foco_valor` guiam tanto o atingimento de meta quanto a base de comissão (bruto x líquido).
 - **Produtos globais**: produtos marcados como “Disponível para todas as cidades” vêm de `tipo_produtos`; seleção de produtos não exige cadastro por cidade, mas a cidade da venda deve ser salva.
-- **Orçamentos**: lista + KPIs (sem Kanban), filtros em linha, tabela dentro de card; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
+- **Orçamentos**: lista + KPIs com filtros em linha, tabela dentro de card, timeline de interações, alerta de follow-up, envio/compartilhamento e Kanban opcional; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
 - **UI padrão**: tabelas sempre em `card-base`, botões primários/secondary/light padronizados, espaçamentos consistentes (filtros, formulários e KPIs).
 
 ---
@@ -638,5 +806,22 @@ Tecnologias possíveis:
 6. **Billing/Planos**: apenas quando fluxo operacional/financeiro estiver sólido.
 
 ---
+
+## 7. Checklist rápido (migrações + envs de crons)
+
+- Migrações/SQL:
+  - `public/migration-orcamentos-vendedor.sql` → adiciona `orcamentos.vendedor_id` (FK `users`) e prepara policies.
+  - `public/cron-log-alertas.sql` → cria tabela de auditoria `cron_log_alertas` (opcional, usada pelos crons).
+  - (já mencionado) garantir `metas_vendedor_produto` e colunas extras de produto/usuário, se ainda não aplicados.
+- Env necessários para os crons:
+  - Comum: `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` (ou específicos abaixo).
+  - Orçamentos (`/api/cron-alerta-orcamentos`): `CRON_SECRET_ALERTAS` (fallback `CRON_SECRET`), `ALERTA_WEBHOOK_URL` ou `WEBHOOK_ALERTA_ORCAMENTOS` (opcional), `RESEND_API_KEY` + `ALERTA_FROM_EMAIL` (opcional), ou `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` (opcional).
+  - Comissão (`/api/cron-alerta-comissao`): `CRON_SECRET_COMISSAO` (fallback `CRON_SECRET`), `ALERTA_WEBHOOK_COMISSAO` ou `ALERTA_WEBHOOK_URL` (opcional), `RESEND_API_KEY` + `ALERTA_FROM_EMAIL` ou `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL`.
+  - Header ao chamar: `x-cron-secret` deve bater com o secret configurado.
+
+---
+
+Nota Importante ---> Será preciso fazer Cadastro de acompanhates na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
+
 
 Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGTUR**.

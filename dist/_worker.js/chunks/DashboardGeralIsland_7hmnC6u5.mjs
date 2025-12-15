@@ -2,7 +2,7 @@ globalThis.process ??= {}; globalThis.process.env ??= {};
 import { j as jsxRuntimeExports, s as supabase } from './supabase_CtqDhMax.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from './usePermissao_CncspAO2.mjs';
-import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_DP1eWJUh.mjs';
+import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_CNtxTd7x.mjs';
 import { j as clsx } from './astro/server_C6IdV9ex.mjs';
 
 /**
@@ -1881,6 +1881,7 @@ const ALL_WIDGETS = [
   { id: "vendas_produto", titulo: "Vendas por produto" },
   { id: "timeline", titulo: "Evolução das vendas" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
+  { id: "viagens", titulo: "Próximas viagens" },
   { id: "aniversariantes", titulo: "Aniversariantes" }
 ];
 const BASE_KPIS = [
@@ -1929,6 +1930,7 @@ const DashboardGeralIsland = () => {
   const [userCtx, setUserCtx] = reactExports.useState(null);
   const [loadingUserCtx, setLoadingUserCtx] = reactExports.useState(true);
   const permissaoData = usePermissao("Dashboard");
+  const permissaoOperacao = usePermissao("Operacao");
   const [presetPeriodo, setPresetPeriodo] = reactExports.useState("mes_atual");
   const [inicio, setInicio] = reactExports.useState("");
   const [fim, setFim] = reactExports.useState("");
@@ -1936,6 +1938,7 @@ const DashboardGeralIsland = () => {
   const [orcamentos, setOrcamentos] = reactExports.useState([]);
   const [metas, setMetas] = reactExports.useState([]);
   const [clientes, setClientes] = reactExports.useState([]);
+  const [viagens, setViagens] = reactExports.useState([]);
   const [kpiProdutos, setKpiProdutos] = reactExports.useState([]);
   const [loadingDados, setLoadingDados] = reactExports.useState(true);
   const [erro, setErro] = reactExports.useState(null);
@@ -1967,6 +1970,27 @@ const DashboardGeralIsland = () => {
     vendas_produto: "bar",
     timeline: "line"
   });
+  reactExports.useEffect(() => {
+    const ids = ALL_WIDGETS.map((w) => w.id);
+    setWidgetOrder((prev) => {
+      const filtered = prev.filter((id) => ids.includes(id));
+      const missing = ids.filter((id) => !filtered.includes(id));
+      const next = [...filtered, ...missing];
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+    setWidgetVisible((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => {
+        if (next[id] === void 0) next[id] = true;
+      });
+      Object.keys(next).forEach((id) => {
+        if (!ids.includes(id)) {
+          delete next[id];
+        }
+      });
+      return next;
+    });
+  }, []);
   const toggleWidget = (id) => {
     const updated = { ...widgetVisible, [id]: !widgetVisible[id] };
     setWidgetVisible(updated);
@@ -2152,6 +2176,7 @@ const DashboardGeralIsland = () => {
   }, [allKpis]);
   reactExports.useEffect(() => {
     if (!userCtx || !inicio || !fim) return;
+    if (permissaoOperacao.loading) return;
     async function carregarDashboard() {
       try {
         setLoadingDados(true);
@@ -2202,6 +2227,23 @@ const DashboardGeralIsland = () => {
         if (metasErr) throw metasErr;
         const { data: clientesData, error: clientesErr } = await supabase.from("clientes").select("id, nome, nascimento, telefone");
         if (clientesErr) throw clientesErr;
+        if (permissaoOperacao.permissao === "none") {
+          setViagens([]);
+        } else {
+          try {
+            const hojeIso = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+            let viagensQuery = supabase.from("viagens").select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id").gte("data_inicio", hojeIso).order("data_inicio", { ascending: true }).limit(20);
+            if (userCtx.vendedorIds.length > 0) {
+              viagensQuery = viagensQuery.in("responsavel_user_id", userCtx.vendedorIds);
+            }
+            const { data: viagensData, error: viagensErr } = await viagensQuery;
+            if (viagensErr) throw viagensErr;
+            setViagens(viagensData || []);
+          } catch (viagensErr) {
+            console.warn("Não foi possível carregar viagens no dashboard:", viagensErr);
+            setViagens([]);
+          }
+        }
         const produtosKpi = (tiposData || []).filter((p) => p.exibe_kpi_comissao !== false).map((p) => ({
           id: `kpi_prod_${p.id}`,
           titulo: p.nome || "Produto",
@@ -2311,7 +2353,7 @@ const DashboardGeralIsland = () => {
       }
     }
     carregarDashboard();
-  }, [userCtx, inicio, fim]);
+  }, [userCtx, inicio, fim, permissaoOperacao.loading, permissaoOperacao.permissao]);
   const {
     totalVendas,
     qtdVendas,
@@ -2421,6 +2463,17 @@ const DashboardGeralIsland = () => {
       return d.getMonth() === mesAtual;
     });
   }, [clientes]);
+  const proximasViagens = reactExports.useMemo(() => {
+    const sorted = [...viagens].filter((v) => (v.status || "").toLowerCase() !== "cancelada").sort((a, b) => {
+      const da = a.data_inicio || "";
+      const db = b.data_inicio || "";
+      if (da === db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da < db ? -1 : 1;
+    });
+    return sorted.slice(0, 10);
+  }, [viagens]);
   const renderPieLegendList = (data) => {
     if (!data.length) return null;
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: data.map((entry, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
@@ -2728,6 +2781,35 @@ const DashboardGeralIsland = () => {
             ] })
           ] }) })
         ] });
+      case "viagens":
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 8 }, children: [
+            "Próximas viagens (",
+            proximasViagens.length,
+            ")"
+          ] }),
+          permissaoOperacao.permissao === "none" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Operação/Viagens." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[640px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Início" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Fim" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Origem" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ver" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+              proximasViagens.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhuma viagem futura." }) }),
+              proximasViagens.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.status || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.origem || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: `/operacao/viagens/${v.id}`, children: "Abrir" }) })
+              ] }, v.id))
+            ] })
+          ] }) })
+        ] });
       case "aniversariantes":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 8 }, children: [
@@ -2880,7 +2962,7 @@ const DashboardGeralIsland = () => {
           gap: 12,
           alignItems: "start"
         },
-        children: widgetOrder.filter((id) => ["orcamentos", "aniversariantes"].includes(id) && widgetAtivo(id)).map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: renderWidget(id) }, id))
+        children: widgetOrder.filter((id) => ["orcamentos", "viagens", "aniversariantes"].includes(id) && widgetAtivo(id)).map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: renderWidget(id) }, id))
       }
     ),
     showCustomize && /* @__PURE__ */ jsxRuntimeExports.jsx(

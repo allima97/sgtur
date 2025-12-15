@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../../components/ui/HeaderPage.astro";
+import ViagensListaIsland from "../../../components/islands/ViagensListaIsland.tsx";
+
+const activePage = "operacao_viagens";
+---
+
+<DashboardLayout title="Viagens" {activePage}>
+  <HeaderPage
+    title="Viagens"
+    subtitle="Acompanhe as viagens planejadas, em andamento e concluídas."
+    color="teal"
+  />
+
+  <ViagensListaIsland client:load />
+</DashboardLayout>

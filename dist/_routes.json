@@ -10,9 +10,16 @@
     "/cron-alerta-comissao.md",
     "/cron-alerta-orcamentos.md",
     "/cron-log-alertas.sql",
+    "/migration-clientes-active.sql",
+    "/migration-clientes-campos-endereco.sql",
+    "/migration-clientes-company-id.sql",
+    "/migration-modulo-operacao.sql",
     "/migration-orcamentos-vendedor.sql",
+    "/migration-viagens-acompanhantes.sql",
+    "/migration-viagens-servicos-documentos.sql",
     "/rls-policies-checklist.md",
     "/rls-policies.sql",
+    "/seed-cliente-acompanhantes.sql",
     "/sgtur-plano-modulos.md"
   ]
 }

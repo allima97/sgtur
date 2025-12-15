@@ -25,6 +25,19 @@ type Cliente = {
   notas: string | null;
   active: boolean;
   created_at: string | null;
+  company_id?: string | null;
+};
+
+type Acompanhante = {
+  id: string;
+  nome_completo: string;
+  cpf: string | null;
+  telefone: string | null;
+  grau_parentesco: string | null;
+  rg?: string | null;
+  data_nascimento?: string | null;
+  observacoes?: string | null;
+  ativo: boolean;
 };
 
 const initialForm = {
@@ -132,6 +145,24 @@ export default function ClientesIsland() {
     numero_venda: string | null;
   } | null>(null);
 
+  // Acompanhantes
+  const [acompanhantes, setAcompanhantes] = useState<Acompanhante[]>([]);
+  const [acompLoading, setAcompLoading] = useState(false);
+  const [acompErro, setAcompErro] = useState<string | null>(null);
+  const [acompForm, setAcompForm] = useState({
+    nome_completo: "",
+    cpf: "",
+    telefone: "",
+    grau_parentesco: "",
+    rg: "",
+    data_nascimento: "",
+    observacoes: "",
+    ativo: true,
+  });
+  const [acompEditId, setAcompEditId] = useState<string | null>(null);
+  const [acompSalvando, setAcompSalvando] = useState(false);
+  const [acompExcluindo, setAcompExcluindo] = useState<string | null>(null);
+
   // =====================================
   // CARREGAR CLIENTES
   // =====================================
@@ -144,19 +175,21 @@ export default function ClientesIsland() {
 
       const { data, error } = await supabase
         .from("clientes")
-        .select("*")
+        .select("*, company_id")
         .order("nome", { ascending: true });
 
       if (error) throw error;
 
       setClientes((data || []) as Cliente[]);
+      setAcompanhantes([]);
+      setAcompErro(null);
     } catch (e) {
       console.error(e);
-      setErro("Erro ao carregar clientes.");
-    } finally {
-      setLoading(false);
-    }
+    setErro("Erro ao carregar clientes.");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     if (!loadPerm && podeVer) carregar();
@@ -187,6 +220,9 @@ export default function ClientesIsland() {
     if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    setAcompEditId(null);
   }
 
   async function abrirHistorico(cliente: Cliente) {
@@ -433,6 +469,27 @@ export default function ClientesIsland() {
       setErro("Erro ao carregar histórico do cliente.");
     } finally {
       setLoadingHistorico(false);
+      carregarAcompanhantes(cliente.id);
+    }
+  }
+
+  async function carregarAcompanhantes(clienteId: string) {
+    try {
+      setAcompLoading(true);
+      setAcompErro(null);
+      const { data, error } = await supabase
+        .from("cliente_acompanhantes")
+        .select("*")
+        .eq("cliente_id", clienteId)
+        .order("nome_completo", { ascending: true });
+      if (error) throw error;
+      setAcompanhantes((data || []) as Acompanhante[]);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao carregar acompanhantes.");
+      setAcompanhantes([]);
+    } finally {
+      setAcompLoading(false);
     }
   }
 
@@ -443,6 +500,19 @@ export default function ClientesIsland() {
     setDetalheVenda(null);
     setDetalheRecibos([]);
     setDetalheOrcamento(null);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    setAcompEditId(null);
+    setAcompForm({
+      nome_completo: "",
+      cpf: "",
+      telefone: "",
+      grau_parentesco: "",
+      rg: "",
+      data_nascimento: "",
+      observacoes: "",
+      ativo: true,
+    });
   }
 
   async function verDetalheVenda(v: {
@@ -565,6 +635,7 @@ export default function ClientesIsland() {
       notas: c.notas || "",
       active: c.active,
     });
+    carregarAcompanhantes(c.id);
   }
 
   // =====================================
@@ -602,6 +673,11 @@ export default function ClientesIsland() {
         notas: form.notas || null,
         active: form.active,
       };
+
+      // garante que company_id siga igual ao existente (se houver)
+      if (historicoCliente?.company_id) {
+        (payload as any).company_id = historicoCliente.company_id;
+      }
 
       if (editId) {
         const { error } = await supabase
@@ -670,6 +746,112 @@ export default function ClientesIsland() {
       setErro("Não foi possível excluir este cliente.");
     } finally {
       setExcluindoId(null);
+    }
+  }
+
+  // =====================================
+  // ACOMPANHANTES (CRUD)
+  // =====================================
+  function resetAcompForm() {
+    setAcompForm({
+      nome_completo: "",
+      cpf: "",
+      telefone: "",
+      grau_parentesco: "",
+      rg: "",
+      data_nascimento: "",
+      observacoes: "",
+      ativo: true,
+    });
+    setAcompEditId(null);
+  }
+
+  function iniciarEdicaoAcomp(a: Acompanhante) {
+    setAcompEditId(a.id);
+    setAcompForm({
+      nome_completo: a.nome_completo || "",
+      cpf: a.cpf || "",
+      telefone: a.telefone || "",
+      grau_parentesco: a.grau_parentesco || "",
+      rg: a.rg || "",
+      data_nascimento: a.data_nascimento || "",
+      observacoes: a.observacoes || "",
+      ativo: a.ativo,
+    });
+  }
+
+  async function salvarAcompanhante() {
+    if (!historicoCliente) {
+      setAcompErro("Selecione um cliente antes de salvar acompanhante.");
+      return;
+    }
+    const companyId = (historicoCliente as any).company_id || null;
+    if (!companyId) {
+      setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
+      return;
+    }
+    const payload: any = {
+      cliente_id: historicoCliente.id,
+      company_id: companyId,
+      nome_completo: acompForm.nome_completo.trim(),
+      cpf: acompForm.cpf?.trim() || null,
+      telefone: acompForm.telefone?.trim() || null,
+      grau_parentesco: acompForm.grau_parentesco?.trim() || null,
+      rg: acompForm.rg?.trim() || null,
+      data_nascimento: acompForm.data_nascimento || null,
+      observacoes: acompForm.observacoes?.trim() || null,
+      ativo: acompForm.ativo,
+    };
+    if (!payload.nome_completo) {
+      setAcompErro("Informe o nome completo do acompanhante.");
+      return;
+    }
+
+    try {
+      setAcompSalvando(true);
+      setAcompErro(null);
+      if (acompEditId) {
+        const { error } = await supabase
+          .from("cliente_acompanhantes")
+          .update(payload)
+          .eq("id", acompEditId)
+          .eq("cliente_id", historicoCliente.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("cliente_acompanhantes")
+          .insert(payload);
+        if (error) throw error;
+      }
+      resetAcompForm();
+      await carregarAcompanhantes(historicoCliente.id);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao salvar acompanhante.");
+    } finally {
+      setAcompSalvando(false);
+    }
+  }
+
+  async function excluirAcompanhante(id: string) {
+    if (!podeExcluir || !historicoCliente) return;
+    if (!window.confirm("Remover acompanhante?")) return;
+    try {
+      setAcompExcluindo(id);
+      setAcompErro(null);
+      const { error } = await supabase
+        .from("cliente_acompanhantes")
+        .delete()
+        .eq("id", id)
+        .eq("cliente_id", historicoCliente.id);
+      if (error) throw error;
+      if (acompEditId === id) resetAcompForm();
+      await carregarAcompanhantes(historicoCliente.id);
+    } catch (e) {
+      console.error(e);
+      setAcompErro("Erro ao remover acompanhante.");
+    } finally {
+      setAcompExcluindo(null);
     }
   }
 
@@ -902,6 +1084,157 @@ export default function ClientesIsland() {
 
             {!loadingHistorico && (
               <>
+                <div className="card-base card-blue mb-2">
+                  <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
+                  {acompErro && (
+                    <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
+                  )}
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-header-blue min-w-[720px]">
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>CPF</th>
+                          <th>Telefone</th>
+                          <th>Parentesco</th>
+                          <th>Ativo</th>
+                          {(podeEditar || podeExcluir) && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {acompLoading && (
+                          <tr>
+                            <td colSpan={6}>Carregando acompanhantes...</td>
+                          </tr>
+                        )}
+                        {!acompLoading && acompanhantes.length === 0 && (
+                          <tr>
+                            <td colSpan={6}>Nenhum acompanhante cadastrado.</td>
+                          </tr>
+                        )}
+                        {!acompLoading &&
+                          acompanhantes.map((a) => (
+                            <tr key={a.id}>
+                              <td>{a.nome_completo}</td>
+                              <td>{a.cpf || "-"}</td>
+                              <td>{a.telefone || "-"}</td>
+                              <td>{a.grau_parentesco || "-"}</td>
+                              <td>{a.ativo ? "Sim" : "Não"}</td>
+                              {(podeEditar || podeExcluir) && (
+                                <td className="th-actions" style={{ textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }}>
+                                  {podeEditar && (
+                                    <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
+                                      ✏️
+                                    </button>
+                                  )}
+                                  {podeExcluir && (
+                                    <button
+                                      className="btn-icon btn-danger"
+                                      type="button"
+                                      onClick={() => excluirAcompanhante(a.id)}
+                                      disabled={acompExcluindo === a.id}
+                                      title="Excluir"
+                                    >
+                                      {acompExcluindo === a.id ? "..." : "🗑️"}
+                                    </button>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {podeCriar && (
+                    <div className="card-base" style={{ marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
+                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                        {acompEditId ? "Editar acompanhante" : "Adicionar acompanhante"}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">Nome completo</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.nome_completo}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">CPF</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.cpf}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Telefone</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.telefone}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Parentesco</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.grau_parentesco}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
+                            placeholder="Ex: Esposa, Filho"
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">RG</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.rg}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Data nascimento</label>
+                          <input
+                            type="date"
+                            className="form-input"
+                            value={acompForm.data_nascimento}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Observações</label>
+                          <input
+                            className="form-input"
+                            value={acompForm.observacoes}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group" style={{ alignSelf: "flex-end" }}>
+                          <label className="form-label">Ativo</label>
+                          <input
+                            type="checkbox"
+                            checked={acompForm.ativo}
+                            onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
+                          {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Adicionar acompanhante"}
+                        </button>
+                        {acompEditId && (
+                          <button className="btn btn-light" type="button" onClick={resetAcompForm} disabled={acompSalvando}>
+                            Cancelar edição
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="card-base mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>
                   <div className="table-container overflow-x-auto">

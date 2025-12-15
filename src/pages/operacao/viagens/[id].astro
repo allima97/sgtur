@@ -1,0 +1,18 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../../components/ui/HeaderPage.astro";
+import DossieViagemIsland from "../../../components/islands/DossieViagemIsland.tsx";
+
+const { id } = Astro.params;
+const activePage = "operacao_viagens";
+---
+
+<DashboardLayout title="Dossiê da Viagem" {activePage}>
+  <HeaderPage
+    title="Dossiê da Viagem"
+    subtitle="Detalhes, passageiros e documentos vinculados."
+    color="teal"
+  />
+
+  <DossieViagemIsland client:load viagemId={id} />
+</DashboardLayout>

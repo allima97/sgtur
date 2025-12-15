@@ -81,6 +81,16 @@ type Cliente = {
   telefone: string | null;
 };
 
+type Viagem = {
+  id: string;
+  data_inicio: string | null;
+  data_fim: string | null;
+  status: string | null;
+  origem: string | null;
+  destino: string | null;
+  responsavel_user_id: string | null;
+};
+
 type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
 
 type WidgetId =
@@ -89,6 +99,7 @@ type WidgetId =
   | "vendas_produto"
   | "timeline"
   | "orcamentos"
+  | "viagens"
   | "aniversariantes";
 
 type KpiId = string;
@@ -101,6 +112,7 @@ const ALL_WIDGETS: { id: WidgetId; titulo: string }[] = [
   { id: "vendas_produto", titulo: "Vendas por produto" },
   { id: "timeline", titulo: "Evolução das vendas" },
   { id: "orcamentos", titulo: "Orçamentos recentes" },
+  { id: "viagens", titulo: "Próximas viagens" },
   { id: "aniversariantes", titulo: "Aniversariantes" },
 ];
 
@@ -160,6 +172,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [userCtx, setUserCtx] = useState<UserContext | null>(null);
   const [loadingUserCtx, setLoadingUserCtx] = useState(true);
   const permissaoData = usePermissao("Dashboard");
+  const permissaoOperacao = usePermissao("Operacao");
 
   const [presetPeriodo, setPresetPeriodo] =
     useState<PresetPeriodo>("mes_atual");
@@ -170,6 +183,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [metas, setMetas] = useState<MetaVendedor[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [viagens, setViagens] = useState<Viagem[]>([]);
   const [kpiProdutos, setKpiProdutos] = useState<{ id: KpiId; titulo: string; produtoId: string }[]>([]);
   const [loadingDados, setLoadingDados] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -201,6 +215,29 @@ const DashboardGeralIsland: React.FC = () => {
     vendas_produto: "bar",
     timeline: "line",
   } as Record<WidgetId, ChartType>);
+
+  // Garante que novos widgets entram no order/visibility mesmo com preferências antigas
+  useEffect(() => {
+    const ids = ALL_WIDGETS.map((w) => w.id);
+    setWidgetOrder((prev) => {
+      const filtered = prev.filter((id) => ids.includes(id));
+      const missing = ids.filter((id) => !filtered.includes(id));
+      const next = [...filtered, ...missing];
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+    setWidgetVisible((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => {
+        if (next[id] === undefined) next[id] = true;
+      });
+      Object.keys(next).forEach((id) => {
+        if (!ids.includes(id as WidgetId)) {
+          delete next[id as WidgetId];
+        }
+      });
+      return next;
+    });
+  }, []);
 
   const toggleWidget = (id: WidgetId) => {
     const updated = { ...widgetVisible, [id]: !widgetVisible[id] };
@@ -449,6 +486,7 @@ const DashboardGeralIsland: React.FC = () => {
 
   useEffect(() => {
     if (!userCtx || !inicio || !fim) return;
+    if (permissaoOperacao.loading) return;
 
     async function carregarDashboard() {
       try {
@@ -536,6 +574,33 @@ const DashboardGeralIsland: React.FC = () => {
           .select("id, nome, nascimento, telefone");
 
         if (clientesErr) throw clientesErr;
+
+        // ----- VIAGENS (próximas) -----
+        if (permissaoOperacao.permissao === "none") {
+          setViagens([]);
+        } else {
+          try {
+            const hojeIso = new Date().toISOString().slice(0, 10);
+            let viagensQuery = supabase
+              .from("viagens")
+              .select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id")
+              .gte("data_inicio", hojeIso)
+              .order("data_inicio", { ascending: true })
+              .limit(20);
+
+            // Se houver escopo de vendedor/gestor, filtra por responsável
+            if (userCtx.vendedorIds.length > 0) {
+              viagensQuery = viagensQuery.in("responsavel_user_id", userCtx.vendedorIds);
+            }
+
+            const { data: viagensData, error: viagensErr } = await viagensQuery;
+            if (viagensErr) throw viagensErr;
+            setViagens((viagensData || []) as Viagem[]);
+          } catch (viagensErr) {
+            console.warn("Não foi possível carregar viagens no dashboard:", viagensErr);
+            setViagens([]);
+          }
+        }
 
         const produtosKpi =
           (tiposData || [])
@@ -670,7 +735,7 @@ const DashboardGeralIsland: React.FC = () => {
     }
 
     carregarDashboard();
-  }, [userCtx, inicio, fim]);
+  }, [userCtx, inicio, fim, permissaoOperacao.loading, permissaoOperacao.permissao]);
 
   // ----------------- DERIVADOS: KPI -----------------
 
@@ -822,6 +887,20 @@ const DashboardGeralIsland: React.FC = () => {
       return d.getMonth() === mesAtual;
     });
   }, [clientes]);
+
+  const proximasViagens = useMemo(() => {
+    const sorted = [...viagens]
+      .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
+      .sort((a, b) => {
+        const da = a.data_inicio || "";
+        const db = b.data_inicio || "";
+        if (da === db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da < db ? -1 : 1;
+      });
+    return sorted.slice(0, 10);
+  }, [viagens]);
 
   const renderPieLegendList = (data: { name: string; value: number }[]) => {
     if (!data.length) return null;
@@ -1192,6 +1271,51 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
+      case "viagens":
+        return (
+          <div className="card-base card-purple mb-3">
+            <h3 style={{ marginBottom: 8 }}>Próximas viagens ({proximasViagens.length})</h3>
+            {permissaoOperacao.permissao === "none" ? (
+              <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
+            ) : (
+              <div className="table-container overflow-x-auto">
+                <table className="table-default min-w-[640px]">
+                  <thead>
+                    <tr>
+                      <th>Início</th>
+                      <th>Fim</th>
+                      <th>Status</th>
+                      <th>Origem</th>
+                      <th>Destino</th>
+                      <th>Ver</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {proximasViagens.length === 0 && (
+                      <tr>
+                        <td colSpan={6}>Nenhuma viagem futura.</td>
+                      </tr>
+                    )}
+                    {proximasViagens.map((v) => (
+                      <tr key={v.id}>
+                        <td>{v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-"}</td>
+                        <td>{v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-"}</td>
+                        <td>{v.status || "-"}</td>
+                        <td>{v.origem || "-"}</td>
+                        <td>{v.destino || "-"}</td>
+                        <td>
+                          <a className="btn btn-light" href={`/operacao/viagens/${v.id}`}>
+                            Abrir
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
       case "aniversariantes":
         return (
           <div className="card-base card-purple mb-3">
@@ -1373,7 +1497,7 @@ const DashboardGeralIsland: React.FC = () => {
         }}
       >
         {widgetOrder
-          .filter((id) => ["orcamentos", "aniversariantes"].includes(id) && widgetAtivo(id as WidgetId))
+          .filter((id) => ["orcamentos", "viagens", "aniversariantes"].includes(id) && widgetAtivo(id as WidgetId))
           .map((id) => (
             <div key={id}>{renderWidget(id as WidgetId)}</div>
           ))}
