@@ -1,0 +1,17 @@
+﻿---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import FornecedoresIsland from "../../components/islands/FornecedoresIsland.tsx";
+
+const activePage = "fornecedores";
+---
+
+<DashboardLayout title="Fornecedores" {activePage}>
+  <HeaderPage
+    title="Fornecedores"
+    subtitle="Cadastre parceiros nacionais e internacionais."
+    color="teal"
+  />
+
+  <FornecedoresIsland client:load />
+</DashboardLayout>

@@ -446,6 +446,15 @@ export default function MenuIsland({ activePage }) {
                 <span>🎫</span>Produtos
               </a>
             </li>
+            <li>
+              <a
+                className={`sidebar-link ${activePage === "fornecedores" ? "active" : ""}`}
+                href="/cadastros/fornecedores"
+                onClick={handleNavClick}
+              >
+                <span>🎧</span>Fornecedores
+              </a>
+            </li>
           </ul>
         </div>
       )}

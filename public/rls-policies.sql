@@ -190,6 +190,23 @@ create policy "viagens_write" on public.viagens
                              (select u.company_id from public.users u where u.id = auth.uid()))
   );
 
+-- FORNECEDORES (multi-tenant via company_id)
+alter table public.fornecedores enable row level security;
+drop policy if exists "fornecedores_select" on public.fornecedores;
+create policy "fornecedores_select" on public.fornecedores
+  for select using (
+    is_admin(auth.uid())
+    or company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                             (select u.company_id from public.users u where u.id = auth.uid()))
+  );
+drop policy if exists "fornecedores_write" on public.fornecedores;
+create policy "fornecedores_write" on public.fornecedores
+  for all using (
+    is_admin(auth.uid())
+    or company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                             (select u.company_id from public.users u where u.id = auth.uid()))
+  );
+
 -- CLIENTE_ACOMPANHANTES (multi-tenant por company_id)
 alter table public.cliente_acompanhantes enable row level security;
 drop policy if exists "cliente_acompanhantes_select" on public.cliente_acompanhantes;

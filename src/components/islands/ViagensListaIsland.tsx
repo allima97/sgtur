@@ -236,32 +236,56 @@ export default function ViagensListaIsland() {
   async function criarViagem() {
     if (!podeCriar) return;
     if (!companyId || !userId) {
-      setFormError("Não foi possível determinar sua empresa.");
+      setFormError("NÇőo foi possÇ§vel determinar sua empresa.");
       return;
     }
     if (!cadastroForm.cliente_id) {
-      setFormError("Selecione o cliente responsável.");
+      setFormError("Selecione o cliente responsÂvel.");
       return;
     }
     if (!cadastroForm.origem || !cadastroForm.destino || !cadastroForm.data_inicio) {
-      setFormError("Origem, destino e data de início são obrigatórios.");
+      setFormError("Origem, destino e data de inÃ­cio sÇőo obrigatÃ³rios.");
       return;
     }
+
+    let orcamentoId: string | null = null;
     try {
       setSavingViagem(true);
       setFormError(null);
+
+      const origemLabel = cadastroForm.origem.trim();
+      const destinoLabel = cadastroForm.destino.trim();
+      const { data: orcamentoData, error: orcamentoError } = await supabase
+        .from("orcamentos")
+        .insert({
+          cliente_id: cadastroForm.cliente_id,
+          status: "novo",
+          data_viagem: cadastroForm.data_inicio,
+          notas: `Viagem criada via Operacao: ${origemLabel} -> ${destinoLabel}`,
+        })
+        .select("id")
+        .single();
+
+      if (orcamentoError) throw orcamentoError;
+      orcamentoId = orcamentoData?.id || null;
+      if (!orcamentoId) {
+        throw new Error("Nao foi possivel vincular um orcamento.");
+      }
+
       const payload = {
         company_id: companyId,
         responsavel_user_id: userId,
         cliente_id: cadastroForm.cliente_id,
-        origem: cadastroForm.origem.trim(),
-        destino: cadastroForm.destino.trim(),
+        origem: origemLabel,
+        destino: destinoLabel,
         data_inicio: cadastroForm.data_inicio,
         data_fim: cadastroForm.data_fim || null,
         status: cadastroForm.status,
+        orcamento_id: orcamentoId,
       };
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
+
       setCadastroForm({
         origem: "",
         destino: "",
@@ -272,9 +296,19 @@ export default function ViagensListaIsland() {
       });
       setShowForm(false);
       buscar();
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
-      setFormError("Erro ao criar viagem.");
+      if (orcamentoId) {
+        const { error: cleanupError } = await supabase.from("orcamentos").delete().eq("id", orcamentoId);
+        if (cleanupError) {
+          console.warn("Nao foi possivel remover o orcamento temporario:", cleanupError);
+        }
+      }
+      const errorMessage =
+        e && typeof e === "object" && e !== null && "message" in e && typeof (e as { message?: string }).message === "string"
+          ? (e as { message?: string }).message
+          : null;
+      setFormError(errorMessage || "Erro ao criar viagem.");
     } finally {
       setSavingViagem(false);
     }
