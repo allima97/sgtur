@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/_astro/*",
+    "/.DS_Store",
+    "/SGTUR_DOCUMENTACAO.md",
+    "/cron-alerta-comissao.md",
+    "/cron-alerta-orcamentos.md",
+    "/cron-log-alertas.sql",
+    "/migration-orcamentos-vendedor.sql",
+    "/rls-policies-checklist.md",
+    "/rls-policies.sql",
+    "/sgtur-plano-modulos.md"
+  ]
+}

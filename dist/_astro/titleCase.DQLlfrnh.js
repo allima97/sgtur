@@ -1,0 +1,1 @@
+const a=new Set(["de","da","do","das","dos","e","a","o","as","os","em","para","por"]);function n(r){const e=(r||"").trim();return e?e.split(/\s+/).map((o,s)=>{const t=o.toLowerCase();return s>0&&a.has(t)?t:t.charAt(0).toUpperCase()+t.slice(1)}).join(" "):""}export{n as t};

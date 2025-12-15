@@ -35,6 +35,12 @@ type FormRecibo = {
   valor_taxas: string;
 };
 
+type Toast = {
+  id: number;
+  message: string;
+  type: "success" | "error";
+};
+
 const initialVenda: FormVenda = {
   cliente_id: "",
   destino_id: "",
@@ -99,6 +105,8 @@ export default function VendasCadastroIsland() {
   const [salvando, setSalvando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingVenda, setLoadingVenda] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toastCounter, setToastCounter] = useState(0);
 
   // AUTOCOMPLETE (cliente, cidade de destino, produto)
 const [buscaCliente, setBuscaCliente] = useState("");
@@ -152,6 +160,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar dados.");
+      showToast("Erro ao carregar dados.", "error");
     } finally {
       setLoading(false);
     }
@@ -231,6 +240,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar venda para edição.");
+      showToast("Erro ao carregar venda para edição.", "error");
     } finally {
       setLoadingVenda(false);
     }
@@ -383,6 +393,17 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     setMostrarSugestoesCidade(true);
   }
 
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToastCounter((prev) => {
+      const id = prev + 1;
+      setToasts((current) => [...current, { id, message, type }]);
+      setTimeout(() => {
+        setToasts((current) => current.filter((t) => t.id !== id));
+      }, 3500);
+      return id;
+    });
+  }
+
   // =======================================================
   // HANDLERS
   // =======================================================
@@ -459,11 +480,13 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
     if (!podeCriar && !isAdmin) {
       setErro("Você não possui permissão para cadastrar vendas.");
+      showToast("Você não possui permissão para cadastrar vendas.", "error");
       return;
     }
 
     if (recibos.length === 0) {
       setErro("Uma venda precisa ter ao menos 1 recibo.");
+      showToast("Inclua ao menos um recibo na venda.", "error");
       return;
     }
 
@@ -475,12 +498,14 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       const userId = auth?.user?.id;
       if (!userId) {
         setErro("Usuário não autenticado.");
+        showToast("Usuário não autenticado.", "error");
         setSalvando(false);
         return;
       }
 
       if (!recibos.length) {
         setErro("Uma venda precisa ter ao menos 1 recibo.");
+        showToast("Inclua ao menos um recibo na venda.", "error");
         setSalvando(false);
         return;
       }
@@ -488,6 +513,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       const produtoDestinoIdRaw = recibos[0]?.produto_id;
       if (!produtoDestinoIdRaw) {
         setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
+        showToast("Selecione um produto para o recibo principal.", "error");
         setSalvando(false);
         return;
       }
@@ -500,6 +526,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
       if (possuiProdutoLocal && !formVenda.destino_id) {
         setErro("Selecione a cidade de destino para vendas com produtos vinculados a cidade.");
+        showToast("Selecione a cidade de destino.", "error");
         setSalvando(false);
         return;
       }
@@ -612,8 +639,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           detalhes: { id: editId, venda: formVenda, recibos },
         });
 
-        alert("Venda atualizada com sucesso!");
-        resetFormAndGoToConsulta();
+        showToast("Venda atualizada com sucesso!", "success");
+        setTimeout(() => resetFormAndGoToConsulta(), 200);
       } else {
         // 1) INSERE VENDA
         const { data: vendaData, error: vendaErr } = await supabase
@@ -673,14 +700,15 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           },
         });
 
-        alert("Venda cadastrada com sucesso!");
-        resetFormAndGoToConsulta();
+        showToast("Venda cadastrada com sucesso!", "success");
+        setTimeout(() => resetFormAndGoToConsulta(), 200);
       }
     } catch (e: any) {
       console.error(e);
       const detalhes = e?.message || e?.error?.message || "";
       const cod = e?.code || e?.error?.code || "";
       setErro(`Erro ao salvar venda.${cod ? ` Código: ${cod}.` : ""}${detalhes ? ` Detalhes: ${detalhes}` : ""}`);
+      showToast("Erro ao salvar venda.", "error");
     } finally {
       setSalvando(false);
     }
@@ -973,6 +1001,35 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           </div>
         </form>
       </div>
+      {toasts.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            display: "grid",
+            gap: 8,
+            zIndex: 9999,
+            maxWidth: "320px",
+          }}
+        >
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className="card-base"
+              style={{
+                padding: "10px 12px",
+                background: t.type === "success" ? "#ecfdf3" : "#fee2e2",
+                border: `1px solid ${t.type === "success" ? "#16a34a" : "#ef4444"}`,
+                color: "#0f172a",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+              }}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,13 @@
 ---
-layout: ../../layouts/DashboardLayout.astro
-title: Importar Vendas
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import ImportarVendasIsland from "../../components/islands/ImportarVendasIsland.tsx";
+
+const activePage = "importar-vendas";
 ---
 
-<ImportarVendasIsland />
+<DashboardLayout title="Importar Vendas" {activePage}>
+  <h1 class="page-title">Importar Vendas</h1>
+  <p class="page-subtitle">Envie uma planilha Excel (.xlsx) para importar vendas em lote.</p>
+
+  <ImportarVendasIsland client:load />
+</DashboardLayout>

@@ -30,6 +30,12 @@ type Recibo = {
   produto_nome?: string | null;
 };
 
+type Toast = {
+  id: number;
+  message: string;
+  type: "success" | "error";
+};
+
 type Papel = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
 type UserCtx = {
@@ -69,6 +75,8 @@ export default function VendasConsultaIsland() {
   const [salvando, setSalvando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [excluindoRecibo, setExcluindoRecibo] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toastCounter, setToastCounter] = useState(0);
 
   // ================================
   // CONTEXTO DE USUÁRIO (papel/vendedorIds)
@@ -283,6 +291,7 @@ export default function VendasConsultaIsland() {
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar vendas.");
+      showToast("Erro ao carregar vendas.", "error");
     } finally {
       setLoading(false);
     }
@@ -322,6 +331,15 @@ export default function VendasConsultaIsland() {
     return recibos.filter((r) => r.venda_id === id);
   }
 
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToastCounter((prev) => prev + 1);
+    const id = toastCounter + 1;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  }
+
   // ================================
   // CANCELAR VENDA
   // ================================
@@ -347,9 +365,11 @@ export default function VendasConsultaIsland() {
 
       await carregar();
       setModalVenda(null);
+      showToast("Venda cancelada.", "success");
     } catch (e) {
       console.error(e);
-      alert("Erro ao cancelar venda.");
+      setErro("Erro ao cancelar venda.");
+      showToast("Erro ao cancelar venda.", "error");
     } finally {
       setCancelando(false);
     }
@@ -374,9 +394,11 @@ export default function VendasConsultaIsland() {
       });
 
       await carregar();
+      showToast("Recibo excluído.", "success");
     } catch (e) {
       console.error(e);
-      alert("Erro ao excluir recibo.");
+      setErro("Erro ao excluir recibo.");
+      showToast("Erro ao excluir recibo.", "error");
     } finally {
       setExcluindoRecibo(null);
     }
@@ -403,9 +425,11 @@ export default function VendasConsultaIsland() {
       });
 
       await carregar();
+      showToast("Data de embarque atualizada.", "success");
     } catch (e) {
       console.error(e);
-      alert("Erro ao remarcar.");
+      setErro("Erro ao remarcar venda.");
+      showToast("Erro ao remarcar.", "error");
     } finally {
       setSalvando(false);
     }
@@ -475,9 +499,9 @@ export default function VendasConsultaIsland() {
       )}
 
       {/* TABELA */}
-      <div className="table-container overflow-x-auto">
+      <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
         <table className="table-default table-header-green min-w-[820px]">
-          <thead>
+          <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
             <tr>
               <th>Cliente</th>
               <th>Destino</th>
@@ -706,6 +730,35 @@ export default function VendasConsultaIsland() {
               </div>
             )}
           </div>
+        </div>
+      )}
+      {toasts.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            display: "grid",
+            gap: 8,
+            zIndex: 9999,
+            maxWidth: "320px",
+          }}
+        >
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className="card-base"
+              style={{
+                padding: "10px 12px",
+                background: t.type === "success" ? "#ecfdf3" : "#fee2e2",
+                border: `1px solid ${t.type === "success" ? "#16a34a" : "#ef4444"}`,
+                color: "#0f172a",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+              }}
+            >
+              {t.message}
+            </div>
+          ))}
         </div>
       )}
     </div>
