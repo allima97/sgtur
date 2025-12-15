@@ -822,7 +822,24 @@ CREATE POLICY viagens_del ON public.viagens
 
 ---
 
-Nota Importante ---> Será preciso fazer Cadastro de acompanhates na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
+Nota Importante ---> Será preciso fazer Cadastro de acompanhantes na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
 
 
 Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGTUR**.
+## 5. Planejamento de módulos ainda pendentes
+
+O SGTUR deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo estão os módulos que ainda estão em roadmap e precisam ser detalhados/executados:
+
+- **Cadastros avançados:** Clientes, Fornecedores, Tarifários, Serviços, Bloqueios, Aeroportos, Emissores, Promotores, Estoques de Bilhetes, Usuários, Tipos de Tarifa, Moedas, Cotações, Parametrizações e afins. Cada item precisa de CRUD completo, permissões granulares e auditoria.
+- **Vendas individuais (FIT):** Controle operacional de cotações e vendas individuais, com regras de comissionamento, reservas, tarifas e acompanhamento de status de orçamento até emissão.
+- **Vendas em grupo:** Gestão operacional de grupos (aéreos/rodoviários), inclusive room lists, listas de passageiros, orçamentos consolidados e distribuição de pagamento.
+- **Interfaces com GDS:** Captura automática de reservas originadas em AMADEUS, GALILEO, SABRE e WORLSPAN para evitar retrabalho manual na entrada de dados.
+- **Documentos de viagem:** Geração de documentos operacionais — orçamento, confirmação, solicitação de reservas, voucher, contrato, ordem de passagem (OP), room list, air/bus list, solicitação de reembolso etc. Deve-se manter template e histórico de envios.
+- **Financeiro completo:** Contas a receber, contas a pagar, fluxo de caixa, caixa/bancos e notas fiscais com integração ao módulo contábil e conciliações automáticas quando possível.
+- **Consultas na tela:** Dashboards e telas de consulta envolvendo cadastros, vendas, reservas, financeiro, comissões, posições, mapas de ocupação e demais indicadores operacionais.
+- **Estoque de bilhetes:** Controle integrado com vendas e reservas para rastrear segmentos emitidos, bloqueios, remanescentes e alertas de overbooking.
+- **Mala direta:** Emissão de etiquetas e listas de contatos (clientes, fornecedores, passageiros) para campanhas, envios físicos ou logísticos.
+- **Reembolso:** Fluxo completo de solicitação, recebimento e pagamento de reembolsos, com impacto automático no financeiro e registro de comprovantes.
+- **Relatórios avançados:** Mapa de vendas, rankings, cálculo de comissão, posição de vendas de grupos, room nights, room list, carta de bilhetes, fluxo de caixa, títulos em aberto/recebidos/pagos, extratos e saldos por centro de custo.
+
+Cada bloco acima pode virar um epic no backlog e deve ser priorizado conforme o impacto operacional. Recomenda-se criar histórias específicas (ex: “interface com GDS Galileo”, “relatório de fluxo caixa”) e validar com equipes de operação antes de codificar.
