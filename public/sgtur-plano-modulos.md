@@ -160,6 +160,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Múltiplos recibos por venda:
     - produto, número, valor total, valor taxas
   - Salvamento atômico (venda + recibos)
+  - UX: toasts de sucesso/erro e validações explícitas
   - Auditoria:
     - `venda_criada`
 - Tecnologias:
@@ -199,6 +200,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     - Remarcar venda (alterar data de embarque)
     - Cancelar venda (exclui recibos + venda)
     - Excluir recibo individual
+  - UX: toasts padronizados para operações, tabela com header fixo em scroll
   - Auditoria:
     - `venda_cancelada`, `venda_remarcada`, `recibo_excluido`
 - Tecnologias:
@@ -345,13 +347,14 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Card **Situação do Orçamento** com KPIs por status (Novo/Enviado/Negociando/Fechado/Perdido), mostrando quantidade (`XX Itens`) e valor total; cores ajustadas (#1d4ed8 azul, amarelo, laranja, verde, vermelho).
   - Tabela dentro de card, espaçada dos KPIs, com status editável inline, modal de edição e conversão para venda.
   - Mensagens de sucesso/erro legíveis; autoatualização ao receber o evento `orcamento-criado`.
+  - Timeline de interações por orçamento (mensagem, responsável), envio/compartilhamento (link + e-mail), alerta/flag de follow-up, filtro “Só pendentes de follow-up” e badge “Sem interação”.
+  - Kanban opcional (ativável) para visão por etapa.
 - Cadastro:
   - Formulário com espaçamento vertical maior, botão “Criar orçamento” no padrão do sistema e ação “Limpar”.
   - Ao criar: dispara o evento `orcamento-criado`, exibe sucesso em preto/negrito.
 - Conversão:
   - Converter cria venda + recibo, encerra o orçamento e registra nota de referência.
 - Observações:
-  - Kanban removido (foco atual em lista + KPIs).
   - Exportação CSV disponível na consulta.
 
 ---
@@ -360,10 +363,10 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 
 ### 3.1 Orçamentos (próximos incrementos)
 
-- Histórico de interações mais rico (timeline, responsável, anexos).
-- Envio/compartilhamento do orçamento (PDF/WhatsApp/e-mail) com template.
-- Alertas/lembranças automáticas por status ou data de viagem.
-- Kanban opcional (drag-and-drop) se voltarmos a usar um funil visual.
+- PDF/WhatsApp/e-mail com template (hoje link + e-mail simples).
+- Anexos nas interações (hoje só texto).
+- Alertas/lembranças com templates por status ou data de viagem (cron já existe; falta parametrização de mensagens e liga/desliga por status).
+- Kanban com drag-and-drop (hoje leitura).
 - Relacionar interações diretamente a vendas criadas a partir do orçamento.
 
 ---
@@ -524,7 +527,6 @@ Tecnologias possíveis:
 - Criar formulário de cadastro de fornecedores dos produtos (cadastro completo)
 - linkar aos formulários de produtos, podendo ou não ter forcenedor (aceita null no banco de dados se o usuário não tiver acesso ao módulo de fornecedores, caso contrário ele é obrigado a cadastrar o fornecedor)
 
-
 ### 3.9 Marketing & Pós-Venda
 
 - Fluxos automáticos:
@@ -535,6 +537,15 @@ Tecnologias possíveis:
   - Integração com provedor de e-mail (SendGrid / Resend)
   - Webhooks ou funções agendadas (cron no Supabase)
   - Tabela de templates de mensagens
+
+---
+
+### 3.10 Automação / Crons
+
+- **Cron Alerta Orçamentos** (`/api/cron-alerta-orcamentos`): envia lembretes por status com `diasStatus`, suporta webhook + e-mail (Resend/SendGrid) e dry-run, grava log opcional em `cron_log_alertas`.
+- **Cron Alerta Comissão** (`/api/cron-alerta-comissao`): calcula atingimento mensal vs metas (`metas_vendedor`/`vendas`), envia resumo por canal e registra log.
+- Ambiente: `CRON_SECRET[_ALERTAS]`, `CRON_SECRET_COMISSAO`, Resend/SendGrid (opcional), webhook (opcional), `SUPABASE_SERVICE_ROLE_KEY`.
+- Próximos: painel para templates/mensagens por status e liga/desliga por canal; monitoramento via `cron_log_alertas`.
 
 ---
 
@@ -597,10 +608,10 @@ Tecnologias possíveis:
 
 ### 4.5 Checklist para não quebrar a lógica atual
 
-- **Banco alinhado**: `metas_vendedor_produto`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos` — garantir colunas e FKs existentes.
+- **Banco alinhado**: `metas_vendedor_produto`, `orcamentos.vendedor_id`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos`, `cron_log_alertas` — garantir colunas e FKs existentes.
 - **Parâmetros como fonte única**: `usar_taxas_na_meta` + `foco_valor` guiam tanto o atingimento de meta quanto a base de comissão (bruto x líquido).
 - **Produtos globais**: produtos marcados como “Disponível para todas as cidades” vêm de `tipo_produtos`; seleção de produtos não exige cadastro por cidade, mas a cidade da venda deve ser salva.
-- **Orçamentos**: lista + KPIs (sem Kanban), filtros em linha, tabela dentro de card; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
+- **Orçamentos**: lista + KPIs com filtros em linha, tabela dentro de card, timeline de interações, alerta de follow-up, envio/compartilhamento e Kanban opcional; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
 - **UI padrão**: tabelas sempre em `card-base`, botões primários/secondary/light padronizados, espaçamentos consistentes (filtros, formulários e KPIs).
 
 ---
@@ -636,6 +647,20 @@ Tecnologias possíveis:
 4. **Relatórios/Exportações**: PDFs/Excel para vendas, comissionamento e orçamentos; gráficos já padronizados (Top 5 destino em pizza, visão completa em barras).
 5. **Dashboards Premium**: preferências por perfil (vendedor/gestor/admin) e widgets adicionais.
 6. **Billing/Planos**: apenas quando fluxo operacional/financeiro estiver sólido.
+
+---
+
+## 7. Checklist rápido (migrações + envs de crons)
+
+- Migrações/SQL:
+  - `public/migration-orcamentos-vendedor.sql` → adiciona `orcamentos.vendedor_id` (FK `users`) e prepara policies.
+  - `public/cron-log-alertas.sql` → cria tabela de auditoria `cron_log_alertas` (opcional, usada pelos crons).
+  - (já mencionado) garantir `metas_vendedor_produto` e colunas extras de produto/usuário, se ainda não aplicados.
+- Env necessários para os crons:
+  - Comum: `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` (ou específicos abaixo).
+  - Orçamentos (`/api/cron-alerta-orcamentos`): `CRON_SECRET_ALERTAS` (fallback `CRON_SECRET`), `ALERTA_WEBHOOK_URL` ou `WEBHOOK_ALERTA_ORCAMENTOS` (opcional), `RESEND_API_KEY` + `ALERTA_FROM_EMAIL` (opcional), ou `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` (opcional).
+  - Comissão (`/api/cron-alerta-comissao`): `CRON_SECRET_COMISSAO` (fallback `CRON_SECRET`), `ALERTA_WEBHOOK_COMISSAO` ou `ALERTA_WEBHOOK_URL` (opcional), `RESEND_API_KEY` + `ALERTA_FROM_EMAIL` ou `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL`.
+  - Header ao chamar: `x-cron-secret` deve bater com o secret configurado.
 
 ---
 
