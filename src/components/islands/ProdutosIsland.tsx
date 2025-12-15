@@ -36,6 +36,7 @@ type Produto = {
   nivel_preco: string | null;
   imagem_url: string | null;
   ativo: boolean | null;
+  fornecedor_id?: string | null;
   created_at: string | null;
 };
 
@@ -99,6 +100,8 @@ export default function ProdutosIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -131,9 +134,9 @@ export default function ProdutosIsland() {
           }),
         supabase
           .from("produtos")
-          .select(
-            "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at"
-          )
+        .select(
+          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at"
+        )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
       ]);
@@ -243,12 +246,78 @@ export default function ProdutosIsland() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function resolveCompany() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sessionUser = sessionData?.session?.user;
+        const user =
+          sessionUser || (await supabase.auth.getUser()).data?.user || null;
+        if (!user || !isMounted) return;
+
+        const { data, error } = await supabase
+          .from("users")
+          .select("company_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!isMounted) return;
+        if (error) {
+          console.error("Erro ao buscar company_id dos fornecedores:", error);
+          return;
+        }
+        setCompanyId(data?.company_id || null);
+      } catch (error) {
+        console.error("Erro ao determinar company_id dos fornecedores:", error);
+      }
+    }
+
+    resolveCompany();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!companyId) {
+      setFornecedoresLista([]);
+      return;
+    }
+
+    let isActive = true;
+
+    async function carregarFornecedores() {
+      const { data, error } = await supabase
+        .from("fornecedores")
+        .select("id, nome_completo, nome_fantasia")
+        .eq("company_id", companyId)
+        .order("nome_fantasia", { ascending: true });
+      if (!isActive) return;
+      if (error) {
+        console.error("Erro ao carregar fornecedores:", error);
+        return;
+      }
+      setFornecedoresLista((data || []) as FornecedorOption[]);
+    }
+
+    carregarFornecedores();
+
+    return () => {
+      isActive = false;
+    };
+  }, [companyId]);
+
+  useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarDados(true);
     }
   }, [busca, carregouTodos]);
 
   const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
+  const fornecedoresMap = useMemo(
+    () => new Map(fornecedoresLista.map((f) => [f.id, formatFornecedorLabel(f)])),
+    [fornecedoresLista]
+  );
 
   function formatarCidadeNome(cidadeId: string) {
     const cidade = cidades.find((c) => c.id === cidadeId);
@@ -280,9 +349,10 @@ export default function ProdutosIsland() {
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipoLabel(tipo),
+        fornecedor_nome: fornecedoresMap.get(p.fornecedor_id || "") || "",
       };
     });
-  }, [produtos, cidades, subdivisoes, paises, tipos]);
+  }, [produtos, cidades, subdivisoes, paises, tipos, fornecedoresMap]);
 
   const produtosFiltrados = useMemo(() => {
     if (!busca.trim()) return produtosEnriquecidos;
@@ -314,6 +384,19 @@ export default function ProdutosIsland() {
     setMostrarSugestoes(true);
   }
 
+  function handleFornecedorInput(valor: string) {
+    handleChange("fornecedor_label", valor);
+    const termo = valor.trim().toLowerCase();
+    if (!termo) {
+      handleChange("fornecedor_id", "");
+      return;
+    }
+    const match = fornecedoresLista.find(
+      (f) => formatFornecedorLabel(f).toLowerCase() === termo
+    );
+    handleChange("fornecedor_id", match ? match.id : "");
+  }
+
   function iniciarNovo() {
     setForm(initialForm);
     setEditandoId(null);
@@ -338,6 +421,10 @@ export default function ProdutosIsland() {
       informacoes_importantes: produto.informacoes_importantes || "",
       ativo: produto.ativo ?? true,
       destino: produto.destino || "",
+      fornecedor_id: produto.fornecedor_id || "",
+      fornecedor_label: formatFornecedorLabel(
+        fornecedoresLista.find((f) => f.id === produto.fornecedor_id)
+      ),
     });
     setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
@@ -440,6 +527,7 @@ export default function ProdutosIsland() {
         imagem_url: form.imagem_url.trim() || null,
         informacoes_importantes: form.informacoes_importantes.trim() || null,
         ativo: form.ativo,
+        fornecedor_id: form.fornecedor_id || null,
       };
 
       if (editandoId) {
@@ -600,6 +688,22 @@ export default function ProdutosIsland() {
                 </div>
               )}
             </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Fornecedor (opcional)</label>
+              <input
+                className="form-input"
+                list="fornecedores-list"
+                placeholder="Escolha um fornecedor"
+                value={form.fornecedor_label}
+                onChange={(e) => handleFornecedorInput(e.target.value)}
+                disabled={permissao === "view"}
+              />
+              <datalist id="fornecedores-list">
+                {fornecedoresLista.map((fornecedor) => (
+                  <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           <div className="form-row" style={{ marginTop: 12 }}>
@@ -744,7 +848,8 @@ export default function ProdutosIsland() {
               <th>Produto</th>
               <th>Tipo</th>
               <th>Destino</th>
-              <th>Cidade</th>
+              <th>Cidade</th>
+              <th>Fornecedor</th>
               <th>Estado/Província</th>
               <th>Pais</th>
               <th>Nivel de preco</th>
@@ -773,6 +878,7 @@ export default function ProdutosIsland() {
                   <td>{(p as any).tipo_nome || "-"}</td>
                   <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
+                  <td>{p.fornecedor_nome || "-"}</td>
                   <td>{(p as any).subdivisao_nome || "-"}</td>
                   <td>{(p as any).pais_nome || "-"}</td>
                   <td>{p.nivel_preco || "-"}</td>
