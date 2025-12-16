@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -220,9 +220,8 @@ function AdminPermissoesIsland() {
     ] }) }),
     selecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { children: [
-        "Permissões de:",
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: 600 }, children: selecionado.nome_completo })
+        "Permissões de: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: selecionado.nome_completo })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[500px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -242,7 +241,7 @@ function AdminPermissoesIsland() {
           ) })
         ] }, modulo)) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -256,7 +255,6 @@ function AdminPermissoesIsland() {
           "button",
           {
             className: "btn btn-light",
-            style: { marginLeft: 8 },
             onClick: () => setSelecionado(null),
             children: "Fechar"
           }

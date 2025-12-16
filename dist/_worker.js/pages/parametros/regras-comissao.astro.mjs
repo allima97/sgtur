@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -380,7 +380,7 @@ function CommissionRulesIsland() {
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 flex-wrap mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "submit", disabled: !podeEditar || salvando, children: salvando ? "Salvando..." : editId ? "Atualizar regra" : "Criar regra" }),
         editId && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -396,8 +396,8 @@ function CommissionRulesIsland() {
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 16 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Regras cadastradas" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mt-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2", children: "Regras cadastradas" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[900px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),

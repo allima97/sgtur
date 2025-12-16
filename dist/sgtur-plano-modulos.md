@@ -617,6 +617,7 @@ CREATE TABLE IF NOT EXISTS public.viagens (
   venda_id uuid REFERENCES public.vendas(id) ON DELETE SET NULL,
   orcamento_id uuid REFERENCES public.orcamentos(id) ON DELETE SET NULL,
   company_id uuid NOT NULL REFERENCES public.companies(id),
+  cliente_id uuid REFERENCES public.clientes(id),
   responsavel_user_id uuid REFERENCES public.users(id),
   origem text,
   destino text,
@@ -664,6 +665,22 @@ CREATE TABLE IF NOT EXISTS public.viagem_acompanhantes (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_viagem_acompanhantes_viagem ON public.viagem_acompanhantes (viagem_id);
+
+-- Passageiros vinculados à viagem (responsáveis ou acompanhantes específicos)
+CREATE TABLE IF NOT EXISTS public.viagem_passageiros (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  viagem_id uuid NOT NULL REFERENCES public.viagens(id) ON DELETE CASCADE,
+  cliente_id uuid NOT NULL REFERENCES public.clientes(id) ON DELETE CASCADE,
+  company_id uuid NOT NULL REFERENCES public.companies(id),
+  papel text NOT NULL CHECK (papel IN ('passageiro', 'responsavel')),
+  observacoes text,
+  created_by uuid REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_viagem_passageiros_viagem_cliente
+  ON public.viagem_passageiros (viagem_id, cliente_id);
+CREATE INDEX IF NOT EXISTS idx_viagem_passageiros_viagem ON public.viagem_passageiros (viagem_id);
 ```
 
 #### RLS sugeridas (ajustar ao modelo de tenancy)
@@ -821,7 +838,67 @@ CREATE POLICY viagens_del ON public.viagens
 
 ---
 
-Nota Importante ---> Será preciso fazer Cadastro de acompanhates na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
+Nota Importante ---> Será preciso fazer Cadastro de acompanhantes na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
 
 
 Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGTUR**.
+## 5. Planejamento de módulos ainda pendentes
+
+O SGTUR deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo segue o roadmap estratégico com subtítulos para cada grande bloco, prioridades (P1 = alta) e dependências principais.
+
+### 5.1 Cadastros avançados (P1)
+- **Descrição:** Consolidar CRUDs completos para Clientes, Fornecedores, Tarifários, Serviços, Bloqueios, Aeroportos, Emissores, Promotores, Estoques de Bilhetes, Usuários, Tipos de Tarifa, Moedas, Cotações e Parametrizações.
+- **Dependências:** `modulo_acesso` já existente; precisa de ERDs novos (tarifários/serviços), auditoria e validações por empresa (company_id).
+- **Riscos:** Complexidade de integrações com Financeiro e com Venda ao relacionar tarifas e serviço.
+
+### 5.2 Vendas Individuais (FIT) (P1)
+- **Descrição:** Controle completo de cotações e vendas individuais: status de orçamento → reserva → emissão, regras de comissionamento, tarifas e vínculo com fornecedores.
+- **Dependências:** Produtos/tarifários, módulo de cadastros (clientes, fornecedores), engine de documentos (voucher/ordem de passagem).
+- **Observação:** Permitir exportação rápida para financeiro e alertas de follow-up para vendedores.
+
+### 5.3 Vendas em Grupo (aéreas/rodoviárias) (P1)
+- **Descrição:** Gestão operacional de grupos com room list, listas de passageiros, controle de pagamentos por cliente e consolidação em uma única reserva/grupo.
+- **Dependências:** Estoque de bilhetes, financeiro, módulo de documentos e CRM para histórico do grupo.
+- **Vídeo futuro:** Workflow para integrar múltiplos serviços (hotel, ônibus) em um único grupo.
+
+### 5.4 Interfaces com GDS (P2)
+- **Descrição:** Captura automática de reservas vindas de AMADEUS, GALILEO, SABRE e WORLSPAN.
+- **Dependências:** Base de taxas/tarifários, autenticação segura, monitoramento/alertas para falhas de importação.
+- **Meta:** Evitar retrabalho manual e manter o inventário sincronizado com reservas externas.
+
+### 5.5 Documentos de viagem (P1)
+- **Descrição:** Geração e envio de orçamento, confirmação, solicitação de reserva, voucher, contrato, ordem de passagem, room/air/bus lists e solicitações de reembolso.
+- **Dependências:** Dados de vendas/viagens, storage (PDF/Storage) e templates reaproveitáveis.
+- **Dica:** Versionar templates e registrar histórico de envios e responsáveil por documento.
+
+### 5.6 Financeiro completo (P1)
+- **Descrição:** Contas a receber, contas a pagar, fluxo de caixa, caixa/bancos e notas fiscais com conciliações e integrações com ERPs externos.
+- **Dependências:** Vendas/Reservas, fornecedores, módulos de reembolso/contas.
+- **Diferencial:** Alertas automáticos quando título vence ou pagamento não identificado.
+
+### 5.7 Consultas na tela (P2)
+- **Descrição:** Dashboards/telas para cadastros, vendas, reservas, financeiro, comissões, posições e mapas operacionais.
+- **Dependências:** APIs consolidadas e mecanismos de filtro/paginação eficientes.
+- **Valor:** Transparência imediata para gestores com KPIs atualizados.
+
+### 5.8 Estoque de bilhetes (P1)
+- **Descrição:** Controle integrado com reservas/vendas, bloqueios, remanescentes, alertas de overbooking e expiramentos.
+- **Dependências:** Interfaces GDS, módulo de documentos (OP/air list) e cadastros de fornecedor.
+- **Uso:** Garantir que emissão de bilhetes respeite disponibilidade real.
+
+### 5.9 Mala direta (P3)
+- **Descrição:** Emissão de etiquetas/listas (clientes, fornecedores, passageiros) para campanhas físicas ou logísticas.
+- **Dependências:** Cadastro de contatos e templates de etiquetas/exportação.
+- **Sugestão:** Oferecer exportação CSV/PDF e integração com impressão de etiquetas.
+
+### 5.10 Reembolso (P1)
+- **Descrição:** Solicitação, recebimento e pagamento de reembolsos com impacto automático no financeiro e registro de comprovantes.
+- **Dependências:** Financeiro, documentos e fluxo de vendas.
+- **Detalhe:** Controle de políticas (taxas administrativas, prazos de reembolso, aprovação).
+
+### 5.11 Relatórios avançados (P2)
+- **Descrição:** Mapas de vendas, rankings, cálculo de comissão, posição de vendas de grupos, room nights, room list, carta de bilhetes, fluxo de caixa, títulos abertos/pagos, extratos e saldos por centro de custo.
+- **Dependências:** Dados consolidados de vendas, financeiro e cadastros.
+- **Nota:** Pode incluir exportações CSV/Excel e alertas por métricas críticas.
+
+Cada bloco pode virar um epic no backlog e deve ser priorizado conforme o impacto operacional. Use as prioridades acima (P1 alta, P2 média, P3 baixa) para sequenciar entregas e valide dependências com as áreas de operação antes de codificar.

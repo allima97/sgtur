@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -33,11 +33,14 @@ function ViagensListaIsland() {
     destino: "",
     data_inicio: "",
     data_fim: "",
-    status: "planejada"
+    status: "planejada",
+    cliente_id: ""
   });
   const [cidades, setCidades] = reactExports.useState([]);
   const [companyId, setCompanyId] = reactExports.useState(null);
   const [userId, setUserId] = reactExports.useState(null);
+  const [clientes, setClientes] = reactExports.useState([]);
+  const [clientesErro, setClientesErro] = reactExports.useState(null);
   const [buscandoCidades, setBuscandoCidades] = reactExports.useState(false);
   const [erroCidades, setErroCidades] = reactExports.useState(null);
   const cidadesAbort = reactExports.useRef(null);
@@ -71,6 +74,21 @@ function ViagensListaIsland() {
     }
     resolveUser();
   }, []);
+  reactExports.useEffect(() => {
+    if (!companyId) return;
+    async function carregarClientes() {
+      try {
+        const { data, error } = await supabase.from("clientes").select("id, nome, cpf").eq("company_id", companyId).order("nome", { ascending: true }).limit(200);
+        if (error) throw error;
+        setClientes(data || []);
+        setClientesErro(null);
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+        setClientesErro("Não foi possível carregar os clientes.");
+      }
+    }
+    carregarClientes();
+  }, [companyId]);
   reactExports.useEffect(() => {
     carregarSugestoes("");
     return () => {
@@ -144,7 +162,7 @@ function ViagensListaIsland() {
     try {
       setLoading(true);
       setErro(null);
-      let query = supabase.from("viagens").select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id").order("data_inicio", { ascending: true });
+      let query = supabase.from("viagens").select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome)").order("data_inicio", { ascending: true });
       if (statusFiltro) {
         query = query.eq("status", statusFiltro);
       }
@@ -167,24 +185,44 @@ function ViagensListaIsland() {
   async function criarViagem() {
     if (!podeCriar) return;
     if (!companyId || !userId) {
-      setFormError("Não foi possível determinar sua empresa.");
+      setFormError("NÇőo foi possÇ§vel determinar sua empresa.");
+      return;
+    }
+    if (!cadastroForm.cliente_id) {
+      setFormError("Selecione o cliente responsÂvel.");
       return;
     }
     if (!cadastroForm.origem || !cadastroForm.destino || !cadastroForm.data_inicio) {
-      setFormError("Origem, destino e data de início são obrigatórios.");
+      setFormError("Origem, destino e data de inÃ­cio sÇőo obrigatÃ³rios.");
       return;
     }
+    let orcamentoId = null;
     try {
       setSavingViagem(true);
       setFormError(null);
+      const origemLabel = cadastroForm.origem.trim();
+      const destinoLabel = cadastroForm.destino.trim();
+      const { data: orcamentoData, error: orcamentoError } = await supabase.from("orcamentos").insert({
+        cliente_id: cadastroForm.cliente_id,
+        status: "novo",
+        data_viagem: cadastroForm.data_inicio,
+        notas: `Viagem criada via Operacao: ${origemLabel} -> ${destinoLabel}`
+      }).select("id").single();
+      if (orcamentoError) throw orcamentoError;
+      orcamentoId = orcamentoData?.id || null;
+      if (!orcamentoId) {
+        throw new Error("Nao foi possivel vincular um orcamento.");
+      }
       const payload = {
         company_id: companyId,
         responsavel_user_id: userId,
-        origem: cadastroForm.origem.trim(),
-        destino: cadastroForm.destino.trim(),
+        cliente_id: cadastroForm.cliente_id,
+        origem: origemLabel,
+        destino: destinoLabel,
         data_inicio: cadastroForm.data_inicio,
         data_fim: cadastroForm.data_fim || null,
-        status: cadastroForm.status
+        status: cadastroForm.status,
+        orcamento_id: orcamentoId
       };
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
@@ -193,13 +231,21 @@ function ViagensListaIsland() {
         destino: "",
         data_inicio: "",
         data_fim: "",
-        status: "planejada"
+        status: "planejada",
+        cliente_id: ""
       });
       setShowForm(false);
       buscar();
     } catch (e) {
       console.error(e);
-      setFormError("Erro ao criar viagem.");
+      if (orcamentoId) {
+        const { error: cleanupError } = await supabase.from("orcamentos").delete().eq("id", orcamentoId);
+        if (cleanupError) {
+          console.warn("Nao foi possivel remover o orcamento temporario:", cleanupError);
+        }
+      }
+      const errorMessage = e && typeof e === "object" && e !== null && "message" in e && typeof e.message === "string" ? e.message : null;
+      setFormError(errorMessage || "Erro ao criar viagem.");
     } finally {
       setSavingViagem(false);
     }
@@ -241,6 +287,25 @@ function ViagensListaIsland() {
       )) }),
       buscandoCidades && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#6366f1" }, children: "Buscando cidades..." }),
       erroCidades && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "red" }, children: erroCidades }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            className: "form-select",
+            value: cadastroForm.cliente_id,
+            onChange: (e) => setCadastroForm((prev) => ({ ...prev, cliente_id: e.target.value })),
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione um cliente" }),
+              clientes.map((cliente) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cliente.id, children: [
+                cliente.nome,
+                cliente.cpf ? ` (${cliente.cpf})` : ""
+              ] }, cliente.id))
+            ]
+          }
+        ),
+        clientesErro && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "red" }, children: clientesErro })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Origem" }),
@@ -378,6 +443,7 @@ function ViagensListaIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Origem" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Responsável" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ver" })
       ] }) }),
@@ -390,6 +456,7 @@ function ViagensListaIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.status || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.origem || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.clientes?.nome || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.responsavel_user_id || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: `/operacao/viagens/${v.id}`, children: "Abrir" }) })
         ] }, v.id))

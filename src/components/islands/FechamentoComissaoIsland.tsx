@@ -531,24 +531,9 @@ export default function FechamentoComissaoIsland() {
   }
 
   return (
-    <div className="fechamento-comissao-page">
+    <div className="min-h-screen bg-slate-50 p-2 md:p-6">
       {/* BARRA DE CONTEXTO */}
-      <div
-        style={{
-          marginBottom: "15px",
-          padding: "10px 14px",
-          borderRadius: "8px",
-          background: "#022c22",
-          border: "1px solid #064e3b",
-          color: "#e2f3ed",
-          fontSize: "0.9rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="mb-4 p-3 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-100 text-sm flex flex-wrap gap-3 items-center justify-between">
         <div>
           <strong>Módulo:</strong> Fechamento de Comissão
         </div>
@@ -575,7 +560,7 @@ export default function FechamentoComissaoIsland() {
             {permissao}
           </span>
         </div>
-        <div style={{ width: "100%", marginTop: 6, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div className="w-full mt-2 flex flex-wrap gap-2">
           <span>
             <strong>Período:</strong> {periodo}
           </span>
@@ -606,7 +591,7 @@ export default function FechamentoComissaoIsland() {
             {parametros?.foco_valor === "liquido" ? "Valor líquido" : "Valor bruto"}
           </span>
         </div>
-        <div style={{ width: "100%", marginTop: 6, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 8 }}>
+        <div className="w-full mt-2 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
           <div>
             <strong>Período:</strong> {periodo}
           </div>
@@ -638,12 +623,12 @@ export default function FechamentoComissaoIsland() {
           </div>
         </div>
         {metaAtual?.scope === "equipe" && (
-          <div style={{ width: "100%", marginTop: 6, color: "#cbd5e1" }}>
+          <div className="w-full mt-2 text-slate-300">
             <strong>Escopo:</strong> Equipe ({idsEquipe.length} membros)
           </div>
         )}
         {metaAtual?.scope === "equipe" && idsEquipe.length > 0 && (
-          <div style={{ width: "100%", marginTop: 4, color: "#cbd5e1", fontSize: "0.9rem" }}>
+          <div className="w-full mt-1 text-slate-300 text-sm">
             <strong>Membros:</strong>{" "}
             {idsEquipe
               .map((id) => vendedores.find((v) => v.id === id)?.nome_completo || id)
@@ -654,9 +639,9 @@ export default function FechamentoComissaoIsland() {
 
       {/* FILTROS */}
       <div className="card-base card-green mb-3">
-        <div className="form-row">
+        <div className="form-row flex flex-col md:flex-row gap-4">
           {mostrarSelectVendedor && (
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Vendedor</label>
               <select
                 className="form-select"
@@ -672,7 +657,7 @@ export default function FechamentoComissaoIsland() {
             </div>
           )}
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[180px]">
             <label className="form-label">Período</label>
             <input
               type="month"
@@ -682,7 +667,7 @@ export default function FechamentoComissaoIsland() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[180px]">
             <label className="form-label">Template de Comissão</label>
             <select
               className="form-select"
@@ -727,12 +712,8 @@ export default function FechamentoComissaoIsland() {
 
       {/* KPIs PRINCIPAIS */}
       <div
-        className="mb-3"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 12,
-        }}
+        className="mb-3 grid gap-3 md:gap-4"
+        style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
       >
         <div className="card-base card-green">
           <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>Meta do mês</div>

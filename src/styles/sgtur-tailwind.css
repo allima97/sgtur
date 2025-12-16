@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Utilitários customizados SGTUR para UI padrão */
+
+.btn {
+  @apply inline-flex items-center gap-2 rounded-md font-medium cursor-pointer border-0 text-base px-4 py-2 transition-colors;
+}
+.btn-primary {
+  @apply bg-primary text-white shadow-sm hover:bg-blue-title disabled:opacity-70 disabled:cursor-default;
+}
+.btn-secondary {
+  @apply bg-secondary text-dark shadow-sm hover:bg-row-hover;
+}
+.btn-light {
+  @apply bg-white border border-border text-dark shadow-sm hover:bg-row-hover;
+}
+.btn-danger {
+  @apply bg-danger text-white shadow-sm hover:bg-red-700;
+}
+.card-base {
+  @apply bg-white rounded-md p-5 shadow-sm;
+}
+.card-blue {
+  @apply bg-blue-bg border border-blue-border;
+}
+.card-purple {
+  @apply bg-[#f3e8ff] border border-[#c084fc];
+}
+.card-green {
+  @apply bg-green-bg border border-green-border;
+}
+.card-config {
+  @apply bg-config-bg border border-config-border;
+}
+.table-default {
+  @apply w-full text-left border-collapse;
+}
+.table-default th {
+  @apply bg-blue-bg text-blue-title font-bold px-4 py-2 border-b border-blue-border;
+}
+.table-default td {
+  @apply px-4 py-2 border-b border-border;
+}
+.table-header-blue th {
+  @apply bg-blue-bg text-blue-title font-bold px-4 py-2 border-b border-blue-border;
+}
+.form-group {
+  @apply flex flex-col gap-1 mb-3;
+}
+.form-input {
+  @apply rounded-md border border-border px-3 py-2 bg-white text-dark text-base focus:outline-none focus:border-blue-border focus:shadow-md;
+}
+
+.btn-icon {
+  @apply inline-flex items-center justify-center rounded-md p-2 text-base hover:bg-row-hover transition-colors;
+}
+.th-actions {
+  @apply whitespace-nowrap text-center;
+}

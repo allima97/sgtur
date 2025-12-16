@@ -830,14 +830,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             </div>
           </div>
 
-          <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-            <h3 style={{ marginBottom: 8 }}>Documentos / vouchers ({documentos.length})</h3>
+          <div className="card-base border border-slate-200">
+            <h3 className="mb-2">Documentos / vouchers ({documentos.length})</h3>
             {podeCriar && (
-              <div
-                className="card-base"
-                style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>Enviar documento</div>
+              <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
+                <div className="font-semibold mb-2">Enviar documento</div>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Título</label>
@@ -874,7 +871,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                 <button className="btn btn-primary" type="button" onClick={salvarDocumento} disabled={savingDoc}>
                   {savingDoc ? "Enviando..." : "Enviar documento"}
                 </button>
-                <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+                <div className="text-xs text-slate-500 mt-2">
                   Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
                 </div>
               </div>

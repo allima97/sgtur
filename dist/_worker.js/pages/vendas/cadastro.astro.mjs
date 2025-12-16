@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -538,14 +538,14 @@ function VendasCadastroIsland() {
   if (!podeCriar && !isAdmin) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Você não possui permissão para cadastrar vendas." }) });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "vendas-cadastro-page", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-slate-50 p-2 md:p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-green mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar venda" : "Cadastro de Venda" }),
       editId && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#0f172a" }, children: "Modo edição — altere cliente, cidade de destino, embarque e recibos." }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvarVenda, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[220px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente *" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -581,7 +581,7 @@ function VendasCadastroIsland() {
               c.id
             )) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[220px] relative", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade de Destino *" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -601,18 +601,7 @@ function VendasCadastroIsland() {
             mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
-                className: "card-base",
-                style: {
-                  marginTop: 4,
-                  maxHeight: 180,
-                  overflowY: "auto",
-                  padding: 6,
-                  border: "1px solid #e5e7eb",
-                  position: "absolute",
-                  zIndex: 5,
-                  width: "100%",
-                  background: "#fff"
-                },
+                className: "card-base absolute left-0 right-0 mt-1 max-h-44 overflow-y-auto p-1 border border-slate-200 bg-white z-10",
                 children: [
                   resultadosCidade.length === 0 && !buscandoCidade && buscaDestino.trim().length >= 2 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 6px", color: "#6b7280" }, children: "Nenhuma cidade encontrada." }),
                   resultadosCidade.map((c) => {
@@ -621,14 +610,7 @@ function VendasCadastroIsland() {
                       "button",
                       {
                         type: "button",
-                        className: "btn btn-light",
-                        style: {
-                          width: "100%",
-                          justifyContent: "flex-start",
-                          marginBottom: 4,
-                          background: formVenda.destino_id === c.id ? "#e0f2fe" : "#fff",
-                          borderColor: formVenda.destino_id === c.id ? "#38bdf8" : "#e5e7eb"
-                        },
+                        className: `btn btn-light w-full justify-start mb-1 ${formVenda.destino_id === c.id ? "bg-sky-100 border-sky-400" : "bg-white border-slate-200"}`,
                         onMouseDown: (e) => {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
@@ -651,7 +633,7 @@ function VendasCadastroIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data de embarque" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -667,9 +649,9 @@ function VendasCadastroIsland() {
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-3", children: "Recibos da Venda" }),
-        recibos.map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-3 font-semibold text-lg", children: "Recibos da Venda" }),
+        recibos.map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto *" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -693,7 +675,7 @@ function VendasCadastroIsland() {
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `listaProdutos-${i}`, children: produtosFiltrados.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.nome }, p.id)) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número recibo *" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -705,7 +687,7 @@ function VendasCadastroIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor total *" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -721,7 +703,7 @@ function VendasCadastroIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Taxas" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -736,17 +718,17 @@ function VendasCadastroIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { width: "80px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group flex-none w-20 flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "btn-icon btn-danger mt-4",
+              className: "btn-icon btn-danger mt-2",
               onClick: () => removerRecibo(i),
               children: "🗑️"
             }
           ) })
         ] }) }, i)),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -769,9 +751,8 @@ function VendasCadastroIsland() {
             "button",
             {
               type: "button",
-              className: "btn btn-outline",
+              className: "btn btn-outline bg-slate-100 text-slate-800",
               onClick: cancelarCadastro,
-              style: { backgroundColor: "#f3f4f6", color: "#1f2937" },
               children: "Cancelar"
             }
           )

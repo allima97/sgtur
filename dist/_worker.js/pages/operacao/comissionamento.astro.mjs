@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -325,17 +325,12 @@ function ComissionamentoIsland() {
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Vendas." });
-  const cardColStyle = {
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center"
-  };
   const metaProdEntries = metaProdEnabled && resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
     ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
   ) : [];
   const difProdutos = resumo && resumo.produtosDiferenciados ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false) : [];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { background: "transparent", boxShadow: "none", padding: 0 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base", style: { marginBottom: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginBottom: 0 }, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base bg-transparent shadow-none p-0", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row mb-0", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "form-select", value: preset, onChange: (e) => setPreset(e.target.value), children: PERIODO_OPCOES.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.id, children: o.label }, o.id)) })
@@ -352,45 +347,30 @@ function ComissionamentoIsland() {
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando dados..." }),
     !loading && resumo && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginBottom: 12 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, marginBottom: 16 }, children: "Como está seu Progresso" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "kpi-grid",
-            style: {
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-              gap: 12,
-              marginBottom: 4
-            },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#16a34a" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta do mês" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (metaGeral?.meta_geral || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#ca8a04" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Bruto" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#c2410c" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Taxas" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalTaxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#0ea5e9" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Valor Liquido" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: { ...cardColStyle, color: "#2563eb" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta atingida" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
-                  resumo.pctMetaGeral.toFixed(1),
-                  "%"
-                ] })
-              ] })
-            ]
-          }
-        )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center font-bold text-lg mb-4", children: "Como está seu Progresso" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 mb-1", style: { gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#16a34a" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta do mês" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (metaGeral?.meta_geral || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#ca8a04" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Bruto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#c2410c" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Líquido" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#0ea5e9" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Taxas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalTaxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#2563eb" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalVendas })
+          ] })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }, children: "Seus Valores a Receber" }),
@@ -401,16 +381,16 @@ function ComissionamentoIsland() {
             className: "kpi-grid",
             style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão (geral)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
-              metaProdEnabled && metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
+              metaProdEnabled && metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) }),
                 val === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Meta não atingida" })
               ] }, `meta-${pid}`)),
-              difProdutos.map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", style: cardColStyle, children: [
+              difProdutos.map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
                   style: "currency",
@@ -418,7 +398,7 @@ function ComissionamentoIsland() {
                 }) }),
                 (resumo.comissaoDifDetalhe?.[pid] || 0) === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Sem comissão" })
               ] }, pid)),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card kpi-highlight", style: cardColStyle, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card kpi-highlight flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão total" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalComissao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] })

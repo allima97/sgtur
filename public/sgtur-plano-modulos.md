@@ -665,6 +665,22 @@ CREATE TABLE IF NOT EXISTS public.viagem_acompanhantes (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_viagem_acompanhantes_viagem ON public.viagem_acompanhantes (viagem_id);
+
+-- Passageiros vinculados à viagem (responsáveis ou acompanhantes específicos)
+CREATE TABLE IF NOT EXISTS public.viagem_passageiros (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  viagem_id uuid NOT NULL REFERENCES public.viagens(id) ON DELETE CASCADE,
+  cliente_id uuid NOT NULL REFERENCES public.clientes(id) ON DELETE CASCADE,
+  company_id uuid NOT NULL REFERENCES public.companies(id),
+  papel text NOT NULL CHECK (papel IN ('passageiro', 'responsavel')),
+  observacoes text,
+  created_by uuid REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_viagem_passageiros_viagem_cliente
+  ON public.viagem_passageiros (viagem_id, cliente_id);
+CREATE INDEX IF NOT EXISTS idx_viagem_passageiros_viagem ON public.viagem_passageiros (viagem_id);
 ```
 
 #### RLS sugeridas (ajustar ao modelo de tenancy)

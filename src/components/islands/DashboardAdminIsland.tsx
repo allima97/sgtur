@@ -170,31 +170,14 @@ export default function DashboardAdminIsland() {
     <div className="dashboard-admin-page">
 
       {/* INDICADOR */}
-      <div
-        style={{
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3",
-        }}
-      >
+      <div className="mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100">
         <strong>Dashboard Administrativo</strong> — Controle Geral do Sistema
       </div>
 
       {/* KPIs do Sistema */}
       <div className="card-base card-red mb-3">
-        <h3 style={{ marginBottom: 12 }}>Visão geral do sistema</h3>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 10,
-          }}
-        >
+        <h3 className="mb-3 font-semibold text-lg">Visão geral do sistema</h3>
+        <div className="grid gap-2 md:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <div className="kpi-card">
             <div className="kpi-label">Clientes</div>
             <div className="kpi-value">{sistema.clientes}</div>
@@ -219,8 +202,7 @@ export default function DashboardAdminIsland() {
 
       {/* EMPRESAS */}
       <div className="card-base card-red mb-3">
-        <h3 style={{ marginBottom: 10 }}>Empresas cadastradas</h3>
-
+        <h3 className="mb-2 font-semibold">Empresas cadastradas</h3>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-red min-w-[760px]">
             <thead>
@@ -256,8 +238,7 @@ export default function DashboardAdminIsland() {
 
       {/* USUÁRIOS */}
       <div className="card-base card-red mb-3">
-        <h3 style={{ marginBottom: 10 }}>Usuários do sistema</h3>
-
+        <h3 className="mb-2 font-semibold">Usuários do sistema</h3>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-red min-w-[640px]">
             <thead>
@@ -281,12 +262,7 @@ export default function DashboardAdminIsland() {
                   <td>{u.nome_completo}</td>
                   <td>{u.email || "-"}</td>
                   <td>{u.user_types?.name || "-"}</td>
-                  <td
-                    style={{
-                      color: u.active ? "#22c55e" : "#ef4444",
-                      fontWeight: "bold",
-                    }}
-                  >
+                  <td className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
                     {u.active ? "Sim" : "Não"}
                   </td>
                 </tr>

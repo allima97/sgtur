@@ -140,16 +140,7 @@ export default function LogsIsland() {
 
   return (
     <div className="logs-admin-page">
-      <div
-        style={{
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3",
-        }}
-      >
+      <div className="mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100">
         <strong>Logs de Auditoria</strong> — todas as ações do sistema
       </div>
 
@@ -221,15 +212,12 @@ export default function LogsIsland() {
 
       {/* TABELA */}
       <div className="card-base card-red">
-        <h3 style={{ marginBottom: 12 }}>
-          Registros ({logsFiltrados.length})
-        </h3>
-
+        <h3 className="mb-3 font-semibold">Registros ({logsFiltrados.length})</h3>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-red min-w-[820px]">
             <thead>
               <tr>
-                <th style={{ minWidth: 150 }}>Data</th>
+                <th className="min-w-[150px]">Data</th>
                 <th>Usuário</th>
                 <th>Ação</th>
                 <th>Módulo</th>
@@ -237,19 +225,15 @@ export default function LogsIsland() {
                 <th>Ver</th>
               </tr>
             </thead>
-
             <tbody>
               {logsFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={6}>Nenhum log encontrado.</td>
                 </tr>
               )}
-
               {logsFiltrados.map((l) => (
                 <tr key={l.id}>
-                  <td>
-                    {new Date(l.created_at).toLocaleString("pt-BR")}
-                  </td>
+                  <td>{new Date(l.created_at).toLocaleString("pt-BR")}</td>
                   <td>{l.users?.nome_completo || "Desconhecido"}</td>
                   <td>{l.acao}</td>
                   <td>{l.modulo || "-"}</td>
@@ -271,36 +255,9 @@ export default function LogsIsland() {
 
       {/* MODAL DETALHES */}
       {logSelecionado && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 100,
-          }}
-        >
-          <div
-            style={{
-              width: "95%",
-              maxWidth: 700,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#1e293b",
-              padding: 18,
-              borderRadius: 10,
-              color: "#e2e8f0",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}
-            >
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[100]">
+          <div className="w-[95%] max-w-[700px] max-h-[90vh] overflow-y-auto bg-slate-800 p-5 rounded-xl text-slate-100">
+            <div className="flex justify-between mb-2">
               <h3>Detalhes do log</h3>
               <button
                 className="btn btn-light"
@@ -309,10 +266,8 @@ export default function LogsIsland() {
                 Fechar
               </button>
             </div>
-
             <p>
-              <strong>Usuário:</strong>{" "}
-              {logSelecionado.users?.nome_completo}
+              <strong>Usuário:</strong> {logSelecionado.users?.nome_completo}
             </p>
             <p>
               <strong>Ação:</strong> {logSelecionado.acao}
@@ -321,28 +276,16 @@ export default function LogsIsland() {
               <strong>Módulo:</strong> {logSelecionado.modulo}
             </p>
             <p>
-              <strong>Data:</strong>{" "}
-              {new Date(logSelecionado.created_at).toLocaleString(
-                "pt-BR"
-              )}
+              <strong>Data:</strong> {new Date(logSelecionado.created_at).toLocaleString("pt-BR")}
             </p>
             <p>
               <strong>IP:</strong> {logSelecionado.ip || "-"}
             </p>
-
-            <p style={{ marginTop: 12 }}>
+            <p className="mt-3">
               <strong>Detalhes:</strong>
             </p>
-            <pre
-              style={{
-                background: "#0f172a",
-                padding: 10,
-                borderRadius: 6,
-                whiteSpace: "pre-wrap",
-                fontSize: 12,
-              }}
-            >
-{JSON.stringify(logSelecionado.detalhes, null, 2)}
+            <pre className="bg-slate-900 p-3 rounded text-xs whitespace-pre-wrap">
+              {JSON.stringify(logSelecionado.detalhes, null, 2)}
             </pre>
           </div>
         </div>

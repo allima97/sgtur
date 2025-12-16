@@ -364,15 +364,15 @@ export default function MetasVendedorIsland() {
   if (!ativo) return <div>Acesso ao módulo de Metas bloqueado.</div>;
 
   return (
-    <div className="metas-vendedor-page">
+    <div className="min-h-screen bg-slate-50 p-2 md:p-6">
 
       {/* FORMULÁRIO */}
       <div className="card-base card-blue mb-3">
         <form onSubmit={salvarMeta}>
-          <div className="form-row">
+          <div className="flex flex-col md:flex-row gap-4">
 
             {mostrarSelectVendedor && (
-              <div className="form-group">
+              <div className="form-group flex-1 min-w-[180px]">
                 <label className="form-label">Vendedor *</label>
                 <select
                   className="form-select"
@@ -390,7 +390,7 @@ export default function MetasVendedorIsland() {
               </div>
             )}
 
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Período *</label>
               <input
                 type="month"
@@ -400,7 +400,7 @@ export default function MetasVendedorIsland() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Meta Geral (R$) *</label>
               <input
                 className="form-input"
@@ -415,12 +415,12 @@ export default function MetasVendedorIsland() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[220px]">
               <label className="form-label">Metas diferenciadas por produto (opcional)</label>
               <div className="flex flex-col gap-2">
                 {metaProdutos.map((mp, idx) => (
-                  <div className="form-row" key={idx}>
-                    <div className="form-group">
+                  <div className="flex flex-col md:flex-row gap-2" key={idx}>
+                    <div className="form-group flex-1 min-w-[140px]">
                       <label className="form-label">Produto</label>
                       <select
                         className="form-select"
@@ -439,7 +439,7 @@ export default function MetasVendedorIsland() {
                         ))}
                       </select>
                     </div>
-                    <div className="form-group">
+                    <div className="form-group flex-1 min-w-[120px]">
                       <label className="form-label">Meta (R$)</label>
                       <input
                         className="form-input"
@@ -455,7 +455,7 @@ export default function MetasVendedorIsland() {
                         placeholder="0,00"
                       />
                     </div>
-                    <div className="form-group" style={{ justifyContent: "flex-end" }}>
+                    <div className="form-group flex-none flex items-end">
                       <button
                         type="button"
                         className="btn btn-light"

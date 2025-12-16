@@ -130,14 +130,14 @@ export default function AuthRegisterIsland() {
             />
           </div>
           <div className="auth-actions">
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            <button type="submit" className="btn btn-primary w-full" disabled={loading}>
               <i className="fa-solid fa-user-plus"></i>
               {loading ? " Criando..." : " Criar Conta"}
             </button>
             <div className="auth-divider">
               <span>ou</span>
             </div>
-            <a href="/auth/login" className="btn btn-secondary btn-block">
+            <a href="/auth/login" className="btn btn-secondary w-full">
               <i className="fa-solid fa-right-to-bracket"></i>
               Já tenho conta
             </a>

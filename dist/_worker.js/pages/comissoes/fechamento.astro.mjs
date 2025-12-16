@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -379,142 +379,123 @@ function FechamentoComissaoIsland() {
   if (loading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando dados do fechamento..." });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fechamento-comissao-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        style: {
-          marginBottom: "15px",
-          padding: "10px 14px",
-          borderRadius: "8px",
-          background: "#022c22",
-          border: "1px solid #064e3b",
-          color: "#e2f3ed",
-          fontSize: "0.9rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap"
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Módulo:" }),
-            " Fechamento de Comissão"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Perfil:" }),
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { textTransform: "uppercase" }, children: usuario?.uso_individual ? "Uso Individual" : "Corporativo" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Permissão:" }),
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "span",
-              {
-                style: {
-                  textTransform: "uppercase",
-                  fontWeight: "bold",
-                  color: permissao === "admin" ? "#22c55e" : permissao === "edit" ? "#eab308" : "#ef4444"
-                },
-                children: permissao
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", marginTop: 6, display: "flex", flexWrap: "wrap", gap: 8 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Período:" }),
-              " ",
-              periodo
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Vendedor:" }),
-              " ",
-              vendedores.find((v) => v.id === vendedorSelecionado)?.nome_completo || "N/A"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Template:" }),
-              " ",
-              templates.find((t) => t.id === templateIdSelecionado)?.nome || "Selecione"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Meta:" }),
-              " ",
-              metaAtual?.meta_geral?.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-              }) || "N/A"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Base da meta:" }),
-              " ",
-              baseMetaUsada.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-              })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Foco:" }),
-              " ",
-              parametros?.foco_valor === "liquido" ? "Valor líquido" : "Valor bruto"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", marginTop: 6, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 8 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Período:" }),
-              " ",
-              periodo
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Vendedor:" }),
-              " ",
-              vendedores.find((v) => v.id === vendedorSelecionado)?.nome_completo || "N/A"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Template:" }),
-              " ",
-              templates.find((t) => t.id === templateIdSelecionado)?.nome || "Selecione"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Meta:" }),
-              " ",
-              metaAtual?.meta_geral?.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-              }) || "N/A"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Base da meta:" }),
-              " ",
-              baseMetaUsada.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-              })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Foco:" }),
-              " ",
-              parametros?.foco_valor === "liquido" ? "Valor líquido" : "Valor bruto"
-            ] })
-          ] }),
-          metaAtual?.scope === "equipe" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", marginTop: 6, color: "#cbd5e1" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Escopo:" }),
-            " Equipe (",
-            idsEquipe.length,
-            " membros)"
-          ] }),
-          metaAtual?.scope === "equipe" && idsEquipe.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", marginTop: 4, color: "#cbd5e1", fontSize: "0.9rem" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Membros:" }),
-            " ",
-            idsEquipe.map((id) => vendedores.find((v) => v.id === id)?.nome_completo || id).join(", ")
-          ] })
-        ]
-      }
-    ),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-slate-50 p-2 md:p-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-3 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-100 text-sm flex flex-wrap gap-3 items-center justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Módulo:" }),
+        " Fechamento de Comissão"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Perfil:" }),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { textTransform: "uppercase" }, children: usuario?.uso_individual ? "Uso Individual" : "Corporativo" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Permissão:" }),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            style: {
+              textTransform: "uppercase",
+              fontWeight: "bold",
+              color: permissao === "admin" ? "#22c55e" : permissao === "edit" ? "#eab308" : "#ef4444"
+            },
+            children: permissao
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full mt-2 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Período:" }),
+          " ",
+          periodo
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Vendedor:" }),
+          " ",
+          vendedores.find((v) => v.id === vendedorSelecionado)?.nome_completo || "N/A"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Template:" }),
+          " ",
+          templates.find((t) => t.id === templateIdSelecionado)?.nome || "Selecione"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Meta:" }),
+          " ",
+          metaAtual?.meta_geral?.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          }) || "N/A"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Base da meta:" }),
+          " ",
+          baseMetaUsada.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Foco:" }),
+          " ",
+          parametros?.foco_valor === "liquido" ? "Valor líquido" : "Valor bruto"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full mt-2 grid gap-2", style: { gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Período:" }),
+          " ",
+          periodo
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Vendedor:" }),
+          " ",
+          vendedores.find((v) => v.id === vendedorSelecionado)?.nome_completo || "N/A"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Template:" }),
+          " ",
+          templates.find((t) => t.id === templateIdSelecionado)?.nome || "Selecione"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Meta:" }),
+          " ",
+          metaAtual?.meta_geral?.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          }) || "N/A"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Base da meta:" }),
+          " ",
+          baseMetaUsada.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Foco:" }),
+          " ",
+          parametros?.foco_valor === "liquido" ? "Valor líquido" : "Valor bruto"
+        ] })
+      ] }),
+      metaAtual?.scope === "equipe" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full mt-2 text-slate-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Escopo:" }),
+        " Equipe (",
+        idsEquipe.length,
+        " membros)"
+      ] }),
+      metaAtual?.scope === "equipe" && idsEquipe.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full mt-1 text-slate-300 text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Membros:" }),
+        " ",
+        idsEquipe.map((id) => vendedores.find((v) => v.id === id)?.nome_completo || id).join(", ")
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-green mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-        mostrarSelectVendedor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row flex flex-col md:flex-row gap-4", children: [
+        mostrarSelectVendedor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Vendedor" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "select",
@@ -526,7 +507,7 @@ function FechamentoComissaoIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -538,7 +519,7 @@ function FechamentoComissaoIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Template de Comissão" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -582,12 +563,8 @@ function FechamentoComissaoIsland() {
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "mb-3",
-        style: {
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 12
-        },
+        className: "mb-3 grid gap-3 md:gap-4",
+        style: { gridTemplateColumns: "repeat(4, minmax(0, 1fr))" },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-green", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.8rem", opacity: 0.8 }, children: "Meta do mês" }),

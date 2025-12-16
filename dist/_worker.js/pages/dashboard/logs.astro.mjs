@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -76,23 +76,10 @@ function LogsIsland() {
     return result;
   }, [logs, filtroUsuario, filtroModulo, filtroAcao, busca]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "logs-admin-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        style: {
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3"
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Logs de Auditoria" }),
-          " — todas as ações do sistema"
-        ]
-      }
-    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Logs de Auditoria" }),
+      " — todas as ações do sistema"
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 12 }, children: "Filtros" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
@@ -161,14 +148,14 @@ function LogsIsland() {
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 12 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "mb-3 font-semibold", children: [
         "Registros (",
         logsFiltrados.length,
         ")"
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[820px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { minWidth: 150 }, children: "Data" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[150px]", children: "Data" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Usuário" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ação" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Módulo" }),
@@ -195,99 +182,46 @@ function LogsIsland() {
         ] })
       ] }) })
     ] }),
-    logSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        style: {
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 100
-        },
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
+    logSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 flex justify-center items-center z-[100]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95%] max-w-[700px] max-h-[90vh] overflow-y-auto bg-slate-800 p-5 rounded-xl text-slate-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between mb-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Detalhes do log" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
           {
-            style: {
-              width: "95%",
-              maxWidth: 700,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#1e293b",
-              padding: 18,
-              borderRadius: 10,
-              color: "#e2e8f0"
-            },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 10
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Detalhes do log" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn btn-light",
-                        onClick: () => setLogSelecionado(null),
-                        children: "Fechar"
-                      }
-                    )
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Usuário:" }),
-                " ",
-                logSelecionado.users?.nome_completo
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Ação:" }),
-                " ",
-                logSelecionado.acao
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Módulo:" }),
-                " ",
-                logSelecionado.modulo
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Data:" }),
-                " ",
-                new Date(logSelecionado.created_at).toLocaleString(
-                  "pt-BR"
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "IP:" }),
-                " ",
-                logSelecionado.ip || "-"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Detalhes:" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "pre",
-                {
-                  style: {
-                    background: "#0f172a",
-                    padding: 10,
-                    borderRadius: 6,
-                    whiteSpace: "pre-wrap",
-                    fontSize: 12
-                  },
-                  children: JSON.stringify(logSelecionado.detalhes, null, 2)
-                }
-              )
-            ]
+            className: "btn btn-light",
+            onClick: () => setLogSelecionado(null),
+            children: "Fechar"
           }
         )
-      }
-    )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Usuário:" }),
+        " ",
+        logSelecionado.users?.nome_completo
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Ação:" }),
+        " ",
+        logSelecionado.acao
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Módulo:" }),
+        " ",
+        logSelecionado.modulo
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Data:" }),
+        " ",
+        new Date(logSelecionado.created_at).toLocaleString("pt-BR")
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "IP:" }),
+        " ",
+        logSelecionado.ip || "-"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Detalhes:" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "bg-slate-900 p-3 rounded text-xs whitespace-pre-wrap", children: JSON.stringify(logSelecionado.detalhes, null, 2) })
+    ] }) })
   ] });
 }
 

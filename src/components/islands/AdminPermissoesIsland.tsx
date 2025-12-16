@@ -330,10 +330,8 @@ export default function AdminPermissoesIsland() {
       {selecionado && (
         <div className="card-base card-blue">
           <h3>
-            Permissões de:{" "}
-            <span style={{ fontWeight: 600 }}>{selecionado.nome_completo}</span>
+            Permissões de: <span className="font-semibold">{selecionado.nome_completo}</span>
           </h3>
-
           <div className="table-container overflow-x-auto">
             <table className="table-default table-header-blue min-w-[500px]">
               <thead>
@@ -350,9 +348,7 @@ export default function AdminPermissoesIsland() {
                       <select
                         className="form-select"
                         value={formPermissoes[modulo] || "none"}
-                        onChange={(e) =>
-                          handleChangeNivel(modulo, e.target.value)
-                        }
+                        onChange={(e) => handleChangeNivel(modulo, e.target.value)}
                       >
                         {NIVEIS.map((n) => (
                           <option key={n.value} value={n.value}>
@@ -366,8 +362,7 @@ export default function AdminPermissoesIsland() {
               </tbody>
             </table>
           </div>
-
-          <div className="mt-2">
+          <div className="mt-2 flex gap-2">
             <button
               className="btn btn-primary"
               onClick={salvarPermissoes}
@@ -377,7 +372,6 @@ export default function AdminPermissoesIsland() {
             </button>
             <button
               className="btn btn-light"
-              style={{ marginLeft: 8 }}
               onClick={() => setSelecionado(null)}
             >
               Fechar

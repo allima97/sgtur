@@ -190,16 +190,7 @@ export default function PermissoesAdminIsland() {
 
   return (
     <div className="permissoes-admin-page">
-      <div
-        style={{
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3",
-        }}
-      >
+      <div className="mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100">
         <strong>Editor de Permissões</strong> — controle total dos módulos
       </div>
 
@@ -211,19 +202,17 @@ export default function PermissoesAdminIsland() {
 
       {/* LISTAGEM */}
       <div className="card-base card-red">
-        <h3 style={{ marginBottom: 12 }}>Usuários</h3>
-
+        <h3 className="mb-3 font-semibold">Usuários</h3>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-red min-w-[900px]">
             <thead>
               <tr>
-                <th style={{ minWidth: 180 }}>Usuário</th>
+                <th className="min-w-[180px]">Usuário</th>
                 {MODULOS.map((m) => (
                   <th key={m}>{m}</th>
                 ))}
               </tr>
             </thead>
-
             <tbody>
               {usuarios.map((u) => (
                 <tr key={u.id}>
@@ -234,21 +223,13 @@ export default function PermissoesAdminIsland() {
                     <br />
                     <small>Tipo: {u.tipo}</small>
                   </td>
-
                   {MODULOS.map((m) => {
                     const per = getPermissao(u.id, m);
-
                     return (
                       <td key={m}>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                          }}
-                        >
+                        <div className="flex flex-col gap-1">
                           {/* Toggle ATIVO */}
-                          <label style={{ fontSize: 12 }}>
+                          <label className="text-xs">
                             <input
                               type="checkbox"
                               checked={per.ativo}
@@ -258,10 +239,9 @@ export default function PermissoesAdminIsland() {
                                   ativo: e.target.checked,
                                 })
                               }
-                            />{" "}
+                            />{' '}
                             ativo
                           </label>
-
                           {/* SELECT PERMISSÃO */}
                           <select
                             disabled={!per.ativo}
@@ -272,14 +252,7 @@ export default function PermissoesAdminIsland() {
                                 permissao: e.target.value as any,
                               })
                             }
-                            style={{
-                              fontSize: 12,
-                              background: "#1e1b4b",
-                              color: "#e0e7ff",
-                              border: "1px solid #312e81",
-                              borderRadius: 4,
-                              padding: "2px 4px",
-                            }}
+                            className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
                           >
                             <option value="view">View</option>
                             <option value="edit">Edit</option>

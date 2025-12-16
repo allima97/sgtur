@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -492,7 +492,7 @@ function CommissionTemplatesIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.nome }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.modo }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.ativo ? "Sim" : "Não" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions flex gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {

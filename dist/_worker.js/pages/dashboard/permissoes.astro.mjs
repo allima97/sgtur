@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -111,30 +111,17 @@ function PermissoesAdminIsland() {
     }
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "permissoes-admin-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        style: {
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3"
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Editor de Permissões" }),
-          " — controle total dos módulos"
-        ]
-      }
-    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Editor de Permissões" }),
+      " — controle total dos módulos"
+    ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: erro }),
     loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando..." }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 12 }, children: "Usuários" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-3 font-semibold", children: "Usuários" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[900px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { minWidth: 180 }, children: "Usuário" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[180px]", children: "Usuário" }),
           MODULOS.map((m) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: m }, m))
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: usuarios.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -150,57 +137,40 @@ function PermissoesAdminIsland() {
           ] }),
           MODULOS.map((m) => {
             const per = getPermissao(u.id, m);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                style: {
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4
-                },
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { fontSize: 12 }, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: per.ativo,
-                        onChange: (e) => salvar({
-                          ...per,
-                          ativo: e.target.checked
-                        })
-                      }
-                    ),
-                    " ",
-                    "ativo"
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      disabled: !per.ativo,
-                      value: per.permissao,
-                      onChange: (e) => salvar({
-                        ...per,
-                        permissao: e.target.value
-                      }),
-                      style: {
-                        fontSize: 12,
-                        background: "#1e1b4b",
-                        color: "#e0e7ff",
-                        border: "1px solid #312e81",
-                        borderRadius: 4,
-                        padding: "2px 4px"
-                      },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "view", children: "View" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "edit", children: "Edit" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "admin", children: "Admin" })
-                      ]
-                    }
-                  )
-                ]
-              }
-            ) }, m);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: per.ativo,
+                    onChange: (e) => salvar({
+                      ...per,
+                      ativo: e.target.checked
+                    })
+                  }
+                ),
+                " ",
+                "ativo"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  disabled: !per.ativo,
+                  value: per.permissao,
+                  onChange: (e) => salvar({
+                    ...per,
+                    permissao: e.target.value
+                  }),
+                  className: "text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "view", children: "View" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "edit", children: "Edit" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "admin", children: "Admin" })
+                  ]
+                }
+              )
+            ] }) }, m);
           })
         ] }, u.id)) })
       ] }) })

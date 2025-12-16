@@ -85,11 +85,11 @@ const EmpresasAdminIsland: React.FC = () => {
   }
 
   return (
-    <div style={{ marginTop: 40 }}>
-      <h3 style={{ fontSize: "1.4rem", marginBottom: 15 }}>🏢 Empresas Cadastradas</h3>
+    <div className="mt-10">
+      <h3 className="text-xl font-semibold mb-4">🏢 Empresas Cadastradas</h3>
 
       {erro && (
-        <div style={{ background: "#7f1d1d", padding: 10, borderRadius: 8 }}>
+        <div className="bg-red-900 text-red-100 p-3 rounded mb-3">
           {erro}
         </div>
       )}
@@ -97,93 +97,71 @@ const EmpresasAdminIsland: React.FC = () => {
       {loading ? (
         <p>Carregando empresas...</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              background: "#0f172a",
-              color: "#e2e8f0",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-slate-900 text-slate-200 rounded-xl overflow-hidden border-separate border-spacing-0">
             <thead>
-              <tr style={{ background: "#1e293b" }}>
-                <th className="th">Nome Fantasia</th>
-                <th className="th">CNPJ</th>
-                <th className="th">Cidade/Estado</th>
-                <th className="th">Status</th>
-                <th className="th">Ult. Pagamento</th>
-                <th className="th">Próx. Vencimento</th>
-                <th className="th">Valor</th>
-                <th className="th">Ações</th>
+              <tr className="bg-slate-800">
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Nome Fantasia</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">CNPJ</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Cidade/Estado</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Status</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Ult. Pagamento</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Próx. Vencimento</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Valor</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Ações</th>
               </tr>
             </thead>
 
             <tbody>
               {empresas.map((e) => (
-                <tr key={e.id} className="tr">
-                  <td className="td">{e.nome_fantasia}</td>
-                  <td className="td">{e.cnpj}</td>
-                  <td className="td">
-                    {e.cidade}/{e.estado}
-                  </td>
-
-                  <td className="td">
+                <tr key={e.id} className="hover:bg-slate-800">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{e.nome_fantasia}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{e.cnpj}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{e.cidade}/{e.estado}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     <span
-                      style={{
-                        color: statusColors[e?.billing?.status || "canceled"],
-                        fontWeight: "bold",
-                        textTransform: "capitalize",
-                      }}
+                      className="font-bold capitalize"
+                      style={{ color: statusColors[e?.billing?.status || "canceled"] }}
                     >
                       {e.billing?.status || "—"}
                     </span>
                   </td>
-
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     {e.billing?.ultimo_pagamento
                       ? new Date(e.billing.ultimo_pagamento).toLocaleDateString()
                       : "—"}
                   </td>
-
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     {e.billing?.proximo_vencimento
                       ? new Date(e.billing.proximo_vencimento).toLocaleDateString()
                       : "—"}
                   </td>
-
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     {e.billing?.valor_mensal
                       ? `R$ ${e.billing.valor_mensal.toFixed(2)}`
                       : "—"}
                   </td>
-
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-slate-700 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(e.id, "active")}
                     >
                       Ativar
                     </button>
-
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-yellow-600 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(e.id, "past_due")}
                     >
                       Atraso
                     </button>
-
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-orange-600 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(e.id, "suspended")}
                     >
                       Suspender
                     </button>
-
                     <button
-                      className="btn-small red"
+                      className="px-2 py-1 rounded bg-rose-600 text-slate-100 hover:opacity-85 transition"
                       onClick={() => atualizarStatus(e.id, "canceled")}
                     >
                       Cancelar
@@ -195,39 +173,6 @@ const EmpresasAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
-
-      {/* CSS INLINE SIMPLES PARA FUNCIONAR AGORA */}
-      <style>{`
-        .th {
-          padding: 10px;
-          font-size: 0.85rem;
-          text-align: left;
-          border-bottom: 1px solid #334155;
-        }
-        .td {
-          padding: 10px;
-          font-size: 0.85rem;
-          border-bottom: 1px solid #1e293b;
-        }
-        .tr:hover {
-          background: #1e293b;
-        }
-        .btn-small {
-          margin-right: 6px;
-          padding: 4px 7px;
-          border-radius: 6px;
-          border: none;
-          cursor: pointer;
-          background: #334155;
-          color: #e2e8f0;
-        }
-        .btn-small:hover {
-          opacity: 0.85;
-        }
-        .btn-small.red {
-          background: #ef4444;
-        }
-      `}</style>
     </div>
   );
 };

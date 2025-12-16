@@ -519,7 +519,7 @@ export default function DestinosIsland() {
                       ? new Date(d.created_at).toLocaleDateString("pt-BR")
                       : "-"}
                   </td>
-                  <td className="th-actions">
+                  <td className="th-actions flex gap-2">
                     {permissao !== "view" && (
                       <button
                         className="btn-icon"
@@ -529,7 +529,6 @@ export default function DestinosIsland() {
                         ✏️
                       </button>
                     )}
-
                     {permissao === "admin" && (
                       <button
                         className="btn-icon btn-danger"

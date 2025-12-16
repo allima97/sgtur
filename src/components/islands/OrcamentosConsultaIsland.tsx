@@ -206,6 +206,27 @@ export default function OrcamentosConsultaIsland() {
     }
   }
 
+
+
+
+  const pendentesFollowUp = useMemo(() => {
+    const relevantes: StatusOrcamento[] = ["novo", "enviado", "negociando"];
+    return lista.filter((o) => {
+      const status = (o.status as StatusOrcamento) || "novo";
+      if (!relevantes.includes(status)) return false;
+
+      const diasViagem = diasAte(o.data_viagem || null);
+      const diasCriacao = diasDesde(o.data_orcamento || null);
+      const ultima = ultimasInteracoes[o.id];
+      const diasInteracao = diasDesdeISO(ultima?.created_at || null);
+      const semDataEAntigo = !o.data_viagem && diasCriacao >= 7;
+      const viagemProximaOuAtrasada = Number.isFinite(diasViagem) && diasViagem <= 7;
+      const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
+
+      return viagemProximaOuAtrasada || semDataEAntigo || semInteracaoRecente;
+    });
+  }, [lista, ultimasInteracoes]);
+
   const pendentesIds = useMemo(() => new Set(pendentesFollowUp.map((o) => o.id)), [pendentesFollowUp]);
   const filtrados = useMemo(
     () => (somentePendentes ? lista.filter((o) => pendentesIds.has(o.id)) : lista),
@@ -266,23 +287,6 @@ export default function OrcamentosConsultaIsland() {
     }, 3500);
   }
 
-  const pendentesFollowUp = useMemo(() => {
-    const relevantes: StatusOrcamento[] = ["novo", "enviado", "negociando"];
-    return lista.filter((o) => {
-      const status = (o.status as StatusOrcamento) || "novo";
-      if (!relevantes.includes(status)) return false;
-
-      const diasViagem = diasAte(o.data_viagem || null);
-      const diasCriacao = diasDesde(o.data_orcamento || null);
-      const ultima = ultimasInteracoes[o.id];
-      const diasInteracao = diasDesdeISO(ultima?.created_at || null);
-      const semDataEAntigo = !o.data_viagem && diasCriacao >= 7;
-      const viagemProximaOuAtrasada = Number.isFinite(diasViagem) && diasViagem <= 7;
-      const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
-
-      return viagemProximaOuAtrasada || semDataEAntigo || semInteracaoRecente;
-    });
-  }, [lista, ultimasInteracoes]);
   const totais = useMemo(() => {
     const acc: Record<StatusOrcamento, { qtd: number; valor: number }> = {
       novo: { qtd: 0, valor: 0 },
@@ -706,17 +710,15 @@ export default function OrcamentosConsultaIsland() {
   return (
     <>
       <div className="card-base">
-        <div className="page-header" style={{ marginBottom: 8 }}>
+        <div className="page-header mb-2">
           <div>
-            <h2 className="card-title">Orçamentos</h2>
-            <p className="page-subtitle">Consulta rápida dos orçamentos cadastrados.</p>
+            <h2 className="card-title font-semibold text-lg">Orçamentos</h2>
+            <p className="page-subtitle text-slate-500">Consulta rápida dos orçamentos cadastrados.</p>
           </div>
         </div>
         <div
-          className="grid w-full"
+          className="grid w-full mt-3 gap-2 md:gap-3"
           style={{
-            marginTop: 12,
-            gap: 10,
             gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
             alignItems: "end",
           }}
@@ -773,15 +775,15 @@ export default function OrcamentosConsultaIsland() {
             />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-          <button className="btn btn-secondary" onClick={carregar} style={{ minWidth: 120 }}>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <button className="btn btn-secondary min-w-[120px]" onClick={carregar}>
             Atualizar
           </button>
-          <button className="btn btn-light" onClick={exportarCSV} style={{ minWidth: 140 }}>
+          <button className="btn btn-light min-w-[140px]" onClick={exportarCSV}>
             Exportar CSV
           </button>
           <button
-            className="btn btn-light"
+            className="btn btn-light min-w-[140px]"
             onClick={() => {
               setStatusFiltro("");
               setPeriodoIni("");
@@ -790,18 +792,16 @@ export default function OrcamentosConsultaIsland() {
               setValorMax("");
               carregar();
             }}
-            style={{ minWidth: 140 }}
           >
             Limpar filtros
           </button>
           <button
-            className="btn btn-light"
+            className="btn btn-light min-w-[160px]"
             onClick={() => setMostrarKanban((prev) => !prev)}
-            style={{ minWidth: 160 }}
           >
             {mostrarKanban ? "Ocultar Kanban" : "Mostrar Kanban"}
           </button>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={somentePendentes}
@@ -819,34 +819,22 @@ export default function OrcamentosConsultaIsland() {
         </div>
       )}
 
-      <div className="card-base card-blue" style={{ marginTop: 12 }}>
-        <h3 className="card-title">Situação do Orçamento</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 10,
-            alignItems: "stretch",
-          }}
-        >
+      <div className="card-base card-blue mt-3">
+        <h3 className="card-title font-semibold">Situação do Orçamento</h3>
+        <div className="grid gap-2 md:gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', alignItems: 'stretch' }}>
           {statuses.map((status) => (
             <div
               key={`kpi-${status}`}
-              className="kpi-card"
+              className="kpi-card flex flex-col gap-1 items-center justify-center text-center"
               style={{
                 background: statusCores[status].bg,
                 border: `1px solid ${statusCores[status].border}`,
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                justifyContent: "center",
               }}
             >
-              <div className="kpi-label" style={{ textTransform: "capitalize", fontWeight: 700 }}>
+              <div className="kpi-label capitalize font-bold">
                 {status} - {String(totais[status].qtd).padStart(2, "0")} Itens
               </div>
-              <div className="kpi-value" style={{ fontSize: "1.3rem", fontWeight: 800 }}>
+              <div className="kpi-value text-xl font-extrabold">
                 {totais[status].valor.toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL",

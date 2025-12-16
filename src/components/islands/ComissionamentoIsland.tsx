@@ -483,11 +483,7 @@ export default function ComissionamentoIsland() {
   if (loadingPerm) return <div>Carregando permissões...</div>;
   if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
 
-  const cardColStyle = {
-    flexDirection: "column" as const,
-    alignItems: "center" as const,
-    textAlign: "center" as const,
-  };
+  const cardColStyle = {};
 
   const metaProdEntries =
     metaProdEnabled && resumo
@@ -501,9 +497,9 @@ export default function ComissionamentoIsland() {
       : [];
 
   return (
-    <div className="card-base" style={{ background: "transparent", boxShadow: "none", padding: 0 }}>
-      <div className="card-base" style={{ marginBottom: 12 }}>
-        <div className="form-row" style={{ marginBottom: 0 }}>
+    <div className="card-base bg-transparent shadow-none p-0">
+      <div className="card-base mb-3">
+        <div className="form-row mb-0">
           <div className="form-group">
             <label className="form-label">Período</label>
             <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
@@ -535,46 +531,36 @@ export default function ComissionamentoIsland() {
 
       {!loading && resumo && (
         <>
-          <div className="card-base" style={{ marginBottom: 12 }}>
-            <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, marginBottom: 16 }}>
-              Como está seu Progresso
-            </div>
-            <div
-              className="kpi-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: 12,
-                marginBottom: 4,
-              }}
-            >
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#16a34a" }}>
+          <div className="card-base mb-3">
+            <div className="text-center font-bold text-lg mb-4">Como está seu Progresso</div>
+            <div className="grid gap-3 mb-1" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
+              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#16a34a' }}>
                 <div className="kpi-label">Meta do mês</div>
                 <div className="kpi-value">
                   {(metaGeral?.meta_geral || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#ca8a04" }}>
+              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#ca8a04' }}>
                 <div className="kpi-label">Total Bruto</div>
                 <div className="kpi-value">
                   {resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#c2410c" }}>
-                <div className="kpi-label">Total Taxas</div>
+              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#c2410c' }}>
+                <div className="kpi-label">Total Líquido</div>
+                <div className="kpi-value">
+                  {resumo.totalLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              </div>
+              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#0ea5e9' }}>
+                <div className="kpi-label">Taxas</div>
                 <div className="kpi-value">
                   {resumo.totalTaxas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#0ea5e9" }}>
-                <div className="kpi-label">Valor Liquido</div>
-                <div className="kpi-value">
-                  {resumo.valorLiquido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </div>
-              </div>
-              <div className="kpi-card" style={{ ...cardColStyle, color: "#2563eb" }}>
-                <div className="kpi-label">Meta atingida</div>
-                <div className="kpi-value">{resumo.pctMetaGeral.toFixed(1)}%</div>
+              <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#2563eb' }}>
+                <div className="kpi-label">Vendas</div>
+                <div className="kpi-value">{resumo.totalVendas}</div>
               </div>
             </div>
           </div>
@@ -592,7 +578,7 @@ export default function ComissionamentoIsland() {
               className="kpi-grid"
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
             >
-              <div className="kpi-card" style={cardColStyle}>
+              <div className="kpi-card flex flex-col items-center text-center">
                 <div className="kpi-label">Comissão (geral)</div>
                 <div className="kpi-value">
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -600,7 +586,7 @@ export default function ComissionamentoIsland() {
               </div>
               {metaProdEnabled &&
                 metaProdEntries.map(([pid, val]) => (
-                  <div key={`meta-${pid}`} className="kpi-card" style={cardColStyle}>
+                  <div key={`meta-${pid}`} className="kpi-card flex flex-col items-center text-center">
                     <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
                     <div className="kpi-value">
                       {val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -609,7 +595,7 @@ export default function ComissionamentoIsland() {
                   </div>
                 ))}
               {difProdutos.map((pid) => (
-                <div key={pid} className="kpi-card" style={cardColStyle}>
+                <div key={pid} className="kpi-card flex flex-col items-center text-center">
                   <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
                   <div className="kpi-value">
                     {(resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
@@ -622,7 +608,7 @@ export default function ComissionamentoIsland() {
                   )}
                 </div>
               ))}
-              <div className="kpi-card kpi-highlight" style={cardColStyle}>
+              <div className="kpi-card kpi-highlight flex flex-col items-center text-center">
                 <div className="kpi-label">Comissão total</div>
                 <div className="kpi-value">
                   {resumo.totalComissao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}

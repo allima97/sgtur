@@ -613,7 +613,7 @@ export default function CommissionTemplatesIsland() {
                   <td>{t.nome}</td>
                   <td>{t.modo}</td>
                   <td>{t.ativo ? "Sim" : "Não"}</td>
-                  <td className="th-actions">
+                  <td className="th-actions flex gap-2">
                     <button
                       className="btn-icon"
                       title="Editar"

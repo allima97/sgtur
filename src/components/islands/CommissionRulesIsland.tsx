@@ -443,7 +443,7 @@ export default function CommissionRulesIsland() {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+        <div className="flex gap-2 flex-wrap mt-2">
           <button className="btn btn-primary" type="submit" disabled={!podeEditar || salvando}>
             {salvando ? "Salvando..." : editId ? "Atualizar regra" : "Criar regra"}
           </button>
@@ -462,8 +462,8 @@ export default function CommissionRulesIsland() {
         </div>
       </form>
 
-      <div className="card-base card-blue" style={{ marginTop: 16 }}>
-        <h4 style={{ marginBottom: 8 }}>Regras cadastradas</h4>
+      <div className="card-base card-blue mt-4">
+        <h4 className="mb-2">Regras cadastradas</h4>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-header-blue min-w-[900px]">
             <thead>

@@ -96,18 +96,16 @@ export default function OrcamentosCadastroIsland() {
 
   return (
     <div className="card-base card-blue mb-3">
-      <h2 className="card-title">Novo Orçamento</h2>
+      <h2 className="card-title font-semibold text-lg">Novo Orçamento</h2>
 
-      {erro && <div className="auth-error">{erro}</div>}
+      {erro && <div className="auth-error text-red-600 font-medium mb-2">{erro}</div>}
       {sucesso && (
-        <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
-          {sucesso}
-        </div>
+        <div className="auth-success text-slate-900 font-bold mb-2">{sucesso}</div>
       )}
 
-      <form onSubmit={salvar} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div className="form-row" style={{ gap: 12 }}>
-          <div className="form-group">
+      <form onSubmit={salvar} className="flex flex-col gap-4">
+        <div className="form-row flex flex-col md:flex-row gap-3">
+          <div className="form-group flex-1 min-w-[180px]">
             <label className="form-label">Cliente *</label>
             <select
               className="form-select"
@@ -124,7 +122,7 @@ export default function OrcamentosCadastroIsland() {
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[180px]">
             <label className="form-label">Destino *</label>
             <select
               className="form-select"
@@ -141,7 +139,7 @@ export default function OrcamentosCadastroIsland() {
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[180px]">
             <label className="form-label">Tipo de produto</label>
             <select
               className="form-select"
@@ -158,8 +156,8 @@ export default function OrcamentosCadastroIsland() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gap: 12 }}>
-          <div className="form-group">
+        <div className="form-row flex flex-col md:flex-row gap-3">
+          <div className="form-group flex-1 min-w-[140px]">
             <label className="form-label">Status</label>
             <select
               className="form-select"
@@ -174,7 +172,7 @@ export default function OrcamentosCadastroIsland() {
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[140px]">
             <label className="form-label">Valor estimado (R$)</label>
             <input
               className="form-input"
@@ -186,7 +184,7 @@ export default function OrcamentosCadastroIsland() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group flex-1 min-w-[140px]">
             <label className="form-label">Data da viagem</label>
             <input
               className="form-input"
@@ -208,7 +206,7 @@ export default function OrcamentosCadastroIsland() {
           />
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="mt-3 flex flex-wrap gap-2">
           <button type="submit" className="btn btn-primary" disabled={salvando}>
             {salvando ? "Salvando..." : "Criar orçamento"}
           </button>

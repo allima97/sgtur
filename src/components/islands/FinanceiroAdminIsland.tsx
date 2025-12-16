@@ -92,13 +92,11 @@ const FinanceiroAdminIsland: React.FC = () => {
   }
 
   return (
-    <div style={{ marginTop: 40 }}>
-      <h3 style={{ fontSize: "1.4rem", marginBottom: 15 }}>
-        💳 Controle Financeiro (Billing)
-      </h3>
+    <div className="mt-10">
+      <h3 className="text-xl font-semibold mb-4">💳 Controle Financeiro (Billing)</h3>
 
       {erro && (
-        <div style={{ background: "#7f1d1d", padding: 10, borderRadius: 8 }}>
+        <div className="bg-red-900 text-red-100 p-3 rounded mb-3">
           {erro}
         </div>
       )}
@@ -106,75 +104,60 @@ const FinanceiroAdminIsland: React.FC = () => {
       {loading ? (
         <p>Carregando financeiro...</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              background: "#0f172a",
-              color: "#e2e8f0",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-slate-900 text-slate-200 rounded-xl overflow-hidden border-separate border-spacing-0">
             <thead>
-              <tr style={{ background: "#1e293b" }}>
-                <th className="th">Empresa</th>
-                <th className="th">CNPJ</th>
-                <th className="th">Status</th>
-                <th className="th">Último Pagamento</th>
-                <th className="th">Próx. Vencimento</th>
-                <th className="th">Valor do Plano</th>
-                <th className="th">Ações</th>
+              <tr className="bg-slate-800">
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Empresa</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">CNPJ</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Status</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Último Pagamento</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Próx. Vencimento</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Valor do Plano</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Ações</th>
               </tr>
             </thead>
 
             <tbody>
               {registros.map((r) => (
-                <tr key={r.id} className="tr">
-                  <td className="td">{r.companies?.nome_fantasia || "—"}</td>
-                  <td className="td">{r.companies?.cnpj || "—"}</td>
+                <tr key={r.id} className="hover:bg-slate-800">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{r.companies?.nome_fantasia || "—"}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{r.companies?.cnpj || "—"}</td>
 
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     <span
-                      style={{
-                        color: statusColors[r.status],
-                        fontWeight: "bold",
-                        textTransform: "capitalize",
-                      }}
+                      className="font-bold capitalize"
+                      style={{ color: statusColors[r.status] }}
                     >
                       {statusLabels[r.status]}
                     </span>
                   </td>
 
-                  <td className="td">{formatarData(r.ultimo_pagamento)}</td>
-                  <td className="td">{formatarData(r.proximo_vencimento)}</td>
-                  <td className="td">{formatarValor(r.valor_mensal)}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{formatarData(r.ultimo_pagamento)}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{formatarData(r.proximo_vencimento)}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">{formatarValor(r.valor_mensal)}</td>
 
-                  <td className="td">
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-slate-700 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(r.company_id, "active")}
                     >
                       Ativar
                     </button>
-
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-yellow-600 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(r.company_id, "past_due")}
                     >
                       Atrasada
                     </button>
-
                     <button
-                      className="btn-small"
+                      className="px-2 py-1 rounded bg-orange-600 text-slate-100 hover:opacity-85 transition mr-1"
                       onClick={() => atualizarStatus(r.company_id, "suspended")}
                     >
                       Suspender
                     </button>
-
                     <button
-                      className="btn-small red"
+                      className="px-2 py-1 rounded bg-rose-600 text-slate-100 hover:opacity-85 transition"
                       onClick={() => atualizarStatus(r.company_id, "canceled")}
                     >
                       Cancelar
@@ -186,35 +169,6 @@ const FinanceiroAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
-
-      <style>{`
-        .th {
-          padding: 10px;
-          font-size: 0.85rem;
-          text-align: left;
-          border-bottom: 1px solid #334155;
-        }
-        .td {
-          padding: 10px;
-          font-size: 0.85rem;
-          border-bottom: 1px solid #1e293b;
-        }
-        .tr:hover {
-          background: #1e293b;
-        }
-        .btn-small {
-          margin-right: 6px;
-          padding: 4px 7px;
-          border-radius: 6px;
-          border: none;
-          cursor: pointer;
-          background: #334155;
-          color: #e2e8f0;
-        }
-        .btn-small.red {
-          background: #ef4444;
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -79,12 +79,12 @@ function OrcamentosCadastroIsland() {
   }
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-3", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Novo Orçamento" }),
-    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
-    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", style: { color: "#0f172a", fontWeight: 700 }, children: sucesso }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, style: { display: "flex", flexDirection: "column", gap: 14 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { gap: 12 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title font-semibold text-lg", children: "Novo Orçamento" }),
+    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error text-red-600 font-medium mb-2", children: erro }),
+    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success text-slate-900 font-bold mb-2", children: sucesso }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, className: "flex flex-col gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row flex flex-col md:flex-row gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente *" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -100,7 +100,7 @@ function OrcamentosCadastroIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Destino *" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -116,7 +116,7 @@ function OrcamentosCadastroIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de produto" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -132,8 +132,8 @@ function OrcamentosCadastroIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { gap: 12 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row flex flex-col md:flex-row gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[140px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -151,7 +151,7 @@ function OrcamentosCadastroIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[140px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor estimado (R$)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -165,7 +165,7 @@ function OrcamentosCadastroIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[140px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data da viagem" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -191,7 +191,7 @@ function OrcamentosCadastroIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : "Criar orçamento" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -358,6 +358,21 @@ function OrcamentosConsultaIsland() {
       setCarregando(false);
     }
   }
+  const pendentesFollowUp = reactExports.useMemo(() => {
+    const relevantes = ["novo", "enviado", "negociando"];
+    return lista.filter((o) => {
+      const status = o.status || "novo";
+      if (!relevantes.includes(status)) return false;
+      const diasViagem = diasAte(o.data_viagem || null);
+      const diasCriacao = diasDesde(o.data_orcamento || null);
+      const ultima = ultimasInteracoes[o.id];
+      const diasInteracao = diasDesdeISO(ultima?.created_at || null);
+      const semDataEAntigo = !o.data_viagem && diasCriacao >= 7;
+      const viagemProximaOuAtrasada = Number.isFinite(diasViagem) && diasViagem <= 7;
+      const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
+      return viagemProximaOuAtrasada || semDataEAntigo || semInteracaoRecente;
+    });
+  }, [lista, ultimasInteracoes]);
   const pendentesIds = reactExports.useMemo(() => new Set(pendentesFollowUp.map((o) => o.id)), [pendentesFollowUp]);
   const filtrados = reactExports.useMemo(
     () => somentePendentes ? lista.filter((o) => pendentesIds.has(o.id)) : lista,
@@ -411,21 +426,6 @@ function OrcamentosConsultaIsland() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3500);
   }
-  const pendentesFollowUp = reactExports.useMemo(() => {
-    const relevantes = ["novo", "enviado", "negociando"];
-    return lista.filter((o) => {
-      const status = o.status || "novo";
-      if (!relevantes.includes(status)) return false;
-      const diasViagem = diasAte(o.data_viagem || null);
-      const diasCriacao = diasDesde(o.data_orcamento || null);
-      const ultima = ultimasInteracoes[o.id];
-      const diasInteracao = diasDesdeISO(ultima?.created_at || null);
-      const semDataEAntigo = !o.data_viagem && diasCriacao >= 7;
-      const viagemProximaOuAtrasada = Number.isFinite(diasViagem) && diasViagem <= 7;
-      const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
-      return viagemProximaOuAtrasada || semDataEAntigo || semInteracaoRecente;
-    });
-  }, [lista, ultimasInteracoes]);
   const totais = reactExports.useMemo(() => {
     const acc = {
       novo: { qtd: 0, valor: 0 },
@@ -790,17 +790,15 @@ function OrcamentosConsultaIsland() {
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "page-header", style: { marginBottom: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Orçamentos" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle", children: "Consulta rápida dos orçamentos cadastrados." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "page-header mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title font-semibold text-lg", children: "Orçamentos" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle text-slate-500", children: "Consulta rápida dos orçamentos cadastrados." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: "grid w-full",
+          className: "grid w-full mt-3 gap-2 md:gap-3",
           style: {
-            marginTop: 12,
-            gap: 10,
             gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
             alignItems: "end"
           },
@@ -871,13 +869,13 @@ function OrcamentosConsultaIsland() {
           ]
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: carregar, style: { minWidth: 120 }, children: "Atualizar" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", onClick: exportarCSV, style: { minWidth: 140 }, children: "Exportar CSV" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 mt-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary min-w-[120px]", onClick: carregar, children: "Atualizar" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light min-w-[140px]", onClick: exportarCSV, children: "Exportar CSV" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            className: "btn btn-light",
+            className: "btn btn-light min-w-[140px]",
             onClick: () => {
               setStatusFiltro("");
               setPeriodoIni("");
@@ -886,20 +884,18 @@ function OrcamentosConsultaIsland() {
               setValorMax("");
               carregar();
             },
-            style: { minWidth: 140 },
             children: "Limpar filtros"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            className: "btn btn-light",
+            className: "btn btn-light min-w-[160px]",
             onClick: () => setMostrarKanban((prev) => !prev),
-            style: { minWidth: 160 },
             children: mostrarKanban ? "Ocultar Kanban" : "Mostrar Kanban"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -914,47 +910,31 @@ function OrcamentosConsultaIsland() {
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
     sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", style: { color: "#0f172a", fontWeight: 700 }, children: sucesso }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "card-title", children: "Situação do Orçamento" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mt-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "card-title font-semibold", children: "Situação do Orçamento" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:gap-3", style: { gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", alignItems: "stretch" }, children: statuses.map((status) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
+          className: "kpi-card flex flex-col gap-1 items-center justify-center text-center",
           style: {
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 10,
-            alignItems: "stretch"
+            background: statusCores[status].bg,
+            border: `1px solid ${statusCores[status].border}`
           },
-          children: statuses.map((status) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "kpi-card",
-              style: {
-                background: statusCores[status].bg,
-                border: `1px solid ${statusCores[status].border}`,
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                justifyContent: "center"
-              },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-label", style: { textTransform: "capitalize", fontWeight: 700 }, children: [
-                  status,
-                  " - ",
-                  String(totais[status].qtd).padStart(2, "0"),
-                  " Itens"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", style: { fontSize: "1.3rem", fontWeight: 800 }, children: totais[status].valor.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL"
-                }) })
-              ]
-            },
-            `kpi-${status}`
-          ))
-        }
-      )
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-label capitalize font-bold", children: [
+              status,
+              " - ",
+              String(totais[status].qtd).padStart(2, "0"),
+              " Itens"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value text-xl font-extrabold", children: totais[status].valor.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL"
+            }) })
+          ]
+        },
+        `kpi-${status}`
+      )) })
     ] }),
     pendentesFollowUp.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-yellow", style: { marginTop: 12 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [

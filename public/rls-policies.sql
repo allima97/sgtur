@@ -249,6 +249,31 @@ create policy "viagem_acompanhantes_write" on public.viagem_acompanhantes
     )
   );
 
+-- VIAGEM_PASSAGEIROS
+alter table public.viagem_passageiros enable row level security;
+drop policy if exists "viagem_passageiros_select" on public.viagem_passageiros;
+create policy "viagem_passageiros_select" on public.viagem_passageiros
+  for select using (
+    is_admin(auth.uid())
+    or exists (
+      select 1 from public.viagens v
+      where v.id = viagem_id
+        and v.company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                                     (select u.company_id from public.users u where u.id = auth.uid()))
+    )
+  );
+drop policy if exists "viagem_passageiros_write" on public.viagem_passageiros;
+create policy "viagem_passageiros_write" on public.viagem_passageiros
+  for all using (
+    is_admin(auth.uid())
+    or exists (
+      select 1 from public.viagens v
+      where v.id = viagem_id
+        and v.company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                                     (select u.company_id from public.users u where u.id = auth.uid()))
+    )
+  );
+
 -- VIAGEM_SERVICOS
 alter table public.viagem_servicos enable row level security;
 drop policy if exists "viagem_servicos_select" on public.viagem_servicos;

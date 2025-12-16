@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, a as createAstro, e as renderComponent, d as renderTemplate } from '../../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -685,71 +685,64 @@ function DossieViagemIsland({ viagemId }) {
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 8 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base border border-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "mb-2", children: [
           "Documentos / vouchers (",
           documentos.length,
           ")"
         ] }),
-        podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "card-base",
-            style: { marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: "Enviar documento" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Título" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: docTitulo,
-                      onChange: (e) => setDocTitulo(e.target.value),
-                      placeholder: "Ex: Voucher do hotel"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      className: "form-select",
-                      value: docTipo,
-                      onChange: (e) => setDocTipo(e.target.value),
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "voucher", children: "Voucher" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "bilhete", children: "Bilhete" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "roteiro", children: "Roteiro" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "seguro", children: "Seguro" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "outro", children: "Outro" })
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Arquivo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "file",
-                      className: "form-input",
-                      onChange: (e) => setDocFile(e.target.files?.[0] || null)
-                    }
-                  )
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarDocumento, disabled: savingDoc, children: savingDoc ? "Enviando..." : "Enviar documento" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 12, color: "#475569", marginTop: 6 }, children: [
-                "Bucket sugerido: ",
-                STORAGE_BUCKET,
-                " (público ou via URL assinada)."
-              ] })
-            ]
-          }
-        ),
+        podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3 border border-dashed border-slate-300 bg-slate-50", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold mb-2", children: "Enviar documento" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Título" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  value: docTitulo,
+                  onChange: (e) => setDocTitulo(e.target.value),
+                  placeholder: "Ex: Voucher do hotel"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  className: "form-select",
+                  value: docTipo,
+                  onChange: (e) => setDocTipo(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "voucher", children: "Voucher" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "bilhete", children: "Bilhete" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "roteiro", children: "Roteiro" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "seguro", children: "Seguro" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "outro", children: "Outro" })
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Arquivo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "file",
+                  className: "form-input",
+                  onChange: (e) => setDocFile(e.target.files?.[0] || null)
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarDocumento, disabled: savingDoc, children: savingDoc ? "Enviando..." : "Enviar documento" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-slate-500 mt-2", children: [
+            "Bucket sugerido: ",
+            STORAGE_BUCKET,
+            " (público ou via URL assinada)."
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[640px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Título" }),

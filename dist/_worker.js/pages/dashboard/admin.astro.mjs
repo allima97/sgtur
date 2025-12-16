@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BQoodnBS.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_Da6suYyQ.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -82,56 +82,33 @@ function DashboardAdminIsland() {
     loadData();
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-admin-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        style: {
-          marginBottom: 16,
-          padding: "12px 16px",
-          background: "#4c0519",
-          border: "1px solid #be123c",
-          borderRadius: 8,
-          color: "#fecdd3"
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dashboard Administrativo" }),
-          " — Controle Geral do Sistema"
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 12 }, children: "Visão geral do sistema" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          style: {
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 10
-          },
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Clientes" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.clientes })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.vendas })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Produtos" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.produtos })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Tipos de produto" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.tipos })
-            ] })
-          ]
-        }
-      )
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dashboard Administrativo" }),
+      " — Controle Geral do Sistema"
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 10 }, children: "Empresas cadastradas" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-3 font-semibold text-lg", children: "Visão geral do sistema" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:gap-3", style: { gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Clientes" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.clientes })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.vendas })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Produtos" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.produtos })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Tipos de produto" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: sistema.tipos })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-2 font-semibold", children: "Empresas cadastradas" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[760px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome fantasia" }),
@@ -153,7 +130,7 @@ function DashboardAdminIsland() {
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 10 }, children: "Usuários do sistema" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-2 font-semibold", children: "Usuários do sistema" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[640px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
@@ -167,16 +144,7 @@ function DashboardAdminIsland() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.nome_completo }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.email || "-" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.user_types?.name || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "td",
-              {
-                style: {
-                  color: u.active ? "#22c55e" : "#ef4444",
-                  fontWeight: "bold"
-                },
-                children: u.active ? "Sim" : "Não"
-              }
-            )
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold", children: u.active ? "Sim" : "Não" })
           ] }, u.id))
         ] })
       ] }) })

@@ -737,7 +737,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   // FORM
   // =======================================================
   return (
-    <div className="vendas-cadastro-page">
+    <div className="min-h-screen bg-slate-50 p-2 md:p-6">
 
       {/* FORM VENDA */}
       <div className="card-base card-green mb-3">
@@ -755,9 +755,9 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         )}
 
         <form onSubmit={salvarVenda}>
-          <div className="form-row">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* CLIENTE */}
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[220px]">
               <label className="form-label">Cliente *</label>
               <input
                 className="form-input"
@@ -799,7 +799,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             </div>
 
             {/* CIDADE DE DESTINO */}
-            <div className="form-group" style={{ position: "relative" }}>
+            <div className="form-group flex-1 min-w-[220px] relative">
               <label className="form-label">Cidade de Destino *</label>
               <input
                 className="form-input"
@@ -817,18 +817,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
               )}
               {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
                 <div
-                  className="card-base"
-                  style={{
-                    marginTop: 4,
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    padding: 6,
-                    border: "1px solid #e5e7eb",
-                    position: "absolute",
-                    zIndex: 5,
-                    width: "100%",
-                    background: "#fff",
-                  }}
+                  className="card-base absolute left-0 right-0 mt-1 max-h-44 overflow-y-auto p-1 border border-slate-200 bg-white z-10"
                 >
                   {resultadosCidade.length === 0 && !buscandoCidade && buscaDestino.trim().length >= 2 && (
                     <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
@@ -839,14 +828,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                       <button
                         key={c.id}
                         type="button"
-                        className="btn btn-light"
-                        style={{
-                          width: "100%",
-                          justifyContent: "flex-start",
-                          marginBottom: 4,
-                          background: formVenda.destino_id === c.id ? "#e0f2fe" : "#fff",
-                          borderColor: formVenda.destino_id === c.id ? "#38bdf8" : "#e5e7eb",
-                        }}
+                        className={`btn btn-light w-full justify-start mb-1 ${formVenda.destino_id === c.id ? 'bg-sky-100 border-sky-400' : 'bg-white border-slate-200'}`}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
@@ -865,7 +847,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             </div>
 
             {/* EMBARQUE */}
-            <div className="form-group">
+            <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Data de embarque</label>
               <input
                 className="form-input"
@@ -882,13 +864,13 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           </div>
 
           {/* RECIBOS */}
-          <h4 className="mt-3">Recibos da Venda</h4>
+          <h4 className="mt-3 font-semibold text-lg">Recibos da Venda</h4>
 
           {recibos.map((r, i) => (
             <div key={i} className="card-base mb-2">
-              <div className="form-row">
+              <div className="flex flex-col md:flex-row gap-4">
                 {/* PRODUTO */}
-                <div className="form-group">
+                <div className="form-group flex-1 min-w-[180px]">
                   <label className="form-label">Produto *</label>
                   <input
                     className="form-input"
@@ -919,7 +901,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 </div>
 
                 {/* NÚMERO */}
-                <div className="form-group">
+                <div className="form-group flex-1 min-w-[120px]">
                   <label className="form-label">Número recibo *</label>
                   <input
                     className="form-input"
@@ -932,7 +914,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 </div>
 
                 {/* VALOR */}
-                <div className="form-group">
+                <div className="form-group flex-1 min-w-[120px]">
                   <label className="form-label">Valor total *</label>
                   <input
                     className="form-input"
@@ -947,7 +929,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 </div>
 
                 {/* TAXAS */}
-                <div className="form-group">
+                <div className="form-group flex-1 min-w-[120px]">
                   <label className="form-label">Taxas</label>
                   <input
                     className="form-input"
@@ -961,10 +943,10 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 </div>
 
                 {/* REMOVER */}
-                <div className="form-group" style={{ width: "80px" }}>
+                <div className="form-group flex-none w-20 flex items-end">
                   <button
                     type="button"
-                    className="btn-icon btn-danger mt-4"
+                    className="btn-icon btn-danger mt-2"
                     onClick={() => removerRecibo(i)}
                   >
                     🗑️
@@ -974,7 +956,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             </div>
           ))}
 
-          <div className="mt-3" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               className="btn btn-primary"
@@ -982,7 +964,6 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             >
               ➕ Adicionar recibo
             </button>
-
             <button
               type="submit"
               className="btn btn-success"
@@ -992,9 +973,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             </button>
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-outline bg-slate-100 text-slate-800"
               onClick={cancelarCadastro}
-              style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}
             >
               Cancelar
             </button>

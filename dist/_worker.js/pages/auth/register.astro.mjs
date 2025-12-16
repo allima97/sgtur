@@ -144,12 +144,12 @@ function AuthRegisterIsland() {
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-actions", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "submit", className: "btn btn-primary btn-block", disabled: loading, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "submit", className: "btn btn-primary w-full", disabled: loading, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-user-plus" }),
           loading ? " Criando..." : " Criar Conta"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-divider", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "ou" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("a", { href: "/auth/login", className: "btn btn-secondary btn-block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("a", { href: "/auth/login", className: "btn btn-secondary w-full", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-right-to-bracket" }),
           "Já tenho conta"
         ] })
