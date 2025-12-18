@@ -173,6 +173,31 @@ drop policy if exists "cron_log_select_admin" on public.cron_log_alertas;
 create policy "cron_log_select_admin" on public.cron_log_alertas
   for select using (is_admin(auth.uid()));
 
+-- LOGS DE EVENTOS (somente leitura para admins, inserção liberada a usuários autenticados)
+alter table public.logs enable row level security;
+drop policy if exists "logs_select_admin" on public.logs;
+create policy "logs_select_admin" on public.logs
+  for select using (is_admin(auth.uid()));
+drop policy if exists "logs_insert" on public.logs;
+create policy "logs_insert" on public.logs
+  for insert with check (auth.uid() IS NOT NULL);
+
+-- GARANTE VIAGEM_PASSAGEIROS EXISTE ANTES DAS POLÍTICAS
+create table if not exists public.viagem_passageiros (
+  id uuid primary key default gen_random_uuid(),
+  viagem_id uuid not null references public.viagens(id) on delete cascade,
+  cliente_id uuid not null references public.clientes(id) on delete cascade,
+  company_id uuid not null references public.companies(id),
+  papel text not null check (papel in ('passageiro', 'responsavel')),
+  observacoes text,
+  created_by uuid references public.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists idx_viagem_passageiros_viagem_cliente
+  on public.viagem_passageiros (viagem_id, cliente_id);
+create index if not exists idx_viagem_passageiros_viagem on public.viagem_passageiros (viagem_id);
+
 -- VIAGENS (usa company_id; ajuste para claim se aplicável)
 alter table public.viagens enable row level security;
 drop policy if exists "viagens_select" on public.viagens;

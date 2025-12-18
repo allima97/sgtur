@@ -72,6 +72,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
   // ============================
   const mapaRotas: Record<string, string> = {
+    "/dashboard/logs": "Admin",
+    "/dashboard/admin": "Admin",
+    "/dashboard/permissoes": "Admin",
     "/": "Dashboard",
     "/dashboard": "Dashboard",
     "/vendas": "Vendas",

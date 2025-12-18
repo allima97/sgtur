@@ -103,6 +103,9 @@ const onRequest$2 = defineMiddleware(async (context, next) => {
     return Response.redirect(new URL("/auth/login", url), 302);
   }
   const mapaRotas = {
+    "/dashboard/logs": "Admin",
+    "/dashboard/admin": "Admin",
+    "/dashboard/permissoes": "Admin",
     "/": "Dashboard",
     "/dashboard": "Dashboard",
     "/vendas": "Vendas",

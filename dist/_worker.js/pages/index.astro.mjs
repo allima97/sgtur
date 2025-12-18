@@ -1,8 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_Da6suYyQ.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CsxualbE.mjs';
 import { $ as $$HeaderPage } from '../chunks/HeaderPage_DCV0c2xr.mjs';
-import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_CTl8yUtY.mjs';
+import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_BVMlMyat.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 
 const $$Index = createComponent(($$result, $$props, $$slots) => {
