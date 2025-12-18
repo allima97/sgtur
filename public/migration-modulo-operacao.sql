@@ -14,10 +14,8 @@ select u.id, 'operacao', 'edit', true
 from public.users u
 left join public.user_types t on t.id = u.user_type_id
 where upper(coalesce(t.name, '')) like '%ADMIN%'
-  and not exists (
-    select 1 from public.modulo_acesso m
-    where m.usuario_id = u.id and lower(m.modulo) = 'operacao'
-  );
+on conflict (usuario_id, modulo)
+do update set permissao = excluded.permissao, ativo = true;
 
 -- Gestores (view/edit) — ajuste a string do tipo se for diferente
 insert into public.modulo_acesso (usuario_id, modulo, permissao, ativo)
@@ -25,10 +23,8 @@ select u.id, 'operacao', 'edit', true
 from public.users u
 left join public.user_types t on t.id = u.user_type_id
 where upper(coalesce(t.name, '')) like '%GESTOR%'
-  and not exists (
-    select 1 from public.modulo_acesso m
-    where m.usuario_id = u.id and lower(m.modulo) = 'operacao'
-  );
+on conflict (usuario_id, modulo)
+do update set permissao = excluded.permissao, ativo = true;
 
 -- Opcional: vendedores apenas leitura
 -- insert into public.modulo_acesso (usuario_id, modulo, permissao, ativo)
