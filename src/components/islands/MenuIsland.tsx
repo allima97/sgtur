@@ -548,7 +548,7 @@ export default function MenuIsland({ activePage }) {
                   href="/dashboard/admin"
                   onClick={handleNavClick}
                 >
-                  <span>🧑‍💼</span>Usuários
+                  <span>🧑</span>Usuários
                 </a>
               </li>
             </ul>
