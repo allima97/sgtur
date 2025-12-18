@@ -18,7 +18,7 @@ import {
 
 // ----------------- TIPOS -----------------
 
-type PapelUsuario = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
+type PapelUsuario = "ADMINISTRADOR" | "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
 type UserContext = {
   usuarioId: string;
