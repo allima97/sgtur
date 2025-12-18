@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
+import { usePermissao } from "../../lib/usePermissao";
 import { logoutUsuario } from "../../lib/logout";
+
 
 type NivelPermissao =
   | "none"
