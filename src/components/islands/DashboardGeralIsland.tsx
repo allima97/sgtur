@@ -16,6 +16,11 @@ import {
   Legend,
 } from "recharts";
 
+useEffect(() => {
+  alert("DashboardIsland executou");
+}, []);
+
+
 // ----------------- TIPOS -----------------
 
 type PapelUsuario = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
