@@ -364,18 +364,6 @@ export default function MenuIsland({ activePage }) {
             </li>
           )}
 
-          {can("Vendas") && (
-            <li>
-              <a
-                className={`sidebar-link ${activePage === "comissionamento" ? "active" : ""}`}
-                href="/operacao/comissionamento"
-                onClick={handleNavClick}
-              >
-                <span>💰</span>Comissionamento
-              </a>
-            </li>
-          )}
-
           {can("Operacao") && (
             <li>
               <a
