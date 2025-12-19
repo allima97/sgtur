@@ -1095,8 +1095,16 @@ const DashboardGeralIsland: React.FC = () => {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div style={{ display: "flex", gap: 16, alignItems: "center", height: "100%" }}>
-                  <div style={{ flex: 1, height: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 16,
+                    alignItems: "center",
+                    height: "100%",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: "1 1 280px", minWidth: 0, height: "100%" }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie
@@ -1115,7 +1123,13 @@ const DashboardGeralIsland: React.FC = () => {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  <div style={{ minWidth: 220, maxHeight: "100%", overflowY: "auto" }}>
+                  <div
+                    style={{
+                      width: 220,
+                      maxHeight: "100%",
+                      overflowY: "auto",
+                    }}
+                  >
                     {renderPieLegendList(vendasPorDestinoTop5)}
                   </div>
                 </div>
@@ -1142,8 +1156,16 @@ const DashboardGeralIsland: React.FC = () => {
               {vendasPorProduto.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefs.vendas_produto === "pie" ? (
-                <div style={{ display: "flex", gap: 16, alignItems: "center", height: "100%" }}>
-                  <div style={{ flex: 1, height: "100%" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 16,
+                    alignItems: "center",
+                    height: "100%",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: "1 1 280px", minWidth: 0, height: "100%" }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie
@@ -1162,7 +1184,13 @@ const DashboardGeralIsland: React.FC = () => {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  <div style={{ minWidth: 220, maxHeight: "100%", overflowY: "auto" }}>
+                  <div
+                    style={{
+                      width: 220,
+                      maxHeight: "100%",
+                      overflowY: "auto",
+                    }}
+                  >
                     {renderPieLegendList(vendasPorProduto)}
                   </div>
                 </div>
