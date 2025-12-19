@@ -255,6 +255,8 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     - Nível: none/view/create/edit/delete/admin
     - Bloqueio total por módulo
   - Auditoria de alterações de permissões
+- Ao carregar o dashboard/Admin e o módulo de logs, o hook `usePermissao("AdminDashboard")` usa o componente `LoadingUsuarioContext` para renderizar um único card amarelo com "Carregando contexto do usuário..." enquanto valida claims e permissões.
+- O filtro de gestores passou a usar `.eq("user_types.name","GESTOR")` (em vez de `.contains("user_types(name)", ["GESTOR"])`) para montar uma query compatível com o PostgREST e evitar erros 400.
 
 #### 2.6.2 Logs de Auditoria
 - Tabela: `logs` (estrutura definida/implementada)
@@ -265,6 +267,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Alteração de permissões
 - Página:
   - `/dashboard/logs` com filtro básico (já planejada/implementada)
+- A ordenação dos hooks no island foi ajustada para declarar `usePermissao`, `useEffect` e `useMemo` antes de qualquer retorno condicional, eliminando o warning de mudança de ordem e mantendo o card amarelo de carregamento como único estado inicial.
 
 ---
 
@@ -435,6 +438,7 @@ Tecnologias:
 
 **Próximos passos imediatos:**
 - Garantir no Supabase a tabela `metas_vendedor_produto` (FK para `metas_vendedor` e `produtos`) para evitar erros 42703 no CRUD de metas diferenciadas.
+- Script pronto: `database/migrations/20240720_create_metas_vendedor_produto.sql` cria a tabela + índices; execute com `psql`/Supabase CLI para garantir que a estrutura esteja disponível.
 - Garantir no Supabase a coluna `exibe_kpi_comissao boolean default true` em `tipo_produtos` para habilitar o toggle de KPI por produto.
 - Garantir no Supabase as colunas extras do perfil em `users`: `rg text`, `whatsapp text`, `cep text`, `endereco text`, `numero text`, `complemento text`.
 - Se `template_id` em `metas_vendedor` não for mais usado, avaliar remoção/ignorar nas consultas e policies.
