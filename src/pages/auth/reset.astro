@@ -2,12 +2,15 @@
 import "../../styles/global.css";
 import "../../styles/auth-extra.css";
 import AuthResetIsland from "../../components/islands/AuthResetIsland.tsx";
+import { SYSTEM_NAME } from "../../lib/systemName";
+
+const pageTitle = `Nova senha - ${SYSTEM_NAME}`;
 ---
 
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>Nova senha - SGTUR</title>
+    <title>{pageTitle}</title>
   </head>
   <body class="auth-body">
     <AuthResetIsland client:load />

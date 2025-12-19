@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
+import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthLoginIsland() {
   const [email, setEmail] = useState("");
@@ -138,8 +139,8 @@ export default function AuthLoginIsland() {
           <div className="auth-icon">
             <i className="fa-solid fa-plane-departure" aria-hidden />
           </div>
-          <h1>Bem-vindo ao SGTUR</h1>
-          <h2>Sistema de Gerenciamento de Turismo</h2>
+          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
+          <h2>Sistema de Gerenciamento de Vendas para Turismo</h2>
           <p className="auth-subtitle">Use seu e-mail e senha para acessar ou faça seu cadastro</p>
         </div>
 

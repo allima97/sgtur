@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
+import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthResetIsland() {
   const [password, setPassword] = useState("");
@@ -109,7 +110,9 @@ export default function AuthResetIsland() {
             <i className="fa-solid fa-plane-departure"></i>
           </div>
           <h1>Definir nova senha</h1>
-          <h2 className="auth-subtitle">Crie uma nova senha para voltar a usar o SGTUR.</h2>
+          <h2 className="auth-subtitle">
+            Crie uma nova senha para voltar a usar o {SYSTEM_NAME}.
+          </h2>
         </div>
         {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
         {ok && (

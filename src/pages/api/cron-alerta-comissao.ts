@@ -283,7 +283,8 @@ export const POST: APIRoute = async ({ request }) => {
       .replace("{{meta}}", a.meta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }))
       .replace("{{periodo}}", `${periodoInicio} a ${periodoFim}`);
 
-    const subject = "Alerta de Meta - SGTUR";
+    const subject =
+      "Alerta de Meta - SGVTUR - Sistema de Gerenciamento de Vendas para Turismo";
     const html = `<p>${msg}</p><p>Período: ${periodoInicio} a ${periodoFim}</p>`;
     const text = `${msg}\nPeríodo: ${periodoInicio} a ${periodoFim}`;
 

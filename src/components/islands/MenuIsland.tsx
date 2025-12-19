@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { logoutUsuario } from "../../lib/logout";
+import { SYSTEM_NAME } from "../../lib/systemName";
 
 
 type NivelPermissao =
@@ -298,7 +299,7 @@ export default function MenuIsland({ activePage }) {
     <>
       {mobileControls}
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
-        <div className="sidebar-logo">SGTUR</div>
+            <div className="sidebar-logo">{SYSTEM_NAME}</div>
 
         <div>
           <div className="sidebar-section-title">Operação</div>

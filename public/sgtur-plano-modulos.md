@@ -1,5 +1,5 @@
-# Plano de Módulos do SGTUR
-Guia de tudo o que já foi construído, o que falta e melhores práticas para transformar o SGTUR em um sistema profissional de gestão para turismo.
+# Plano de Módulos do SGVTUR - Sistema de Gerenciamento de Vendas para Turismo
+Guia de tudo o que já foi construído, o que falta e melhores práticas para transformar o SGVTUR - Sistema de Gerenciamento de Vendas para Turismo em um sistema profissional de gestão para turismo.
 
 ---
 
@@ -10,7 +10,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 - **Frontend**
   - [x] **Astro 4** (SSR + Islands)
   - [x] **React + TypeScript** nos islands
-  - [x] CSS utilitário próprio (padrão SGTUR: cards, tabelas, cores por módulo)
+  - [x] CSS utilitário próprio (padrão SGVTUR - Sistema de Gerenciamento de Vendas para Turismo: cards, tabelas, cores por módulo)
   - [x] **TailwindCSS** (configurado com `preflight` desativado para preservar o visual atual)
 - **Deploy / Infra**
   - [x] Cloudflare Pages + Functions (adapter `@astrojs/cloudflare`)
@@ -852,10 +852,10 @@ CREATE POLICY viagens_del ON public.viagens
 Nota Importante ---> Será preciso fazer Cadastro de acompanhantes na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
 
 
-Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGTUR**.
+Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGVTUR - Sistema de Gerenciamento de Vendas para Turismo**.
 ## 5. Planejamento de módulos ainda pendentes
 
-O SGTUR deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo segue o roadmap estratégico com subtítulos para cada grande bloco, prioridades (P1 = alta) e dependências principais.
+O SGVTUR - Sistema de Gerenciamento de Vendas para Turismo deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo segue o roadmap estratégico com subtítulos para cada grande bloco, prioridades (P1 = alta) e dependências principais.
 
 ### 5.1 Cadastros avançados (P1)
 - **Descrição:** Consolidar CRUDs completos para Clientes, Fornecedores, Tarifários, Serviços, Bloqueios, Aeroportos, Emissores, Promotores, Estoques de Bilhetes, Usuários, Tipos de Tarifa, Moedas, Cotações e Parametrizações.

@@ -327,7 +327,8 @@ async function processarAlerta(opcoes: OpcaoAlerta, secretHeader: string | null)
       .map((t) => t.trim())
       .filter(Boolean);
     if (toList.length) {
-      const subject = "SGTUR - Alertas de follow-up de orçamentos";
+      const subject =
+        "SGVTUR - Sistema de Gerenciamento de Vendas para Turismo - Alertas de follow-up de orçamentos";
       const listaHtml = inserts
         .map(
           (i) => `<li><strong>${i.orcamento_id}</strong> - ${i.mensagem}</li>`

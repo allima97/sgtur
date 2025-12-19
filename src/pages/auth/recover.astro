@@ -2,12 +2,15 @@
 import "../../styles/global.css";
 import "../../styles/auth-extra.css";
 import AuthRecoverIsland from "../../components/islands/AuthRecoverIsland.tsx";
+import { SYSTEM_NAME } from "../../lib/systemName";
+
+const pageTitle = `Recuperar senha - ${SYSTEM_NAME}`;
 ---
 
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>Recuperar senha - SGTUR</title>
+    <title>{pageTitle}</title>
   </head>
   <body class="auth-body">
     <AuthRecoverIsland client:load />

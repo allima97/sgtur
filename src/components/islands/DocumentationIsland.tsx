@@ -6,7 +6,7 @@ export default function DocumentationIsland() {
   useEffect(() => {
     async function loadDoc() {
       try {
-        const res = await fetch("/SGTUR_DOCUMENTACAO.md");
+        const res = await fetch("/SGVTUR_DOCUMENTACAO.md");
         const text = await res.text();
         setContent(text);
       } catch (e) {

@@ -2,12 +2,15 @@
 import "../../styles/global.css";
 import "../../styles/auth-extra.css";
 import AuthLoginIsland from "../../components/islands/AuthLoginIsland.tsx";
+import { SYSTEM_NAME } from "../../lib/systemName";
+
+const pageTitle = `Login - ${SYSTEM_NAME}`;
 ---
 
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <title>Login - SGTUR</title>
+    <title>{pageTitle}</title>
   </head>
   <body class="auth-body">
     <AuthLoginIsland client:load />

@@ -1,4 +1,4 @@
-# RLS Checklist SGTUR
+# RLS Checklist SGVTUR - Sistema de Gerenciamento de Vendas para Turismo
 
 Políticas sugeridas para Supabase (ajustar conforme schema real e vínculos de gestor/equipe).
 

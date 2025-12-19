@@ -2,6 +2,7 @@ import React from "react";
 import { supabase } from "../../lib/supabase";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
+import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthRegisterIsland() {
   const registerForm = useRegisterForm({
@@ -22,8 +23,8 @@ export default function AuthRegisterIsland() {
           <div className="auth-icon">
             <i className="fa-solid fa-plane-departure"></i>
           </div>
-          <h1>Bem-vindo ao SGTUR</h1>
-          <h2>Sistema de Gerenciamento de Turismo</h2>
+          <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
+          <h2>Sistema de Gerenciamento de Vendas para Turismo</h2>
           <p className="auth-subtitle">
             Cadastre-se, confirme o e-mail e complete seus dados no primeiro acesso.
           </p>

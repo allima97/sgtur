@@ -13,7 +13,7 @@ export default function DocumentationPortalIsland() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/SGTUR_DOCUMENTACAO.md");
+        const res = await fetch("/SGVTUR_DOCUMENTACAO.md");
         const text = await res.text();
         setRaw(text);
       } catch (e) {

@@ -3,8 +3,9 @@ import "../styles/global.css";
 import "../styles/auth-extra.css";
 
 import MenuIsland from "../components/islands/MenuIsland.tsx";
+import { SYSTEM_NAME } from "../lib/systemName";
 
-const { title = "SGTUR", activePage = "" } = Astro.props;
+const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
 ---
 
 <html lang="pt-BR">

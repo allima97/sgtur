@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Utilitários customizados SGTUR para UI padrão */
+/* Utilitários customizados SGVTUR - Sistema de Gerenciamento de Vendas para Turismo para UI padrão */
 
 .btn {
   @apply inline-flex items-center gap-2 rounded-md font-medium cursor-pointer border-0 text-base px-4 py-2 transition-colors;
