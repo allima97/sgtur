@@ -452,6 +452,11 @@ Tecnologias:
 - KPIs de produto: se o tipo de produto estiver com `exibe_kpi_comissao = true`, o dashboard adiciona um KPI com o nome do produto (valor vendido no período) e ele aparece no painel de personalização para ligar/desligar e reordenar.
 - As páginas de `/dashboard`, `/dashboard/admin`, `/dashboard/logs` e `/dashboard/permissoes` compartilham o container `.page-content-wrap`, garantindo largura máxima, centralização e o padding amarelo padrão do `LoadingUsuarioContext` enquanto as permissões são avaliadas.
 - Novo KPI “Dias restantes” mostra quantos dias faltam para o fim do mês e também é personalizável via painel do dashboard.
+- **Dashboard Administrativo:** o card de “Controle Geral do Sistema” agora incorpora formulários para editar empresas, usuários e gestores.
+  - Empresas: tabela com botão “Editar”, formulário para criar/atualizar e campo `active` para bloquear sem excluir registros.
+  - Usuários: coluna que mostra a empresa vinculada, botão “Editar” e formulário lateral para ajustar nome, e-mail, tipo, empresa e status ativo/bloqueado.
+  - Gestores & equipes: tabela com contadores de vendedores e formulário para ativar/desativar vínculos entre gestores e vendedores na tabela `gestor_vendedor`. Foi adicionada a coluna `ativo boolean DEFAULT true` para que a equipe seja atualizada sem excluir registros.
+- **Próximo passo:** aplicar as migrations `20240721_add_ativo_gestor_vendedor.sql` e `20240721_add_active_companies.sql` para garantir que os campos `ativo` existem em `gestor_vendedor` e `companies` antes de usar os novos modais.
 
 ### 3.4 Dashboard Premium (Gestor / Vendedor / Admin)
 
