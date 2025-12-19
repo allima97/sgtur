@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Fornecedor = {
   id: string;
@@ -184,7 +185,11 @@ export default function FornecedoresIsland() {
     }
   }
 
-  if (!ativo && !loadingPerm) {
+  if (loadingPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
+  if (!ativo) {
     return <div>Você não possui acesso ao módulo de Cadastros.</div>;
   }
 

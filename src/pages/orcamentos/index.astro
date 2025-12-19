@@ -3,6 +3,7 @@ import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import OrcamentosCadastroIsland from "../../components/islands/OrcamentosCadastroIsland.tsx";
 import OrcamentosConsultaIsland from "../../components/islands/OrcamentosConsultaIsland.tsx";
+import OrcamentosPermissionLoader from "../../components/islands/OrcamentosPermissionLoader.tsx";
 
 const activePage = "orcamentos";
 ---
@@ -13,6 +14,8 @@ const activePage = "orcamentos";
     Cadastre e acompanhe orçamentos antes de virarem vendas.
   </p>
 
-  <OrcamentosCadastroIsland client:load />
-  <OrcamentosConsultaIsland client:load />
+  <OrcamentosPermissionLoader client:load>
+    <OrcamentosCadastroIsland client:load suppressLoadingMessage />
+    <OrcamentosConsultaIsland client:load suppressLoadingMessage />
+  </OrcamentosPermissionLoader>
 </DashboardLayout>

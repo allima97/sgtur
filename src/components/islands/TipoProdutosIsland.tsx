@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -361,7 +362,7 @@ export default function TipoProdutosIsland() {
     return tipos.filter((p) => normalizeText(p.nome || p.tipo || "").includes(termo));
   }, [busca, tipos]);
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Você não possui acesso ao módulo de Parâmetros.</div>;
 
   return (

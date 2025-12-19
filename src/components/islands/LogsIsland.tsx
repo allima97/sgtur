@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type LogEntry = {
   id: string;
@@ -54,7 +55,7 @@ export default function LogsIsland() {
     validar();
   }, []);
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
 
   if (!ativo || !isAdmin)
     return (

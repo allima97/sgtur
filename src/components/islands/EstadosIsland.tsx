@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -186,7 +187,13 @@ export default function SubdivisoesIsland() {
     }
   }
 
-  if (loadingPerm) return <div className="paises-page">Carregando permissoes...</div>;
+  if (loadingPerm) {
+    return (
+      <div className="paises-page">
+        <LoadingUsuarioContext />
+      </div>
+    );
+  }
   if (!ativo) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (

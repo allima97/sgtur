@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Parametros = {
   usar_taxas_na_meta: boolean;
@@ -481,7 +482,7 @@ export default function ComissionamentoIsland() {
     };
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
 
   const cardColStyle = {};

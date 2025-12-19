@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type ViagemAcompanhante = {
   id: string;
@@ -235,7 +236,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     }
   }
 
-  if (!ativo && !loadingPerm) {
+  if (loadingPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
+  if (!ativo) {
     return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
   }
 

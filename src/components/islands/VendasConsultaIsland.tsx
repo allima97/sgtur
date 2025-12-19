@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -438,16 +439,16 @@ export default function VendasConsultaIsland() {
   // ================================
   // BLOQUEIO TOTAL DE MÓDULO
   // ================================
+  if (loadingUser || loadPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
   if (!ativo) {
     return (
       <div className="card-base card-config">
         <strong>Acesso negado ao módulo de Vendas.</strong>
       </div>
     );
-  }
-
-  if (loadingUser || loadPerm) {
-    return <div className="card-base card-config">Carregando contexto do usuário...</div>;
   }
 
   if (!podeVer) {

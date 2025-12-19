@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Rule = {
   id: string;
@@ -37,7 +38,7 @@ const emptyRule = {
 };
 
 export default function CommissionRulesIsland() {
-  const { permissao, ativo } = usePermissao("Parametros");
+  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
   const podeEditar = permissao === "admin" || permissao === "edit";
 
   const [rules, setRules] = useState<Rule[]>([]);
@@ -255,6 +256,10 @@ export default function CommissionRulesIsland() {
             })) || []
           : [],
     });
+  }
+
+  if (loadingPerm) {
+    return <LoadingUsuarioContext />;
   }
 
   if (!ativo) {

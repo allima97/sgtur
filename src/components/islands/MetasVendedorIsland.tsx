@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Usuario = {
   id: string;
@@ -26,7 +27,7 @@ type MetaProduto = {
 };
 
 export default function MetasVendedorIsland() {
-  const { permissao, ativo } = usePermissao("Metas");
+  const { permissao, ativo, loading } = usePermissao("Metas");
   const [parametros, setParametros] = useState<{
     foco_valor?: "bruto" | "liquido";
   } | null>(null);
@@ -46,7 +47,7 @@ export default function MetasVendedorIsland() {
   const [detalhesMetas, setDetalhesMetas] = useState<Record<string, MetaProduto[]>>({});
   const [editId, setEditId] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loadingMeta, setLoadingMeta] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -59,7 +60,7 @@ export default function MetasVendedorIsland() {
 
   async function carregarDados() {
     try {
-      setLoading(true);
+      setLoadingMeta(true);
 
       // usuário logado
       const { data: auth } = await supabase.auth.getUser();
@@ -110,7 +111,7 @@ export default function MetasVendedorIsland() {
       console.error(e);
       setErro("Erro ao carregar dados iniciais");
     } finally {
-      setLoading(false);
+      setLoadingMeta(false);
     }
   }
 
@@ -360,7 +361,7 @@ export default function MetasVendedorIsland() {
   // UI
   // =============================================
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading || loadingMeta) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Acesso ao módulo de Metas bloqueado.</div>;
 
   return (

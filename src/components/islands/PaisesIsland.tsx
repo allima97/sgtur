@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -176,7 +177,11 @@ export default function PaisesIsland() {
   }
 
   if (loadingPerm) {
-    return <div className="paises-page">Carregando permissões...</div>;
+    return (
+      <div className="paises-page">
+        <LoadingUsuarioContext />
+      </div>
+    );
   }
 
   if (!ativo) {

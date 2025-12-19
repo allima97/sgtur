@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Usuario = {
   id: string;
@@ -32,6 +33,7 @@ const MODULOS: string[] = [
   "Vendas",
   "Orcamentos",
   "Operacao",
+  "Viagens",
   "Comissionamento",
   "Cadastros",
   "Paises",
@@ -59,7 +61,7 @@ const NIVEIS: { value: NivelPermissao; label: string }[] = [
 ];
 
 export default function AdminPermissoesIsland() {
-  const { permissao, ativo } = usePermissao("Admin"); // módulo Admin
+  const { permissao, ativo, loading: loadingAdminPerm } = usePermissao("Admin"); // módulo Admin
 
   const [usuarioLogadoId, setUsuarioLogadoId] = useState<string | null>(null);
 
@@ -244,6 +246,10 @@ export default function AdminPermissoesIsland() {
   // ---------------------------------------
   // UI
   // ---------------------------------------
+  if (loadingAdminPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
   if (!ativo) {
     return <div>Acesso ao módulo de Admin bloqueado.</div>;
   }

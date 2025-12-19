@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -437,7 +438,7 @@ export default function CidadesIsland() {
 
   if (!podeVer && !isAdmin) {
     if (carregando) {
-      return <div className="auth-info">Carregando permissoes...</div>;
+      return <LoadingUsuarioContext className="mb-3" />;
     }
     return <div className="auth-error">Voce nao possui permissao para visualizar Cidades.</div>;
   }
@@ -518,7 +519,7 @@ export default function CidadesIsland() {
         </div>
       </div>
 
-      {carregando && <div className="auth-info mb-3">Carregando permissoes...</div>}
+      {carregando && <LoadingUsuarioContext className="mb-3" />}
       {!carregando && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>

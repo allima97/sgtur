@@ -563,7 +563,7 @@ Tecnologias possíveis:
   - Dossiê mostra timeline da viagem, passageiros, serviços (voos/hotel/transfer) e anexos; permite upload para Supabase Storage e geração de links assinados.
   - Geração de dossiê PDF (roteiro + documentos) para envio por e-mail/WhatsApp; opção de compartilhar link temporário.
   - Alertas automáticos (cron) X dias antes da viagem com checklist e documentos principais; logar em `cron_log_alertas`.
-  - Permissões: novo módulo `Operacao` ou reaproveitar `Vendas` com níveis de edição.
+  - Permissões: novo módulo `Operacao` (para os dados e criação) e o módulo `Viagens` em Administração → Permissões (ele mapeia para `operacao_viagens` e libera o menu da tela).
 - Tecnologias:
   - Islands dedicados: `ViagensListaIsland`, `DossieViagemIsland`.
   - Supabase Storage para anexos + geração de URLs assinadas.

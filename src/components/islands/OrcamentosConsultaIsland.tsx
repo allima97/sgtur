@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Orcamento = {
   id: string;
@@ -49,8 +50,14 @@ function gerarNumeroVenda(data: Date) {
   return `VND-${y}${m}${d}-${h}${min}-${rand}`;
 }
 
-export default function OrcamentosConsultaIsland() {
-  const { ativo } = usePermissao("Vendas");
+type OrcamentosConsultaProps = {
+  suppressLoadingMessage?: boolean;
+};
+
+export default function OrcamentosConsultaIsland({
+  suppressLoadingMessage = false,
+}: OrcamentosConsultaProps) {
+  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
   const [lista, setLista] = useState<Orcamento[]>([]);
   const [statusFiltro, setStatusFiltro] = useState<string>("");
   const [erro, setErro] = useState<string | null>(null);
@@ -703,6 +710,10 @@ export default function OrcamentosConsultaIsland() {
     } finally {
       setSalvandoInteracao(false);
     }
+  }
+
+  if (loadingPerm) {
+    return suppressLoadingMessage ? null : <LoadingUsuarioContext />;
   }
 
   if (!ativo) return <div>Acesso ao módulo de Vendas bloqueado.</div>;

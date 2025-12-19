@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Empresa = {
   id: string;
@@ -77,7 +78,7 @@ export default function DashboardAdminIsland() {
   }, []);
 
   // bloquear quem não é admin
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo || !isAdmin)
     return (
       <div style={{ padding: 20 }}>

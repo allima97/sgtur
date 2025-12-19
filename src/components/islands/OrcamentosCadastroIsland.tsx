@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Cliente = { id: string; nome: string };
 type Destino = { id: string; nome: string };
@@ -8,8 +9,14 @@ type TipoProduto = { id: string; nome: string | null; tipo?: string };
 
 type StatusOrcamento = "novo" | "enviado" | "negociando" | "fechado" | "perdido";
 
-export default function OrcamentosCadastroIsland() {
-  const { ativo } = usePermissao("Vendas");
+type OrcamentosCadastroProps = {
+  suppressLoadingMessage?: boolean;
+};
+
+export default function OrcamentosCadastroIsland({
+  suppressLoadingMessage = false,
+}: OrcamentosCadastroProps) {
+  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [destinos, setDestinos] = useState<Destino[]>([]);
   const [produtos, setProdutos] = useState<TipoProduto[]>([]);
@@ -90,6 +97,10 @@ export default function OrcamentosCadastroIsland() {
     } finally {
       setSalvando(false);
     }
+  }
+
+  if (loadingPerm) {
+    return suppressLoadingMessage ? null : <LoadingUsuarioContext className="mb-3" />;
   }
 
   if (!ativo) return <div>Acesso ao módulo de Vendas bloqueado.</div>;

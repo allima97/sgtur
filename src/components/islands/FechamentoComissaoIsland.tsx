@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import {
   calcularValorComissao,
 } from "../../lib/comissao";
@@ -99,7 +100,7 @@ function getPrimeiroDiaMesSeguinte(periodoYYYYMM: string) {
 }
 
 export default function FechamentoComissaoIsland() {
-  const { permissao, ativo } = usePermissao("Metas");
+  const { permissao, ativo, loading } = usePermissao("Metas");
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
@@ -521,6 +522,8 @@ export default function FechamentoComissaoIsland() {
   // ==========================================
   // UI
   // ==========================================
+
+  if (loading) return <LoadingUsuarioContext />;
 
   if (!ativo) {
     return <div>Acesso ao módulo de Metas & Comissões bloqueado.</div>;

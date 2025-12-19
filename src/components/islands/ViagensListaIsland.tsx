@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Viagem = {
   id: string;
@@ -325,7 +326,11 @@ export default function ViagensListaIsland() {
     });
   }, [viagens]);
 
-  if (!ativo && !loadingPerm) {
+  if (loadingPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
+  if (!ativo) {
     return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
   }
 

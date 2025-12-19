@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import {
   ResponsiveContainer,
   BarChart,
@@ -933,7 +934,7 @@ const DashboardGeralIsland: React.FC = () => {
   // liberando a renderização assim que já houver contexto básico.
 
   if ((loadingUserCtx && !userCtx) || permissaoData.loading) {
-    return <div>Carregando contexto do dashboard...</div>;
+    return <LoadingUsuarioContext />;
   }
 
   if (!permissaoData.ativo) {

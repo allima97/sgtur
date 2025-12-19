@@ -68,8 +68,7 @@ export function usePermissao(modulo: string) {
           .from("modulo_acesso")
           .select("permissao, ativo")
           .eq("usuario_id", user.id)
-          .ilike("modulo", moduloTrimmed)
-          .maybeSingle();
+          .ilike("modulo", moduloTrimmed);
 
         if (cancelled) return;
 
@@ -78,8 +77,39 @@ export function usePermissao(modulo: string) {
           return;
         }
 
-        const ativoValue = Boolean(data?.ativo);
-        const permissaoValue = normalizePermissao(data?.permissao);
+        const registros = (data || []) as { permissao: string | null; ativo: boolean | null }[];
+        let melhorRegistro: { permissao: string | null; ativo: boolean | null } | null = null;
+
+        for (const registro of registros) {
+          if (!melhorRegistro) {
+            melhorRegistro = registro;
+            continue;
+          }
+
+          const atualAtivo = Boolean(registro.ativo);
+          const melhorAtivo = Boolean(melhorRegistro.ativo);
+
+          if (atualAtivo !== melhorAtivo) {
+            if (atualAtivo) melhorRegistro = registro;
+            continue;
+          }
+
+          const nivelAtual = permLevel(normalizePermissao(registro.permissao));
+          const nivelMelhor = permLevel(normalizePermissao(melhorRegistro.permissao));
+
+          if (nivelAtual > nivelMelhor) {
+            melhorRegistro = registro;
+          }
+        }
+
+        if (!melhorRegistro) {
+          setAtivo(false);
+          setPermissao("none");
+          return;
+        }
+
+        const ativoValue = Boolean(melhorRegistro.ativo);
+        const permissaoValue = normalizePermissao(melhorRegistro.permissao);
         setAtivo(ativoValue);
         setPermissao(ativoValue ? permissaoValue : "none");
       } catch (err) {

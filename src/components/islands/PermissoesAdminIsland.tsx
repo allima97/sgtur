@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Usuario = {
   id: string;
@@ -23,6 +24,7 @@ const MODULOS = [
   "Vendas",
   "Orcamentos",
   "Operacao",
+  "Viagens",
   "Comissionamento",
   "Cadastros",
   "Paises",
@@ -73,7 +75,7 @@ export default function PermissoesAdminIsland() {
     loadType();
   }, []);
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo || !isAdmin)
     return (
       <div style={{ padding: 20 }}>

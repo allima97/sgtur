@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 
 type ParametrosSistema = {
@@ -170,7 +171,7 @@ export default function ParametrosSistemaIsland() {
   }
 
   if (loading || loadingPerm) {
-    return <div>Carregando parâmetros do sistema...</div>;
+    return <LoadingUsuarioContext />;
   }
 
   if (!ativo) {

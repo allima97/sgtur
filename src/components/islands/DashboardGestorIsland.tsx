@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 import {
   ResponsiveContainer,
@@ -302,7 +303,7 @@ export default function DashboardGestorIsland() {
   // RENDER
   // =====================================================================
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Você não possui acesso ao Dashboard.</div>;
 
   if (papel !== "GESTOR" && papel !== "ADMIN") {

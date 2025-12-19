@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Cliente = {
   id: string;
@@ -858,6 +859,10 @@ export default function ClientesIsland() {
   // =====================================
   // RESTRIÇÃO TOTAL DE MÓDULO
   // =====================================
+  if (loadPerm) {
+    return <LoadingUsuarioContext />;
+  }
+
   if (!ativo) {
     return (
       <div className="card-base card-config">

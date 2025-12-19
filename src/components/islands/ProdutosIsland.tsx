@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -578,7 +579,7 @@ export default function ProdutosIsland() {
     }
   }
 
-  if (loadingPerm) return <div>Carregando permissoes...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (

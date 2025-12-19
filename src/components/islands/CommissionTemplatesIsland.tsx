@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type Template = {
   id: string;
@@ -246,7 +247,7 @@ export default function CommissionTemplatesIsland() {
   // UI
   // ============================================================
 
-  if (loadingPerm) return <div>Carregando permissões...</div>;
+  if (loadingPerm) return <LoadingUsuarioContext />;
   if (!acessoAtivo) return <div>Acesso bloqueado ao módulo Parâmetros.</div>;
 
   return (
