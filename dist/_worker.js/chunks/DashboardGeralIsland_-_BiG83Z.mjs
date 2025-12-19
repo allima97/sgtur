@@ -3,7 +3,7 @@ import { j as jsxRuntimeExports, s as supabase } from './supabase_CtqDhMax.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
 import { u as usePermissao } from './usePermissao_ChD594_G.mjs';
 import { L as LoadingUsuarioContext } from './LoadingUsuarioContext_XbJI-A09.mjs';
-import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_CjDDsk3B.mjs';
+import { c as createSelector, p as pickAxisType, b as pickAxisId, i as itemAxisPredicate, s as selectBaseAxis, d as combineGraphicalItemsSettings, e as combineGraphicalItemsData, f as selectChartDataAndAlwaysIgnoreIndexes, g as combineDisplayedData, h as combineAppliedValues, j as getValueByDataKey, k as selectAllErrorBarSettings, l as combineDomainOfAllAppliedNumericalValuesIncludingErrorValues, m as selectDomainDefinition, n as selectDomainFromUserPreference, o as selectChartLayout, q as combineNumericalDomain, r as selectStackOffsetType, t as combineAxisDomain, u as selectRealScaleType, v as combineNiceTicks, w as combineAxisDomainWithNiceTicks, x as getTooltipNameProp, y as selectChartOffsetInternal, z as useAppDispatch, A as setActiveMouseOverItemIndex, B as mouseLeaveItem, C as setActiveClickItemIndex, D as resolveDefaultProps, E as DefaultZIndexes, F as svgPropertiesNoEvents, G as RegisterGraphicalItemId, S as SetPolarGraphicalItem, H as findAllByType, I as useAppSelector, J as SetPolarLegendPayload, K as Layer, Z as ZIndexLayer, M as SetTooltipEntrySettings, N as useAnimationId, O as JavascriptAnimate, P as get, Q as interpolate, U as isNumber, V as mathSign, W as polarToCartesian, _ as PolarLabelListContextProvider, $ as selectActiveTooltipIndex, a0 as selectActiveTooltipDataKey, a1 as selectActiveTooltipGraphicalItemId, a2 as DATA_ITEM_DATAKEY_ATTRIBUTE_NAME, a3 as DATA_ITEM_INDEX_ATTRIBUTE_NAME, a4 as adaptEventsOfChild, a5 as Shape, a6 as LabelListFromLabelProp, a7 as getMaxRadius, a8 as getPercentValue, a9 as svgPropertiesNoEventsFromUnknown, aa as Curve, ab as Text, ac as isNullish, ad as isWellBehavedNumber, ae as propsAreEqual, af as useIsPanorama, ag as SetLegendPayload, ah as SetCartesianGraphicalItem, ai as getNormalizedStackId, aj as useNeedsClip, ak as useChartLayout, al as SetErrorBarContext, am as GraphicalItemClipPath, an as getBaseValueOfBar, ao as truncateByDomain, ap as getCateCoordinateOfBar, aq as CartesianLabelListContextProvider, ar as isNan, as as selectAxisViewBox, at as selectAxisWithScale, au as selectTicksOfGraphicalItem, av as selectChartDataWithIndexesIfNotInPanorama, aw as getBandSizeOfAxis, ax as selectUnfilteredCartesianItems, ay as selectRootMaxBarSize, az as selectBarGap, aA as selectBarCategoryGap, aB as selectStackGroups, aC as getStackSeriesIdentifier, aD as selectRootBarSize, aE as selectCartesianAxisSize, aF as isStacked, aG as CartesianChart, aH as arrayTooltipSearcher, aI as updatePolarOptions, aJ as RechartsStoreProvider, aK as ChartDataContextProvider, aL as ReportMainChartProps, aM as ReportChartProps, aN as CategoricalChart, R as ResponsiveContainer, X as XAxis, Y as YAxis, T as Tooltip, L as LineChart, a as Line } from './LineChart_Cvk1nMwx.mjs';
 import { j as clsx } from './astro/server_C6IdV9ex.mjs';
 
 /**
@@ -1891,8 +1891,9 @@ const BASE_KPIS = [
   { id: "kpi_ticket_medio", titulo: "Ticket médio" },
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
-  { id: "kpi_meta", titulo: "Meta somada (R$)" },
-  { id: "kpi_atingimento", titulo: "Atingimento da meta" }
+  { id: "kpi_meta", titulo: "Meta somada" },
+  { id: "kpi_atingimento", titulo: "Atingimento meta" },
+  { id: "kpi_dias_restantes", titulo: "Dias restantes" }
 ];
 function formatCurrency(value) {
   return value.toLocaleString("pt-BR", {
@@ -1913,6 +1914,11 @@ function getLastNDaysBounds(n) {
   start.setDate(end.getDate() - (n - 1));
   const toISO = (d) => d.toISOString().substring(0, 10);
   return { inicio: toISO(start), fim: toISO(end) };
+}
+function normalizeKpiOrder(order, ids) {
+  const filtered = order.filter((id) => ids.includes(id));
+  const missing = ids.filter((id) => !filtered.includes(id));
+  return [...filtered, ...missing];
 }
 function calcularIdade(nascimentoStr) {
   if (!nascimentoStr) return null;
@@ -2160,9 +2166,8 @@ const DashboardGeralIsland = () => {
   reactExports.useEffect(() => {
     const ids = allKpis.map((k) => k.id);
     setKpiOrder((prev) => {
-      const filtered = prev.filter((id) => ids.includes(id));
-      const missing = ids.filter((id) => !filtered.includes(id));
-      return [...filtered, ...missing];
+      const next = normalizeKpiOrder(prev, ids);
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
     });
     setKpiVisible((prev) => {
       const next = { ...prev };
@@ -2286,7 +2291,9 @@ const DashboardGeralIsland = () => {
             });
             if (ordem.length > 0) setWidgetOrder(ordem);
             setWidgetVisible(vis);
-            if (kpiFromDb.order && kpiFromDb.order.length > 0) setKpiOrder(kpiFromDb.order);
+            const kpiIdArray = Array.from(allKpiIds);
+            if (kpiFromDb.order && kpiFromDb.order.length > 0)
+              setKpiOrder(normalizeKpiOrder(kpiFromDb.order, kpiIdArray));
             if (kpiFromDb.visible) setKpiVisible(kpiFromDb.visible);
             if (chartsFromDb) setChartPrefs((prev) => ({ ...prev, ...chartsFromDb }));
           } else {
@@ -2302,7 +2309,11 @@ const DashboardGeralIsland = () => {
             const localKpi = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_kpis") : null;
             if (localKpi) {
               const parsed = JSON.parse(localKpi);
-              if (parsed.order) setKpiOrder(parsed.order.filter((kid) => allKpiIds.has(kid)));
+              const kpiIdArray = Array.from(allKpiIds);
+              if (parsed.order) {
+                const cleaned = parsed.order.filter((kid) => allKpiIds.has(kid));
+                if (cleaned.length > 0) setKpiOrder(normalizeKpiOrder(cleaned, kpiIdArray));
+              }
               if (parsed.visible) {
                 const filtered = {};
                 Object.entries(parsed.visible).forEach(([kid, val]) => {
@@ -2331,7 +2342,11 @@ const DashboardGeralIsland = () => {
           const localKpi = typeof window !== "undefined" ? window.localStorage.getItem("dashboard_kpis") : null;
           if (localKpi) {
             const parsed = JSON.parse(localKpi);
-            if (parsed.order) setKpiOrder(parsed.order.filter((kid) => allKpiIds.has(kid)));
+            const kpiIdArray = Array.from(allKpiIds);
+            if (parsed.order) {
+              const cleaned = parsed.order.filter((kid) => allKpiIds.has(kid));
+              if (cleaned.length > 0) setKpiOrder(normalizeKpiOrder(cleaned, kpiIdArray));
+            }
             if (parsed.visible) {
               const filtered = {};
               Object.entries(parsed.visible).forEach(([kid, val]) => {
@@ -2363,7 +2378,8 @@ const DashboardGeralIsland = () => {
     conversao,
     metaSomada,
     atingimentoMeta,
-    valorPorProduto
+    valorPorProduto,
+    diasRestantes
   } = reactExports.useMemo(() => {
     let totalVendas2 = 0;
     let qtdVendas2 = vendas.length;
@@ -2389,6 +2405,9 @@ const DashboardGeralIsland = () => {
       0
     );
     const atingimentoMeta2 = metaSomada2 > 0 ? totalVendas2 / metaSomada2 * 100 : 0;
+    const hoje = /* @__PURE__ */ new Date();
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    const diasRestantes2 = Math.max(0, ultimoDia.getDate() - hoje.getDate());
     return {
       totalVendas: totalVendas2,
       qtdVendas: qtdVendas2,
@@ -2397,7 +2416,8 @@ const DashboardGeralIsland = () => {
       conversao: conversao2,
       metaSomada: metaSomada2,
       atingimentoMeta: atingimentoMeta2,
-      valorPorProduto: valorPorProduto2
+      valorPorProduto: valorPorProduto2,
+      diasRestantes: diasRestantes2
     };
   }, [vendas, orcamentos, metas]);
   const vendasPorDestinoFull = reactExports.useMemo(() => {
@@ -2415,7 +2435,7 @@ const DashboardGeralIsland = () => {
       value
     })).sort((a, b) => b.value - a.value);
   }, [vendas]);
-  const vendasPorDestinoTop5 = reactExports.useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
+  const top5Destinos = reactExports.useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
   const vendasPorProduto = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     vendas.forEach((v) => {
@@ -2594,7 +2614,7 @@ const DashboardGeralIsland = () => {
                     className: "kpi-card",
                     style: { display: "flex", flexDirection: "column", gap: 4 },
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta somada (R$)" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Meta somada" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(metaSomada) })
                     ]
                   },
@@ -2608,11 +2628,25 @@ const DashboardGeralIsland = () => {
                     className: "kpi-card",
                     style: { display: "flex", flexDirection: "column", gap: 4 },
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Atingimento da meta" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Atingimento meta" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-value", children: [
                         atingimentoMeta.toFixed(1),
                         "%"
                       ] })
+                    ]
+                  },
+                  id2
+                );
+              }
+              if (id2 === "kpi_dias_restantes") {
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "kpi-card",
+                    style: { display: "flex", flexDirection: "column", gap: 4 },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Dias restantes" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: diasRestantes })
                     ]
                   },
                   id2
@@ -2657,29 +2691,74 @@ const DashboardGeralIsland = () => {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 260 }, children: vendasPorDestinoFull.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_destino === "bar" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorDestinoFull, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 280 }, children: vendasPorDestinoFull.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_destino === "bar" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorDestinoFull, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(XAxis, { dataKey: "name", hide: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(YAxis, {}),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Bar, { dataKey: "value", children: vendasPorDestinoFull.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-dest-${index}`)) })
-          ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 16, alignItems: "center", height: "100%" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(PieChart, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Pie,
-                {
-                  data: vendasPorDestinoTop5,
-                  dataKey: "value",
-                  nameKey: "name",
-                  outerRadius: 90,
-                  label: false,
-                  labelLine: false,
-                  children: vendasPorDestinoTop5.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-${index}`))
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) })
-            ] }) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { minWidth: 220, maxHeight: "100%", overflowY: "auto" }, children: renderPieLegendList(vendasPorDestinoTop5) })
-          ] }) })
+          ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              style: {
+                width: "100%",
+                minHeight: 220,
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                justifyContent: "center",
+                flexWrap: "wrap"
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    style: {
+                      flex: "1 1 220px",
+                      minWidth: 180,
+                      maxWidth: 260,
+                      height: 220,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    },
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { width: "100%", height: 180, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(PieChart, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        Pie,
+                        {
+                          data: top5Destinos,
+                          dataKey: "value",
+                          nameKey: "name",
+                          outerRadius: 70,
+                          label: false,
+                          labelLine: false,
+                          children: top5Destinos.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-dest-pie-${index}`))
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) })
+                    ] }) })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    style: {
+                      flex: "0 0 180px",
+                      minWidth: 140,
+                      maxWidth: 200,
+                      maxHeight: 220,
+                      padding: 8,
+                      boxSizing: "border-box",
+                      overflowY: "auto",
+                      borderRadius: 8,
+                      background: "#0f172a10",
+                      marginLeft: 8
+                    },
+                    children: renderPieLegendList(top5Destinos)
+                  }
+                )
+              ]
+            }
+          ) })
         ] });
       case "vendas_produto":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
@@ -2699,24 +2778,68 @@ const DashboardGeralIsland = () => {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 260 }, children: vendasPorProduto.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_produto === "pie" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 16, alignItems: "center", height: "100%" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(PieChart, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Pie,
-                {
-                  data: vendasPorProduto,
-                  dataKey: "value",
-                  nameKey: "name",
-                  outerRadius: 90,
-                  label: false,
-                  labelLine: false,
-                  children: vendasPorProduto.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-prod-pie-${index}`))
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) })
-            ] }) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { minWidth: 220, maxHeight: "100%", overflowY: "auto" }, children: renderPieLegendList(vendasPorProduto) })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorProduto, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", height: 260 }, children: vendasPorProduto.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.9rem" }, children: "Sem dados para o período." }) : chartPrefs.vendas_produto === "pie" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              style: {
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 220,
+                flexWrap: "wrap"
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    style: {
+                      flex: "1 1 220px",
+                      minWidth: 180,
+                      maxWidth: 260,
+                      height: 220,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    },
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { width: "100%", height: 180, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(PieChart, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        Pie,
+                        {
+                          data: vendasPorProduto,
+                          dataKey: "value",
+                          nameKey: "name",
+                          outerRadius: 70,
+                          label: false,
+                          labelLine: false,
+                          children: vendasPorProduto.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(Cell, { fill: COLORS_PURPLE[index % COLORS_PURPLE.length] }, `cell-prod-pie-${index}`))
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) })
+                    ] }) })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    style: {
+                      flex: "0 0 180px",
+                      minWidth: 140,
+                      maxWidth: 200,
+                      maxHeight: 220,
+                      padding: 8,
+                      boxSizing: "border-box",
+                      overflowY: "auto",
+                      borderRadius: 8,
+                      background: "#0f172a10",
+                      marginLeft: 8
+                    },
+                    children: renderPieLegendList(vendasPorProduto)
+                  }
+                )
+              ]
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(ResponsiveContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(BarChart, { data: vendasPorProduto, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(XAxis, { dataKey: "name", hide: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(YAxis, {}),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { formatter: (value) => formatCurrency(Number(value || 0)) }),

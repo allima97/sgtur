@@ -23,8 +23,16 @@ function AuthRecoverIsland() {
     const emailLimpo = email.trim().toLowerCase();
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset` : void 0;
     try {
-      await registrarLog({ user_id: null, acao: "solicitou_recuperacao_senha", modulo: "login", detalhes: { email: emailLimpo } });
-      const { error } = await supabase.auth.resetPasswordForEmail(emailLimpo, redirectTo ? { redirectTo } : void 0);
+      await registrarLog({
+        user_id: null,
+        acao: "solicitou_recuperacao_senha",
+        modulo: "login",
+        detalhes: { email: emailLimpo }
+      });
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        emailLimpo,
+        redirectTo ? { redirectTo } : void 0
+      );
       if (error) {
         mostrarMensagem("Não foi possível enviar o link. Tente novamente.");
       } else {
@@ -36,7 +44,7 @@ function AuthRecoverIsland() {
       setLoading(false);
     }
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-card", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-card auth-card-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-icon", children: /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plane-departure" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Recuperar senha" }),
@@ -46,7 +54,7 @@ function AuthRecoverIsland() {
     ok && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "alert alert-success", style: { marginBottom: 16 }, children: "Instruções enviadas para seu e-mail!" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "auth-form", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "email", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "recover-email", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-envelope" }),
           " E-mail"
         ] }),
@@ -54,8 +62,8 @@ function AuthRecoverIsland() {
           "input",
           {
             type: "email",
-            id: "email",
-            className: "form-control",
+            id: "recover-email",
+            className: "form-input",
             placeholder: "seu@email.com",
             required: true,
             autoComplete: "email",

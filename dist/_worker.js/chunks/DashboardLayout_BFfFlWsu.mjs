@@ -436,6 +436,13 @@ const MAPA_MODULOS = {
   Viagens: "operacao_viagens",
   Comissionamento: "comissionamento"
 };
+const MODULO_ALIASES = Object.keys(MAPA_MODULOS).reduce(
+  (acc, key) => {
+    acc[key.toLowerCase()] = MAPA_MODULOS[key];
+    return acc;
+  },
+  {}
+);
 const permLevel = (p) => {
   switch (p) {
     case "admin":
@@ -488,9 +495,18 @@ function MenuIsland({ activePage }) {
   const handleNavClick = () => {
     if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
   };
+  function setPerm(perms, key, perm) {
+    const normalizedKey = key.toLowerCase();
+    const atual = perms[normalizedKey] ?? "none";
+    perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
+  }
   function mergePerm(perms, modulo, perm) {
-    const atual = perms[modulo] ?? "none";
-    perms[modulo] = permLevel(perm) > permLevel(atual) ? perm : atual;
+    const normalizedModulo = modulo.toLowerCase();
+    setPerm(perms, normalizedModulo, perm);
+    const alias = MODULO_ALIASES[normalizedModulo];
+    if (alias) {
+      setPerm(perms, alias, perm);
+    }
   }
   async function carregar() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -567,6 +583,26 @@ function MenuIsland({ activePage }) {
     if (!modBD) return false;
     return pode(modBD, min);
   };
+  const cadastrosMenu = [
+    { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "🌍", label: "Países" },
+    {
+      name: "Subdivisoes",
+      href: "/cadastros/estados",
+      active: "subdivisoes",
+      icon: "🗺️",
+      label: "Estado/Província"
+    },
+    { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "🏙️", label: "Cidades" },
+    { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "🎫", label: "Produtos" },
+    {
+      name: "Fornecedores",
+      href: "/cadastros/fornecedores",
+      active: "fornecedores",
+      icon: "🎧",
+      label: "Fornecedores"
+    }
+  ];
+  const hasCadastrosSection = cadastrosMenu.some((item) => can(item.name));
   const sidebarId = "app-sidebar";
   const mobileControls = mounted ? reactDomExports.createPortal(
     /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -681,70 +717,20 @@ function MenuIsland({ activePage }) {
           ) })
         ] })
       ] }),
-      can("Cadastros") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      hasCadastrosSection && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sidebar-section-title", children: "Cadastros" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "sidebar-nav", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
-            {
-              className: `sidebar-link ${activePage === "paises" ? "active" : ""}`,
-              href: "/cadastros/paises",
-              onClick: handleNavClick,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🌍" }),
-                "Países"
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
-            {
-              className: `sidebar-link ${activePage === "subdivisoes" ? "active" : ""}`,
-              href: "/cadastros/estados",
-              onClick: handleNavClick,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🗺️" }),
-                "Estado/Província"
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
-            {
-              className: `sidebar-link ${activePage === "cidades" ? "active" : ""}`,
-              href: "/cadastros/cidades",
-              onClick: handleNavClick,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🏙️" }),
-                "Cidades"
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
-            {
-              className: `sidebar-link ${activePage === "produtos" ? "active" : ""}`,
-              href: "/cadastros/produtos",
-              onClick: handleNavClick,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🎫" }),
-                "Produtos"
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
-            {
-              className: `sidebar-link ${activePage === "fornecedores" ? "active" : ""}`,
-              href: "/cadastros/fornecedores",
-              onClick: handleNavClick,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "🎧" }),
-                "Fornecedores"
-              ]
-            }
-          ) })
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "sidebar-nav", children: cadastrosMenu.filter((item) => can(item.name)).map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "a",
+          {
+            className: `sidebar-link ${activePage === item.active ? "active" : ""}`,
+            href: item.href,
+            onClick: handleNavClick,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.icon }),
+              item.label
+            ]
+          }
+        ) }, item.name)) })
       ] }),
       can("Relatorios") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sidebar-section-title", children: "Relatórios" }),

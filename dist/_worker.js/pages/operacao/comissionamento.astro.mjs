@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -49,7 +49,7 @@ function calcPeriodo(preset) {
   return { inicio: formatISODate(inicio), fim: formatISODate(hoje) };
 }
 function ComissionamentoIsland() {
-  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
+  const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = import.meta?.env?.PUBLIC_META_PRODUTO_ENABLED !== "false";
   const [user, setUser] = reactExports.useState(null);
   const [parametros, setParametros] = reactExports.useState(null);
@@ -67,7 +67,7 @@ function ComissionamentoIsland() {
   reactExports.useEffect(() => {
     if (loadingPerm || !ativo) return;
     carregarTudo();
-  }, [loadingPerm, ativo, preset]);
+  }, [loadingPerm, ativo, preset, permissao]);
   reactExports.useEffect(() => {
     setPeriodo(calcPeriodo(preset));
   }, [preset]);
@@ -83,6 +83,7 @@ function ComissionamentoIsland() {
       }
       setUser({ id: userId, nome: auth?.user?.email || "" });
       const periodoAtual = calcPeriodo(preset);
+      const isAdminPermissao = permissao === "admin";
       const { data: paramsData } = await supabase.from("parametros_comissao").select("usar_taxas_na_meta, foco_valor").maybeSingle();
       const { data: metaData } = await supabase.from("metas_vendedor").select("id, meta_geral").eq("vendedor_id", userId).eq("periodo", periodoAtual.inicio.slice(0, 7) + "-01").maybeSingle();
       const tipoProdBaseCols = "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
@@ -97,7 +98,7 @@ function ComissionamentoIsland() {
         produtosDataRes = await tentarSelectProdutos(false);
       }
       const nestedTipoProdCols = suportaKpi ? "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao" : "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
-      let vendasDataRes = await supabase.from("vendas").select(
+      let vendasQuery = supabase.from("vendas").select(
         `
           id,
           data_lancamento,
@@ -112,8 +113,12 @@ function ComissionamentoIsland() {
           )
         `
       ).eq("cancelada", false).gte("data_lancamento", periodoAtual.inicio).lte("data_lancamento", periodoAtual.fim);
+      if (!isAdminPermissao && userId) {
+        vendasQuery = vendasQuery.eq("vendedor_id", userId);
+      }
+      let vendasDataRes = await vendasQuery;
       if (vendasDataRes.error && vendasDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
-        vendasDataRes = await supabase.from("vendas").select(
+        let fallbackQuery = supabase.from("vendas").select(
           `
           id,
           data_lancamento,
@@ -128,6 +133,10 @@ function ComissionamentoIsland() {
           )
         `
         ).eq("cancelada", false).gte("data_lancamento", periodoAtual.inicio).lte("data_lancamento", periodoAtual.fim);
+        if (!isAdminPermissao && userId) {
+          fallbackQuery = fallbackQuery.eq("vendedor_id", userId);
+        }
+        vendasDataRes = await fallbackQuery;
         suportaKpi = false;
       }
       const [metasProdDataRes, regrasDataRes, regrasProdDataRes] = await Promise.all([

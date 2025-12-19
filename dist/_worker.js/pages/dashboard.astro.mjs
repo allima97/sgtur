@@ -1,19 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B-SnFw9s.mjs';
-import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_D1vDPcmc.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_-_BiG83Z.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 
 const $$Index = createComponent(($$result, $$props, $$slots) => {
   return renderTemplate`<!-- 
   Página do Dashboard Geral 
   Esta rota é protegida pelo middleware (autenticação + permissões)
--->${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Dashboard Geral" }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<section style="
-      padding: 16px;
-      width: 100%;
-      max-width: 1300px;
-      margin: 0 auto;
-    "> ${renderComponent($$result2, "DashboardGeralIsland", DashboardGeralIsland, { "client:visible": true, "client:component-hydration": "visible", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/DashboardGeralIsland.tsx", "client:component-export": "default" })} </section> ` })}`;
+-->${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Dashboard Geral" }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<div class="page-content-wrap"> ${renderComponent($$result2, "DashboardGeralIsland", DashboardGeralIsland, { "client:visible": true, "client:component-hydration": "visible", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/DashboardGeralIsland.tsx", "client:component-export": "default" })} </div> ` })}`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/index.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/index.astro";

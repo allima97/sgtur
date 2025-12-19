@@ -89,7 +89,7 @@ function AuthResetIsland() {
       setLoading(false);
     }
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-card", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-card auth-card-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-icon", children: /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plane-departure" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Definir nova senha" }),
@@ -108,7 +108,7 @@ function AuthResetIsland() {
           {
             type: "password",
             id: "senha",
-            className: "form-control",
+            className: "form-input",
             placeholder: "Mínimo 6 caracteres",
             required: true,
             autoComplete: "new-password",
@@ -128,7 +128,7 @@ function AuthResetIsland() {
           {
             type: "password",
             id: "confirmar",
-            className: "form-control",
+            className: "form-input",
             placeholder: "Repita a senha",
             required: true,
             value: confirmPassword,

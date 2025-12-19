@@ -255,6 +255,8 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     - Nível: none/view/create/edit/delete/admin
     - Bloqueio total por módulo
   - Auditoria de alterações de permissões
+- Ao carregar o dashboard/Admin e o módulo de logs, o hook `usePermissao("AdminDashboard")` usa o componente `LoadingUsuarioContext` para renderizar um único card amarelo com "Carregando contexto do usuário..." enquanto valida claims e permissões.
+- O filtro de gestores passou a usar `.eq("user_types.name","GESTOR")` (em vez de `.contains("user_types(name)", ["GESTOR"])`) para montar uma query compatível com o PostgREST e evitar erros 400.
 
 #### 2.6.2 Logs de Auditoria
 - Tabela: `logs` (estrutura definida/implementada)
@@ -265,6 +267,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Alteração de permissões
 - Página:
   - `/dashboard/logs` com filtro básico (já planejada/implementada)
+- A ordenação dos hooks no island foi ajustada para declarar `usePermissao`, `useEffect` e `useMemo` antes de qualquer retorno condicional, eliminando o warning de mudança de ordem e mantendo o card amarelo de carregamento como único estado inicial.
 
 ---
 
@@ -435,6 +438,7 @@ Tecnologias:
 
 **Próximos passos imediatos:**
 - Garantir no Supabase a tabela `metas_vendedor_produto` (FK para `metas_vendedor` e `produtos`) para evitar erros 42703 no CRUD de metas diferenciadas.
+- Script pronto: `database/migrations/20240720_create_metas_vendedor_produto.sql` cria a tabela + índices; execute com `psql`/Supabase CLI para garantir que a estrutura esteja disponível.
 - Garantir no Supabase a coluna `exibe_kpi_comissao boolean default true` em `tipo_produtos` para habilitar o toggle de KPI por produto.
 - Garantir no Supabase as colunas extras do perfil em `users`: `rg text`, `whatsapp text`, `cep text`, `endereco text`, `numero text`, `complemento text`.
 - Se `template_id` em `metas_vendedor` não for mais usado, avaliar remoção/ignorar nas consultas e policies.
@@ -446,6 +450,13 @@ Tecnologias:
 - Botão “Personalizar dashboard” abre modal para toggles e reorder (↑↓). Ordem padrão é a sequência atual caso não haja preferências.
 - Widgets de gráficos permitem escolher tipo (pizza/barras para destino/produto; linha/barras para timeline). Preferências de gráficos em `settings` (coluna opcional) ou localStorage (`dashboard_charts`).
 - KPIs de produto: se o tipo de produto estiver com `exibe_kpi_comissao = true`, o dashboard adiciona um KPI com o nome do produto (valor vendido no período) e ele aparece no painel de personalização para ligar/desligar e reordenar.
+- As páginas de `/dashboard`, `/dashboard/admin`, `/dashboard/logs` e `/dashboard/permissoes` compartilham o container `.page-content-wrap`, garantindo largura máxima, centralização e o padding amarelo padrão do `LoadingUsuarioContext` enquanto as permissões são avaliadas.
+- Novo KPI “Dias restantes” mostra quantos dias faltam para o fim do mês e também é personalizável via painel do dashboard.
+- **Dashboard Administrativo:** o card de “Controle Geral do Sistema” agora incorpora formulários para editar empresas, usuários e gestores.
+  - Empresas: tabela com botão “Editar”, formulário para criar/atualizar e campo `active` para bloquear sem excluir registros.
+  - Usuários: coluna que mostra a empresa vinculada, botão “Editar” e formulário lateral para ajustar nome, e-mail, tipo, empresa e status ativo/bloqueado.
+  - Gestores & equipes: tabela com contadores de vendedores e formulário para ativar/desativar vínculos entre gestores e vendedores na tabela `gestor_vendedor`. Foi adicionada a coluna `ativo boolean DEFAULT true` para que a equipe seja atualizada sem excluir registros.
+- **Próximo passo:** aplicar as migrations `20240721_add_ativo_gestor_vendedor.sql` e `20240721_add_active_companies.sql` para garantir que os campos `ativo` existem em `gestor_vendedor` e `companies` antes de usar os novos modais.
 
 ### 3.4 Dashboard Premium (Gestor / Vendedor / Admin)
 

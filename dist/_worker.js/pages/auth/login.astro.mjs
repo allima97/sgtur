@@ -26,6 +26,17 @@ function AuthLoginIsland() {
     setMensagem({ texto: msg, tipo });
     setTimeout(() => setMensagem(null), 5e3);
   }
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("type") === "signup") {
+      mostrarMensagem("E-mail confirmado! Faça login para continuar.", "success");
+      ["type", "access_token", "token"].forEach((key) => params.delete(key));
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
   function abrirModalSuspenso() {
     setModalSuspenso(true);
   }
