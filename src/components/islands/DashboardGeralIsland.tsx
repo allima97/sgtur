@@ -18,7 +18,7 @@ import {
 
 // ----------------- TIPOS -----------------
 
-type PapelUsuario = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
+type PapelUsuario = "ADMINISTRADOR" | "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
 type UserContext = {
   usuarioId: string;
@@ -171,7 +171,7 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
 const DashboardGeralIsland: React.FC = () => {
   const [userCtx, setUserCtx] = useState<UserContext | null>(null);
   const [loadingUserCtx, setLoadingUserCtx] = useState(true);
-  const permissaoData = usePermissao("Dashboard");
+  const permissaoData = usePermissao("dashboard");
   const permissaoOperacao = usePermissao("Operacao");
 
   const [presetPeriodo, setPresetPeriodo] =

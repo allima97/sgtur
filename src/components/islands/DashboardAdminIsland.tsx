@@ -1,3 +1,14 @@
+useEffect(() => {
+  console.log("DASHBOARD: useEffect executou");
+
+  supabase.from("vendas").select("id").limit(1).then(res => {
+    console.log("DASHBOARD QUERY:", res.data, res.error);
+  });
+}, []);
+
+
+
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
