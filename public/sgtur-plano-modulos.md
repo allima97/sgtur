@@ -450,6 +450,8 @@ Tecnologias:
 - Botão “Personalizar dashboard” abre modal para toggles e reorder (↑↓). Ordem padrão é a sequência atual caso não haja preferências.
 - Widgets de gráficos permitem escolher tipo (pizza/barras para destino/produto; linha/barras para timeline). Preferências de gráficos em `settings` (coluna opcional) ou localStorage (`dashboard_charts`).
 - KPIs de produto: se o tipo de produto estiver com `exibe_kpi_comissao = true`, o dashboard adiciona um KPI com o nome do produto (valor vendido no período) e ele aparece no painel de personalização para ligar/desligar e reordenar.
+- As páginas de `/dashboard`, `/dashboard/admin`, `/dashboard/logs` e `/dashboard/permissoes` compartilham o container `.page-content-wrap`, garantindo largura máxima, centralização e o padding amarelo padrão do `LoadingUsuarioContext` enquanto as permissões são avaliadas.
+- Novo KPI “Dias restantes” mostra quantos dias faltam para o fim do mês e também é personalizável via painel do dashboard.
 
 ### 3.4 Dashboard Premium (Gestor / Vendedor / Admin)
 

@@ -7,11 +7,13 @@ const activePage = "dashboard";
 ---
 
 <DashboardLayout title="Dashboard Geral" {activePage}>
-  <HeaderPage
-    title="Dashboard Geral"
-    subtitle="Visão consolidada do mês: metas, vendas, produtos diferenciados, orçamentos e aniversariantes."
-    color="purple"
-  />
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Dashboard Geral"
+      subtitle="Visão consolidada do mês: metas, vendas, produtos diferenciados, orçamentos e aniversariantes."
+      color="purple"
+    />
 
-  <DashboardGeralIsland client:load />
+    <DashboardGeralIsland client:load />
+  </div>
 </DashboardLayout>

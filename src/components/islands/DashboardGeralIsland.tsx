@@ -123,8 +123,9 @@ const BASE_KPIS: { id: KpiId; titulo: string }[] = [
   { id: "kpi_ticket_medio", titulo: "Ticket médio" },
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
-  { id: "kpi_meta", titulo: "Meta somada (R$)" },
-  { id: "kpi_atingimento", titulo: "Atingimento da meta" },
+  { id: "kpi_meta", titulo: "Meta somada" },
+  { id: "kpi_atingimento", titulo: "Atingimento meta" },
+  { id: "kpi_dias_restantes", titulo: "Dias restantes" },
 ];
 
 // ----------------- HELPERS -----------------
@@ -150,6 +151,12 @@ function getLastNDaysBounds(n: number) {
   start.setDate(end.getDate() - (n - 1));
   const toISO = (d: Date) => d.toISOString().substring(0, 10);
   return { inicio: toISO(start), fim: toISO(end) };
+}
+
+function normalizeKpiOrder(order: KpiId[], ids: KpiId[]) {
+  const filtered = order.filter((id) => ids.includes(id));
+  const missing = ids.filter((id) => !filtered.includes(id));
+  return [...filtered, ...missing];
 }
 
 function calcularIdade(nascimentoStr: string | null): number | null {
@@ -467,9 +474,8 @@ const DashboardGeralIsland: React.FC = () => {
   useEffect(() => {
     const ids = allKpis.map((k) => k.id);
     setKpiOrder((prev) => {
-      const filtered = prev.filter((id) => ids.includes(id));
-      const missing = ids.filter((id) => !filtered.includes(id));
-      return [...filtered, ...missing];
+      const next = normalizeKpiOrder(prev, ids);
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
     });
     setKpiVisible((prev) => {
       const next = { ...prev };
@@ -655,7 +661,9 @@ const DashboardGeralIsland: React.FC = () => {
             });
             if (ordem.length > 0) setWidgetOrder(ordem);
             setWidgetVisible(vis);
-            if (kpiFromDb.order && kpiFromDb.order.length > 0) setKpiOrder(kpiFromDb.order);
+            const kpiIdArray = Array.from(allKpiIds);
+            if (kpiFromDb.order && kpiFromDb.order.length > 0)
+              setKpiOrder(normalizeKpiOrder(kpiFromDb.order, kpiIdArray));
             if (kpiFromDb.visible) setKpiVisible(kpiFromDb.visible);
             if (chartsFromDb) setChartPrefs((prev) => ({ ...prev, ...chartsFromDb }));
           } else {
@@ -675,7 +683,11 @@ const DashboardGeralIsland: React.FC = () => {
               : null;
             if (localKpi) {
               const parsed = JSON.parse(localKpi);
-              if (parsed.order) setKpiOrder(parsed.order.filter((kid: string) => allKpiIds.has(kid)));
+              const kpiIdArray = Array.from(allKpiIds);
+              if (parsed.order) {
+                const cleaned = (parsed.order as KpiId[]).filter((kid: string) => allKpiIds.has(kid));
+                if (cleaned.length > 0) setKpiOrder(normalizeKpiOrder(cleaned, kpiIdArray));
+              }
               if (parsed.visible) {
                 const filtered: Record<KpiId, boolean> = {};
                 Object.entries(parsed.visible).forEach(([kid, val]) => {
@@ -710,7 +722,11 @@ const DashboardGeralIsland: React.FC = () => {
             : null;
           if (localKpi) {
             const parsed = JSON.parse(localKpi);
-            if (parsed.order) setKpiOrder(parsed.order.filter((kid: string) => allKpiIds.has(kid)));
+            const kpiIdArray = Array.from(allKpiIds);
+            if (parsed.order) {
+              const cleaned = (parsed.order as KpiId[]).filter((kid: string) => allKpiIds.has(kid));
+              if (cleaned.length > 0) setKpiOrder(normalizeKpiOrder(cleaned, kpiIdArray));
+            }
             if (parsed.visible) {
               const filtered: Record<KpiId, boolean> = {};
               Object.entries(parsed.visible).forEach(([kid, val]) => {
@@ -749,6 +765,7 @@ const DashboardGeralIsland: React.FC = () => {
     metaSomada,
     atingimentoMeta,
     valorPorProduto,
+    diasRestantes,
   } = useMemo(() => {
     let totalVendas = 0;
     let qtdVendas = vendas.length;
@@ -786,6 +803,9 @@ const DashboardGeralIsland: React.FC = () => {
     );
     const atingimentoMeta =
       metaSomada > 0 ? (totalVendas / metaSomada) * 100 : 0;
+    const hoje = new Date();
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    const diasRestantes = Math.max(0, ultimoDia.getDate() - hoje.getDate());
 
     return {
       totalVendas,
@@ -796,6 +816,7 @@ const DashboardGeralIsland: React.FC = () => {
       metaSomada,
       atingimentoMeta,
       valorPorProduto,
+      diasRestantes,
     };
   }, [vendas, orcamentos, metas]);
 
@@ -821,7 +842,7 @@ const DashboardGeralIsland: React.FC = () => {
       .sort((a, b) => b.value - a.value);
   }, [vendas]);
 
-  const vendasPorDestinoTop5 = useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
+  const top5Destinos = useMemo(() => vendasPorDestinoFull.slice(0, 5), [vendasPorDestinoFull]);
 
   const vendasPorProduto = useMemo(() => {
     const map = new Map<string, number>();
@@ -1025,7 +1046,7 @@ const DashboardGeralIsland: React.FC = () => {
                         key={id}
                         style={{ display: "flex", flexDirection: "column", gap: 4 }}
                       >
-                        <div className="kpi-label">Meta somada (R$)</div>
+                        <div className="kpi-label">Meta somada</div>
                         <div className="kpi-value">{formatCurrency(metaSomada)}</div>
                       </div>
                     );
@@ -1037,8 +1058,20 @@ const DashboardGeralIsland: React.FC = () => {
                         key={id}
                         style={{ display: "flex", flexDirection: "column", gap: 4 }}
                       >
-                        <div className="kpi-label">Atingimento da meta</div>
+                        <div className="kpi-label">Atingimento meta</div>
                         <div className="kpi-value">{atingimentoMeta.toFixed(1)}%</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_dias_restantes") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Dias restantes</div>
+                        <div className="kpi-value">{diasRestantes}</div>
                       </div>
                     );
                   }
@@ -1078,7 +1111,7 @@ const DashboardGeralIsland: React.FC = () => {
                 <option value="bar">Barras</option>
               </select>
             </div>
-            <div style={{ width: "100%", height: 260 }}>
+            <div style={{ width: "100%", height: 280 }}>
               {vendasPorDestinoFull.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
               ) : chartPrefs.vendas_destino === "bar" ? (
@@ -1097,26 +1130,38 @@ const DashboardGeralIsland: React.FC = () => {
               ) : (
                 <div
                   style={{
+                    width: "100%",
+                    minHeight: 220,
                     display: "flex",
-                    gap: 16,
+                    gap: 8,
                     alignItems: "center",
-                    height: "100%",
+                    justifyContent: "center",
                     flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ flex: "1 1 280px", minWidth: 0, height: "100%" }}>
-                    <ResponsiveContainer>
+                  <div
+                    style={{
+                      flex: "1 1 220px",
+                      minWidth: 180,
+                      maxWidth: 260,
+                      height: 220,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height={180}>
                       <PieChart>
                         <Pie
-                          data={vendasPorDestinoTop5}
+                          data={top5Destinos}
                           dataKey="value"
                           nameKey="name"
-                          outerRadius={90}
+                          outerRadius={70}
                           label={false}
                           labelLine={false}
                         >
-                          {vendasPorDestinoTop5.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
+                          {top5Destinos.map((entry, index) => (
+                            <Cell key={`cell-dest-pie-${index}`} fill={COLORS_PURPLE[index % COLORS_PURPLE.length]} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value: any) => formatCurrency(Number(value || 0))} />
@@ -1125,12 +1170,19 @@ const DashboardGeralIsland: React.FC = () => {
                   </div>
                   <div
                     style={{
-                      width: 220,
-                      maxHeight: "100%",
+                      flex: "0 0 180px",
+                      minWidth: 140,
+                      maxWidth: 200,
+                      maxHeight: 220,
+                      padding: 8,
+                      boxSizing: "border-box",
                       overflowY: "auto",
+                      borderRadius: 8,
+                      background: "#0f172a10",
+                      marginLeft: 8,
                     }}
                   >
-                    {renderPieLegendList(vendasPorDestinoTop5)}
+                    {renderPieLegendList(top5Destinos)}
                   </div>
                 </div>
               )}
@@ -1159,20 +1211,31 @@ const DashboardGeralIsland: React.FC = () => {
                 <div
                   style={{
                     display: "flex",
-                    gap: 16,
+                    gap: 8,
                     alignItems: "center",
-                    height: "100%",
+                    justifyContent: "center",
+                    minHeight: 220,
                     flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ flex: "1 1 280px", minWidth: 0, height: "100%" }}>
-                    <ResponsiveContainer>
+                  <div
+                    style={{
+                      flex: "1 1 220px",
+                      minWidth: 180,
+                      maxWidth: 260,
+                      height: 220,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height={180}>
                       <PieChart>
                         <Pie
                           data={vendasPorProduto}
                           dataKey="value"
                           nameKey="name"
-                          outerRadius={90}
+                          outerRadius={70}
                           label={false}
                           labelLine={false}
                         >
@@ -1186,9 +1249,16 @@ const DashboardGeralIsland: React.FC = () => {
                   </div>
                   <div
                     style={{
-                      width: 220,
-                      maxHeight: "100%",
+                      flex: "0 0 180px",
+                      minWidth: 140,
+                      maxWidth: 200,
+                      maxHeight: 220,
+                      padding: 8,
+                      boxSizing: "border-box",
                       overflowY: "auto",
+                      borderRadius: 8,
+                      background: "#0f172a10",
+                      marginLeft: 8,
                     }}
                   >
                     {renderPieLegendList(vendasPorProduto)}

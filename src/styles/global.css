@@ -199,6 +199,12 @@ body {
   font-size: 0.95rem;
 }
 
+.page-content-wrap {
+  width: 100%;
+  padding-block: 16px;
+  box-sizing: border-box;
+}
+
 /* Header */
 .page-header {
   display: flex;

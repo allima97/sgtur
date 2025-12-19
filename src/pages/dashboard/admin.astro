@@ -6,14 +6,7 @@ import DashboardAdminIsland from "../../components/islands/DashboardAdminIsland.
 <!-- Apenas ADMIN deve acessar — middleware + island verificam isso -->
 
 <DashboardLayout title="Dashboard Administrativo">
-  <section
-    style="
-      padding: 16px;
-      width: 100%;
-      max-width: 1300px;
-      margin: 0 auto;
-    "
-  >
+  <div class="page-content-wrap">
     <DashboardAdminIsland client:visible />
-  </section>
+  </div>
 </DashboardLayout>
