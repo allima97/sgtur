@@ -5,8 +5,9 @@ import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -265,7 +266,7 @@ function TipoProdutosIsland() {
     const termo = normalizeText(busca);
     return tipos.filter((p) => normalizeText(p.nome || p.tipo || "").includes(termo));
   }, [busca, tipos]);
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Parâmetros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "produtos-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [

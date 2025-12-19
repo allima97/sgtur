@@ -4,8 +4,9 @@ import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_B-SnFw9s
 import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../../chunks/usePermissao_ChD594_G.mjs';
 import { r as registrarLog } from '../../../chunks/logs_D3Eb6w9w.mjs';
+import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 const initialForm = {
   id: "",
@@ -158,7 +159,7 @@ function CommissionTemplatesIsland() {
       setErro("Erro ao excluir template.");
     }
   }
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!acessoAtivo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso bloqueado ao módulo Parâmetros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "commission-templates-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [

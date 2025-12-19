@@ -5,8 +5,9 @@ import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mj
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 const emptyRule = {
   id: "",
@@ -20,7 +21,7 @@ const emptyRule = {
   tiers: []
 };
 function CommissionRulesIsland() {
-  const { permissao, ativo } = usePermissao("Parametros");
+  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
   const podeEditar = permissao === "admin" || permissao === "edit";
   const [rules, setRules] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
@@ -205,6 +206,9 @@ function CommissionRulesIsland() {
         inc_pct_comissao: t.inc_pct_comissao
       })) || [] : []
     });
+  }
+  if (loadingPerm) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   }
   if (!ativo) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: "Acesso negado ao módulo de Parâmetros." });

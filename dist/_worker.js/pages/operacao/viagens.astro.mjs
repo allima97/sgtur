@@ -5,7 +5,8 @@ import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 const STATUS_OPCOES = [
   { value: "", label: "Todas" },
@@ -260,7 +261,10 @@ function ViagensListaIsland() {
       return da < db ? -1 : 1;
     });
   }, [viagens]);
-  if (!ativo && !loadingPerm) {
+  if (loadingPerm) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
+  }
+  if (!ativo) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Operação/Viagens." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-purple", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: [

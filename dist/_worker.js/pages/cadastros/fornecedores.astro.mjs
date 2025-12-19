@@ -5,7 +5,8 @@ import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 const LOCALIZACAO_OPCOES = [
   { value: "brasil", label: "Brasil" },
@@ -145,7 +146,10 @@ function FornecedoresIsland() {
       setSalvando(false);
     }
   }
-  if (!ativo && !loadingPerm) {
+  if (loadingPerm) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
+  }
+  if (!ativo) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Cadastros." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [

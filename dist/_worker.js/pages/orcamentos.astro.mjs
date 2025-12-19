@@ -5,10 +5,13 @@ import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B-SnFw9s.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
-function OrcamentosCadastroIsland() {
-  const { ativo } = usePermissao("Vendas");
+function OrcamentosCadastroIsland({
+  suppressLoadingMessage = false
+}) {
+  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
   const [clientes, setClientes] = reactExports.useState([]);
   const [destinos, setDestinos] = reactExports.useState([]);
   const [produtos, setProdutos] = reactExports.useState([]);
@@ -76,6 +79,9 @@ function OrcamentosCadastroIsland() {
     } finally {
       setSalvando(false);
     }
+  }
+  if (loadingPerm) {
+    return suppressLoadingMessage ? null : /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" });
   }
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-3", children: [
@@ -226,8 +232,10 @@ function gerarNumeroVenda(data) {
   const rand = Math.floor(Math.random() * 900 + 100);
   return `VND-${y}${m}${d}-${h}${min}-${rand}`;
 }
-function OrcamentosConsultaIsland() {
-  const { ativo } = usePermissao("Vendas");
+function OrcamentosConsultaIsland({
+  suppressLoadingMessage = false
+}) {
+  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
   const [lista, setLista] = reactExports.useState([]);
   const [statusFiltro, setStatusFiltro] = reactExports.useState("");
   const [erro, setErro] = reactExports.useState(null);
@@ -786,6 +794,9 @@ function OrcamentosConsultaIsland() {
     } finally {
       setSalvandoInteracao(false);
     }
+  }
+  if (loadingPerm) {
+    return suppressLoadingMessage ? null : /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   }
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -1515,11 +1526,24 @@ function OrcamentosConsultaIsland() {
   ] });
 }
 
+function OrcamentosPermissionLoader({
+  children
+}) {
+  const { ativo, loading } = usePermissao("Vendas");
+  if (loading) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" });
+  }
+  if (!ativo) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Acesso ao módulo de Vendas bloqueado." }) });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children });
+}
+
 const $$Index = createComponent(($$result, $$props, $$slots) => {
   const activePage = "orcamentos";
   return renderTemplate`${renderComponent($$result, "DashboardLayout", $$DashboardLayout, { "title": "Or\xE7amentos", "activePage": activePage }, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<h1 class="page-title">Orçamentos / CRM</h1> <p class="page-subtitle">
 Cadastre e acompanhe orçamentos antes de virarem vendas.
-</p> ${renderComponent($$result2, "OrcamentosCadastroIsland", OrcamentosCadastroIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosCadastroIsland.tsx", "client:component-export": "default" })} ${renderComponent($$result2, "OrcamentosConsultaIsland", OrcamentosConsultaIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosConsultaIsland.tsx", "client:component-export": "default" })} ` })}`;
+</p> ${renderComponent($$result2, "OrcamentosPermissionLoader", OrcamentosPermissionLoader, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosPermissionLoader.tsx", "client:component-export": "default" }, { "default": ($$result3) => renderTemplate` ${renderComponent($$result3, "OrcamentosCadastroIsland", OrcamentosCadastroIsland, { "client:load": true, "suppressLoadingMessage": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosCadastroIsland.tsx", "client:component-export": "default" })} ${renderComponent($$result3, "OrcamentosConsultaIsland", OrcamentosConsultaIsland, { "client:load": true, "suppressLoadingMessage": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/OrcamentosConsultaIsland.tsx", "client:component-export": "default" })} ` })} ` })}`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro";

@@ -55,15 +55,6 @@ export default function LogsIsland() {
     validar();
   }, []);
 
-  if (loadingPerm) return <LoadingUsuarioContext />;
-
-  if (!ativo || !isAdmin)
-    return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar os logs.</h3>
-      </div>
-    );
-
   // ---------------------------------------------------------------
   // CARREGAR LOGS
   // ---------------------------------------------------------------
@@ -134,6 +125,15 @@ export default function LogsIsland() {
 
     return result;
   }, [logs, filtroUsuario, filtroModulo, filtroAcao, busca]);
+
+  if (loadingPerm) return <LoadingUsuarioContext />;
+
+  if (!ativo || !isAdmin)
+    return (
+      <div style={{ padding: 20 }}>
+        <h3>Apenas administradores podem acessar os logs.</h3>
+      </div>
+    );
 
   // ---------------------------------------------------------------
   // RENDER

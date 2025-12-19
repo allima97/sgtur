@@ -4,7 +4,8 @@ import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mj
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 const MODULOS = [
   "Dashboard",
@@ -12,6 +13,7 @@ const MODULOS = [
   "Vendas",
   "Orcamentos",
   "Operacao",
+  "Viagens",
   "Comissionamento",
   "Cadastros",
   "Paises",
@@ -44,7 +46,7 @@ function PermissoesAdminIsland() {
     }
     loadType();
   }, []);
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo || !isAdmin)
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Apenas administradores podem acessar este módulo." }) });
   reactExports.useEffect(() => {

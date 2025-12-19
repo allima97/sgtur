@@ -5,7 +5,7 @@ import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
 
 function normalizeText(value) {

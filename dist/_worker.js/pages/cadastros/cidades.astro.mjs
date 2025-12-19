@@ -5,9 +5,10 @@ import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -313,7 +314,7 @@ function CidadesIsland() {
   }
   if (!podeVer && !isAdmin) {
     if (carregando) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info", children: "Carregando permissoes..." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Voce nao possui permissao para visualizar Cidades." });
   }
@@ -384,7 +385,7 @@ function CidadesIsland() {
         }
       )
     ] }) }) }),
-    carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-info mb-3", children: "Carregando permissoes..." }),
+    carregando && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" }),
     !carregando && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [

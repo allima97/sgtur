@@ -77,15 +77,6 @@ export default function DashboardAdminIsland() {
     loadAdmin();
   }, []);
 
-  // bloquear quem não é admin
-  if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo || !isAdmin)
-    return (
-      <div style={{ padding: 20 }}>
-        <h3>Apenas administradores podem acessar este dashboard.</h3>
-      </div>
-    );
-
   // =========================================================
   // CARREGAR DADOS ADMINISTRATIVOS
   // =========================================================
@@ -95,7 +86,6 @@ export default function DashboardAdminIsland() {
         setLoading(true);
         setErro(null);
 
-        // EMPRESAS
         const { data: emp } = await supabase
           .from("companies")
           .select("*")
@@ -103,7 +93,6 @@ export default function DashboardAdminIsland() {
 
         setEmpresas(emp || []);
 
-        // USUÁRIOS
         const { data: usu } = await supabase
           .from("users")
           .select("id, nome_completo, email, active, user_types(name)")
@@ -111,11 +100,10 @@ export default function DashboardAdminIsland() {
 
         setUsuarios(usu || []);
 
-        // GESTORES + QUANTIDADE DE VENDEDORES
         const { data: gest } = await supabase
           .from("users")
           .select("id, nome_completo, user_types(name)")
-          .contains("user_types(name)", ["GESTOR"]);
+          .eq("user_types.name", "GESTOR");
 
         let listaGestores: Gestor[] = [];
         if (gest) {
@@ -134,11 +122,10 @@ export default function DashboardAdminIsland() {
         }
         setGestores(listaGestores);
 
-        // CONTAGEM DO SISTEMA
         const tabelas = [
           { chave: "clientes", tabela: "clientes" },
           { chave: "vendas", tabela: "vendas" },
-          { chave: "produtos", tabela: "produtos" }, // destinos/produtos cadastrados
+          { chave: "produtos", tabela: "produtos" },
           { chave: "tipos", tabela: "tipo_produtos" },
         ];
         const resultado: SistemaCount = { clientes: 0, vendas: 0, produtos: 0, tipos: 0 };
@@ -162,6 +149,15 @@ export default function DashboardAdminIsland() {
 
     loadData();
   }, []);
+
+  // bloquear quem não é admin
+  if (loadingPerm) return <LoadingUsuarioContext />;
+  if (!ativo || !isAdmin)
+    return (
+      <div style={{ padding: 20 }}>
+        <h3>Apenas administradores podem acessar este dashboard.</h3>
+      </div>
+    );
 
   // =========================================================
   // UI PRINCIPAL

@@ -1,0 +1,1 @@
+import{j as o}from"./jsx-runtime.mfZSNocD.js";function a({className:r=""}){const s=["card-base","card-config",r].filter(Boolean).join(" ");return o.jsx("div",{className:s,children:o.jsx("strong",{children:"Carregando contexto do usuário..."})})}export{a as L};

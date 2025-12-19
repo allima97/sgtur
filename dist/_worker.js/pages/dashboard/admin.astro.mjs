@@ -4,7 +4,8 @@ import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mj
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 function DashboardAdminIsland() {
   const { ativo, loading: loadingPerm } = usePermissao("AdminDashboard");
@@ -34,9 +35,6 @@ function DashboardAdminIsland() {
     }
     loadAdmin();
   }, []);
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
-  if (!ativo || !isAdmin)
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Apenas administradores podem acessar este dashboard." }) });
   reactExports.useEffect(() => {
     async function loadData() {
       try {
@@ -46,7 +44,7 @@ function DashboardAdminIsland() {
         setEmpresas(emp || []);
         const { data: usu } = await supabase.from("users").select("id, nome_completo, email, active, user_types(name)").order("nome_completo");
         setUsuarios(usu || []);
-        const { data: gest } = await supabase.from("users").select("id, nome_completo, user_types(name)").contains("user_types(name)", ["GESTOR"]);
+        const { data: gest } = await supabase.from("users").select("id, nome_completo, user_types(name)").eq("user_types.name", "GESTOR");
         let listaGestores = [];
         if (gest) {
           for (const g of gest) {
@@ -63,7 +61,6 @@ function DashboardAdminIsland() {
           { chave: "clientes", tabela: "clientes" },
           { chave: "vendas", tabela: "vendas" },
           { chave: "produtos", tabela: "produtos" },
-          // destinos/produtos cadastrados
           { chave: "tipos", tabela: "tipo_produtos" }
         ];
         const resultado = { clientes: 0, vendas: 0, produtos: 0, tipos: 0 };
@@ -81,6 +78,9 @@ function DashboardAdminIsland() {
     }
     loadData();
   }, []);
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
+  if (!ativo || !isAdmin)
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Apenas administradores podem acessar este dashboard." }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-admin-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dashboard Administrativo" }),

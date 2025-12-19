@@ -4,7 +4,8 @@ import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mj
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 function LogsIsland() {
   const { ativo, loading: loadingPerm } = usePermissao("AdminDashboard");
@@ -28,9 +29,6 @@ function LogsIsland() {
     }
     validar();
   }, []);
-  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });
-  if (!ativo || !isAdmin)
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Apenas administradores podem acessar os logs." }) });
   reactExports.useEffect(() => {
     async function load() {
       try {
@@ -75,6 +73,9 @@ function LogsIsland() {
     }
     return result;
   }, [logs, filtroUsuario, filtroModulo, filtroAcao, busca]);
+  if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
+  if (!ativo || !isAdmin)
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: 20 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Apenas administradores podem acessar os logs." }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "logs-admin-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-4 rounded-lg bg-rose-950 border border-rose-700 text-rose-100", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Logs de Auditoria" }),

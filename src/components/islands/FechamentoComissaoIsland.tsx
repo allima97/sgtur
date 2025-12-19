@@ -100,7 +100,7 @@ function getPrimeiroDiaMesSeguinte(periodoYYYYMM: string) {
 }
 
 export default function FechamentoComissaoIsland() {
-  const { permissao, ativo, loading } = usePermissao("Metas");
+  const { permissao, ativo, loading: loadingPermissao } = usePermissao("Metas");
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
@@ -116,7 +116,7 @@ export default function FechamentoComissaoIsland() {
   const [vendasPeriodo, setVendasPeriodo] = useState<Venda[]>([]);
   const [idsEquipe, setIdsEquipe] = useState<string[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [carregandoDados, setCarregandoDados] = useState(true);
   const [calculando, setCalculando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -169,7 +169,7 @@ export default function FechamentoComissaoIsland() {
 
   async function carregarDadosIniciais() {
     try {
-      setLoading(true);
+      setCarregandoDados(true);
       setErro(null);
 
       // usuário logado
@@ -255,7 +255,7 @@ export default function FechamentoComissaoIsland() {
       console.error(e);
       setErro("Erro ao carregar dados iniciais do fechamento.");
     } finally {
-      setLoading(false);
+      setCarregandoDados(false);
     }
   }
 
@@ -523,13 +523,13 @@ export default function FechamentoComissaoIsland() {
   // UI
   // ==========================================
 
-  if (loading) return <LoadingUsuarioContext />;
+  if (loadingPermissao) return <LoadingUsuarioContext />;
 
   if (!ativo) {
     return <div>Acesso ao módulo de Metas & Comissões bloqueado.</div>;
   }
 
-  if (loading) {
+  if (carregandoDados) {
     return <div>Carregando dados do fechamento...</div>;
   }
 

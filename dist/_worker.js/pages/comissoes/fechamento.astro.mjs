@@ -4,7 +4,8 @@ import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mj
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
 
 function calcularBaseMeta(resumo, params) {
   const valorLiquido = resumo.valor_total_bruto - resumo.valor_total_taxas;
@@ -86,7 +87,7 @@ function getPrimeiroDiaMesSeguinte(periodoYYYYMM) {
   return `${anoFinal}-${mesFinal}-01`;
 }
 function FechamentoComissaoIsland() {
-  const { permissao, ativo } = usePermissao("Metas");
+  const { permissao, ativo, loading: loadingPermissao } = usePermissao("Metas");
   const [usuario, setUsuario] = reactExports.useState(null);
   const [vendedores, setVendedores] = reactExports.useState([]);
   const [templates, setTemplates] = reactExports.useState([]);
@@ -98,7 +99,7 @@ function FechamentoComissaoIsland() {
   const [metaAtual, setMetaAtual] = reactExports.useState(null);
   const [vendasPeriodo, setVendasPeriodo] = reactExports.useState([]);
   const [idsEquipe, setIdsEquipe] = reactExports.useState([]);
-  const [loading, setLoading] = reactExports.useState(true);
+  const [carregandoDados, setCarregandoDados] = reactExports.useState(true);
   const [calculando, setCalculando] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
   const [valorBruto, setValorBruto] = reactExports.useState(0);
@@ -133,7 +134,7 @@ function FechamentoComissaoIsland() {
   }, []);
   async function carregarDadosIniciais() {
     try {
-      setLoading(true);
+      setCarregandoDados(true);
       setErro(null);
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth?.user?.id;
@@ -193,7 +194,7 @@ function FechamentoComissaoIsland() {
       console.error(e);
       setErro("Erro ao carregar dados iniciais do fechamento.");
     } finally {
-      setLoading(false);
+      setCarregandoDados(false);
     }
   }
   async function carregarParametrosComissao(user) {
@@ -373,10 +374,11 @@ function FechamentoComissaoIsland() {
       setCalculando(false);
     }
   }
+  if (loadingPermissao) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Metas & Comissões bloqueado." });
   }
-  if (loading) {
+  if (carregandoDados) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando dados do fechamento..." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-slate-50 p-2 md:p-6", children: [
