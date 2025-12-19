@@ -103,7 +103,7 @@ export default function AuthResetIsland() {
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-card auth-card-lg">
         <div className="auth-header">
           <div className="auth-icon">
             <i className="fa-solid fa-plane-departure"></i>
@@ -119,29 +119,33 @@ export default function AuthResetIsland() {
         )}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="senha"><i className="fa-solid fa-lock"></i> Nova senha</label>
+            <label htmlFor="senha">
+              <i className="fa-solid fa-lock"></i> Nova senha
+            </label>
             <input
               type="password"
               id="senha"
-              className="form-control"
+              className="form-input"
               placeholder="Mínimo 6 caracteres"
               required
               autoComplete="new-password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
           </div>
           <div className="form-group">
-            <label htmlFor="confirmar"><i className="fa-solid fa-lock"></i> Confirmar nova senha</label>
+            <label htmlFor="confirmar">
+              <i className="fa-solid fa-lock"></i> Confirmar nova senha
+            </label>
             <input
               type="password"
               id="confirmar"
-              className="form-control"
+              className="form-input"
               placeholder="Repita a senha"
               required
               value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loading}
             />
           </div>
