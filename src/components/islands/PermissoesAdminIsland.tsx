@@ -22,6 +22,8 @@ const MODULOS = [
   "Clientes",
   "Vendas",
   "Orcamentos",
+  "Operacao",
+  "Comissionamento",
   "Cadastros",
   "Paises",
   "Cidades",

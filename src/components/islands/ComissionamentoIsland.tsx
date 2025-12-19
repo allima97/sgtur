@@ -401,7 +401,7 @@ export default function ComissionamentoIsland() {
       });
     });
 
-    const valorLiquido = totalBruto - totalTaxas;
+    const totalLiquido = totalBruto - totalTaxas;
     const pctMetaGeral =
       metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? (baseMeta / metaGeral.meta_geral) * 100 : 0;
 
@@ -468,7 +468,7 @@ export default function ComissionamentoIsland() {
       baseMeta,
       totalBruto,
       totalTaxas,
-      valorLiquido,
+      totalLiquido,
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
@@ -477,6 +477,7 @@ export default function ComissionamentoIsland() {
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
       produtosDiferenciados,
+      totalVendas: vendas.length,
     };
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
 

@@ -31,6 +31,8 @@ const MODULOS: string[] = [
   "Clientes",
   "Vendas",
   "Orcamentos",
+  "Operacao",
+  "Comissionamento",
   "Cadastros",
   "Paises",
   "Cidades",
