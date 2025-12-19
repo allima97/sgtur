@@ -58,6 +58,14 @@ const MAPA_MODULOS: Record<string, string> = {
   Comissionamento: "comissionamento",
 };
 
+const MODULO_ALIASES: Record<string, string> = Object.keys(MAPA_MODULOS).reduce(
+  (acc, key) => {
+    acc[key.toLowerCase()] = MAPA_MODULOS[key];
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
 // hierarquia igual ao SQL perm_level()
 const permLevel = (p: NivelPermissao | undefined) => {
   switch (p) {
@@ -124,9 +132,20 @@ export default function MenuIsland({ activePage }) {
   };
 
   // monta mapa {modulo: permissao} pegando SEMPRE a maior permissão se houver duplicata
+  function setPerm(perms: Record<string, NivelPermissao>, key: string, perm: NivelPermissao) {
+    const normalizedKey = key.toLowerCase();
+    const atual = perms[normalizedKey] ?? "none";
+    perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
+  }
+
   function mergePerm(perms: Record<string, NivelPermissao>, modulo: string, perm: NivelPermissao) {
-    const atual = perms[modulo] ?? "none";
-    perms[modulo] = permLevel(perm) > permLevel(atual) ? perm : atual;
+    const normalizedModulo = modulo.toLowerCase();
+    setPerm(perms, normalizedModulo, perm);
+
+    const alias = MODULO_ALIASES[normalizedModulo];
+    if (alias) {
+      setPerm(perms, alias, perm);
+    }
   }
 
   async function carregar() {
