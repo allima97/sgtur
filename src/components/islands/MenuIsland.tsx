@@ -233,6 +233,27 @@ export default function MenuIsland({ activePage }) {
     return pode(modBD, min);
   };
 
+  const cadastrosMenu = [
+    { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "🌍", label: "Países" },
+    {
+      name: "Subdivisoes",
+      href: "/cadastros/estados",
+      active: "subdivisoes",
+      icon: "🗺️",
+      label: "Estado/Província",
+    },
+    { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "🏙️", label: "Cidades" },
+    { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "🎫", label: "Produtos" },
+    {
+      name: "Fornecedores",
+      href: "/cadastros/fornecedores",
+      active: "fornecedores",
+      icon: "🎧",
+      label: "Fornecedores",
+    },
+  ];
+  const hasCadastrosSection = cadastrosMenu.some((item) => can(item.name));
+
   const sidebarId = "app-sidebar";
 
   const mobileControls = mounted
@@ -350,59 +371,24 @@ export default function MenuIsland({ activePage }) {
         </div>
 
         {/* CADASTROS */}
-        {can("Cadastros") && (
+        {hasCadastrosSection && (
           <div>
             <div className="sidebar-section-title">Cadastros</div>
             <ul className="sidebar-nav">
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "paises" ? "active" : ""}`}
-                  href="/cadastros/paises"
-                  onClick={handleNavClick}
-                >
-                  <span>🌍</span>Países
-                </a>
-              </li>
-
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "subdivisoes" ? "active" : ""}`}
-                  href="/cadastros/estados"
-                  onClick={handleNavClick}
-                >
-                  <span>🗺️</span>Estado/Província
-                </a>
-              </li>
-
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "cidades" ? "active" : ""}`}
-                  href="/cadastros/cidades"
-                  onClick={handleNavClick}
-                >
-                  <span>🏙️</span>Cidades
-                </a>
-              </li>
-
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "produtos" ? "active" : ""}`}
-                  href="/cadastros/produtos"
-                  onClick={handleNavClick}
-                >
-                  <span>🎫</span>Produtos
-                </a>
-              </li>
-
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "fornecedores" ? "active" : ""}`}
-                  href="/cadastros/fornecedores"
-                  onClick={handleNavClick}
-                >
-                  <span>🎧</span>Fornecedores
-                </a>
-              </li>
+              {cadastrosMenu
+                .filter((item) => can(item.name))
+                .map((item) => (
+                  <li key={item.name}>
+                    <a
+                      className={`sidebar-link ${activePage === item.active ? "active" : ""}`}
+                      href={item.href}
+                      onClick={handleNavClick}
+                    >
+                      <span>{item.icon}</span>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
             </ul>
           </div>
         )}

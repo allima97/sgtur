@@ -139,7 +139,7 @@ export default function ComissionamentoIsland() {
   useEffect(() => {
     if (loadingPerm || !ativo) return;
     carregarTudo();
-  }, [loadingPerm, ativo, preset]);
+  }, [loadingPerm, ativo, preset, permissao]);
 
   useEffect(() => {
     setPeriodo(calcPeriodo(preset));
@@ -158,6 +158,7 @@ export default function ComissionamentoIsland() {
       setUser({ id: userId, nome: auth?.user?.email || "" });
 
       const periodoAtual = calcPeriodo(preset);
+      const isAdminPermissao = permissao === "admin";
 
       const { data: paramsData } = await supabase
         .from("parametros_comissao")
@@ -190,7 +191,7 @@ export default function ComissionamentoIsland() {
         ? "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao"
         : "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
 
-      let vendasDataRes = await supabase
+      let vendasQuery = supabase
         .from("vendas")
         .select(
           `
@@ -210,9 +211,13 @@ export default function ComissionamentoIsland() {
         .eq("cancelada", false)
         .gte("data_lancamento", periodoAtual.inicio)
         .lte("data_lancamento", periodoAtual.fim);
+      if (!isAdminPermissao && userId) {
+        vendasQuery = vendasQuery.eq("vendedor_id", userId);
+      }
+      let vendasDataRes = await vendasQuery;
 
       if (vendasDataRes.error && vendasDataRes.error.message?.toLowerCase().includes("exibe_kpi_comissao")) {
-        vendasDataRes = await supabase
+        let fallbackQuery = supabase
           .from("vendas")
           .select(
             `
@@ -232,6 +237,10 @@ export default function ComissionamentoIsland() {
           .eq("cancelada", false)
           .gte("data_lancamento", periodoAtual.inicio)
           .lte("data_lancamento", periodoAtual.fim);
+        if (!isAdminPermissao && userId) {
+          fallbackQuery = fallbackQuery.eq("vendedor_id", userId);
+        }
+        vendasDataRes = await fallbackQuery;
         suportaKpi = false;
       }
 
