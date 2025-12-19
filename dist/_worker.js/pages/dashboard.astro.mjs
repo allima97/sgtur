@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_CsxualbE.mjs';
-import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_BVMlMyat.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B-SnFw9s.mjs';
+import { D as DashboardGeralIsland } from '../chunks/DashboardGeralIsland_D0npFyid.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 
 const $$Index = createComponent(($$result, $$props, $$slots) => {
@@ -13,7 +13,7 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
       width: 100%;
       max-width: 1300px;
       margin: 0 auto;
-    "> ${renderComponent($$result2, "DashboardGeralIsland", DashboardGeralIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/DashboardGeralIsland.tsx", "client:component-export": "default" })} </section> ` })}`;
+    "> ${renderComponent($$result2, "DashboardGeralIsland", DashboardGeralIsland, { "client:visible": true, "client:component-hydration": "visible", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/DashboardGeralIsland.tsx", "client:component-export": "default" })} </section> ` })}`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/index.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/dashboard/index.astro";

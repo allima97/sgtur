@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CsxualbE.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
 
 const PERIODO_OPCOES = [
   { id: "mes_atual", label: "Mês atual" },
@@ -258,7 +258,7 @@ function ComissionamentoIsland() {
         totalTaxas += valTaxas;
       });
     });
-    const valorLiquido = totalBruto - totalTaxas;
+    const totalLiquido = totalBruto - totalTaxas;
     const pctMetaGeral = metaGeral?.meta_geral && metaGeral.meta_geral > 0 ? baseMeta / metaGeral.meta_geral * 100 : 0;
     Object.keys(brutoPorProduto).forEach((prodId) => {
       const prod = produtos[prodId];
@@ -312,7 +312,7 @@ function ComissionamentoIsland() {
       baseMeta,
       totalBruto,
       totalTaxas,
-      valorLiquido,
+      totalLiquido,
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
@@ -320,7 +320,8 @@ function ComissionamentoIsland() {
       totalComissao: metaProdEnabled ? comissaoGeral + comissaoDif + comissaoMetaProd : comissaoGeral + comissaoDif,
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
-      produtosDiferenciados
+      produtosDiferenciados,
+      totalVendas: vendas.length
     };
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando permissões..." });

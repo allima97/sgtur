@@ -1,11 +1,11 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CsxualbE.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B-SnFw9s.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_CncspAO2.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_BjbZI5-O.mjs';
 import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
 
 const emptyRule = {
