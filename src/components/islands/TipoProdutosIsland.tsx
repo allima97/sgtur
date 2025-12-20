@@ -611,9 +611,9 @@ export default function TipoProdutosIsland() {
   <div className="card-base mb-3">
     <div
       className="form-row"
-      style={{ alignItems: "flex-end", gap: 8, flexWrap: "wrap", width: "100%" }}
+      style={{ display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap" }}
     >
-      <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
+      <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
         <label className="form-label">Buscar tipo de produto</label>
         <input
           className="form-input"
@@ -623,7 +623,7 @@ export default function TipoProdutosIsland() {
         />
       </div>
       {permissao !== "view" && (
-        <div style={{ display: "flex" }}>
+        <div style={{ flex: "0 0 auto" }}>
           <button
             className="btn btn-primary"
             type="button"
