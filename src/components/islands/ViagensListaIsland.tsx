@@ -385,34 +385,34 @@ export default function ViagensListaIsland() {
                 )}
               </div>
               <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Origem</label>
-                    <input
-                      className="form-input"
-                      list="cidades-list"
-                      value={cadastroForm.origem}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCadastroForm((prev) => ({ ...prev, origem: value }));
-                        agendarBuscaCidades(value);
-                      }}
-                      placeholder="Cidade de origem"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Destino</label>
-                    <input
-                      className="form-input"
-                      list="cidades-list"
-                      value={cadastroForm.destino}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCadastroForm((prev) => ({ ...prev, destino: value }));
-                        agendarBuscaCidades(value);
-                      }}
-                      placeholder="Cidade de destino"
-                    />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Origem</label>
+                  <input
+                    className="form-input"
+                    list="cidades-list"
+                    value={cadastroForm.origem}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setCadastroForm((prev) => ({ ...prev, origem: value }));
+                      agendarBuscaCidades(value);
+                    }}
+                    placeholder="Cidade de origem"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Destino</label>
+                  <input
+                    className="form-input"
+                    list="cidades-list"
+                    value={cadastroForm.destino}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setCadastroForm((prev) => ({ ...prev, destino: value }));
+                      agendarBuscaCidades(value);
+                    }}
+                    placeholder="Cidade de destino"
+                  />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Data início</label>
                   <input
@@ -430,60 +430,42 @@ export default function ViagensListaIsland() {
                     value={cadastroForm.data_fim}
                     onChange={(e) => setCadastroForm((prev) => ({ ...prev, data_fim: e.target.value }))}
                   />
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-              >
-                {STATUS_OPCOES.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Inicio</label>
-              <input
-                type="date"
-                className="form-input"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Final</label>
-              <input
-                type="date"
-                className="form-input"
-                value={fim}
-                onChange={(e) => setFim(e.target.value)}
-              />
-            </div>
-                <div
-                  className="form-row"
-                  style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" }}
-                >
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    onClick={criarViagem}
-                    disabled={savingViagem}
-                  >
-                    {savingViagem ? "Salvando..." : "Salvar"}
-                  </button>
-                  <button
-                    className="btn btn-light"
-                    type="button"
-                    onClick={fecharFormularioViagem}
-                    disabled={savingViagem}
-                  >
-                    Cancelar
-                  </button>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={cadastroForm.status}
+                    onChange={(e) => setCadastroForm((prev) => ({ ...prev, status: e.target.value }))}
+                  >
+                    <option value="planejada">Planejada</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="em_viagem">Em viagem</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="cancelada">Cancelada</option>
+                  </select>
+                </div>
+              </div>
+              <div
+                className="form-row"
+                style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" }}
+              >
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={criarViagem}
+                  disabled={savingViagem}
+                >
+                  {savingViagem ? "Salvando..." : "Salvar"}
+                </button>
+                <button
+                  className="btn btn-light"
+                  type="button"
+                  onClick={fecharFormularioViagem}
+                  disabled={savingViagem}
+                >
+                  Cancelar
+                </button>
               </div>
               {formError && <div style={{ color: "red" }}>{formError}</div>}
             </div>
