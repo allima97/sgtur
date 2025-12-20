@@ -510,6 +510,7 @@ export default function ViagensListaIsland() {
               style={{
                 alignSelf: "flex-end",
                 display: "flex",
+                flexDirection: "row",
                 gap: 8,
                 marginBottom: 0,
                 marginLeft: "auto",
