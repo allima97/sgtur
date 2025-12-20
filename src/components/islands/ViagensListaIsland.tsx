@@ -514,8 +514,12 @@ export default function ViagensListaIsland() {
                 marginBottom: 0,
                 marginLeft: "auto",
                 flexWrap: "nowrap",
+                justifyContent: "flex-end",
               }}
             >
+              <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
+                {loading ? "Atualizando..." : "Atualizar"}
+              </button>
               {podeCriar && (
                 <button
                   className="btn btn-primary"
@@ -526,9 +530,6 @@ export default function ViagensListaIsland() {
                   Nova viagem
                 </button>
               )}
-              <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
-                {loading ? "Atualizando..." : "Atualizar"}
-              </button>
             </div>
           </div>
 
