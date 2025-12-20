@@ -338,6 +338,7 @@ export default function ViagensListaIsland() {
       return da < db ? -1 : 1;
     });
   }, [viagens]);
+  const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
 
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
@@ -486,7 +487,7 @@ export default function ViagensListaIsland() {
                 ))}
               </select>
             </div>
-            <div className="form-group" style={{ flex: "1 1 160px" }}>
+            <div className="form-group" style={compactDateFieldStyle}>
               <label className="form-label">Inicio</label>
               <input
                 type="date"
@@ -495,7 +496,7 @@ export default function ViagensListaIsland() {
                 onChange={(e) => setInicio(e.target.value)}
               />
             </div>
-            <div className="form-group" style={{ flex: "1 1 160px" }}>
+            <div className="form-group" style={compactDateFieldStyle}>
               <label className="form-label">Final</label>
               <input
                 type="date"
@@ -512,6 +513,7 @@ export default function ViagensListaIsland() {
                 gap: 8,
                 marginBottom: 0,
                 marginLeft: "auto",
+                flexWrap: "nowrap",
               }}
             >
               {podeCriar && (
@@ -524,7 +526,7 @@ export default function ViagensListaIsland() {
                   Nova viagem
                 </button>
               )}
-              <button className="btn btn-light" type="button" onClick={buscar} disabled={loading}>
+              <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
                 {loading ? "Atualizando..." : "Atualizar"}
               </button>
             </div>
