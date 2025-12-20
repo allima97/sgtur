@@ -609,27 +609,32 @@ export default function TipoProdutosIsland() {
 
   {/* BUSCA */}
   <div className="card-base mb-3">
-    <div className="form-group">
-      <label className="form-label">Buscar tipo de produto</label>
-      <input
-        className="form-input"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Digite parte do nome..."
-      />
-    </div>
-    {permissao !== "view" && (
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={abrirFormularioTipo}
-          disabled={mostrarFormulario}
-        >
-          Novo produto
-        </button>
+    <div
+      className="form-row"
+      style={{ alignItems: "flex-end", gap: 8, flexWrap: "wrap", width: "100%" }}
+    >
+      <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
+        <label className="form-label">Buscar tipo de produto</label>
+        <input
+          className="form-input"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Digite parte do nome..."
+        />
       </div>
-    )}
+      {permissao !== "view" && (
+        <div style={{ display: "flex" }}>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={abrirFormularioTipo}
+            disabled={mostrarFormulario}
+          >
+            Novo produto
+          </button>
+        </div>
+      )}
+    </div>
   </div>
 
       {erro && <div className="card-base card-config mb-3">{erro}</div>}
