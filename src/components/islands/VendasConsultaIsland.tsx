@@ -467,24 +467,14 @@ export default function VendasConsultaIsland() {
 
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div
-          className="form-row"
-          style={{
-            marginTop: 8,
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            alignItems: "flex-end",
-          }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
+        <div className="form-row" style={{ marginTop: 8 }}>
+          <div className="form-group">
             <label className="form-label">Buscar venda</label>
             <input
               className="form-input"
               placeholder="Nome, destino ou ID..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              style={{ width: "100%" }}
             />
             {filtroLabel && (
               <small style={{ color: "#64748b" }}>
@@ -493,20 +483,7 @@ export default function VendasConsultaIsland() {
             )}
           </div>
           {podeCriar && (
-            <div
-              className="form-group"
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                gap: 8,
-                marginBottom: 0,
-                marginLeft: "auto",
-                flexWrap: "nowrap",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                flex: "0 0 auto",
-              }}
-            >
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
               <a className="btn btn-primary" href="/vendas/cadastro">
                 Nova venda
               </a>
