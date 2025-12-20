@@ -508,7 +508,6 @@ export default function ViagensListaIsland() {
             <div
               className="form-group"
               style={{
-                alignSelf: "flex-end",
                 display: "flex",
                 flexDirection: "row",
                 gap: 8,
@@ -517,6 +516,7 @@ export default function ViagensListaIsland() {
                 flexWrap: "nowrap",
                 justifyContent: "flex-end",
                 alignItems: "center",
+                alignSelf: "center",
               }}
             >
               <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
