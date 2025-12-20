@@ -516,6 +516,7 @@ export default function ViagensListaIsland() {
                 marginLeft: "auto",
                 flexWrap: "nowrap",
                 justifyContent: "flex-end",
+                alignItems: "center",
               }}
             >
               <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
