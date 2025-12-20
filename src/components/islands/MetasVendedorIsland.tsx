@@ -382,19 +382,15 @@ export default function MetasVendedorIsland() {
   return (
     <div className="min-h-screen bg-slate-50 p-2 md:p-6">
 
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue mb-2">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div>
-            <div style={{ fontWeight: 600 }}>Metas do vendedor</div>
-            <small style={{ color: "#64748b" }}>Defina metas gerais e produtos diferenciados para o período.</small>
-          </div>
+          <h3>Metas cadastradas</h3>
           {usuarioPodeEditar && (
             <button
               type="button"
               className="btn btn-primary"
               onClick={abrirFormularioMeta}
               disabled={mostrarFormularioMeta}
-              style={{ alignSelf: "flex-end" }}
             >
               Adicionar meta
             </button>
@@ -574,10 +570,6 @@ export default function MetasVendedorIsland() {
       </div>
 
       {/* LISTAGEM */}
-      <div className="card-base card-blue mb-2">
-        <h3>Metas cadastradas</h3>
-      </div>
-
       <div className="table-container overflow-x-auto">
         <table className="table-default table-header-blue min-w-[880px]">
           <thead>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -350,19 +350,6 @@ export default function ViagensListaIsland() {
   return (
       <div className="card-base card-purple">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {podeCriar && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontWeight: 600 }}>Viagens</div>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    onClick={abrirFormularioViagem}
-                    disabled={showForm}
-                  >
-                    Nova viagem
-                  </button>
-                </div>
-          )}
           {showForm && (
             <div className="card-base card-blue" style={{ padding: 16 }}>
               <datalist id="cidades-list">
@@ -443,21 +430,39 @@ export default function ViagensListaIsland() {
                     value={cadastroForm.data_fim}
                     onChange={(e) => setCadastroForm((prev) => ({ ...prev, data_fim: e.target.value }))}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={cadastroForm.status}
-                    onChange={(e) => setCadastroForm((prev) => ({ ...prev, status: e.target.value }))}
-                  >
-                    <option value="planejada">Planejada</option>
-                    <option value="confirmada">Confirmada</option>
-                    <option value="em_viagem">Em viagem</option>
-                    <option value="concluida">Concluída</option>
-                    <option value="cancelada">Cancelada</option>
-                  </select>
-                </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value)}
+              >
+                {STATUS_OPCOES.map((op) => (
+                  <option key={op.value} value={op.value}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Inicio</label>
+              <input
+                type="date"
+                className="form-input"
+                value={inicio}
+                onChange={(e) => setInicio(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Final</label>
+              <input
+                type="date"
+                className="form-input"
+                value={fim}
+                onChange={(e) => setFim(e.target.value)}
+              />
+            </div>
                 <div
                   className="form-row"
                   style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" }}
@@ -485,44 +490,54 @@ export default function ViagensListaIsland() {
           )}
 
           <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value)}
-            >
-              {STATUS_OPCOES.map((op) => (
-                <option key={op.value} value={op.value}>
-                  {op.label}
-                </option>
-              ))}
-            </select>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value)}
+              >
+                {STATUS_OPCOES.map((op) => (
+                  <option key={op.value} value={op.value}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Início</label>
+              <input
+                type="date"
+                className="form-input"
+                value={inicio}
+                onChange={(e) => setInicio(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Final</label>
+              <input
+                type="date"
+                className="form-input"
+                value={fim}
+                onChange={(e) => setFim(e.target.value)}
+              />
+            </div>
+            <div className="form-group" style={{ alignSelf: "flex-end", display: "flex", gap: 8 }}>
+              {podeCriar && (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={abrirFormularioViagem}
+                  disabled={showForm}
+                >
+                  Nova viagem
+                </button>
+              )}
+              <button className="btn btn-light" type="button" onClick={buscar} disabled={loading}>
+                {loading ? "Atualizando..." : "Atualizar"}
+              </button>
+            </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Início a partir de</label>
-            <input
-              type="date"
-              className="form-input"
-              value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Início até</label>
-            <input
-              type="date"
-              className="form-input"
-              value={fim}
-              onChange={(e) => setFim(e.target.value)}
-            />
-          </div>
-          <div className="form-group" style={{ alignSelf: "flex-end" }}>
-            <button className="btn btn-light" type="button" onClick={buscar} disabled={loading}>
-              {loading ? "Atualizando..." : "Atualizar"}
-            </button>
-          </div>
-        </div>
 
         {erro && <div style={{ color: "red" }}>{erro}</div>}
 

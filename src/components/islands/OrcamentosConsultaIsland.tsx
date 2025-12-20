@@ -732,12 +732,6 @@ export default function OrcamentosConsultaIsland({
   return (
     <>
       <div className="card-base">
-        <div className="page-header mb-2">
-          <div>
-            <h2 className="card-title font-semibold text-lg">Orçamentos</h2>
-            <p className="page-subtitle text-slate-500">Consulta rápida dos orçamentos cadastrados.</p>
-          </div>
-        </div>
         <div
           className="grid w-full mt-3 gap-2 md:gap-3"
           style={{

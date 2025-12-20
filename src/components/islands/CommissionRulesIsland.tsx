@@ -287,25 +287,22 @@ export default function CommissionRulesIsland() {
   }
 
   return (
-    <div className="card-base card-blue">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h3 style={{ marginBottom: 6 }}>Regras de Comissionamento</h3>
-          <p style={{ marginTop: 0, marginBottom: 12, color: "#475569", fontSize: "0.9rem" }}>
-            Configure regras gerais ou escalonadas usadas em produtos e metas.
-          </p>
+      <div className="card-base card-blue">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>
+          </div>
+          {podeEditar && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={abrirFormularioRegra}
+              disabled={mostrarFormulario}
+            >
+              Adicionar regra
+            </button>
+          )}
         </div>
-        {podeEditar && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={abrirFormularioRegra}
-            disabled={mostrarFormulario}
-          >
-            Adicionar regra
-          </button>
-        )}
-      </div>
 
       {erro && (
         <div className="card-base card-config mb-2">
@@ -499,9 +496,7 @@ export default function CommissionRulesIsland() {
           </form>
       )}
 
-      <div className="card-base card-blue mt-4">
-        <h4 className="mb-2">Regras cadastradas</h4>
-        <div className="table-container overflow-x-auto">
+      <div className="table-container overflow-x-auto">
           <table className="table-default table-header-blue min-w-[900px]">
             <thead>
               <tr>
@@ -556,7 +551,6 @@ export default function CommissionRulesIsland() {
             </tbody>
           </table>
         </div>
-      </div>
     </div>
   );
 }

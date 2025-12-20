@@ -382,24 +382,8 @@ export default function TipoProdutosIsland() {
 
   return (
     <div className="produtos-page">
-      <div className="card-base card-blue mb-3">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontWeight: 600 }}>Tipos de produto</div>
-            <small style={{ color: "#94a3b8" }}>Crie e edite tipos usados em produtos e comissões.</small>
-          </div>
-          {permissao !== "view" && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={abrirFormularioTipo}
-              disabled={mostrarFormulario}
-            >
-              Adicionar tipo
-            </button>
-          )}
-        </div>
-        {mostrarFormulario && (
+      {mostrarFormulario && (
+        <div className="card-base card-blue mb-3">
           <form onSubmit={salvar}>
             <div className="form-row">
             <div className="form-group">
@@ -620,21 +604,33 @@ export default function TipoProdutosIsland() {
             </div>
           )}
           </form>
-        )}
-      </div>
-
-      {/* BUSCA */}
-      <div className="card-base mb-3">
-        <div className="form-group">
-          <label className="form-label">Buscar tipo de produto</label>
-          <input
-            className="form-input"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Digite parte do nome..."
-          />
         </div>
+      )}
+
+  {/* BUSCA */}
+  <div className="card-base mb-3">
+    <div className="form-group">
+      <label className="form-label">Buscar tipo de produto</label>
+      <input
+        className="form-input"
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        placeholder="Digite parte do nome..."
+      />
+    </div>
+    {permissao !== "view" && (
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={abrirFormularioTipo}
+          disabled={mostrarFormulario}
+        >
+          Adicionar tipo
+        </button>
       </div>
+    )}
+  </div>
 
       {erro && <div className="card-base card-config mb-3">{erro}</div>}
 
