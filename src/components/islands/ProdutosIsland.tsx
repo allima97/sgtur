@@ -103,6 +103,7 @@ export default function ProdutosIsland() {
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -429,6 +430,18 @@ export default function ProdutosIsland() {
     });
     setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
     setMostrarSugestoes(false);
+    setMostrarFormulario(true);
+  }
+
+  function abrirFormularioProduto() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+    setErro(null);
+  }
+
+  function fecharFormularioProduto() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
 
   useEffect(() => {
@@ -584,241 +597,12 @@ export default function ProdutosIsland() {
 
   return (
     <div className="destinos-page">
-      {/* Formulario */}
-      <div className="card-base card-blue mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome do produto *</label>
-              <input
-                className="form-input"
-                value={form.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                placeholder="Ex: Passeio em Gramado, Pacote Paris..."
-                disabled={permissao === "view"}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tipo *</label>
-              <select
-                className="form-select"
-                value={form.tipo_produto}
-                onChange={(e) => handleChange("tipo_produto", e.target.value)}
-                disabled={permissao === "view"}
-              >
-                <option value="">Selecione o tipo</option>
-                {tipos.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {tipoLabel(t) || "(sem nome)"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Destino *</label>
-              <input
-                className="form-input"
-                value={form.destino}
-                onChange={(e) => handleChange("destino", e.target.value)}
-                onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
-                placeholder="Ex: Disney, Porto de Galinhas"
-                disabled={permissao === "view"}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Cidade *</label>
-              <input
-                className="form-input"
-                placeholder="Digite o nome da cidade"
-                value={cidadeBusca}
-                onChange={(e) => handleCidadeBusca(e.target.value)}
-                onFocus={() => setMostrarSugestoes(true)}
-                onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                disabled={permissao === "view"}
-                style={{ marginBottom: 6 }}
-              />
-              {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
-              {erroCidadeBusca && !buscandoCidade && (
-                <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-              )}
-              {mostrarSugestoes && (
-                <div
-                  className="card-base"
-                  style={{
-                    marginTop: 4,
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    padding: 6,
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
-                  {resultadosCidade.length === 0 && !buscandoCidade && (
-                    <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
-                  )}
-                  {resultadosCidade.map((c) => {
-                    const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="btn btn-light"
-                        style={{
-                          width: "100%",
-                          justifyContent: "flex-start",
-                          marginBottom: 4,
-                          background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
-                          borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
-                        }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleChange("cidade_id", c.id);
-                          setCidadeBusca(label);
-                          setMostrarSugestoes(false);
-                          setResultadosCidade([]);
-                        }}
-                      >
-                        {label}
-                        {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>• {c.pais_nome}</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Fornecedor (opcional)</label>
-              <input
-                className="form-input"
-                list="fornecedores-list"
-                placeholder="Escolha um fornecedor"
-                value={form.fornecedor_label}
-                onChange={(e) => handleFornecedorInput(e.target.value)}
-                disabled={permissao === "view"}
-              />
-              <datalist id="fornecedores-list">
-                {fornecedoresLista.map((fornecedor) => (
-                  <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Atracao principal</label>
-              <input
-                className="form-input"
-                value={form.atracao_principal}
-                onChange={(e) => handleChange("atracao_principal", e.target.value)}
-                placeholder="Ex: Disney, Torre Eiffel..."
-                disabled={permissao === "view"}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Melhor epoca</label>
-              <input
-                className="form-input"
-                value={form.melhor_epoca}
-                onChange={(e) => handleChange("melhor_epoca", e.target.value)}
-                placeholder="Ex: Dezembro a Marco"
-                disabled={permissao === "view"}
-              />
-            </div>
-          </div>
-
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Duracao sugerida</label>
-              <select
-                className="form-select"
-                value={form.duracao_sugerida}
-                onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
-                disabled={permissao === "view"}
-              >
-                <option value="">Selecione</option>
-                <option value="De 1 a 3 dias">De 1 a 3 dias</option>
-                <option value="De 3 a 5 dias">De 3 a 5 dias</option>
-                <option value="De 5 a 7 dias">De 5 a 7 dias</option>
-                <option value="De 7 a 10 dias">De 7 a 10 dias</option>
-                <option value="10 dias ou mais">10 dias ou mais</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nivel de preco</label>
-              <select
-                className="form-select"
-                value={form.nivel_preco}
-                onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                disabled={permissao === "view"}
-              >
-                <option value="">Selecione</option>
-                <option value="Economico">Economico</option>
-                <option value="Intermediario">Intermediario</option>
-                <option value="Premium">Premium</option>
-                <option value="Super Premium">Super Premium</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Imagem (URL)</label>
-              <input
-                className="form-input"
-                value={form.imagem_url}
-                onChange={(e) => handleChange("imagem_url", e.target.value)}
-                placeholder="URL de uma imagem do destino"
-                disabled={permissao === "view"}
-              />
-            </div>
-          </div>
-
-          <div className="form-group" style={{ marginTop: 12 }}>
-            <label className="form-label">Informacoes importantes</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={form.informacoes_importantes}
-              onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-              placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-              disabled={permissao === "view"}
-            />
-          </div>
-
-          <div className="form-group" style={{ marginTop: 12 }}>
-            <label className="form-label">Ativo</label>
-            <select
-              className="form-select"
-              value={form.ativo ? "true" : "false"}
-              onChange={(e) => handleChange("ativo", e.target.value === "true")}
-              disabled={permissao === "view"}
-            >
-              <option value="true">Sim</option>
-              <option value="false">Nao</option>
-            </select>
-          </div>
-
-          <div className="mt-2">
-            {permissao !== "view" && (
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar produto"}
-              </button>
-            )}
-
-            {editandoId && permissao !== "view" && (
-              <button type="button" className="btn btn-light" style={{ marginLeft: 8 }} onClick={iniciarNovo}>
-                Cancelar edicao
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      {/* Filtro */}
       <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
+        <div
+          className="form-row"
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <div className="form-group" style={{ flex: "1 1 320px" }}>
             <label className="form-label">Buscar produto</label>
             <input
               className="form-input"
@@ -827,8 +611,247 @@ export default function ProdutosIsland() {
               placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
             />
           </div>
+          {permissao !== "view" && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={abrirFormularioProduto}
+                disabled={mostrarFormulario}
+              >
+                Adicionar produto
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {mostrarFormulario && (
+        <div className="card-base card-blue mb-3">
+          <form onSubmit={salvar}>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Nome do produto *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tipo *</label>
+                <select
+                  className="form-select"
+                  value={form.tipo_produto}
+                  onChange={(e) => handleChange("tipo_produto", e.target.value)}
+                  disabled={permissao === "view"}
+                >
+                  <option value="">Selecione o tipo</option>
+                  {tipos.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {tipoLabel(t) || "(sem nome)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Destino *</label>
+                <input
+                  className="form-input"
+                  value={form.destino}
+                  onChange={(e) => handleChange("destino", e.target.value)}
+                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Disney, Porto de Galinhas"
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Cidade *</label>
+                <input
+                  className="form-input"
+                  placeholder="Digite o nome da cidade"
+                  value={cidadeBusca}
+                  onChange={(e) => handleCidadeBusca(e.target.value)}
+                  onFocus={() => setMostrarSugestoes(true)}
+                  onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                  disabled={permissao === "view"}
+                  style={{ marginBottom: 6 }}
+                />
+                {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
+                {erroCidadeBusca && !buscandoCidade && (
+                  <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
+                )}
+                {mostrarSugestoes && (
+                  <div
+                    className="card-base"
+                    style={{
+                      marginTop: 4,
+                      maxHeight: 180,
+                      overflowY: "auto",
+                      padding: 6,
+                      border: "1px solid #e5e7eb",
+                    }}
+                  >
+                    {resultadosCidade.length === 0 && !buscandoCidade && (
+                      <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                    )}
+                    {resultadosCidade.map((c) => {
+                      const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="btn btn-light"
+                          style={{
+                            width: "100%",
+                            justifyContent: "flex-start",
+                            marginBottom: 4,
+                            background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
+                            borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
+                          }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleChange("cidade_id", c.id);
+                            setCidadeBusca(label);
+                            setMostrarSugestoes(false);
+                            setResultadosCidade([]);
+                          }}
+                        >
+                          {label}
+                          {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>• {c.pais_nome}</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Fornecedor (opcional)</label>
+                <input
+                  className="form-input"
+                  list="fornecedores-list"
+                  placeholder="Escolha um fornecedor"
+                  value={form.fornecedor_label}
+                  onChange={(e) => handleFornecedorInput(e.target.value)}
+                  disabled={permissao === "view"}
+                />
+                <datalist id="fornecedores-list">
+                  {fornecedoresLista.map((fornecedor) => (
+                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Atracao principal</label>
+                <input
+                  className="form-input"
+                  value={form.atracao_principal}
+                  onChange={(e) => handleChange("atracao_principal", e.target.value)}
+                  placeholder="Ex: Disney, Torre Eiffel..."
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Melhor epoca</label>
+                <input
+                  className="form-input"
+                  value={form.melhor_epoca}
+                  onChange={(e) => handleChange("melhor_epoca", e.target.value)}
+                  placeholder="Ex: Dezembro a Marco"
+                  disabled={permissao === "view"}
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Duracao sugerida</label>
+                <select
+                  className="form-select"
+                  value={form.duracao_sugerida}
+                  onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
+                  disabled={permissao === "view"}
+                >
+                  <option value="">Selecione</option>
+                  <option value="De 1 a 3 dias">De 1 a 3 dias</option>
+                  <option value="De 3 a 5 dias">De 3 a 5 dias</option>
+                  <option value="De 5 a 7 dias">De 5 a 7 dias</option>
+                  <option value="De 7 a 10 dias">De 7 a 10 dias</option>
+                  <option value="10 dias ou mais">10 dias ou mais</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nivel de preco</label>
+                <select
+                  className="form-select"
+                  value={form.nivel_preco}
+                  onChange={(e) => handleChange("nivel_preco", e.target.value)}
+                  disabled={permissao === "view"}
+                >
+                  <option value="">Selecione</option>
+                  <option value="Economico">Economico</option>
+                  <option value="Intermediario">Intermediario</option>
+                  <option value="Premium">Premium</option>
+                  <option value="Super Premium">Super Premium</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Imagem (URL)</label>
+                <input
+                  className="form-input"
+                  value={form.imagem_url}
+                  onChange={(e) => handleChange("imagem_url", e.target.value)}
+                  placeholder="URL de uma imagem do destino"
+                  disabled={permissao === "view"}
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Informacoes importantes</label>
+              <textarea
+                className="form-input"
+                rows={3}
+                value={form.informacoes_importantes}
+                onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+                placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
+                disabled={permissao === "view"}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Ativo</label>
+              <select
+                className="form-select"
+                value={form.ativo ? "true" : "false"}
+                onChange={(e) => handleChange("ativo", e.target.value === "true")}
+                disabled={permissao === "view"}
+              >
+                <option value="true">Sim</option>
+                <option value="false">Nao</option>
+              </select>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Salvar produto"}
+              </button>
+              <button type="button" className="btn btn-light" onClick={fecharFormularioProduto} disabled={salvando}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">

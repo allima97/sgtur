@@ -57,7 +57,8 @@ type OrcamentosConsultaProps = {
 export default function OrcamentosConsultaIsland({
   suppressLoadingMessage = false,
 }: OrcamentosConsultaProps) {
-  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
+  const { ativo, loading: loadingPerm, podeCriar } = usePermissao("Vendas");
+  const [formAberto, setFormAberto] = useState(false);
   const [lista, setLista] = useState<Orcamento[]>([]);
   const [statusFiltro, setStatusFiltro] = useState<string>("");
   const [erro, setErro] = useState<string | null>(null);
@@ -137,6 +138,16 @@ export default function OrcamentosConsultaIsland({
   useEffect(() => {
     carregar();
     carregarListas();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ aberto: boolean }>;
+      setFormAberto(Boolean(custom?.detail?.aberto));
+    };
+    window.addEventListener("formulario-orcamento-status", handler);
+    return () => window.removeEventListener("formulario-orcamento-status", handler);
   }, []);
 
   useEffect(() => {
@@ -730,7 +741,7 @@ export default function OrcamentosConsultaIsland({
         <div
           className="grid w-full mt-3 gap-2 md:gap-3"
           style={{
-            gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             alignItems: "end",
           }}
         >
@@ -785,6 +796,22 @@ export default function OrcamentosConsultaIsland({
               onChange={(e) => setValorMax(e.target.value)}
             />
           </div>
+          {podeCriar && (
+            <div
+              className="form-group"
+              style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}
+            >
+              <span style={{ visibility: "hidden" }}>botão</span>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => window.dispatchEvent(new CustomEvent("abrir-formulario-orcamento"))}
+                disabled={formAberto}
+              >
+                Adicionar orçamento
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
           <button className="btn btn-secondary min-w-[120px]" onClick={carregar}>

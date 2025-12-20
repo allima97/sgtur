@@ -31,10 +31,30 @@ export default function OrcamentosCadastroIsland({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
 
   useEffect(() => {
     carregarListas();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const abrir = () => setMostrarForm(true);
+    const fechar = () => setMostrarForm(false);
+    window.addEventListener("abrir-formulario-orcamento", abrir);
+    window.addEventListener("fechar-formulario-orcamento", fechar);
+    return () => {
+      window.removeEventListener("abrir-formulario-orcamento", abrir);
+      window.removeEventListener("fechar-formulario-orcamento", fechar);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("formulario-orcamento-status", { detail: { aberto: mostrarForm } })
+    );
+  }, [mostrarForm]);
 
   async function carregarListas() {
     try {
@@ -55,6 +75,23 @@ export default function OrcamentosCadastroIsland({
       console.error(e);
       setErro("Erro ao carregar listas.");
     }
+  }
+
+  function limparFormularioOrcamento() {
+    setClienteId("");
+    setDestinoId("");
+    setProdutoId("");
+    setStatus("novo");
+    setValor("");
+    setDataViagem("");
+    setNotas("");
+    setErro(null);
+    setSucesso(null);
+  }
+
+  function fecharFormulario() {
+    limparFormularioOrcamento();
+    setMostrarForm(false);
   }
 
   async function salvar(e: React.FormEvent) {
@@ -91,6 +128,7 @@ export default function OrcamentosCadastroIsland({
       setValor("");
       setDataViagem("");
       setNotas("");
+      setMostrarForm(false);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar orçamento.");
@@ -104,6 +142,7 @@ export default function OrcamentosCadastroIsland({
   }
 
   if (!ativo) return <div>Acesso ao módulo de Vendas bloqueado.</div>;
+  if (!mostrarForm) return null;
 
   return (
     <div className="card-base card-blue mb-3">
@@ -219,24 +258,10 @@ export default function OrcamentosCadastroIsland({
 
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="submit" className="btn btn-primary" disabled={salvando}>
-            {salvando ? "Salvando..." : "Criar orçamento"}
+            {salvando ? "Salvando..." : "Salvar"}
           </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => {
-              setClienteId("");
-              setDestinoId("");
-              setProdutoId("");
-              setStatus("novo");
-              setValor("");
-              setDataViagem("");
-              setNotas("");
-              setErro(null);
-              setSucesso(null);
-            }}
-          >
-            Limpar
+          <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+            Cancelar
           </button>
         </div>
       </form>

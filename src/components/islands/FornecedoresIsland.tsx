@@ -71,6 +71,7 @@ export default function FornecedoresIsland() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,6 +149,18 @@ export default function FornecedoresIsland() {
     return null;
   }
 
+  function abrirFormularioFornecedor() {
+    setForm(INITIAL_FORM);
+    setFormError(null);
+    setMostrarFormulario(true);
+  }
+
+  function fecharFormularioFornecedor() {
+    setForm(INITIAL_FORM);
+    setFormError(null);
+    setMostrarFormulario(false);
+  }
+
   const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
 
   async function salvarFornecedor() {
@@ -200,30 +213,41 @@ export default function FornecedoresIsland() {
           <div style={{ fontWeight: 600 }}>Fornecedores</div>
           <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
         </div>
+        {podeSalvar && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={abrirFormularioFornecedor}
+            disabled={mostrarFormulario}
+          >
+            Adicionar fornecedor
+          </button>
+        )}
       </div>
 
-      <div className="card-base card-blue" style={{ marginTop: 12, padding: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Novo fornecedor</div>
-        <div className="form-row">
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Localização</label>
-            <div style={{ display: "flex", gap: 12 }}>
-              {LOCALIZACAO_OPCOES.map((opcao) => (
-                <label key={opcao.value} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <input
-                    type="radio"
-                    name="localizacao"
-                    value={opcao.value}
-                    checked={form.localizacao === opcao.value}
-                    onChange={(e) => setForm((prev) => ({ ...prev, localizacao: e.target.value as "brasil" | "exterior" }))}
-                    disabled={!podeSalvar}
-                  />
-                  {opcao.label}
-                </label>
-              ))}
+      {mostrarFormulario && (
+        <div className="card-base card-blue" style={{ marginTop: 12, padding: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Novo fornecedor</div>
+          <div className="form-row">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Localização</label>
+              <div style={{ display: "flex", gap: 12 }}>
+                {LOCALIZACAO_OPCOES.map((opcao) => (
+                  <label key={opcao.value} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <input
+                      type="radio"
+                      name="localizacao"
+                      value={opcao.value}
+                      checked={form.localizacao === opcao.value}
+                      onChange={(e) => setForm((prev) => ({ ...prev, localizacao: e.target.value as "brasil" | "exterior" }))}
+                      disabled={!podeSalvar}
+                    />
+                    {opcao.label}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
         <div className="form-row" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
@@ -362,19 +386,35 @@ export default function FornecedoresIsland() {
           />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={salvarFornecedor}
-            disabled={salvando || !podeSalvar}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
           >
-            {salvando ? "Salvando..." : "Cadastrar fornecedor"}
-          </button>
-        </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={salvarFornecedor}
+              disabled={salvando || !podeSalvar}
+            >
+              {salvando ? "Salvando..." : "Salvar fornecedor"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={fecharFormularioFornecedor}
+              disabled={salvando}
+            >
+              Cancelar
+            </button>
+          </div>
 
-        {formError && <div style={{ color: "red", marginTop: 8 }}>{formError}</div>}
-      </div>
+          {formError && <div style={{ color: "red", marginTop: 8 }}>{formError}</div>}
+        </div>
+      )}
 
       <div className="card-base" style={{ marginTop: 16 }}>
         <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>

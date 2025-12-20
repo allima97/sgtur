@@ -14,6 +14,7 @@ type Cliente = {
   whatsapp: string | null;
   email: string | null;
   endereco: string | null;
+  numero: string | null;
   complemento: string | null;
   cidade: string | null;
   estado: string | null;
@@ -24,8 +25,10 @@ type Cliente = {
   tags: string[] | null;
   tipo_cliente: string | null;
   notas: string | null;
+  ativo: boolean;
   active: boolean;
   created_at: string | null;
+  updated_at: string | null;
   company_id?: string | null;
 };
 
@@ -49,6 +52,7 @@ const initialForm = {
   whatsapp: "",
   email: "",
   endereco: "",
+  numero: "",
   complemento: "",
   cidade: "",
   estado: "",
@@ -58,7 +62,9 @@ const initialForm = {
   nacionalidade: "",
   tags: "",
   tipo_cliente: "passageiro",
+  company_id: "",
   notas: "",
+  ativo: true,
   active: true,
 };
 
@@ -90,6 +96,10 @@ export default function ClientesIsland() {
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
+  const [cepStatus, setCepStatus] = useState<string | null>(null);
+  const [mostrarFormAcomp, setMostrarFormAcomp] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [mostrarFormCliente, setMostrarFormCliente] = useState(false);
   const [historicoVendas, setHistoricoVendas] = useState<
     {
       id: string;
@@ -217,6 +227,58 @@ export default function ClientesIsland() {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
+  function formatCpf(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+
+  function formatTelefone(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 10) {
+      return digits
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
+    }
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
+  function formatCep(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    return digits.replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
+  async function buscarCepIfNeeded(cepRaw: string) {
+    const digits = (cepRaw || "").replace(/\D/g, "");
+    if (digits.length !== 8) {
+      setCepStatus(null);
+      return;
+    }
+    try {
+      setCepStatus("Buscando endereço...");
+      const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { mode: "cors" });
+      if (!resp.ok) throw new Error("CEP inválido ou indisponível.");
+      const data = await resp.json();
+      if (data.erro) throw new Error("CEP não encontrado.");
+
+      setForm((prev) => ({
+        ...prev,
+        cep: formatCep(digits),
+        endereco: data.logradouro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || "",
+      }));
+      setCepStatus("Endereço carregado pelo CEP.");
+    } catch (e) {
+      console.error("Erro ao buscar CEP:", e);
+      setCepStatus("Não foi possível carregar o CEP.");
+    }
+  }
+
   function iniciarNovo() {
     if (!podeCriar) return;
     setEditId(null);
@@ -224,6 +286,15 @@ export default function ClientesIsland() {
     setAcompanhantes([]);
     setAcompErro(null);
     setAcompEditId(null);
+    setMostrarFormCliente(false);
+    setMsg(null);
+  }
+
+  function fecharFormularioCliente() {
+    setMostrarFormCliente(false);
+    setForm(initialForm);
+    setEditId(null);
+    setMsg(null);
   }
 
   async function abrirHistorico(cliente: Cliente) {
@@ -503,17 +574,7 @@ export default function ClientesIsland() {
     setDetalheOrcamento(null);
     setAcompanhantes([]);
     setAcompErro(null);
-    setAcompEditId(null);
-    setAcompForm({
-      nome_completo: "",
-      cpf: "",
-      telefone: "",
-      grau_parentesco: "",
-      rg: "",
-      data_nascimento: "",
-      observacoes: "",
-      ativo: true,
-    });
+    resetAcompForm(true);
   }
 
   async function verDetalheVenda(v: {
@@ -624,6 +685,7 @@ export default function ClientesIsland() {
       whatsapp: c.whatsapp || "",
       email: c.email || "",
       endereco: c.endereco || "",
+      numero: c.numero || "",
       complemento: c.complemento || "",
       cidade: c.cidade || "",
       estado: c.estado || "",
@@ -633,10 +695,13 @@ export default function ClientesIsland() {
       nacionalidade: c.nacionalidade || "",
       tags: (c.tags || []).join(", "),
       tipo_cliente: c.tipo_cliente || "passageiro",
+      company_id: c.company_id || "",
       notas: c.notas || "",
+      ativo: c.ativo,
       active: c.active,
     });
     carregarAcompanhantes(c.id);
+    setMostrarFormCliente(true);
   }
 
   // =====================================
@@ -649,6 +714,7 @@ export default function ClientesIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      setMsg(null);
 
       const nomeNormalizado = titleCaseWithExceptions(form.nome);
 
@@ -660,6 +726,7 @@ export default function ClientesIsland() {
         whatsapp: form.whatsapp.trim() || null,
         email: form.email.trim() || null,
         endereco: form.endereco.trim() || null,
+        numero: form.numero.trim() || null,
         complemento: form.complemento.trim() || null,
         cidade: form.cidade.trim() || null,
         estado: form.estado.trim() || null,
@@ -672,11 +739,14 @@ export default function ClientesIsland() {
           : [],
         tipo_cliente: form.tipo_cliente,
         notas: form.notas || null,
+        ativo: form.ativo,
         active: form.active,
       };
 
-      // garante que company_id siga igual ao existente (se houver)
-      if (historicoCliente?.company_id) {
+      const trimmedCompanyId = form.company_id.trim();
+      if (trimmedCompanyId) {
+        (payload as any).company_id = trimmedCompanyId;
+      } else if (historicoCliente?.company_id) {
         (payload as any).company_id = historicoCliente.company_id;
       }
 
@@ -709,10 +779,13 @@ export default function ClientesIsland() {
 
       setForm(initialForm);
       setEditId(null);
+      setMostrarFormCliente(false);
+      setMsg(editId ? "Cliente atualizado com sucesso." : "Cliente criado com sucesso.");
       await carregar();
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar cliente.");
+      setMsg(null);
     } finally {
       setSalvando(false);
     }
@@ -753,7 +826,7 @@ export default function ClientesIsland() {
   // =====================================
   // ACOMPANHANTES (CRUD)
   // =====================================
-  function resetAcompForm() {
+  function resetAcompForm(hideForm = false) {
     setAcompForm({
       nome_completo: "",
       cpf: "",
@@ -765,6 +838,9 @@ export default function ClientesIsland() {
       ativo: true,
     });
     setAcompEditId(null);
+    if (hideForm) {
+      setMostrarFormAcomp(false);
+    }
   }
 
   function iniciarEdicaoAcomp(a: Acompanhante) {
@@ -779,6 +855,7 @@ export default function ClientesIsland() {
       observacoes: a.observacoes || "",
       ativo: a.ativo,
     });
+    setMostrarFormAcomp(true);
   }
 
   async function salvarAcompanhante() {
@@ -824,7 +901,7 @@ export default function ClientesIsland() {
           .insert(payload);
         if (error) throw error;
       }
-      resetAcompForm();
+      resetAcompForm(true);
       await carregarAcompanhantes(historicoCliente.id);
     } catch (e) {
       console.error(e);
@@ -846,7 +923,7 @@ export default function ClientesIsland() {
         .eq("id", id)
         .eq("cliente_id", historicoCliente.id);
       if (error) throw error;
-      if (acompEditId === id) resetAcompForm();
+      if (acompEditId === id) resetAcompForm(true);
       await carregarAcompanhantes(historicoCliente.id);
     } catch (e) {
       console.error(e);
@@ -884,14 +961,22 @@ export default function ClientesIsland() {
     <div className="clientes-page">
 
       {/* FORMULÁRIO */}
-      {!modoSomenteLeitura && (
+      {!modoSomenteLeitura && mostrarFormCliente && (
         <div className="card-base card-blue mb-3">
           <form onSubmit={salvar}>
             <h3>{editId ? "Editar cliente" : "Novo cliente"}</h3>
 
-            <div className="form-row">
+            <div
+              className="form-row"
+              style={{
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))",
+                gap: 12,
+              }}
+            >
               <div className="form-group">
-                <label className="form-label">Nome *</label>
+                <label className="form-label">Nome completo *</label>
                 <input
                   className="form-input"
                   value={form.nome}
@@ -900,53 +985,171 @@ export default function ClientesIsland() {
                   required
                 />
               </div>
-
               <div className="form-group">
                 <label className="form-label">CPF *</label>
                 <input
                   className="form-input"
                   value={form.cpf}
-                  onChange={(e) => handleChange("cpf", e.target.value)}
+                  onChange={(e) => handleChange("cpf", formatCpf(e.target.value))}
                   required
                 />
               </div>
+              <div className="form-group">
+                <label className="form-label">RG</label>
+                <input
+                  className="form-input"
+                  value={form.rg}
+                  onChange={(e) => handleChange("rg", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nascimento</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={form.nascimento}
+                  onChange={(e) => handleChange("nascimento", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Gênero</label>
+                <select
+                  className="form-select"
+                  value={form.genero}
+                  onChange={(e) => handleChange("genero", e.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Feminino">Feminino</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nacionalidade</label>
+                <input
+                  className="form-input"
+                  value={form.nacionalidade}
+                  onChange={(e) => handleChange("nacionalidade", e.target.value)}
+                />
+              </div>
+            </div>
 
+            <div
+              className="form-row"
+              style={{
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 12,
+              }}
+            >
               <div className="form-group">
                 <label className="form-label">Telefone *</label>
                 <input
                   className="form-input"
                   value={form.telefone}
-                  onChange={(e) => handleChange("telefone", e.target.value)}
+                  onChange={(e) => handleChange("telefone", formatTelefone(e.target.value))}
                 />
               </div>
-            </div>
-
-            <div className="form-row" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Whatsapp</label>
                 <input
                   className="form-input"
                   value={form.whatsapp}
-                  onChange={(e) => handleChange("whatsapp", e.target.value)}
+                  onChange={(e) => handleChange("whatsapp", formatTelefone(e.target.value))}
                 />
               </div>
-
               <div className="form-group">
-                <label className="form-label">Email</label>
+                <label className="form-label">E-mail</label>
                 <input
                   className="form-input"
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
                 />
               </div>
+            </div>
 
+            <div
+              className="form-row"
+              style={{
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns:
+                  "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
+                gap: 12,
+              }}
+            >
               <div className="form-group">
-                <label className="form-label">Tags (,) </label>
+                <label className="form-label">CEP</label>
                 <input
                   className="form-input"
-                  value={form.tags}
-                  onChange={(e) => handleChange("tags", e.target.value)}
-                  placeholder="premium, recorrente..."
+                  value={form.cep}
+                  onChange={(e) => handleChange("cep", formatCep(e.target.value))}
+                  onBlur={(e) => {
+                    const val = formatCep(e.target.value);
+                    handleChange("cep", val);
+                    if (val.replace(/\D/g, "").length === 8) {
+                      buscarCepIfNeeded(val);
+                    } else {
+                      setCepStatus(null);
+                    }
+                  }}
+                />
+                <small style={{ color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }}>
+                  {cepStatus || "Preencha para auto-preencher endereço."}
+                </small>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Endereço</label>
+                <input
+                  className="form-input"
+                  value={form.endereco}
+                  onChange={(e) => handleChange("endereco", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Número</label>
+                <input
+                  className="form-input"
+                  value={form.numero}
+                  onChange={(e) => handleChange("numero", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Complemento</label>
+                <input
+                  className="form-input"
+                  value={form.complemento}
+                  onChange={(e) => handleChange("complemento", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Cidade</label>
+                <input
+                  className="form-input"
+                  value={form.cidade}
+                  onChange={(e) => handleChange("cidade", e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Estado</label>
+                <input
+                  className="form-input"
+                  value={form.estado}
+                  onChange={(e) => handleChange("estado", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Notas</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  value={form.notas}
+                  onChange={(e) => handleChange("notas", e.target.value)}
+                  placeholder="Informações adicionais"
                 />
               </div>
             </div>
@@ -957,27 +1160,41 @@ export default function ClientesIsland() {
                 disabled={salvando}
                 type="submit"
               >
-                {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Criar cliente"}
-              </button>
+                    {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar"}
+                  </button>
 
-              {editId && (
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={iniciarNovo}
-                >
-                  Cancelar
-                </button>
-              )}
+                  <button
+                type="button"
+                className="btn btn-light"
+                onClick={fecharFormularioCliente}
+                disabled={salvando}
+              >
+                Cancelar
+              </button>
             </div>
           </form>
         </div>
       )}
 
+      {msg && (
+        <div className="card-base card-green mb-3">
+          <strong>{msg}</strong>
+        </div>
+      )}
+
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group">
+        <div
+          className="form-row"
+          style={{
+            marginTop: 12,
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
+        >
+          <div className="form-group" style={{ flex: "1 1 300px" }}>
             <label className="form-label">Buscar cliente</label>
             <input
               className="form-input"
@@ -986,6 +1203,23 @@ export default function ClientesIsland() {
               placeholder="Nome, CPF ou e-mail"
             />
           </div>
+          {podeCriar && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setForm(initialForm);
+                  setEditId(null);
+                  setMsg(null);
+                  setMostrarFormCliente(true);
+                }}
+                disabled={mostrarFormCliente}
+              >
+                Adicionar cliente
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1156,86 +1390,105 @@ export default function ClientesIsland() {
                       <div style={{ fontWeight: 600, marginBottom: 8 }}>
                         {acompEditId ? "Editar acompanhante" : "Adicionar acompanhante"}
                       </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label className="form-label">Nome completo</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.nome_completo}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">CPF</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.cpf}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Telefone</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.telefone}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Parentesco</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.grau_parentesco}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
-                            placeholder="Ex: Esposa, Filho"
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label className="form-label">RG</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.rg}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Data nascimento</label>
-                          <input
-                            type="date"
-                            className="form-input"
-                            value={acompForm.data_nascimento}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Observações</label>
-                          <input
-                            className="form-input"
-                            value={acompForm.observacoes}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
-                          />
-                        </div>
-                        <div className="form-group" style={{ alignSelf: "flex-end" }}>
-                          <label className="form-label">Ativo</label>
-                          <input
-                            type="checkbox"
-                            checked={acompForm.ativo}
-                            onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
-                          />
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                        <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
-                          {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Adicionar acompanhante"}
+                      {!mostrarFormAcomp && !acompEditId && (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => {
+                            resetAcompForm();
+                            setMostrarFormAcomp(true);
+                          }}
+                        >
+                          Adicionar acompanhante
                         </button>
-                        {acompEditId && (
-                          <button className="btn btn-light" type="button" onClick={resetAcompForm} disabled={acompSalvando}>
-                            Cancelar edição
-                          </button>
-                        )}
-                      </div>
+                      )}
+                      {(mostrarFormAcomp || acompEditId) && (
+                        <>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label className="form-label">Nome completo</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.nome_completo}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">CPF</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.cpf}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Telefone</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.telefone}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Parentesco</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.grau_parentesco}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
+                                placeholder="Ex: Esposa, Filho"
+                              />
+                            </div>
+                          </div>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label className="form-label">RG</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.rg}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Data nascimento</label>
+                              <input
+                                type="date"
+                                className="form-input"
+                                value={acompForm.data_nascimento}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Observações</label>
+                              <input
+                                className="form-input"
+                                value={acompForm.observacoes}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+                              />
+                            </div>
+                            <div className="form-group" style={{ alignSelf: "flex-end" }}>
+                              <label className="form-label">Ativo</label>
+                              <input
+                                type="checkbox"
+                                checked={acompForm.ativo}
+                                onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                            <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
+                              {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar"}
+                            </button>
+                            <button
+                              className="btn btn-light"
+                              type="button"
+                              onClick={() => resetAcompForm(true)}
+                              disabled={acompSalvando}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

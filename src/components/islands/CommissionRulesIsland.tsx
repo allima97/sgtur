@@ -48,6 +48,7 @@ export default function CommissionRulesIsland() {
   const [salvando, setSalvando] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   useEffect(() => {
     carregar();
@@ -202,6 +203,22 @@ export default function CommissionRulesIsland() {
     }
   }
 
+  function abrirFormularioRegra() {
+    setForm(emptyRule);
+    setEditId(null);
+    setErro(null);
+    setErroValidacao(null);
+    setMostrarFormulario(true);
+  }
+
+  function fecharFormularioRegra() {
+    setForm(emptyRule);
+    setEditId(null);
+    setErro(null);
+    setErroValidacao(null);
+    setMostrarFormulario(false);
+  }
+
   async function inativar(id: string) {
     if (!podeEditar) return;
     if (!confirm("Inativar esta regra?")) return;
@@ -256,6 +273,9 @@ export default function CommissionRulesIsland() {
             })) || []
           : [],
     });
+    setMostrarFormulario(true);
+    setErro(null);
+    setErroValidacao(null);
   }
 
   if (loadingPerm) {
@@ -268,24 +288,39 @@ export default function CommissionRulesIsland() {
 
   return (
     <div className="card-base card-blue">
-      <h3 style={{ marginBottom: 6 }}>Regras de Comissionamento</h3>
-      <p style={{ marginTop: 0, marginBottom: 12, color: "#475569", fontSize: "0.9rem" }}>
-        Configure regras gerais ou escalonadas usadas em produtos e metas.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h3 style={{ marginBottom: 6 }}>Regras de Comissionamento</h3>
+          <p style={{ marginTop: 0, marginBottom: 12, color: "#475569", fontSize: "0.9rem" }}>
+            Configure regras gerais ou escalonadas usadas em produtos e metas.
+          </p>
+        </div>
+        {podeEditar && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={abrirFormularioRegra}
+            disabled={mostrarFormulario}
+          >
+            Adicionar regra
+          </button>
+        )}
+      </div>
 
       {erro && (
         <div className="card-base card-config mb-2">
           <strong>{erro}</strong>
         </div>
       )}
-      {erroValidacao && (
+      {mostrarFormulario && erroValidacao && (
         <div className="card-base card-config mb-2">
           <strong>{erroValidacao}</strong>
         </div>
       )}
 
-      <form onSubmit={salvar}>
-        <div className="form-row" style={{ marginTop: 12 }}>
+      {mostrarFormulario && (
+        <form onSubmit={salvar}>
+            <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Nome *</label>
             <input
@@ -450,22 +485,19 @@ export default function CommissionRulesIsland() {
 
         <div className="flex gap-2 flex-wrap mt-2">
           <button className="btn btn-primary" type="submit" disabled={!podeEditar || salvando}>
-            {salvando ? "Salvando..." : editId ? "Atualizar regra" : "Criar regra"}
+            {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar regra"}
           </button>
-          {editId && (
-            <button
-              type="button"
-              className="btn btn-light"
-              onClick={() => {
-                setForm(emptyRule);
-                setEditId(null);
-              }}
-            >
-              Cancelar edição
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={fecharFormularioRegra}
+            disabled={salvando}
+          >
+            Cancelar
+          </button>
         </div>
-      </form>
+          </form>
+      )}
 
       <div className="card-base card-blue mt-4">
         <h4 className="mb-2">Regras cadastradas</h4>

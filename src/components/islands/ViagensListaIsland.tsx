@@ -13,6 +13,7 @@ type Viagem = {
   responsavel_user_id: string | null;
   cliente_id: string | null;
   clientes?: { nome: string | null } | null;
+  responsavel?: { nome_completo?: string | null } | null;
 };
 
 const STATUS_OPCOES = [
@@ -23,6 +24,15 @@ const STATUS_OPCOES = [
   { value: "concluida", label: "Concluída" },
   { value: "cancelada", label: "Cancelada" },
 ];
+
+const initialCadastroForm = {
+  origem: "",
+  destino: "",
+  data_inicio: "",
+  data_fim: "",
+  status: "planejada",
+  cliente_id: "",
+};
 
 export default function ViagensListaIsland() {
   const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
@@ -42,14 +52,7 @@ export default function ViagensListaIsland() {
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [savingViagem, setSavingViagem] = useState(false);
-  const [cadastroForm, setCadastroForm] = useState({
-    origem: "",
-    destino: "",
-    data_inicio: "",
-    data_fim: "",
-    status: "planejada",
-    cliente_id: "",
-  });
+  const [cadastroForm, setCadastroForm] = useState(() => ({ ...initialCadastroForm }));
   type CidadeSugestao = {
     nome: string;
     subdivisao_nome?: string | null;
@@ -203,6 +206,21 @@ export default function ViagensListaIsland() {
     }, 250);
   }
 
+  function resetCadastroForm() {
+    setCadastroForm({ ...initialCadastroForm });
+    setFormError(null);
+  }
+
+  function abrirFormularioViagem() {
+    resetCadastroForm();
+    setShowForm(true);
+  }
+
+  function fecharFormularioViagem() {
+    resetCadastroForm();
+    setShowForm(false);
+  }
+
   async function buscar() {
     try {
       setLoading(true);
@@ -210,7 +228,9 @@ export default function ViagensListaIsland() {
 
       let query = supabase
         .from("viagens")
-        .select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome)")
+        .select(
+          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo)"
+        )
         .order("data_inicio", { ascending: true });
 
       if (statusFiltro) {
@@ -287,14 +307,7 @@ export default function ViagensListaIsland() {
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
 
-      setCadastroForm({
-        origem: "",
-        destino: "",
-        data_inicio: "",
-        data_fim: "",
-        status: "planejada",
-        cliente_id: "",
-      });
+      resetCadastroForm();
       setShowForm(false);
       buscar();
     } catch (e: unknown) {
@@ -343,11 +356,12 @@ export default function ViagensListaIsland() {
                   <button
                     className="btn btn-primary"
                     type="button"
-                onClick={() => setShowForm((prev) => !prev)}
-              >
-                {showForm ? "Cancelar" : "Nova viagem"}
-              </button>
-            </div>
+                    onClick={abrirFormularioViagem}
+                    disabled={showForm}
+                  >
+                    Nova viagem
+                  </button>
+                </div>
           )}
           {showForm && (
             <div className="card-base card-blue" style={{ padding: 16 }}>
@@ -444,14 +458,25 @@ export default function ViagensListaIsland() {
                     <option value="cancelada">Cancelada</option>
                   </select>
                 </div>
-                <div className="form-group" style={{ alignSelf: "flex-end" }}>
+                <div
+                  className="form-row"
+                  style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" }}
+                >
                   <button
                     className="btn btn-primary"
                     type="button"
                     onClick={criarViagem}
                     disabled={savingViagem}
                   >
-                    {savingViagem ? "Salvando..." : "Criar viagem"}
+                    {savingViagem ? "Salvando..." : "Salvar"}
+                  </button>
+                  <button
+                    className="btn btn-light"
+                    type="button"
+                    onClick={fecharFormularioViagem}
+                    disabled={savingViagem}
+                  >
+                    Cancelar
                   </button>
                 </div>
               </div>
@@ -534,7 +559,7 @@ export default function ViagensListaIsland() {
                   <td>{v.origem || "-"}</td>
                   <td>{v.destino || "-"}</td>
                   <td>{v.clientes?.nome || "-"}</td>
-                  <td>{v.responsavel_user_id || "-"}</td>
+                  <td>{v.responsavel?.nome_completo || v.responsavel_user_id || "-"}</td>
                   <td>
                     <a className="btn btn-light" href={`/operacao/viagens/${v.id}`}>
                       Abrir

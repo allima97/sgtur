@@ -49,6 +49,7 @@ export default function MetasVendedorIsland() {
 
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [mostrarFormularioMeta, setMostrarFormularioMeta] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   // =============================================
@@ -310,6 +311,18 @@ export default function MetasVendedorIsland() {
     setAtivoMeta(true);
   }
 
+  function abrirFormularioMeta() {
+    limparFormulario();
+    setMostrarFormularioMeta(true);
+    setErro(null);
+  }
+
+  function fecharFormularioMeta() {
+    limparFormulario();
+    setMostrarFormularioMeta(false);
+    setErro(null);
+  }
+
   function iniciarEdicao(m: Meta) {
     setEditId(m.id);
     setPeriodo(m.periodo.slice(0, 7));
@@ -326,6 +339,8 @@ export default function MetasVendedorIsland() {
       setMetaProdutos([]);
     }
     setAtivoMeta(m.ativo);
+    setMostrarFormularioMeta(true);
+    setErro(null);
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
@@ -367,9 +382,26 @@ export default function MetasVendedorIsland() {
   return (
     <div className="min-h-screen bg-slate-50 p-2 md:p-6">
 
-      {/* FORMULÁRIO */}
       <div className="card-base card-blue mb-3">
-        <form onSubmit={salvarMeta}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div>
+            <div style={{ fontWeight: 600 }}>Metas do vendedor</div>
+            <small style={{ color: "#64748b" }}>Defina metas gerais e produtos diferenciados para o período.</small>
+          </div>
+          {usuarioPodeEditar && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={abrirFormularioMeta}
+              disabled={mostrarFormularioMeta}
+              style={{ alignSelf: "flex-end" }}
+            >
+              Adicionar meta
+            </button>
+          )}
+        </div>
+        {mostrarFormularioMeta && (
+          <form onSubmit={salvarMeta}>
           <div className="flex flex-col md:flex-row gap-4">
 
             {mostrarSelectVendedor && (
@@ -515,7 +547,7 @@ export default function MetasVendedorIsland() {
           )}
 
           {usuarioPodeEditar && (
-            <>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -525,22 +557,20 @@ export default function MetasVendedorIsland() {
                   ? "Salvando..."
                   : editId
                   ? "Salvar alterações"
-                  : "Criar meta"}
+                  : "Salvar meta"}
               </button>
-
-              {editId && (
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  style={{ marginLeft: 8 }}
-                  onClick={limparFormulario}
-                >
-                  Cancelar
-                </button>
-              )}
-            </>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={fecharFormularioMeta}
+                disabled={salvando}
+              >
+                Cancelar
+              </button>
+            </div>
           )}
-        </form>
+          </form>
+        )}
       </div>
 
       {/* LISTAGEM */}

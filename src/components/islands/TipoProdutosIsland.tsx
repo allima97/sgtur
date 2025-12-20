@@ -68,6 +68,7 @@ export default function TipoProdutosIsland() {
     disponivel_todas_cidades: false,
     ativo: true,
   });
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   function handleChange(campo: string, valor: any) {
     setForm((prev) => {
@@ -146,6 +147,18 @@ export default function TipoProdutosIsland() {
     setErro(null);
   }
 
+  function abrirFormularioTipo() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+    setErro(null);
+  }
+
+  function fecharFormularioTipo() {
+    iniciarNovo();
+    setMostrarFormulario(false);
+    setErro(null);
+  }
+
   function iniciarEdicao(tipoProd: TipoProduto) {
     setEditandoId(tipoProd.id);
     setForm({
@@ -194,6 +207,8 @@ export default function TipoProdutosIsland() {
         ? String(comissao.fix_super_meta)
         : ""
     );
+    setMostrarFormulario(true);
+    setErro(null);
   }
 
   async function salvar(e: React.FormEvent) {
@@ -367,10 +382,26 @@ export default function TipoProdutosIsland() {
 
   return (
     <div className="produtos-page">
-      {/* FORM */}
       <div className="card-base card-blue mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontWeight: 600 }}>Tipos de produto</div>
+            <small style={{ color: "#94a3b8" }}>Crie e edite tipos usados em produtos e comissões.</small>
+          </div>
+          {permissao !== "view" && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={abrirFormularioTipo}
+              disabled={mostrarFormulario}
+            >
+              Adicionar tipo
+            </button>
+          )}
+        </div>
+        {mostrarFormulario && (
+          <form onSubmit={salvar}>
+            <div className="form-row">
             <div className="form-group">
               <label className="form-label">Nome *</label>
               <input
@@ -581,17 +612,15 @@ export default function TipoProdutosIsland() {
           {permissao !== "view" && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
               <button className="btn btn-primary" type="submit">
-                {editandoId ? "Salvar alterações" : "Adicionar tipo"}
+                {editandoId ? "Salvar alterações" : "Salvar tipo"}
               </button>
-
-              {editandoId && (
-                <button type="button" className="btn btn-light" onClick={iniciarNovo}>
-                  Cancelar edição
-                </button>
-              )}
+              <button type="button" className="btn btn-light" onClick={fecharFormularioTipo}>
+                Cancelar
+              </button>
             </div>
           )}
-        </form>
+          </form>
+        )}
       </div>
 
       {/* BUSCA */}
