@@ -471,8 +471,8 @@ export default function ViagensListaIsland() {
             </div>
           )}
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className="form-row" style={{ flexWrap: "nowrap", gap: 8, alignItems: "flex-end" }}>
+            <div className="form-group" style={{ minWidth: 180 }}>
               <label className="form-label">Status</label>
               <select
                 className="form-select"
@@ -486,8 +486,8 @@ export default function ViagensListaIsland() {
                 ))}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">Início</label>
+            <div className="form-group" style={{ minWidth: 160 }}>
+              <label className="form-label">Inicio</label>
               <input
                 type="date"
                 className="form-input"
@@ -495,7 +495,7 @@ export default function ViagensListaIsland() {
                 onChange={(e) => setInicio(e.target.value)}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ minWidth: 160 }}>
               <label className="form-label">Final</label>
               <input
                 type="date"
@@ -504,7 +504,16 @@ export default function ViagensListaIsland() {
                 onChange={(e) => setFim(e.target.value)}
               />
             </div>
-            <div className="form-group" style={{ alignSelf: "flex-end", display: "flex", gap: 8 }}>
+            <div
+              className="form-group"
+              style={{
+                alignSelf: "flex-end",
+                display: "flex",
+                gap: 8,
+                marginBottom: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
               {podeCriar && (
                 <button
                   className="btn btn-primary"

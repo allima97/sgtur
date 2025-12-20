@@ -626,7 +626,7 @@ export default function TipoProdutosIsland() {
           onClick={abrirFormularioTipo}
           disabled={mostrarFormulario}
         >
-          Adicionar tipo
+          Novo produto
         </button>
       </div>
     )}
