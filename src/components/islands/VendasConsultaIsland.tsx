@@ -163,6 +163,7 @@ export default function VendasConsultaIsland() {
           vendedor_id,
           cliente_id,
           destino_id,
+          destino_cidade_id,
           data_lancamento,
           data_embarque,
           clientes(nome),
@@ -183,7 +184,7 @@ export default function VendasConsultaIsland() {
       const cidadeIds = Array.from(
         new Set(
           (vendasData || [])
-            .map((row: any) => row.destinos?.cidade_id)
+            .map((row: any) => row.destino_cidade_id || row.destinos?.cidade_id)
             .filter((id: string | null | undefined): id is string => Boolean(id))
         )
       );
@@ -204,7 +205,7 @@ export default function VendasConsultaIsland() {
       }
 
       const v = (vendasData || []).map((row: any) => {
-        const cidadeId = row.destinos?.cidade_id || "";
+        const cidadeId = row.destino_cidade_id || row.destinos?.cidade_id || "";
         return {
           id: row.id,
           vendedor_id: row.vendedor_id,
@@ -244,23 +245,23 @@ export default function VendasConsultaIsland() {
         }, {});
 
         let produtosLista: any[] = [];
-        let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+        let tipoProdMap: Record<string, string> = {};
 
         if (produtoIds.length > 0) {
           const { data: produtosData, error: prodErr } = await supabase
             .from("produtos")
-            .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+            .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
             .in("tipo_produto", produtoIds);
           if (!prodErr && produtosData) produtosLista = produtosData as any[];
           else if (prodErr) console.error(prodErr);
 
           const { data: tiposData, error: tipoErr } = await supabase
             .from("tipo_produtos")
-            .select("id, nome, disponivel_todas_cidades")
+            .select("id, nome")
             .in("id", produtoIds);
           if (!tipoErr && tiposData) {
             tipoProdMap = Object.fromEntries(
-              (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+              (tiposData as any[]).map((t) => [t.id, t.nome || "Produto"])
             );
           } else if (tipoErr) {
             console.error(tipoErr);
@@ -271,13 +272,13 @@ export default function VendasConsultaIsland() {
           (recibosData || []).map((r: any) => {
             const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
             const candidato = produtosLista.find((p) => {
-              const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+              const ehGlobal = !!p?.todas_as_cidades;
               return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
             });
-            const tipoInfo = tipoProdMap[r.produto_id as string] || {};
+            const tipoNome = tipoProdMap[r.produto_id as string];
             return {
               ...r,
-              produto_nome: candidato?.nome || tipoInfo.nome || "",
+              produto_nome: candidato?.nome || tipoNome || "",
             };
           }) || [];
 
@@ -467,7 +468,10 @@ export default function VendasConsultaIsland() {
 
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div className="form-row" style={{ marginTop: 8, gridTemplateColumns: "1fr auto" }}>
+        <div
+          className="form-row"
+          style={{ marginTop: 8, gridTemplateColumns: "1fr auto", alignItems: "end" }}
+        >
           <div className="form-group">
             <label className="form-label">Buscar venda</label>
             <input
@@ -483,7 +487,7 @@ export default function VendasConsultaIsland() {
             )}
           </div>
           {podeCriar && (
-            <div className="form-group" style={{ alignItems: "flex-start" }}>
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
               <span style={{ visibility: "hidden" }}>botão</span>
               <a className="btn btn-primary" href="/vendas/cadastro">
                 Nova venda

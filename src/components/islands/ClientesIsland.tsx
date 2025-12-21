@@ -321,7 +321,7 @@ export default function ClientesIsland() {
       // Vendas e recibos
       const { data: vendasData } = await supabase
         .from("vendas")
-        .select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome, cidade_id)")
+        .select("id, data_lancamento, data_embarque, destino_id, destino_cidade_id, destinos:produtos!destino_id (nome, cidade_id)")
         .eq("cliente_id", cliente.id)
         .order("data_lancamento", { ascending: false });
 
@@ -333,7 +333,7 @@ export default function ClientesIsland() {
         const cidadeIds = Array.from(
           new Set(
             vendasData
-              .map((v: any) => v.destinos?.cidade_id)
+              .map((v: any) => v.destino_cidade_id || v.destinos?.cidade_id)
               .filter((id: string | null | undefined): id is string => Boolean(id))
           )
         );
@@ -358,23 +358,23 @@ export default function ClientesIsland() {
         });
 
         let produtosLista: any[] = [];
-        let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+        let tipoProdMap: Record<string, string> = {};
         if (produtoIdsSet.size > 0) {
           const idsArr = Array.from(produtoIdsSet);
           const { data: produtosData, error: prodErr } = await supabase
             .from("produtos")
-            .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+            .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
             .in("tipo_produto", idsArr);
           if (!prodErr && produtosData) produtosLista = produtosData as any[];
           else if (prodErr) console.error(prodErr);
 
           const { data: tiposData, error: tipoErr } = await supabase
             .from("tipo_produtos")
-            .select("id, nome, disponivel_todas_cidades")
+            .select("id, nome")
             .in("id", idsArr);
           if (!tipoErr && tiposData) {
             tipoProdMap = Object.fromEntries(
-              (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+              (tiposData as any[]).map((t) => [t.id, t.nome || "Produto"])
             );
           } else if (tipoErr) {
             console.error(tipoErr);
@@ -384,11 +384,11 @@ export default function ClientesIsland() {
         const resolveProdutoNome = (produtoId?: string | null, cidadeVenda?: string | null) => {
           if (!produtoId) return "";
           const candidato = produtosLista.find((p) => {
-            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            const ehGlobal = !!p?.todas_as_cidades;
             return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
           });
           const tipoInfo = tipoProdMap[produtoId] || {};
-          return candidato?.nome || tipoInfo.nome || "Produto";
+          return candidato?.nome || tipoInfo || "Produto";
         };
 
         vendasFmt = vendasData.map((v: any) => {
@@ -401,16 +401,18 @@ export default function ClientesIsland() {
             (acc, r: any) => acc + (r.valor_taxas || 0),
             0
           );
+          const cidadeVendaId = v.destino_cidade_id || v.destinos?.cidade_id || null;
           const produtosVenda = recForVenda
-            .map((r: any) => resolveProdutoNome(r.produto_id, v.destinos?.cidade_id))
+            .map((r: any) => resolveProdutoNome(r.produto_id, cidadeVendaId || undefined))
             .filter(Boolean);
+          const cidadeVendaNome = cidadeVendaId ? cidadesMap[cidadeVendaId] || "" : "";
           return {
             id: v.id,
             data_lancamento: v.data_lancamento,
             data_embarque: v.data_embarque,
             destino_nome: v.destinos?.nome || "",
-            destino_cidade_id: v.destinos?.cidade_id || null,
-            destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap[v.destinos?.cidade_id] || "" : "",
+            destino_cidade_id: cidadeVendaId,
+            destino_cidade_nome: cidadeVendaNome,
             valor_total: total,
             valor_taxas: taxas,
             produtos: produtosVenda,
@@ -454,19 +456,19 @@ export default function ClientesIsland() {
       const produtoByIdMap: Record<string, string> = {};
       const produtoObjById: Record<string, any> = {};
       const tipoIdsSet: Set<string> = new Set();
-      let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+      let tipoProdMap: Record<string, string> = {};
       if (produtoIdsSet.size > 0) {
         const idsArr = Array.from(produtoIdsSet);
         const { data: produtosData, error: prodErr } = await supabase
           .from("produtos")
-          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
           .in("tipo_produto", idsArr);
         if (!prodErr && produtosData) produtosListaPorTipo = produtosData as any[];
         else if (prodErr) console.error(prodErr);
 
         const { data: produtosPorId, error: prodIdErr } = await supabase
           .from("produtos")
-          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
           .in("id", idsArr);
         if (!prodIdErr && produtosPorId) {
           produtosListaPorId = produtosPorId as any[];
@@ -488,11 +490,11 @@ export default function ClientesIsland() {
 
         const { data: tiposData, error: tipoErr } = await supabase
           .from("tipo_produtos")
-          .select("id, nome, disponivel_todas_cidades")
+          .select("id, nome")
           .in("id", Array.from(tipoIdsSet));
         if (!tipoErr && tiposData) {
           tipoProdMap = Object.fromEntries(
-            (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            (tiposData as any[]).map((t) => [t.id, t.nome || "Produto"])
           );
         } else if (tipoErr) {
           console.error(tipoErr);
@@ -503,16 +505,16 @@ export default function ClientesIsland() {
         if (!produtoId) return "";
         if (produtoObjById[produtoId]) {
           const p = produtoObjById[produtoId];
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           if (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda) return p.nome || "Produto";
         }
         if (produtoByIdMap[produtoId]) return produtoByIdMap[produtoId];
         const candidato = produtosListaPorTipo.find((p) => {
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
         });
-        const tipoInfo = tipoProdMap[produtoId] || {};
-        return candidato?.nome || tipoInfo.nome || "Produto";
+        const tipoNome = tipoProdMap[produtoId] || "Produto";
+        return candidato?.nome || tipoNome;
       };
 
       if (vendasFmt.length > 0) {
@@ -615,23 +617,23 @@ export default function ClientesIsland() {
 
       const cidadeVenda = v.destino_cidade_id || "";
       let produtosListaPorTipo: any[] = [];
-      let tipoProdMap: Record<string, { nome: string; disponivel_todas_cidades?: boolean | null }> = {};
+      let tipoProdMap: Record<string, string> = {};
 
       if (produtoIds.length > 0) {
         const { data: produtosData, error: prodErr } = await supabase
           .from("produtos")
-          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
           .in("tipo_produto", produtoIds);
         if (!prodErr && produtosData) produtosListaPorTipo = produtosData as any[];
         else if (prodErr) console.error(prodErr);
 
         const { data: tiposData, error: tipoErr } = await supabase
           .from("tipo_produtos")
-          .select("id, nome, disponivel_todas_cidades")
+          .select("id, nome")
           .in("id", produtoIds);
         if (!tipoErr && tiposData) {
           tipoProdMap = Object.fromEntries(
-            (tiposData as any[]).map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            (tiposData as any[]).map((t) => [t.id, t.nome || "Produto"])
           );
         } else if (tipoErr) {
           console.error(tipoErr);
@@ -641,11 +643,11 @@ export default function ClientesIsland() {
       const resolveProdutoNome = (produtoId?: string | null) => {
         if (!produtoId) return "";
         const candidato = produtosListaPorTipo.find((p) => {
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
         });
-        const tipoInfo = tipoProdMap[produtoId] || {};
-        return candidato?.nome || tipoInfo.nome || "Produto";
+        const tipoNome = tipoProdMap[produtoId] || "Produto";
+        return candidato?.nome || tipoNome;
       };
 
       setDetalheRecibos(

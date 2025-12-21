@@ -24,11 +24,30 @@ type CidadeBusca = {
   subdivisao_id?: string | null;
 };
 
+const nivelPrecosOptions = [
+  { value: "Economico", label: "Econômico" },
+  { value: "Intermediario", label: "Intermediário" },
+  { value: "Variavel", label: "Variável" },
+  { value: "Premium", label: "Premium" },
+  { value: "Super Premium", label: "Super Premium" },
+];
+
+function nivelPrecoLabel(value?: string | null) {
+  if (!value) return "";
+  const normalizedValue = normalizeText(value);
+  const match = nivelPrecosOptions.find(
+    (nivel) =>
+      normalizeText(nivel.value) === normalizedValue ||
+      normalizeText(nivel.label) === normalizedValue
+  );
+  return match ? match.label : value;
+}
+
 type Produto = {
   id: string;
   nome: string;
   destino: string | null;
-  cidade_id: string;
+  cidade_id: string | null;
   tipo_produto: string | null;
   informacoes_importantes: string | null;
   atracao_principal: string | null;
@@ -39,6 +58,7 @@ type Produto = {
   ativo: boolean | null;
   fornecedor_id?: string | null;
   created_at: string | null;
+  todas_as_cidades: boolean;
 };
 
 type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
@@ -62,6 +82,7 @@ type FormState = {
   ativo: boolean;
   fornecedor_id: string;
   fornecedor_label: string;
+  todas_as_cidades: boolean;
 };
 
 const initialForm: FormState = {
@@ -78,6 +99,7 @@ const initialForm: FormState = {
   ativo: true,
   fornecedor_id: "",
   fornecedor_label: "",
+  todas_as_cidades: false,
 };
 
 export default function ProdutosIsland() {
@@ -137,7 +159,7 @@ export default function ProdutosIsland() {
         supabase
           .from("produtos")
         .select(
-          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at"
+          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades"
         )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
@@ -321,7 +343,8 @@ export default function ProdutosIsland() {
     [fornecedoresLista]
   );
 
-  function formatarCidadeNome(cidadeId: string) {
+  function formatarCidadeNome(cidadeId?: string | null) {
+    if (!cidadeId) return "";
     const cidade = cidades.find((c) => c.id === cidadeId);
     if (!cidade) return "";
     const subdivisao = subdivisaoMap.get(cidade.subdivisao_id);
@@ -339,7 +362,7 @@ export default function ProdutosIsland() {
     const tipoMap = new Map(tipos.map((t) => [t.id, t]));
 
     return produtos.map((p) => {
-      const cidade = cidadeMap.get(p.cidade_id || "");
+      const cidade = p.todas_as_cidades ? null : cidadeMap.get(p.cidade_id || "");
       const subdivisao =
         cidade ? subdivisaoMap.get(cidade.subdivisao_id) || (cidade as any).subdivisoes : undefined;
       const pais = subdivisao ? paisMap.get(subdivisao.pais_id) : undefined;
@@ -347,7 +370,7 @@ export default function ProdutosIsland() {
 
       return {
         ...p,
-        cidade_nome: cidade?.nome || "",
+        cidade_nome: p.todas_as_cidades ? "Todas as cidades" : cidade?.nome || "",
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipoLabel(tipo),
@@ -378,12 +401,23 @@ export default function ProdutosIsland() {
   }
 
   function handleCidadeBusca(valor: string) {
+    if (form.todas_as_cidades) return;
     setCidadeBusca(valor);
     const cidadeAtual = cidades.find((c) => c.id === form.cidade_id);
     if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
       setForm((prev) => ({ ...prev, cidade_id: "" }));
     }
     setMostrarSugestoes(true);
+  }
+
+  function handleToggleTodasAsCidades(valor: boolean) {
+    handleChange("todas_as_cidades", valor);
+    if (valor) {
+      handleChange("cidade_id", "");
+      setCidadeBusca("");
+      setMostrarSugestoes(false);
+      setResultadosCidade([]);
+    }
   }
 
   function handleFornecedorInput(valor: string) {
@@ -427,8 +461,11 @@ export default function ProdutosIsland() {
       fornecedor_label: formatFornecedorLabel(
         fornecedoresLista.find((f) => f.id === produto.fornecedor_id)
       ),
+      todas_as_cidades: produto.todas_as_cidades ?? false,
     });
-    setCidadeBusca(formatarCidadeNome(produto.cidade_id) || cidade?.nome || "");
+    setCidadeBusca(
+      produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
+    );
     setMostrarSugestoes(false);
     setMostrarFormulario(true);
   }
@@ -506,8 +543,8 @@ export default function ProdutosIsland() {
       setErro("Destino e obrigatorio.");
       return;
     }
-    if (!form.cidade_id) {
-      setErro("Cidade e obrigatoria.");
+    if (!form.todas_as_cidades && !form.cidade_id) {
+      setErro("Cidade e obrigatoria quando o produto nao for global.");
       return;
     }
     if (!form.tipo_produto) {
@@ -532,7 +569,7 @@ export default function ProdutosIsland() {
       const payload = {
         nome: nomeNormalizado,
         destino: destinoNormalizado,
-        cidade_id: form.cidade_id,
+        cidade_id: form.todas_as_cidades ? null : form.cidade_id,
         tipo_produto: form.tipo_produto,
         atracao_principal: form.atracao_principal.trim() || null,
         melhor_epoca: form.melhor_epoca.trim() || null,
@@ -542,6 +579,7 @@ export default function ProdutosIsland() {
         informacoes_importantes: form.informacoes_importantes.trim() || null,
         ativo: form.ativo,
         fornecedor_id: form.fornecedor_id || null,
+        todas_as_cidades: form.todas_as_cidades,
       };
 
       if (editandoId) {
@@ -671,6 +709,21 @@ export default function ProdutosIsland() {
                   disabled={permissao === "view"}
                 />
               </div>
+              <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
+                <label className="form-label">Todas as cidades</label>
+                <select
+                  className="form-select"
+                  value={form.todas_as_cidades ? "true" : "false"}
+                  onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
+                  disabled={permissao === "view"}
+                >
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+                <small style={{ color: "#64748b" }}>
+                  Produtos globais ficam disponíveis para qualquer cidade e não salvam cidade específica.
+                </small>
+              </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Cidade *</label>
                 <input
@@ -680,7 +733,7 @@ export default function ProdutosIsland() {
                   onChange={(e) => handleCidadeBusca(e.target.value)}
                   onFocus={() => setMostrarSugestoes(true)}
                   onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                  disabled={permissao === "view"}
+                  disabled={permissao === "view" || form.todas_as_cidades}
                   style={{ marginBottom: 6 }}
                 />
                 {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
@@ -797,12 +850,12 @@ export default function ProdutosIsland() {
                   onChange={(e) => handleChange("nivel_preco", e.target.value)}
                   disabled={permissao === "view"}
                 >
-                    <option value="">Selecione</option>
-                    <option value="Economico">Econômico</option>
-                    <option value="Intermediario">Intermediário</option>
-                    <option value="Variavel">Variável</option>
-                    <option value="Premium">Premium</option>
-                    <option value="Super Premium">Super Premium</option>
+                  <option value="">Selecione</option>
+                  {nivelPrecosOptions.map((nivel) => (
+                    <option key={nivel.value} value={nivel.value}>
+                      {nivel.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="form-group">
@@ -900,7 +953,7 @@ export default function ProdutosIsland() {
                   <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
                   <td>{p.fornecedor_nome || "-"}</td>
-                  <td>{p.nivel_preco || "-"}</td>
+                  <td>{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
                   <td>{p.ativo ? "Sim" : "Nao"}</td>
                   <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">

@@ -16,8 +16,8 @@ type Produto = {
   nome: string;
   cidade_id: string | null;
   tipo_produto: string | null;
-  tipo_info?: { disponivel_todas_cidades?: boolean | null } | null;
   isVirtual?: boolean;
+  todas_as_cidades?: boolean;
 };
 
 type FormVenda = {
@@ -91,9 +91,7 @@ export default function VendasCadastroIsland() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [tipos, setTipos] = useState<{ id: string; nome: string | null; disponivel_todas_cidades?: boolean | null }[]>(
-    []
-  );
+  const [tipos, setTipos] = useState<{ id: string; nome: string | null }[]>([]);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
@@ -130,27 +128,19 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         supabase.from("cidades").select("id, nome").order("nome"),
         supabase
           .from("produtos")
-          .select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
           .order("nome"),
-        supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades"),
+        supabase.from("tipo_produtos").select("id, nome"),
       ]);
 
       setClientes(c.data || []);
       const cidadesLista = (d.data || []) as Cidade[];
       setCidades(cidadesLista);
       const tiposLista = (tiposResp.data as any[]) || [];
-      const tiposMap = new Map(tiposLista.map((t) => [t.id, t]));
-      const produtosLista = ((p.data as any[]) || []).map((prod) => {
-        const tipoInfo = (prod as any).tipo_produtos;
-        return {
-          ...prod,
-          tipo_info: tipoInfo
-            ? { disponivel_todas_cidades: tipoInfo.disponivel_todas_cidades }
-            : tiposMap.has(prod.tipo_produto)
-            ? { disponivel_todas_cidades: tiposMap.get(prod.tipo_produto || "")?.disponivel_todas_cidades }
-            : undefined,
-        } as Produto;
-      });
+      const produtosLista = ((p.data as any[]) || []).map((prod) => ({
+        ...prod,
+        todas_as_cidades: (prod as any).todas_as_cidades ?? false,
+      } as Produto));
       setProdutos(produtosLista);
       setTipos(tiposLista as any);
 
@@ -177,7 +167,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
       const { data: vendaData, error: vendaErr } = await supabase
         .from("vendas")
-        .select("id, cliente_id, destino_id, data_lancamento, data_embarque")
+        .select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque")
         .eq("id", id)
         .maybeSingle();
 
@@ -188,9 +178,13 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       }
 
       // destino_id na tabela aponta para produto; buscamos cidade desse produto
-      let cidadeId = "";
+      let cidadeId = vendaData.destino_cidade_id || "";
       let cidadeNome = "";
-      if (vendaData.destino_id) {
+      if (cidadeId) {
+        const lista = cidadesBase || cidades;
+        const cidadeSelecionada = lista.find((c) => c.id === cidadeId);
+        if (cidadeSelecionada) cidadeNome = cidadeSelecionada.nome;
+      } else if (vendaData.destino_id) {
         const { data: prodData } = await supabase
           .from("produtos")
           .select("id, cidade_id")
@@ -229,7 +223,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           id: r.id,
           produto_id:
             produtosLista.find((p) => {
-              const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+              const ehGlobal = !!p.todas_as_cidades;
               return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
             })?.id || "",
           numero_recibo: r.numero_recibo || "",
@@ -333,52 +327,17 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   }, [cidades, buscaDestino]);
 
   const produtosFiltrados = useMemo(() => {
-    const globalTypes = tipos.filter((t) => t.disponivel_todas_cidades);
-    let base: Produto[] = [];
-
-    if (formVenda.destino_id) {
-      const baseProd = produtos.filter((p) => {
-        const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
-        return ehGlobal || p.cidade_id === formVenda.destino_id;
-      });
-
-      const existentesTipo = new Set(
-        baseProd.filter((p) => p.cidade_id === formVenda.destino_id).map((p) => p.tipo_produto)
-      );
-
-      const virtuais: Produto[] = globalTypes
-        .filter((t) => !existentesTipo.has(t.id))
-        .map((t) => ({
-          id: `virtual-${t.id}`,
-          nome: t.nome || "Produto global",
-          cidade_id: formVenda.destino_id,
-          tipo_produto: t.id,
-          tipo_info: { disponivel_todas_cidades: true },
-          isVirtual: true,
-        }));
-
-      base = [...baseProd, ...virtuais];
-    } else {
-      base = [
-        ...produtos.filter((p) => !!p.tipo_info?.disponivel_todas_cidades),
-        ...globalTypes.map((t) => ({
-          id: `virtual-${t.id}`,
-          nome: t.nome || "Produto global",
-          cidade_id: null,
-          tipo_produto: t.id,
-          tipo_info: { disponivel_todas_cidades: true },
-          isVirtual: true,
-        })),
-      ];
-    }
+    const base = formVenda.destino_id
+      ? produtos.filter((p) => p.todas_as_cidades || p.cidade_id === formVenda.destino_id)
+      : produtos.filter((p) => p.todas_as_cidades);
 
     if (!buscaProduto.trim()) return base;
-    const t = normalizeText(buscaProduto);
-    return base.filter((c) => normalizeText(c.nome).includes(t));
-  }, [produtos, tipos, buscaProduto, formVenda.destino_id]);
+    const term = normalizeText(buscaProduto);
+    return base.filter((c) => normalizeText(c.nome).includes(term));
+  }, [produtos, buscaProduto, formVenda.destino_id]);
 
   const existeProdutoGlobal = useMemo(
-    () => produtos.some((p) => p.tipo_info?.disponivel_todas_cidades),
+    () => produtos.some((p) => !!p.todas_as_cidades),
     [produtos]
   );
 
@@ -430,7 +389,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     setRecibos((prev) =>
       prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades;
+        const ehGlobal = !!prod?.todas_as_cidades;
         if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
@@ -520,7 +479,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
       const possuiProdutoLocal = recibos.some((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades || (r.produto_id || "").startsWith("virtual-");
+        const ehGlobal =
+          !!prod?.todas_as_cidades || (r.produto_id || "").startsWith("virtual-");
         return prod?.cidade_id && !ehGlobal;
       });
 
@@ -545,10 +505,71 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         const cidadeDestino = formVenda.destino_id;
         if (!cidadeDestino) throw new Error("Selecione a cidade de destino para usar produtos globais.");
 
-        const produtoDaCidade = produtos.find((p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino);
+        const tipoInfo = tipos.find((t) => t.id === tipoId);
+        const isGlobalTipo = !!existente?.todas_as_cidades;
+
+        const produtoDaCidade = produtos.find(
+          (p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino && !p.todas_as_cidades
+        );
         if (produtoDaCidade) return produtoDaCidade.id;
 
-        const tipoInfo = tipos.find((t) => t.id === tipoId);
+        if (isGlobalTipo) {
+          const produtoGlobal = produtos.find((p) => p.tipo_produto === tipoId && !!p.todas_as_cidades);
+          if (produtoGlobal) return produtoGlobal.id;
+          const { data: globalDb, error: globalErr } = await supabase
+            .from("produtos")
+            .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
+            .eq("tipo_produto", tipoId)
+            .eq("todas_as_cidades", true)
+            .limit(1)
+            .maybeSingle();
+          if (globalErr) throw globalErr;
+          if (globalDb?.id) {
+            setProdutos((prev) => {
+              if (prev.some((p) => p.id === globalDb.id)) return prev;
+              return [
+                ...prev,
+                {
+                  id: globalDb.id,
+                  nome: globalDb.nome,
+                  cidade_id: globalDb.cidade_id,
+                  tipo_produto: globalDb.tipo_produto,
+                  todas_as_cidades: !!globalDb.todas_as_cidades,
+                },
+              ];
+            });
+            return globalDb.id;
+          }
+          throw new Error(
+            "Produto global selecionado não possui cadastro na tabela de Produtos; cadastre o serviço como global antes de continuar.",
+          );
+        }
+
+        const { data: produtoLocal, error: produtoLocalErr } = await supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
+          .eq("tipo_produto", tipoId)
+          .eq("cidade_id", cidadeDestino)
+          .limit(1)
+          .maybeSingle();
+        if (produtoLocalErr) throw produtoLocalErr;
+        if (produtoLocal?.id) {
+          setProdutos((prev) => {
+            if (prev.some((p) => p.id === produtoLocal.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: produtoLocal.id,
+                nome: produtoLocal.nome,
+                cidade_id: produtoLocal.cidade_id,
+                tipo_produto: produtoLocal.tipo_produto,
+                todas_as_cidades: !!produtoLocal.todas_as_cidades,
+              },
+            ];
+          });
+          return produtoLocal.id;
+        }
+
         const nomeProd = tipoInfo?.nome || "Produto";
         const { data: novo, error } = await supabase
           .from("produtos")
@@ -558,6 +579,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             cidade_id: cidadeDestino,
             tipo_produto: tipoId,
             ativo: true,
+            todas_as_cidades: false,
           })
           .select("id")
           .single();
@@ -571,12 +593,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
               nome: nomeProd,
               cidade_id: cidadeDestino,
               tipo_produto: tipoId,
-              tipo_info: { disponivel_todas_cidades: tipoInfo?.disponivel_todas_cidades },
+              todas_as_cidades: false,
             },
           ]);
           return novoId;
         }
-        throw new Error("Não foi possível criar produto global.");
+        throw new Error("Não foi possível criar produto local.");
       }
 
       const produtoIdsResolvidos: string[] = [];
@@ -596,6 +618,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           .update({
             cliente_id: formVenda.cliente_id,
             destino_id: produtoDestinoId, // FK para produtos
+            destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
           })
@@ -649,6 +672,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             vendedor_id: userId,
             cliente_id: formVenda.cliente_id,
             destino_id: produtoDestinoId, // FK para produtos
+            destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
           })
