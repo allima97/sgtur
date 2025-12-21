@@ -613,13 +613,11 @@ export default function TipoProdutosIsland() {
       className="form-row"
       style={{
         marginTop: 8,
-        display: "flex",
         gap: 8,
-        flexWrap: "wrap",
-        alignItems: "flex-end",
+        gridTemplateColumns: "minmax(220px, 1fr) auto",
       }}
     >
-      <div className="form-group" style={{ flex: "1 1 320px", minWidth: 220 }}>
+      <div className="form-group" style={{ minWidth: 220 }}>
         <label className="form-label">Buscar tipo de produto</label>
         <input
           className="form-input"
@@ -630,20 +628,8 @@ export default function TipoProdutosIsland() {
         />
       </div>
       {permissao !== "view" && (
-        <div
-          className="form-group"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: 8,
-            marginBottom: 0,
-            marginLeft: "auto",
-            flexWrap: "nowrap",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            flex: "0 0 auto",
-          }}
-        >
+        <div className="form-group" style={{ alignItems: "flex-start" }}>
+          <span style={{ visibility: "hidden" }}>botão</span>
           <button
             className="btn btn-primary"
             type="button"

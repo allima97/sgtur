@@ -286,18 +286,6 @@ body {
   padding: 8px 14px;
 }
 
-.btn-strong {
-  background: #1e40af;
-  border: 1px solid #1e40af;
-  color: white;
-  padding: 8px 14px;
-}
-
-.btn-strong:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .btn-danger {
   background: #dc2626;
   color: white;

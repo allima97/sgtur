@@ -467,7 +467,7 @@ export default function VendasConsultaIsland() {
 
       {/* BUSCA */}
       <div className="card-base mb-3">
-        <div className="form-row" style={{ marginTop: 8 }}>
+        <div className="form-row" style={{ marginTop: 8, gridTemplateColumns: "1fr auto" }}>
           <div className="form-group">
             <label className="form-label">Buscar venda</label>
             <input
@@ -483,7 +483,8 @@ export default function VendasConsultaIsland() {
             )}
           </div>
           {podeCriar && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
+            <div className="form-group" style={{ alignItems: "flex-start" }}>
+              <span style={{ visibility: "hidden" }}>botão</span>
               <a className="btn btn-primary" href="/vendas/cadastro">
                 Nova venda
               </a>
