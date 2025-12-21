@@ -797,11 +797,12 @@ export default function ProdutosIsland() {
                   onChange={(e) => handleChange("nivel_preco", e.target.value)}
                   disabled={permissao === "view"}
                 >
-                  <option value="">Selecione</option>
-                  <option value="Economico">Economico</option>
-                  <option value="Intermediario">Intermediario</option>
-                  <option value="Premium">Premium</option>
-                  <option value="Super Premium">Super Premium</option>
+                    <option value="">Selecione</option>
+                    <option value="Economico">Econômico</option>
+                    <option value="Intermediario">Intermediário</option>
+                    <option value="Variavel">Variável</option>
+                    <option value="Premium">Premium</option>
+                    <option value="Super Premium">Super Premium</option>
                 </select>
               </div>
               <div className="form-group">
@@ -870,12 +871,9 @@ export default function ProdutosIsland() {
           <thead>
             <tr>
               <th>Produto</th>
-              <th>Tipo</th>
               <th>Destino</th>
-              <th>Cidade</th>
+              <th>Cidade</th>
               <th>Fornecedor</th>
-              <th>Estado/Província</th>
-              <th>Pais</th>
               <th>Nivel de preco</th>
               <th>Ativo</th>
               <th>Criado em</th>
@@ -885,13 +883,13 @@ export default function ProdutosIsland() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9}>Carregando produtos...</td>
+                <td colSpan={8}>Carregando produtos...</td>
               </tr>
             )}
 
             {!loading && produtosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9}>Nenhum produto encontrado.</td>
+                <td colSpan={8}>Nenhum produto encontrado.</td>
               </tr>
             )}
 
@@ -899,12 +897,9 @@ export default function ProdutosIsland() {
               produtosFiltrados.map((p) => (
                 <tr key={p.id}>
                   <td>{p.nome}</td>
-                  <td>{(p as any).tipo_nome || "-"}</td>
                   <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
                   <td>{p.fornecedor_nome || "-"}</td>
-                  <td>{(p as any).subdivisao_nome || "-"}</td>
-                  <td>{(p as any).pais_nome || "-"}</td>
                   <td>{p.nivel_preco || "-"}</td>
                   <td>{p.ativo ? "Sim" : "Nao"}</td>
                   <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
