@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DH7FbtKa.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
@@ -292,11 +292,13 @@ function VendasConsultaIsland() {
         className: "form-row",
         style: {
           marginTop: 8,
-          gridTemplateColumns: "1fr auto",
-          alignItems: "center"
+          display: "flex",
+          alignItems: "end",
+          gap: 16,
+          flexWrap: "wrap"
         },
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1, minWidth: 0 }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar venda" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -326,7 +328,8 @@ function VendasConsultaIsland() {
                 flexWrap: "nowrap",
                 justifyContent: "flex-end",
                 alignItems: "center",
-                alignSelf: "center"
+                alignSelf: "center",
+                marginTop: -4
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "a",

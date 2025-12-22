@@ -111,7 +111,6 @@ function AuthLoginIsland() {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-icon", children: /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plane-departure", "aria-hidden": true }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: `Bem-vindo ao ${SYSTEM_NAME}` }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Sistema de Gerenciamento de Vendas para Turismo" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "auth-subtitle", children: "Use seu e-mail e senha para acessar ou faça seu cadastro" })
     ] }),
     mensagem && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `alert alert-${mensagem.tipo}`, style: { marginBottom: 12 }, children: mensagem.texto }),

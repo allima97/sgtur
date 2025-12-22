@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DH7FbtKa.mjs';
 import { M as MetasVendedorIsland } from '../../chunks/MetasVendedorIsland_Q1kWA5zk.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 

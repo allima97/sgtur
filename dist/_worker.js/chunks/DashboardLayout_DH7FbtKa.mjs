@@ -460,6 +460,8 @@ const permLevel = (p) => {
   }
 };
 function MenuIsland({ activePage }) {
+  const envMinutes = Number("");
+  const DEFAULT_LOGOUT_MINUTES = Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
   const [userId, setUserId] = reactExports.useState(null);
   const [acessos, setAcessos] = reactExports.useState({});
   const [cacheLoaded, setCacheLoaded] = reactExports.useState(false);
@@ -467,6 +469,14 @@ function MenuIsland({ activePage }) {
   const [userEmail, setUserEmail] = reactExports.useState("");
   const [mounted, setMounted] = reactExports.useState(false);
   const [mobileOpen, setMobileOpen] = reactExports.useState(false);
+  const [showWarning, setShowWarning] = reactExports.useState(false);
+  const logoutTimeoutRef = reactExports.useRef(null);
+  const warningTimeoutRef = reactExports.useRef(null);
+  const AUTO_LOGOUT_MS = DEFAULT_LOGOUT_MINUTES * 60 * 1e3;
+  const WARNING_LEAD_TIME_MS = 60 * 1e3;
+  const SESSION_EXTENSION_MS = 15 * 60 * 1e3;
+  const [remainingMs, setRemainingMs] = reactExports.useState(AUTO_LOGOUT_MS);
+  const deadlineRef = reactExports.useRef(Date.now() + AUTO_LOGOUT_MS);
   const isAdminFinal = Object.values(acessos).some((p) => p === "admin");
   reactExports.useEffect(() => setMounted(true), []);
   reactExports.useEffect(() => {
@@ -491,10 +501,76 @@ function MenuIsland({ activePage }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mobileOpen]);
   const toggleMobile = () => setMobileOpen((prev) => !prev);
-  const closeMobile = () => setMobileOpen(false);
+  const closeMobile = reactExports.useCallback(() => setMobileOpen(false), []);
+  const executarLogout = reactExports.useCallback(
+    async (mostrarFeedback = true) => {
+      if (mostrarFeedback) setSaindo(true);
+      setShowWarning(false);
+      closeMobile();
+      try {
+        await logoutUsuario();
+      } finally {
+        if (mostrarFeedback) setSaindo(false);
+      }
+    },
+    [closeMobile, setSaindo]
+  );
   const handleNavClick = () => {
     if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
   };
+  const clearTimers = reactExports.useCallback(() => {
+    if (logoutTimeoutRef.current) {
+      window.clearTimeout(logoutTimeoutRef.current);
+      logoutTimeoutRef.current = null;
+    }
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
+    }
+  }, []);
+  const scheduleTimers = reactExports.useCallback(
+    (durationMs = AUTO_LOGOUT_MS) => {
+      setShowWarning(false);
+      clearTimers();
+      deadlineRef.current = Date.now() + durationMs;
+      setRemainingMs(durationMs);
+      logoutTimeoutRef.current = window.setTimeout(() => executarLogout(false), durationMs);
+      const warningDelay = Math.max(durationMs - WARNING_LEAD_TIME_MS, 0);
+      warningTimeoutRef.current = window.setTimeout(() => setShowWarning(true), warningDelay);
+    },
+    [AUTO_LOGOUT_MS, WARNING_LEAD_TIME_MS, clearTimers, executarLogout]
+  );
+  const handleExtendSession = () => {
+    scheduleTimers(SESSION_EXTENSION_MS);
+  };
+  const handleActivity = reactExports.useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+    scheduleTimers();
+  }, [scheduleTimers]);
+  reactExports.useEffect(() => {
+    if (!mounted) return;
+    scheduleTimers();
+    const eventosAtividade = ["mousedown", "keydown", "scroll", "touchstart"];
+    eventosAtividade.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+    return () => {
+      eventosAtividade.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      clearTimers();
+      setShowWarning(false);
+    };
+  }, [handleActivity, scheduleTimers, mounted, clearTimers]);
+  reactExports.useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const diff = Math.max(0, (deadlineRef.current || Date.now()) - Date.now());
+      setRemainingMs(diff);
+    }, 1e3);
+    return () => window.clearInterval(intervalId);
+  }, []);
+  const totalSeconds = Math.ceil(Math.max(0, remainingMs) / 1e3);
+  const displayMinutes = Math.floor(totalSeconds / 60);
+  const displaySeconds = totalSeconds % 60;
+  const countdownLabel = displayMinutes > 0 ? `${displayMinutes}m ${displaySeconds.toString().padStart(2, "0")}s` : `${displaySeconds}s`;
   function setPerm(perms, key, perm) {
     const normalizedKey = key.toLowerCase();
     const atual = perms[normalizedKey] ?? "none";
@@ -568,10 +644,7 @@ function MenuIsland({ activePage }) {
     carregar();
   }, []);
   async function handleLogout() {
-    setSaindo(true);
-    closeMobile();
-    await logoutUsuario();
-    setSaindo(false);
+    await executarLogout(true);
   }
   const pode = (moduloBD, min = "view") => {
     const p = acessos[String(moduloBD || "").toLowerCase()] ?? "none";
@@ -913,7 +986,77 @@ function MenuIsland({ activePage }) {
           ]
         }
       ) }) }) })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        "aria-live": "polite",
+        style: {
+          position: "fixed",
+          top: 12,
+          right: 16,
+          zIndex: 950,
+          backgroundColor: "rgba(248, 250, 252, 0.85)",
+          borderRadius: 999,
+          padding: "4px 12px",
+          border: "1px solid rgba(148, 163, 184, 0.6)",
+          fontSize: "0.75rem",
+          color: "#0f172a",
+          backdropFilter: "blur(6px)",
+          boxShadow: "0 10px 30px rgba(15,23,42,0.25)"
+        },
+        children: [
+          "Sessão ativa • ",
+          countdownLabel
+        ]
+      }
+    ),
+    showWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        role: "alertdialog",
+        "aria-modal": "true",
+        style: {
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.55)",
+          zIndex: 9999,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 16
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            style: {
+              background: "white",
+              borderRadius: 12,
+              padding: "24px 32px",
+              boxShadow: "0 30px 60px rgba(15,23,42,0.35)",
+              maxWidth: 420,
+              width: "100%"
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginTop: 0, marginBottom: 12 }, children: "Sessão quase expirando" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 0, marginBottom: 20 }, children: "Sua sessão será encerrada automaticamente em 1 minuto por inatividade. Clique em “Continuar Logado” para ganhar mais 15 minutos sem perder o progresso." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: handleExtendSession, children: "Continuar Logado" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-light",
+                    onClick: () => executarLogout(true),
+                    children: "Sair agora"
+                  }
+                )
+              ] })
+            ]
+          }
+        )
+      }
+    )
   ] });
 }
 
