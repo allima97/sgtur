@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { j as jsxRuntimeExports } from './supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports } from './systemName_BQeIdnjR.mjs';
 
 function LoadingUsuarioContext({ className = "" }) {
   const classes = ["card-base", "card-config", className].filter(Boolean).join(" ");

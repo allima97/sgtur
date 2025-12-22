@@ -1,14 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 const initialForm = {
   nome: "",
@@ -18,6 +18,7 @@ const initialForm = {
   whatsapp: "",
   email: "",
   endereco: "",
+  numero: "",
   complemento: "",
   cidade: "",
   estado: "",
@@ -27,7 +28,9 @@ const initialForm = {
   nacionalidade: "",
   tags: "",
   tipo_cliente: "passageiro",
+  company_id: "",
   notas: "",
+  ativo: true,
   active: true
 };
 function ClientesIsland() {
@@ -45,6 +48,10 @@ function ClientesIsland() {
   const [salvando, setSalvando] = reactExports.useState(false);
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const [historicoCliente, setHistoricoCliente] = reactExports.useState(null);
+  const [cepStatus, setCepStatus] = reactExports.useState(null);
+  const [mostrarFormAcomp, setMostrarFormAcomp] = reactExports.useState(false);
+  const [msg, setMsg] = reactExports.useState(null);
+  const [mostrarFormCliente, setMostrarFormCliente] = reactExports.useState(false);
   const [historicoVendas, setHistoricoVendas] = reactExports.useState([]);
   const [historicoOrcamentos, setHistoricoOrcamentos] = reactExports.useState([]);
   const [loadingHistorico, setLoadingHistorico] = reactExports.useState(false);
@@ -98,13 +105,51 @@ function ClientesIsland() {
   function handleChange(campo, valor) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
-  function iniciarNovo() {
-    if (!podeCriar) return;
-    setEditId(null);
+  function formatCpf(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    return digits.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  function formatTelefone(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 10) {
+      return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+    }
+    return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+  }
+  function formatCep(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    return digits.replace(/(\d{5})(\d)/, "$1-$2");
+  }
+  async function buscarCepIfNeeded(cepRaw) {
+    const digits = (cepRaw || "").replace(/\D/g, "");
+    if (digits.length !== 8) {
+      setCepStatus(null);
+      return;
+    }
+    try {
+      setCepStatus("Buscando endereço...");
+      const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { mode: "cors" });
+      if (!resp.ok) throw new Error("CEP inválido ou indisponível.");
+      const data = await resp.json();
+      if (data.erro) throw new Error("CEP não encontrado.");
+      setForm((prev) => ({
+        ...prev,
+        cep: formatCep(digits),
+        endereco: data.logradouro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || ""
+      }));
+      setCepStatus("Endereço carregado pelo CEP.");
+    } catch (e) {
+      console.error("Erro ao buscar CEP:", e);
+      setCepStatus("Não foi possível carregar o CEP.");
+    }
+  }
+  function fecharFormularioCliente() {
+    setMostrarFormCliente(false);
     setForm(initialForm);
-    setAcompanhantes([]);
-    setAcompErro(null);
-    setAcompEditId(null);
+    setEditId(null);
+    setMsg(null);
   }
   async function abrirHistorico(cliente) {
     setHistoricoCliente(cliente);
@@ -119,14 +164,14 @@ function ClientesIsland() {
         valor_total: v.valor_total ?? null,
         notas: v.notas || null
       })) || [];
-      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destinos:produtos!destino_id (nome, cidade_id)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
+      const { data: vendasData } = await supabase.from("vendas").select("id, data_lancamento, data_embarque, destino_id, destino_cidade_id, destinos:produtos!destino_id (nome, cidade_id)").eq("cliente_id", cliente.id).order("data_lancamento", { ascending: false });
       let vendasFmt = [];
       let cidadesMap2 = {};
       if (vendasData && vendasData.length > 0) {
         const vendaIds = vendasData.map((v) => v.id);
         const cidadeIds = Array.from(
           new Set(
-            vendasData.map((v) => v.destinos?.cidade_id).filter((id) => Boolean(id))
+            vendasData.map((v) => v.destino_cidade_id || v.destinos?.cidade_id).filter((id) => Boolean(id))
           )
         );
         if (cidadeIds.length > 0) {
@@ -145,13 +190,13 @@ function ClientesIsland() {
         let tipoProdMap2 = {};
         if (produtoIdsSet.size > 0) {
           const idsArr = Array.from(produtoIdsSet);
-          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", idsArr);
+          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("tipo_produto", idsArr);
           if (!prodErr && produtosData) produtosLista = produtosData;
           else if (prodErr) console.error(prodErr);
-          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", idsArr);
+          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome").in("id", idsArr);
           if (!tipoErr && tiposData) {
             tipoProdMap2 = Object.fromEntries(
-              tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+              tiposData.map((t) => [t.id, t.nome || "Produto"])
             );
           } else if (tipoErr) {
             console.error(tipoErr);
@@ -160,11 +205,11 @@ function ClientesIsland() {
         const resolveProdutoNome2 = (produtoId, cidadeVenda) => {
           if (!produtoId) return "";
           const candidato = produtosLista.find((p) => {
-            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            const ehGlobal = !!p?.todas_as_cidades;
             return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
           });
           const tipoInfo = tipoProdMap2[produtoId] || {};
-          return candidato?.nome || tipoInfo.nome || "Produto";
+          return candidato?.nome || tipoInfo || "Produto";
         };
         vendasFmt = vendasData.map((v) => {
           const recForVenda = (recs || []).filter((r) => r.venda_id === v.id);
@@ -176,14 +221,16 @@ function ClientesIsland() {
             (acc, r) => acc + (r.valor_taxas || 0),
             0
           );
-          const produtosVenda = recForVenda.map((r) => resolveProdutoNome2(r.produto_id, v.destinos?.cidade_id)).filter(Boolean);
+          const cidadeVendaId = v.destino_cidade_id || v.destinos?.cidade_id || null;
+          const produtosVenda = recForVenda.map((r) => resolveProdutoNome2(r.produto_id, cidadeVendaId || void 0)).filter(Boolean);
+          const cidadeVendaNome = cidadeVendaId ? cidadesMap2[cidadeVendaId] || "" : "";
           return {
             id: v.id,
             data_lancamento: v.data_lancamento,
             data_embarque: v.data_embarque,
             destino_nome: v.destinos?.nome || "",
-            destino_cidade_id: v.destinos?.cidade_id || null,
-            destino_cidade_nome: v.destinos?.cidade_id ? cidadesMap2[v.destinos?.cidade_id] || "" : "",
+            destino_cidade_id: cidadeVendaId,
+            destino_cidade_nome: cidadeVendaNome,
             valor_total: total,
             valor_taxas: taxas,
             produtos: produtosVenda
@@ -213,10 +260,10 @@ function ClientesIsland() {
       let tipoProdMap = {};
       if (produtoIdsSet.size > 0) {
         const idsArr = Array.from(produtoIdsSet);
-        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", idsArr);
+        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("tipo_produto", idsArr);
         if (!prodErr && produtosData) produtosListaPorTipo = produtosData;
         else if (prodErr) console.error(prodErr);
-        const { data: produtosPorId, error: prodIdErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("id", idsArr);
+        const { data: produtosPorId, error: prodIdErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("id", idsArr);
         if (!prodIdErr && produtosPorId) {
           produtosListaPorId = produtosPorId;
           produtosPorId.forEach((p) => {
@@ -233,10 +280,10 @@ function ClientesIsland() {
           if (p.tipo_produto) tipoIdsSet.add(p.tipo_produto);
         });
         idsArr.forEach((id) => tipoIdsSet.add(id));
-        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", Array.from(tipoIdsSet));
+        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome").in("id", Array.from(tipoIdsSet));
         if (!tipoErr && tiposData) {
           tipoProdMap = Object.fromEntries(
-            tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            tiposData.map((t) => [t.id, t.nome || "Produto"])
           );
         } else if (tipoErr) {
           console.error(tipoErr);
@@ -246,16 +293,16 @@ function ClientesIsland() {
         if (!produtoId) return "";
         if (produtoObjById[produtoId]) {
           const p = produtoObjById[produtoId];
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           if (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda) return p.nome || "Produto";
         }
         if (produtoByIdMap[produtoId]) return produtoByIdMap[produtoId];
         const candidato = produtosListaPorTipo.find((p) => {
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
         });
-        const tipoInfo = tipoProdMap[produtoId] || {};
-        return candidato?.nome || tipoInfo.nome || "Produto";
+        const tipoNome = tipoProdMap[produtoId] || "Produto";
+        return candidato?.nome || tipoNome;
       };
       if (vendasFmt.length > 0) {
         vendasFmt = vendasFmt.map((v) => ({
@@ -307,17 +354,7 @@ function ClientesIsland() {
     setDetalheOrcamento(null);
     setAcompanhantes([]);
     setAcompErro(null);
-    setAcompEditId(null);
-    setAcompForm({
-      nome_completo: "",
-      cpf: "",
-      telefone: "",
-      grau_parentesco: "",
-      rg: "",
-      data_nascimento: "",
-      observacoes: "",
-      ativo: true
-    });
+    resetAcompForm(true);
   }
   async function verDetalheVenda(v) {
     setDetalheVenda(v);
@@ -342,13 +379,13 @@ function ClientesIsland() {
       let produtosListaPorTipo = [];
       let tipoProdMap = {};
       if (produtoIds.length > 0) {
-        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", produtoIds);
+        const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("tipo_produto", produtoIds);
         if (!prodErr && produtosData) produtosListaPorTipo = produtosData;
         else if (prodErr) console.error(prodErr);
-        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", produtoIds);
+        const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome").in("id", produtoIds);
         if (!tipoErr && tiposData) {
           tipoProdMap = Object.fromEntries(
-            tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+            tiposData.map((t) => [t.id, t.nome || "Produto"])
           );
         } else if (tipoErr) {
           console.error(tipoErr);
@@ -357,11 +394,11 @@ function ClientesIsland() {
       const resolveProdutoNome = (produtoId) => {
         if (!produtoId) return "";
         const candidato = produtosListaPorTipo.find((p) => {
-          const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+          const ehGlobal = !!p?.todas_as_cidades;
           return p.tipo_produto === produtoId && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
         });
-        const tipoInfo = tipoProdMap[produtoId] || {};
-        return candidato?.nome || tipoInfo.nome || "Produto";
+        const tipoNome = tipoProdMap[produtoId] || "Produto";
+        return candidato?.nome || tipoNome;
       };
       setDetalheRecibos(
         recsBase.map((r) => ({
@@ -390,6 +427,7 @@ function ClientesIsland() {
       whatsapp: c.whatsapp || "",
       email: c.email || "",
       endereco: c.endereco || "",
+      numero: c.numero || "",
       complemento: c.complemento || "",
       cidade: c.cidade || "",
       estado: c.estado || "",
@@ -399,10 +437,13 @@ function ClientesIsland() {
       nacionalidade: c.nacionalidade || "",
       tags: (c.tags || []).join(", "),
       tipo_cliente: c.tipo_cliente || "passageiro",
+      company_id: c.company_id || "",
       notas: c.notas || "",
+      ativo: c.ativo,
       active: c.active
     });
     carregarAcompanhantes(c.id);
+    setMostrarFormCliente(true);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -410,6 +451,7 @@ function ClientesIsland() {
     try {
       setSalvando(true);
       setErro(null);
+      setMsg(null);
       const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const payload = {
         nome: nomeNormalizado,
@@ -419,6 +461,7 @@ function ClientesIsland() {
         whatsapp: form.whatsapp.trim() || null,
         email: form.email.trim() || null,
         endereco: form.endereco.trim() || null,
+        numero: form.numero.trim() || null,
         complemento: form.complemento.trim() || null,
         cidade: form.cidade.trim() || null,
         estado: form.estado.trim() || null,
@@ -429,9 +472,13 @@ function ClientesIsland() {
         tags: form.tags ? form.tags.split(",").map((x) => x.trim()) : [],
         tipo_cliente: form.tipo_cliente,
         notas: form.notas || null,
+        ativo: form.ativo,
         active: form.active
       };
-      if (historicoCliente?.company_id) {
+      const trimmedCompanyId = form.company_id.trim();
+      if (trimmedCompanyId) {
+        payload.company_id = trimmedCompanyId;
+      } else if (historicoCliente?.company_id) {
         payload.company_id = historicoCliente.company_id;
       }
       if (editId) {
@@ -453,10 +500,13 @@ function ClientesIsland() {
       }
       setForm(initialForm);
       setEditId(null);
+      setMostrarFormCliente(false);
+      setMsg(editId ? "Cliente atualizado com sucesso." : "Cliente criado com sucesso.");
       await carregar();
     } catch (e2) {
       console.error(e2);
       setErro("Erro ao salvar cliente.");
+      setMsg(null);
     } finally {
       setSalvando(false);
     }
@@ -480,7 +530,7 @@ function ClientesIsland() {
       setExcluindoId(null);
     }
   }
-  function resetAcompForm() {
+  function resetAcompForm(hideForm = false) {
     setAcompForm({
       nome_completo: "",
       cpf: "",
@@ -492,6 +542,9 @@ function ClientesIsland() {
       ativo: true
     });
     setAcompEditId(null);
+    if (hideForm) {
+      setMostrarFormAcomp(false);
+    }
   }
   function iniciarEdicaoAcomp(a) {
     setAcompEditId(a.id);
@@ -505,6 +558,7 @@ function ClientesIsland() {
       observacoes: a.observacoes || "",
       ativo: a.ativo
     });
+    setMostrarFormAcomp(true);
   }
   async function salvarAcompanhante() {
     if (!historicoCliente) {
@@ -542,7 +596,7 @@ function ClientesIsland() {
         const { error } = await supabase.from("cliente_acompanhantes").insert(payload);
         if (error) throw error;
       }
-      resetAcompForm();
+      resetAcompForm(true);
       await carregarAcompanhantes(historicoCliente.id);
     } catch (e) {
       console.error(e);
@@ -559,7 +613,7 @@ function ClientesIsland() {
       setAcompErro(null);
       const { error } = await supabase.from("cliente_acompanhantes").delete().eq("id", id).eq("cliente_id", historicoCliente.id);
       if (error) throw error;
-      if (acompEditId === id) resetAcompForm();
+      if (acompEditId === id) resetAcompForm(true);
       await carregarAcompanhantes(historicoCliente.id);
     } catch (e) {
       console.error(e);
@@ -577,82 +631,248 @@ function ClientesIsland() {
   const modoSomenteLeitura = !podeCriar && !podeEditar;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "clientes-page", children: [
-      !modoSomenteLeitura && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+      !modoSomenteLeitura && mostrarFormCliente && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar cliente" : "Novo cliente" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.nome,
-                onChange: (e) => handleChange("nome", e.target.value),
-                onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.cpf,
-                onChange: (e) => handleChange("cpf", e.target.value),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.telefone,
-                onChange: (e) => handleChange("telefone", e.target.value)
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Whatsapp" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.whatsapp,
-                onChange: (e) => handleChange("whatsapp", e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Email" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.email,
-                onChange: (e) => handleChange("email", e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tags (,) " }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: form.tags,
-                onChange: (e) => handleChange("tags", e.target.value),
-                placeholder: "premium, recorrente..."
-              }
-            )
-          ] })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "form-row",
+            style: {
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))",
+              gap: 12
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.nome,
+                    onChange: (e) => handleChange("nome", e.target.value),
+                    onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
+                    required: true
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.cpf,
+                    onChange: (e) => handleChange("cpf", formatCpf(e.target.value)),
+                    required: true
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.rg,
+                    onChange: (e) => handleChange("rg", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nascimento" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    className: "form-input",
+                    value: form.nascimento,
+                    onChange: (e) => handleChange("nascimento", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Gênero" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    className: "form-select",
+                    value: form.genero,
+                    onChange: (e) => handleChange("genero", e.target.value),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Masculino", children: "Masculino" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Feminino", children: "Feminino" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Outros", children: "Outros" })
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nacionalidade" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.nacionalidade,
+                    onChange: (e) => handleChange("nacionalidade", e.target.value)
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "form-row",
+            style: {
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 12
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.telefone,
+                    onChange: (e) => handleChange("telefone", formatTelefone(e.target.value))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Whatsapp" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.whatsapp,
+                    onChange: (e) => handleChange("whatsapp", formatTelefone(e.target.value))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "E-mail" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.email,
+                    onChange: (e) => handleChange("email", e.target.value)
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "form-row",
+            style: {
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
+              gap: 12
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CEP" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.cep,
+                    onChange: (e) => handleChange("cep", formatCep(e.target.value)),
+                    onBlur: (e) => {
+                      const val = formatCep(e.target.value);
+                      handleChange("cep", val);
+                      if (val.replace(/\D/g, "").length === 8) {
+                        buscarCepIfNeeded(val);
+                      } else {
+                        setCepStatus(null);
+                      }
+                    }
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }, children: cepStatus || "Preencha para auto-preencher endereço." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Endereço" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.endereco,
+                    onChange: (e) => handleChange("endereco", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.numero,
+                    onChange: (e) => handleChange("numero", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Complemento" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.complemento,
+                    onChange: (e) => handleChange("complemento", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.cidade,
+                    onChange: (e) => handleChange("cidade", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Estado" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    className: "form-input",
+                    value: form.estado,
+                    onChange: (e) => handleChange("estado", e.target.value)
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Notas" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "textarea",
+            {
+              className: "form-textarea",
+              rows: 3,
+              value: form.notas,
+              onChange: (e) => handleChange("notas", e.target.value),
+              placeholder: "Informações adicionais"
+            }
+          )
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -660,32 +880,64 @@ function ClientesIsland() {
               className: "btn btn-primary",
               disabled: salvando,
               type: "submit",
-              children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Criar cliente"
+              children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar"
             }
           ),
-          editId && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               className: "btn btn-light",
-              onClick: iniciarNovo,
+              onClick: fecharFormularioCliente,
+              disabled: salvando,
               children: "Cancelar"
             }
           )
         ] })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cliente" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            className: "form-input",
-            value: busca,
-            onChange: (e) => setBusca(e.target.value),
-            placeholder: "Nome, CPF ou e-mail"
-          }
-        )
-      ] }) }) }),
+      msg && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-green mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: msg }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "form-row",
+          style: {
+            marginTop: 12,
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            alignItems: "flex-end"
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 300px" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cliente" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  value: busca,
+                  onChange: (e) => setBusca(e.target.value),
+                  placeholder: "Nome, CPF ou e-mail"
+                }
+              )
+            ] }),
+            podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-primary",
+                onClick: () => {
+                  setForm(initialForm);
+                  setEditId(null);
+                  setMsg(null);
+                  setMostrarFormCliente(true);
+                },
+                disabled: mostrarFormCliente,
+                children: "Adicionar cliente"
+              }
+            ) })
+          ]
+        }
+      ) }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[960px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -800,103 +1052,126 @@ function ClientesIsland() {
             ] }) }),
             podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: acompEditId ? "Editar acompanhante" : "Adicionar acompanhante" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: acompForm.nome_completo,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))
-                    }
-                  )
+              !mostrarFormAcomp && !acompEditId && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "btn btn-primary",
+                  onClick: () => {
+                    resetAcompForm();
+                    setMostrarFormAcomp(true);
+                  },
+                  children: "Adicionar acompanhante"
+                }
+              ),
+              (mostrarFormAcomp || acompEditId) && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.nome_completo,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.cpf,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.telefone,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.grau_parentesco,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value })),
+                        placeholder: "Ex: Esposa, Filho"
+                      }
+                    )
+                  ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: acompForm.cpf,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
-                    }
-                  )
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.rg,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        className: "form-input",
+                        value: acompForm.data_nascimento,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: acompForm.observacoes,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: acompForm.ativo,
+                        onChange: (e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))
+                      }
+                    )
+                  ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarAcompanhante, disabled: acompSalvando, children: acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
+                    "button",
                     {
-                      className: "form-input",
-                      value: acompForm.telefone,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: acompForm.grau_parentesco,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value })),
-                      placeholder: "Ex: Esposa, Filho"
+                      className: "btn btn-light",
+                      type: "button",
+                      onClick: () => resetAcompForm(true),
+                      disabled: acompSalvando,
+                      children: "Cancelar"
                     }
                   )
                 ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: acompForm.rg,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "date",
-                      className: "form-input",
-                      value: acompForm.data_nascimento,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      className: "form-input",
-                      value: acompForm.observacoes,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: acompForm.ativo,
-                      onChange: (e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))
-                    }
-                  )
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarAcompanhante, disabled: acompSalvando, children: acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Adicionar acompanhante" }),
-                acompEditId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", type: "button", onClick: resetAcompForm, disabled: acompSalvando, children: "Cancelar edição" })
               ] })
             ] })
           ] }),

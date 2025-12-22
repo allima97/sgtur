@@ -1,8 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { s as supabase, j as jsxRuntimeExports } from './supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports } from './systemName_BQeIdnjR.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from './usePermissao_ChD594_G.mjs';
-import { L as LoadingUsuarioContext } from './LoadingUsuarioContext_XbJI-A09.mjs';
+import { u as usePermissao } from './usePermissao_Cbgi1VF4.mjs';
+import { L as LoadingUsuarioContext } from './LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 function MetasVendedorIsland() {
   const { permissao, ativo, loading } = usePermissao("Metas");
@@ -20,6 +20,7 @@ function MetasVendedorIsland() {
   const [editId, setEditId] = reactExports.useState(null);
   const [loadingMeta, setLoadingMeta] = reactExports.useState(true);
   const [salvando, setSalvando] = reactExports.useState(false);
+  const [mostrarFormularioMeta, setMostrarFormularioMeta] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
   reactExports.useEffect(() => {
     carregarDados();
@@ -186,6 +187,16 @@ function MetasVendedorIsland() {
     setEditId(null);
     setAtivoMeta(true);
   }
+  function abrirFormularioMeta() {
+    limparFormulario();
+    setMostrarFormularioMeta(true);
+    setErro(null);
+  }
+  function fecharFormularioMeta() {
+    limparFormulario();
+    setMostrarFormularioMeta(false);
+    setErro(null);
+  }
   function iniciarEdicao(m) {
     setEditId(m.id);
     setPeriodo(m.periodo.slice(0, 7));
@@ -202,6 +213,8 @@ function MetasVendedorIsland() {
       setMetaProdutos([]);
     }
     setAtivoMeta(m.ativo);
+    setMostrarFormularioMeta(true);
+    setErro(null);
   }
   async function toggleAtivo(id, ativo2) {
     try {
@@ -224,165 +237,179 @@ function MetasVendedorIsland() {
   if (loading || loadingMeta) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Metas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-slate-50 p-2 md:p-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvarMeta, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
-        mostrarSelectVendedor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Vendedor *" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "select",
-            {
-              className: "form-select",
-              value: vendedorSelecionado,
-              onChange: (e) => setVendedorSelecionado(e.target.value),
-              children: vendedores.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: v.id, children: v.nome_completo }, v.id))
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período *" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "month",
-              className: "form-input",
-              value: periodo,
-              onChange: (e) => setPeriodo(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta Geral (R$) *" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              type: "text",
-              value: formatarMoeda(metaGeral),
-              onChange: (e) => {
-                const raw = e.target.value.replace(/\D/g, "");
-                setMetaGeral(raw);
-              },
-              inputMode: "decimal",
-              placeholder: "0,00"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[220px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Metas diferenciadas por produto (opcional)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2", children: [
-            metaProdutos.map((mp, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[140px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    className: "form-select",
-                    value: mp.produto_id,
-                    onChange: (e) => {
-                      const copia = [...metaProdutos];
-                      copia[idx] = { ...copia[idx], produto_id: e.target.value };
-                      setMetaProdutos(copia);
-                    },
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
-                      produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome }, p.id))
-                    ]
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta (R$)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    type: "text",
-                    inputMode: "decimal",
-                    value: formatarMoeda(mp.valor),
-                    onChange: (e) => {
-                      const raw = e.target.value.replace(/\D/g, "");
-                      const copia = [...metaProdutos];
-                      copia[idx] = { ...copia[idx], valor: raw };
-                      setMetaProdutos(copia);
-                    },
-                    placeholder: "0,00"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group flex-none flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn btn-light",
-                  onClick: () => {
-                    setMetaProdutos(metaProdutos.filter((_, i) => i !== idx));
-                  },
-                  children: "Remover"
-                }
-              ) })
-            ] }, idx)),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { alignItems: "center" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn btn-primary",
-                  onClick: () => setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }]),
-                  children: "+ Adicionar produto"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginLeft: "auto", fontWeight: 600 }, children: [
-                "Total diferenciada:",
-                " ",
-                totalMetaDiferenciada().toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL"
-                })
-              ] })
-            ] }),
-            parametros?.foco_valor === "liquido" && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#f97316" }, children: "Foco em valor líquido ativo: informe metas diferenciadas por produto." })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativa?" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-select",
-              value: ativoMeta ? "true" : "false",
-              onChange: (e) => setAtivoMeta(e.target.value === "true"),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "true", children: "Sim" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "false", children: "Não" })
-              ]
-            }
-          )
-        ] })
-      ] }),
-      erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-      usuarioPodeEditar && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "submit",
-            className: "btn btn-primary",
-            disabled: salvando,
-            children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Criar meta"
-          }
-        ),
-        editId && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-end" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Metas cadastradas" }),
+        usuarioPodeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             type: "button",
-            className: "btn btn-light",
-            style: { marginLeft: 8 },
-            onClick: limparFormulario,
-            children: "Cancelar"
+            className: "btn btn-primary",
+            onClick: abrirFormularioMeta,
+            disabled: mostrarFormularioMeta,
+            children: "Adicionar meta"
           }
         )
+      ] }),
+      mostrarFormularioMeta && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvarMeta, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
+          mostrarSelectVendedor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Vendedor *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                className: "form-select",
+                value: vendedorSelecionado,
+                onChange: (e) => setVendedorSelecionado(e.target.value),
+                children: vendedores.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: v.id, children: v.nome_completo }, v.id))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "month",
+                className: "form-input",
+                value: periodo,
+                onChange: (e) => setPeriodo(e.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta Geral (R$) *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "text",
+                value: formatarMoeda(metaGeral),
+                onChange: (e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setMetaGeral(raw);
+                },
+                inputMode: "decimal",
+                placeholder: "0,00"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[220px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Metas diferenciadas por produto (opcional)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2", children: [
+              metaProdutos.map((mp, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[140px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      className: "form-select",
+                      value: mp.produto_id,
+                      onChange: (e) => {
+                        const copia = [...metaProdutos];
+                        copia[idx] = { ...copia[idx], produto_id: e.target.value };
+                        setMetaProdutos(copia);
+                      },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                        produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome }, p.id))
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta (R$)" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      type: "text",
+                      inputMode: "decimal",
+                      value: formatarMoeda(mp.valor),
+                      onChange: (e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        const copia = [...metaProdutos];
+                        copia[idx] = { ...copia[idx], valor: raw };
+                        setMetaProdutos(copia);
+                      },
+                      placeholder: "0,00"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group flex-none flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-light",
+                    onClick: () => {
+                      setMetaProdutos(metaProdutos.filter((_, i) => i !== idx));
+                    },
+                    children: "Remover"
+                  }
+                ) })
+              ] }, idx)),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { alignItems: "center" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-primary",
+                    onClick: () => setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }]),
+                    children: "+ Adicionar produto"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginLeft: "auto", fontWeight: 600 }, children: [
+                  "Total diferenciada:",
+                  " ",
+                  totalMetaDiferenciada().toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                  })
+                ] })
+              ] }),
+              parametros?.foco_valor === "liquido" && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#f97316" }, children: "Foco em valor líquido ativo: informe metas diferenciadas por produto." })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativa?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: ativoMeta ? "true" : "false",
+                onChange: (e) => setAtivoMeta(e.target.value === "true"),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "true", children: "Sim" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "false", children: "Não" })
+                ]
+              }
+            )
+          ] })
+        ] }),
+        erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
+        usuarioPodeEditar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "submit",
+              className: "btn btn-primary",
+              disabled: salvando,
+              children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar meta"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: fecharFormularioMeta,
+              disabled: salvando,
+              children: "Cancelar"
+            }
+          )
+        ] })
       ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Metas cadastradas" }) }),
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[880px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Período" }),

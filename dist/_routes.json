@@ -6,7 +6,7 @@
   "exclude": [
     "/_astro/*",
     "/.DS_Store",
-    "/SGTUR_DOCUMENTACAO.md",
+    "/SGVTUR_DOCUMENTACAO.md",
     "/cron-alerta-comissao.md",
     "/cron-alerta-orcamentos.md",
     "/cron-log-alertas.sql",

@@ -83,4 +83,6 @@ const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-export { jsxRuntimeExports as j, supabase as s };
+const SYSTEM_NAME = "SGVTUR - Sistema de Gerenciamento de Vendas para Turismo";
+
+export { SYSTEM_NAME as S, jsxRuntimeExports as j, supabase as s };

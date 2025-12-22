@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, f as renderHead, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports, S as SYSTEM_NAME, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
 
 function AuthResetIsland() {
   const [password, setPassword] = reactExports.useState("");
@@ -93,7 +93,11 @@ function AuthResetIsland() {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-icon", children: /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plane-departure" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Definir nova senha" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "auth-subtitle", children: "Crie uma nova senha para voltar a usar o SGTUR." })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "auth-subtitle", children: [
+        "Crie uma nova senha para voltar a usar o ",
+        SYSTEM_NAME,
+        "."
+      ] })
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "alert alert-danger", style: { marginBottom: 16 }, children: erro }),
     ok && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "alert alert-success", style: { marginBottom: 16 }, children: "Senha alterada com sucesso! Redirecionando..." }),
@@ -153,7 +157,8 @@ function AuthResetIsland() {
 }
 
 const $$Reset = createComponent(($$result, $$props, $$slots) => {
-  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>Nova senha - SGTUR</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthResetIsland", AuthResetIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthResetIsland.tsx", "client:component-export": "default" })} </body></html>`;
+  const pageTitle = `Nova senha - ${SYSTEM_NAME}`;
+  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthResetIsland", AuthResetIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthResetIsland.tsx", "client:component-export": "default" })} </body></html>`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/reset.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/reset.astro";

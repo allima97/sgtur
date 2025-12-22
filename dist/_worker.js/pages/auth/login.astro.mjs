@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, f as renderHead, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports, S as SYSTEM_NAME, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
 
 function AuthLoginIsland() {
   const [email, setEmail] = reactExports.useState("");
@@ -110,8 +110,8 @@ function AuthLoginIsland() {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-card auth-card-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "auth-header", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-icon", children: /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plane-departure", "aria-hidden": true }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: "Bem-vindo ao SGTUR" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Sistema de Gerenciamento de Turismo" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: `Bem-vindo ao ${SYSTEM_NAME}` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { children: "Sistema de Gerenciamento de Vendas para Turismo" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "auth-subtitle", children: "Use seu e-mail e senha para acessar ou faça seu cadastro" })
     ] }),
     mensagem && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `alert alert-${mensagem.tipo}`, style: { marginBottom: 12 }, children: mensagem.texto }),
@@ -216,7 +216,8 @@ function AuthLoginIsland() {
 }
 
 const $$Login = createComponent(($$result, $$props, $$slots) => {
-  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>Login - SGTUR</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthLoginIsland", AuthLoginIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthLoginIsland.tsx", "client:component-export": "default" })} </body></html>`;
+  const pageTitle = `Login - ${SYSTEM_NAME}`;
+  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthLoginIsland", AuthLoginIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthLoginIsland.tsx", "client:component-export": "default" })} </body></html>`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/login.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/login.astro";

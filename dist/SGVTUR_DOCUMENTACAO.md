@@ -1,6 +1,6 @@
 
-# Documentação Geral do Sistema SGTUR  
-*Resumo dos módulos implementados, funcionalidades concluídas e pendências.*
+# Documentação Geral do Sistema SGVTUR - Sistema de Gerenciamento de Vendas para Turismo  
+*Resumo dos módulos implementados, funcionalidades concluídas e pendências do SGVTUR - Sistema de Gerenciamento de Vendas para Turismo.*
 
 ---
 
@@ -202,4 +202,4 @@
 
 ---
 
-*Gerado automaticamente — SGTUR Core System Documentation.*
+*Gerado automaticamente — SGVTUR - Sistema de Gerenciamento de Vendas para Turismo Core System Documentation.*

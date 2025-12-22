@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_BFfFlWsu.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../chunks/supabase_CtqDhMax.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_DgtdOcH4.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../chunks/usePermissao_ChD594_G.mjs';
-import { L as LoadingUsuarioContext } from '../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { u as usePermissao } from '../chunks/usePermissao_Cbgi1VF4.mjs';
+import { L as LoadingUsuarioContext } from '../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 function OrcamentosCadastroIsland({
   suppressLoadingMessage = false
@@ -25,9 +25,27 @@ function OrcamentosCadastroIsland({
   const [salvando, setSalvando] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
   const [sucesso, setSucesso] = reactExports.useState(null);
+  const [mostrarForm, setMostrarForm] = reactExports.useState(false);
   reactExports.useEffect(() => {
     carregarListas();
   }, []);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const abrir = () => setMostrarForm(true);
+    const fechar = () => setMostrarForm(false);
+    window.addEventListener("abrir-formulario-orcamento", abrir);
+    window.addEventListener("fechar-formulario-orcamento", fechar);
+    return () => {
+      window.removeEventListener("abrir-formulario-orcamento", abrir);
+      window.removeEventListener("fechar-formulario-orcamento", fechar);
+    };
+  }, []);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("formulario-orcamento-status", { detail: { aberto: mostrarForm } })
+    );
+  }, [mostrarForm]);
   async function carregarListas() {
     try {
       const [c, d, p] = await Promise.all([
@@ -42,6 +60,21 @@ function OrcamentosCadastroIsland({
       console.error(e);
       setErro("Erro ao carregar listas.");
     }
+  }
+  function limparFormularioOrcamento() {
+    setClienteId("");
+    setDestinoId("");
+    setProdutoId("");
+    setStatus("novo");
+    setValor("");
+    setDataViagem("");
+    setNotas("");
+    setErro(null);
+    setSucesso(null);
+  }
+  function fecharFormulario() {
+    limparFormularioOrcamento();
+    setMostrarForm(false);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -73,6 +106,7 @@ function OrcamentosCadastroIsland({
       setValor("");
       setDataViagem("");
       setNotas("");
+      setMostrarForm(false);
     } catch (e2) {
       console.error(e2);
       setErro("Erro ao salvar orçamento.");
@@ -84,6 +118,7 @@ function OrcamentosCadastroIsland({
     return suppressLoadingMessage ? null : /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" });
   }
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
+  if (!mostrarForm) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title font-semibold text-lg", children: "Novo Orçamento" }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error text-red-600 font-medium mb-2", children: erro }),
@@ -198,26 +233,8 @@ function OrcamentosCadastroIsland({
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : "Criar orçamento" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => {
-              setClienteId("");
-              setDestinoId("");
-              setProdutoId("");
-              setStatus("novo");
-              setValor("");
-              setDataViagem("");
-              setNotas("");
-              setErro(null);
-              setSucesso(null);
-            },
-            children: "Limpar"
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : "Salvar" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: fecharFormulario, disabled: salvando, children: "Cancelar" })
       ] })
     ] })
   ] });
@@ -235,7 +252,8 @@ function gerarNumeroVenda(data) {
 function OrcamentosConsultaIsland({
   suppressLoadingMessage = false
 }) {
-  const { ativo, loading: loadingPerm } = usePermissao("Vendas");
+  const { ativo, loading: loadingPerm, podeCriar } = usePermissao("Vendas");
+  const [formAberto, setFormAberto] = reactExports.useState(false);
   const [lista, setLista] = reactExports.useState([]);
   const [statusFiltro, setStatusFiltro] = reactExports.useState("");
   const [erro, setErro] = reactExports.useState(null);
@@ -300,6 +318,15 @@ function OrcamentosConsultaIsland({
   reactExports.useEffect(() => {
     carregar();
     carregarListas();
+  }, []);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event) => {
+      const custom = event;
+      setFormAberto(Boolean(custom?.detail?.aberto));
+    };
+    window.addEventListener("formulario-orcamento-status", handler);
+    return () => window.removeEventListener("formulario-orcamento-status", handler);
   }, []);
   reactExports.useEffect(() => {
     const handler = () => carregar();
@@ -801,16 +828,12 @@ function OrcamentosConsultaIsland({
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso ao módulo de Vendas bloqueado." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "page-header mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title font-semibold text-lg", children: "Orçamentos" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "page-subtitle text-slate-500", children: "Consulta rápida dos orçamentos cadastrados." })
-      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
           className: "grid w-full mt-3 gap-2 md:gap-3",
           style: {
-            gridTemplateColumns: "repeat(5, minmax(180px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             alignItems: "end"
           },
           children: [
@@ -876,7 +899,27 @@ function OrcamentosConsultaIsland({
                   onChange: (e) => setValorMax(e.target.value)
                 }
               )
-            ] })
+            ] }),
+            podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "form-group",
+                style: { display: "flex", flexDirection: "column", alignItems: "flex-start" },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { visibility: "hidden" }, children: "botão" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn btn-primary",
+                      onClick: () => window.dispatchEvent(new CustomEvent("abrir-formulario-orcamento")),
+                      disabled: formAberto,
+                      children: "Adicionar orçamento"
+                    }
+                  )
+                ]
+              }
+            )
           ]
         }
       ),

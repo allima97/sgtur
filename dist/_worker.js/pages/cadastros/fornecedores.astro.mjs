@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 const LOCALIZACAO_OPCOES = [
   { value: "brasil", label: "Brasil" },
@@ -51,6 +51,7 @@ function FornecedoresIsland() {
   const [salvando, setSalvando] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
   const [formError, setFormError] = reactExports.useState(null);
+  const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   reactExports.useEffect(() => {
     let isMounted = true;
     async function resolveCompany() {
@@ -111,6 +112,16 @@ function FornecedoresIsland() {
     if (form.localizacao === "brasil" && !form.cep.trim()) return "Informe o CEP.";
     return null;
   }
+  function abrirFormularioFornecedor() {
+    setForm(INITIAL_FORM);
+    setFormError(null);
+    setMostrarFormulario(true);
+  }
+  function fecharFormularioFornecedor() {
+    setForm(INITIAL_FORM);
+    setFormError(null);
+    setMostrarFormulario(false);
+  }
   const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
   async function salvarFornecedor() {
     if (!companyId) {
@@ -153,11 +164,23 @@ function FornecedoresIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Cadastros." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: "Fornecedores" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#94a3b8" }, children: "Cadastre parceiros nacionais e internacionais." })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12, padding: 16 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: "Fornecedores" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#94a3b8" }, children: "Cadastre parceiros nacionais e internacionais." })
+      ] }),
+      podeSalvar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "btn btn-primary",
+          onClick: abrirFormularioFornecedor,
+          disabled: mostrarFormulario,
+          children: "Adicionar fornecedor"
+        }
+      )
+    ] }),
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12, padding: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: "Novo fornecedor" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Localização" }),
@@ -343,16 +366,39 @@ function FornecedoresIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
         {
-          type: "button",
-          className: "btn btn-primary",
-          onClick: salvarFornecedor,
-          disabled: salvando || !podeSalvar,
-          children: salvando ? "Salvando..." : "Cadastrar fornecedor"
+          style: {
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            flexWrap: "wrap"
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-primary",
+                onClick: salvarFornecedor,
+                disabled: salvando || !podeSalvar,
+                children: salvando ? "Salvando..." : "Salvar fornecedor"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: fecharFormularioFornecedor,
+                disabled: salvando,
+                children: "Cancelar"
+              }
+            )
+          ]
         }
-      ) }),
+      ),
       formError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginTop: 8 }, children: formError })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 16 }, children: [

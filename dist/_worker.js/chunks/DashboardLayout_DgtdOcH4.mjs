@@ -1,9 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, a as createAstro, f as renderHead, e as renderComponent, r as renderSlot, d as renderTemplate } from './astro/server_C6IdV9ex.mjs';
 /* empty css                              */
-import { s as supabase, j as jsxRuntimeExports } from './supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports, S as SYSTEM_NAME } from './systemName_BQeIdnjR.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from './logs_D3Eb6w9w.mjs';
+import { r as registrarLog } from './logs_CDnMuknJ.mjs';
 
 var reactDom = {exports: {}};
 
@@ -627,7 +627,7 @@ function MenuIsland({ activePage }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     mobileControls,
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { id: sidebarId, className: `app-sidebar ${mobileOpen ? "open" : ""}`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sidebar-logo", children: "SGTUR" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sidebar-logo", children: SYSTEM_NAME }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sidebar-section-title", children: "Operação" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "sidebar-nav", children: [
@@ -921,7 +921,7 @@ const $$Astro = createAstro();
 const $$DashboardLayout = createComponent(($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
   Astro2.self = $$DashboardLayout;
-  const { title = "SGTUR", activePage = "" } = Astro2.props;
+  const { title = SYSTEM_NAME, activePage = "" } = Astro2.props;
   return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>${title}</title>${renderHead()}</head> <body> <div class="app-shell"> <!-- MENU DINÂMICO --> ${renderComponent($$result, "MenuIsland", MenuIsland, { "client:load": true, "activePage": activePage, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/MenuIsland.tsx", "client:component-export": "default" })} <!-- CONTEÚDO --> <main class="app-main"> ${renderSlot($$result, $$slots["default"])} </main> </div> </body></html>`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/layouts/DashboardLayout.astro", void 0);
 

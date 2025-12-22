@@ -1,5 +1,5 @@
-# Plano de Módulos do SGTUR
-Guia de tudo o que já foi construído, o que falta e melhores práticas para transformar o SGTUR em um sistema profissional de gestão para turismo.
+# Plano de Módulos do SGVTUR - Sistema de Gerenciamento de Vendas para Turismo
+Guia de tudo o que já foi construído, o que falta e melhores práticas para transformar o SGVTUR - Sistema de Gerenciamento de Vendas para Turismo em um sistema profissional de gestão para turismo.
 
 ---
 
@@ -10,7 +10,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
 - **Frontend**
   - [x] **Astro 4** (SSR + Islands)
   - [x] **React + TypeScript** nos islands
-  - [x] CSS utilitário próprio (padrão SGTUR: cards, tabelas, cores por módulo)
+  - [x] CSS utilitário próprio (padrão SGVTUR - Sistema de Gerenciamento de Vendas para Turismo: cards, tabelas, cores por módulo)
   - [x] **TailwindCSS** (configurado com `preflight` desativado para preservar o visual atual)
 - **Deploy / Infra**
   - [x] Cloudflare Pages + Functions (adapter `@astrojs/cloudflare`)
@@ -116,10 +116,14 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - CRUD completo
   - Campos:
     - tipo, regra_comissionamento (geral/diferenciado), soma_na_meta, ativo, nome
+    - `todas_as_cidades` (boolean) para marcar produtos globais que não precisam repetir cidade e deixam `cidade_id` nulo
   - Usado em vendas e comissionamento
 - Tecnologias:
   - `ProdutosIsland`
   - Integração com comissão (futuro já planejado)
+- Banco:
+  - Garantir `produtos.todas_as_cidades boolean DEFAULT false` e permitir `cidade_id` nulo para distinguir produtos globais de itens vinculados a uma cidade específica.
+  - Executar `database/migrations/20240722_add_todas_as_cidades_to_produtos.sql` para incluir o campo global e soltar a not-null em `cidade_id`.
 
 ---
 
@@ -187,6 +191,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
     ) u
     WHERE v.vendedor_id IS NULL;
     ```
+  - `destino_cidade_id uuid REFERENCES public.cidades(id)` para armazenar a cidade escolhida na venda, mesmo quando o produto é global; acompanhe com `database/migrations/20240722_add_destino_cidade_to_vendas.sql`.
 
 #### 2.4.2 Consulta de Vendas
 - Tabelas:
@@ -301,6 +306,7 @@ Guia de tudo o que já foi construído, o que falta e melhores práticas para tr
   - Feedback de sucesso/erro, origem dos dados (padrão vs banco), última atualização
   - Exibe “Última edição por” com base no `owner_user_id`
   - Logs: `parametros_sistema_salvos`
+  - O módulo de tipos agora centraliza regra/comissão; a lógica “Todas as cidades” foi movida para `cadastros/produtos`, então o toggle correspondente foi removido de `parametros/tipo-produtos`.
 - Tecnologias:
   - Island React (`ParametrosSistemaIsland`)
   - Supabase upsert + RLS
@@ -428,6 +434,7 @@ Tecnologias:
 - **Comissionamento (novo)**: página `/operacao/comissionamento` mostra KPIs de progresso e valores a receber, calcula comissão geral e por produto diferenciado com base em parâmetros, metas e recebíveis do período.
 - **Comissionamento & Produtos**:
   - Campos novos em `tipo_produtos`: `usa_meta_produto`, `meta_produto_valor`, `comissao_produto_meta_pct`, `descontar_meta_geral`, `exibe_kpi_comissao` (controla exibição dos KPIs por produto tanto na tela de Comissionamento quanto no Dashboard).
+  - A flag `disponivel_todas_cidades` foi removida de `tipo_produtos`; agora `produtos.todas_as_cidades` define se um serviço é global, deixando `cidade_id` nulo e obrigando as vendas a gravarem `destino_cidade_id` para o relatório.
   - Produtos diferenciados que `soma_na_meta = true` somam a comissão calculada na meta geral; detalhamento por produto segue como KPI individual.
 - **product_commission_rule**: correção no upsert para produtos diferenciados criando regra fixa automática quando faltar `rule_id` e garantindo persistência dos campos `fix_meta_*`.
 
@@ -443,6 +450,7 @@ Tecnologias:
 - Garantir no Supabase as colunas extras do perfil em `users`: `rg text`, `whatsapp text`, `cep text`, `endereco text`, `numero text`, `complemento text`.
 - Se `template_id` em `metas_vendedor` não for mais usado, avaliar remoção/ignorar nas consultas e policies.
 - Ajustar fechamento para, futuramente, ponderar comissão por produto usando `metas_vendedor_produto` (hoje usa apenas `meta_geral`).
+- Confirmar as colunas `produtos.todas_as_cidades` e `vendas.destino_cidade_id` no Supabase e aplicar as migrações `database/migrations/20240722_add_todas_as_cidades_to_produtos.sql` e `database/migrations/20240722_add_destino_cidade_to_vendas.sql`.
 
 **Dashboard (personalização)**
 - Dashboard Geral agora permite personalizar widgets por usuário (KPIs, vendas por destino/produto, timeline, orçamentos, aniversariantes) com ordem e visibilidade.
@@ -747,6 +755,7 @@ CREATE POLICY viagens_del ON public.viagens
 - Tailwind habilitado (preflight off):
   - Usar utilitários para responsividade (`flex`, `grid`, `gap`, `md:` etc.) sem mudar o tema atual.
   - Manter tokens CSS existentes para cores de módulo e cartões; Tailwind entra como complemento.
+- Alinhar filtros de busca (ex.: Vendas e Tipo de Produtos) com o botão de ação adjacente como ocorre no módulo de Orçamentos, mantendo a aparência padronizada do formulário (input + botão alineados).
 
 **Tecnologia sugerida:**
 - TailwindCSS para acelerar
@@ -793,9 +802,9 @@ CREATE POLICY viagens_del ON public.viagens
 
 ### 4.5 Checklist para não quebrar a lógica atual
 
-- **Banco alinhado**: `metas_vendedor_produto`, `orcamentos.vendedor_id`, `numero_venda`/`venda_criada` em `orcamentos`, `disponivel_todas_cidades` em `tipo_produtos`, `valor_taxas` em `vendas_recibos`, `cron_log_alertas` — garantir colunas e FKs existentes.
+- **Banco alinhado**: `metas_vendedor_produto`, `orcamentos.vendedor_id`, `numero_venda`/`venda_criada` em `orcamentos`, `produtos.todas_as_cidades`, `vendas.destino_cidade_id`, `valor_taxas` em `vendas_recibos`, `cron_log_alertas` — garantir colunas e FKs existentes.
 - **Parâmetros como fonte única**: `usar_taxas_na_meta` + `foco_valor` guiam tanto o atingimento de meta quanto a base de comissão (bruto x líquido).
-- **Produtos globais**: produtos marcados como “Disponível para todas as cidades” vêm de `tipo_produtos`; seleção de produtos não exige cadastro por cidade, mas a cidade da venda deve ser salva.
+- **Produtos globais**: a disponibilidade global agora é controlada por `produtos.todas_as_cidades` (cidade nula) e as vendas armazenam `destino_cidade_id`, de forma que se reutiliza o mesmo produto global para quaisquer cidades sem duplicar cadastros nem relacionar o produto à cidade escolhida.
 - **Orçamentos**: lista + KPIs com filtros em linha, tabela dentro de card, timeline de interações, alerta de follow-up, envio/compartilhamento e Kanban opcional; evento `orcamento-criado` deve disparar atualização; mensagens legíveis.
 - **UI padrão**: tabelas sempre em `card-base`, botões primários/secondary/light padronizados, espaçamentos consistentes (filtros, formulários e KPIs).
 
@@ -841,6 +850,7 @@ CREATE POLICY viagens_del ON public.viagens
   - `public/migration-orcamentos-vendedor.sql` → adiciona `orcamentos.vendedor_id` (FK `users`) e prepara policies.
   - `public/cron-log-alertas.sql` → cria tabela de auditoria `cron_log_alertas` (opcional, usada pelos crons).
   - (já mencionado) garantir `metas_vendedor_produto` e colunas extras de produto/usuário, se ainda não aplicados.
+  - As migrações `database/migrations/20240722_add_todas_as_cidades_to_produtos.sql` e `database/migrations/20240722_add_destino_cidade_to_vendas.sql` adicionam o flag global em `produtos` e o campo `destino_cidade_id` em `vendas`, respectivamente.
 - Env necessários para os crons:
   - Comum: `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` (ou específicos abaixo).
   - Orçamentos (`/api/cron-alerta-orcamentos`): `CRON_SECRET_ALERTAS` (fallback `CRON_SECRET`), `ALERTA_WEBHOOK_URL` ou `WEBHOOK_ALERTA_ORCAMENTOS` (opcional), `RESEND_API_KEY` + `ALERTA_FROM_EMAIL` (opcional), ou `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` (opcional).
@@ -852,10 +862,10 @@ CREATE POLICY viagens_del ON public.viagens
 Nota Importante ---> Será preciso fazer Cadastro de acompanhantes na viagem no cadastro de clientes (dados como NOME COMPLETO, CPF, RG, TELEFONE, GRAU DE PARENTENCO, ETC)
 
 
-Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGTUR**.
+Este documento pode ser mantido em `/documentacao/plano-modulos-sgtur.md` e atualizado conforme novas features forem entrando, servindo como **mapa mestre do projeto SGVTUR - Sistema de Gerenciamento de Vendas para Turismo**.
 ## 5. Planejamento de módulos ainda pendentes
 
-O SGTUR deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo segue o roadmap estratégico com subtítulos para cada grande bloco, prioridades (P1 = alta) e dependências principais.
+O SGVTUR - Sistema de Gerenciamento de Vendas para Turismo deve crescer até alcançar o conjunto mínimo esperado por grandes operadores como CVC, Decolar e Agaxtur. Abaixo segue o roadmap estratégico com subtítulos para cada grande bloco, prioridades (P1 = alta) e dependências principais.
 
 ### 5.1 Cadastros avançados (P1)
 - **Descrição:** Consolidar CRUDs completos para Clientes, Fornecedores, Tarifários, Serviços, Bloqueios, Aeroportos, Emissores, Promotores, Estoques de Bilhetes, Usuários, Tipos de Tarifa, Moedas, Cotações e Parametrizações.

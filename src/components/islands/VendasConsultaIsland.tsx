@@ -464,57 +464,60 @@ export default function VendasConsultaIsland() {
   // UI — LISTAGEM
   // ================================
   return (
-    <div className="vendas-consulta-page">
 
+    <div className="vendas-consulta-page">
       {/* BUSCA */}
       <div className="card-base mb-3">
         <div
           className="form-row"
           style={{
             marginTop: 8,
-            gridTemplateColumns: "1fr auto",
-            alignItems: "center",
+            display: "flex",
+            alignItems: "end",
+            gap: 16,
+            flexWrap: "wrap",
           }}
         >
-            <div className="form-group">
-              <label className="form-label">Buscar venda</label>
-              <input
-                className="form-input"
-                placeholder="Nome, destino ou ID..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-              {filtroLabel && (
-                <small style={{ color: "#64748b" }}>
-                  {filtroLabel} {userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""}
-                </small>
-              )}
-            </div>
-            {podeCriar && (
-              <div
-                className="form-group"
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: 8,
-                  marginBottom: 0,
-                  marginLeft: "auto",
-                  flexWrap: "nowrap",
-                  justifyContent: "flex-end",
-                  alignItems: "center",
-                  alignSelf: "center",
-                }}
-              >
-                <a
-                  className="btn btn-primary"
-                  href="/vendas/cadastro"
-                  style={{ textDecoration: "none" }}
-                >
-                  Nova venda
-                </a>
-              </div>
+          <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+            <label className="form-label">Buscar venda</label>
+            <input
+              className="form-input"
+              placeholder="Nome, destino ou ID..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+            {filtroLabel && (
+              <small style={{ color: "#64748b" }}>
+                {filtroLabel} {userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""}
+              </small>
             )}
           </div>
+          {podeCriar && (
+            <div
+              className="form-group"
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: 8,
+                marginBottom: 0,
+                marginLeft: "auto",
+                flexWrap: "nowrap",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                alignSelf: "center",
+                marginTop: -4,
+              }}
+            >
+              <a
+                className="btn btn-primary"
+                href="/vendas/cadastro"
+                style={{ textDecoration: "none" }}
+              >
+                Nova venda
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ERRO */}

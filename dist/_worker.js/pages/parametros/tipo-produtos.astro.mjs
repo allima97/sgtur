@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -37,9 +37,9 @@ function TipoProdutosIsland() {
     tipo: "",
     regra_comissionamento: "geral",
     soma_na_meta: true,
-    disponivel_todas_cidades: false,
     ativo: true
   });
+  const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   function handleChange(campo, valor) {
     setForm((prev) => {
       if (campo === "nome") {
@@ -90,7 +90,6 @@ function TipoProdutosIsland() {
       tipo: "",
       regra_comissionamento: "geral",
       soma_na_meta: true,
-      disponivel_todas_cidades: false,
       ativo: true
     });
     setUsaMetaProduto(false);
@@ -105,6 +104,16 @@ function TipoProdutosIsland() {
     setEditandoId(null);
     setErro(null);
   }
+  function abrirFormularioTipo() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+    setErro(null);
+  }
+  function fecharFormularioTipo() {
+    iniciarNovo();
+    setMostrarFormulario(false);
+    setErro(null);
+  }
   function iniciarEdicao(tipoProd) {
     setEditandoId(tipoProd.id);
     setForm({
@@ -112,7 +121,6 @@ function TipoProdutosIsland() {
       tipo: tipoProd.tipo || tipoProd.nome || "",
       regra_comissionamento: tipoProd.regra_comissionamento,
       soma_na_meta: tipoProd.soma_na_meta,
-      disponivel_todas_cidades: !!tipoProd.disponivel_todas_cidades,
       ativo: tipoProd.ativo
     });
     setUsaMetaProduto(!!tipoProd.usa_meta_produto);
@@ -139,6 +147,8 @@ function TipoProdutosIsland() {
     setFixSuperMeta(
       comissao.fix_super_meta !== null && comissao.fix_super_meta !== void 0 ? String(comissao.fix_super_meta) : ""
     );
+    setMostrarFormulario(true);
+    setErro(null);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -176,7 +186,6 @@ function TipoProdutosIsland() {
         tipo,
         regra_comissionamento: form.regra_comissionamento,
         soma_na_meta: form.soma_na_meta,
-        disponivel_todas_cidades: form.disponivel_todas_cidades,
         ativo: form.ativo,
         usa_meta_produto: usaMetaProduto,
         meta_produto_valor: usaMetaProduto ? metaProdValor : null,
@@ -269,7 +278,7 @@ function TipoProdutosIsland() {
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Parâmetros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "produtos-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome *" }),
@@ -320,22 +329,6 @@ function TipoProdutosIsland() {
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "Sim" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "0", children: "Não" })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Disponível para todas as cidades?" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-input",
-              value: form.disponivel_todas_cidades ? "1" : "0",
-              onChange: (e) => handleChange("disponivel_todas_cidades", e.target.value === "1"),
-              disabled: permissao === "view",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "0", children: "Não" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "Sim" })
               ]
             }
           )
@@ -508,22 +501,50 @@ function TipoProdutosIsland() {
         ] })
       ] }),
       permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "submit", children: editandoId ? "Salvar alterações" : "Adicionar tipo" }),
-        editandoId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: iniciarNovo, children: "Cancelar edição" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "submit", children: editandoId ? "Salvar alterações" : "Salvar tipo" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: fecharFormularioTipo, children: "Cancelar" })
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar tipo de produto" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          className: "form-input",
-          value: busca,
-          onChange: (e) => setBusca(e.target.value),
-          placeholder: "Digite parte do nome..."
-        }
-      )
-    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "form-row",
+        style: {
+          marginTop: 8,
+          gap: 8,
+          gridTemplateColumns: "minmax(220px, 1fr) auto",
+          alignItems: "end"
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { minWidth: 220 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar tipo de produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: busca,
+                onChange: (e) => setBusca(e.target.value),
+                placeholder: "Digite parte do nome...",
+                style: { width: "100%" }
+              }
+            )
+          ] }),
+          permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignItems: "flex-end" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { visibility: "hidden" }, children: "botão" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn btn-primary",
+                type: "button",
+                onClick: abrirFormularioTipo,
+                disabled: mostrarFormulario,
+                children: "Novo produto"
+              }
+            )
+          ] })
+        ]
+      }
+    ) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: erro }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -531,7 +552,6 @@ function TipoProdutosIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Regra" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Regra vinculada" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Soma meta" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Todas cidades" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
@@ -544,7 +564,6 @@ function TipoProdutosIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.regra_comissionamento }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtoRegraMap[p.id]?.rule_id ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-" : produtoRegraMap[p.id]?.fix_meta_atingida ? "Comissão fixa" : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.soma_na_meta ? "Sim" : "Não" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.disponivel_todas_cidades ? "Sim" : "Não" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { color: p.ativo ? "#22c55e" : "#ef4444" }, children: p.ativo ? "Ativo" : "Inativo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [

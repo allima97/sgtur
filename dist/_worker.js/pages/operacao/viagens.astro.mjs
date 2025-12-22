@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 const STATUS_OPCOES = [
   { value: "", label: "Todas" },
@@ -16,6 +16,14 @@ const STATUS_OPCOES = [
   { value: "concluida", label: "Concluída" },
   { value: "cancelada", label: "Cancelada" }
 ];
+const initialCadastroForm = {
+  origem: "",
+  destino: "",
+  data_inicio: "",
+  data_fim: "",
+  status: "planejada",
+  cliente_id: ""
+};
 function ViagensListaIsland() {
   const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
   const podeVer = permissao !== "none";
@@ -29,14 +37,7 @@ function ViagensListaIsland() {
   const [showForm, setShowForm] = reactExports.useState(false);
   const [formError, setFormError] = reactExports.useState(null);
   const [savingViagem, setSavingViagem] = reactExports.useState(false);
-  const [cadastroForm, setCadastroForm] = reactExports.useState({
-    origem: "",
-    destino: "",
-    data_inicio: "",
-    data_fim: "",
-    status: "planejada",
-    cliente_id: ""
-  });
+  const [cadastroForm, setCadastroForm] = reactExports.useState(() => ({ ...initialCadastroForm }));
   const [cidades, setCidades] = reactExports.useState([]);
   const [companyId, setCompanyId] = reactExports.useState(null);
   const [userId, setUserId] = reactExports.useState(null);
@@ -159,11 +160,25 @@ function ViagensListaIsland() {
       carregarSugestoes(term);
     }, 250);
   }
+  function resetCadastroForm() {
+    setCadastroForm({ ...initialCadastroForm });
+    setFormError(null);
+  }
+  function abrirFormularioViagem() {
+    resetCadastroForm();
+    setShowForm(true);
+  }
+  function fecharFormularioViagem() {
+    resetCadastroForm();
+    setShowForm(false);
+  }
   async function buscar() {
     try {
       setLoading(true);
       setErro(null);
-      let query = supabase.from("viagens").select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome)").order("data_inicio", { ascending: true });
+      let query = supabase.from("viagens").select(
+        "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo)"
+      ).order("data_inicio", { ascending: true });
       if (statusFiltro) {
         query = query.eq("status", statusFiltro);
       }
@@ -227,14 +242,7 @@ function ViagensListaIsland() {
       };
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
-      setCadastroForm({
-        origem: "",
-        destino: "",
-        data_inicio: "",
-        data_fim: "",
-        status: "planejada",
-        cliente_id: ""
-      });
+      resetCadastroForm();
       setShowForm(false);
       buscar();
     } catch (e) {
@@ -261,6 +269,7 @@ function ViagensListaIsland() {
       return da < db ? -1 : 1;
     });
   }, [viagens]);
+  const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
   if (loadingPerm) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   }
@@ -268,18 +277,6 @@ function ViagensListaIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Operação/Viagens." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-purple", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: [
-    podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: "Viagens" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          className: "btn btn-primary",
-          type: "button",
-          onClick: () => setShowForm((prev) => !prev),
-          children: showForm ? "Cancelar" : "Nova viagem"
-        }
-      )
-    ] }),
     showForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { padding: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "cidades-list", children: cidades.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "option",
@@ -386,22 +383,41 @@ function ViagensListaIsland() {
               ]
             }
           )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            className: "btn btn-primary",
-            type: "button",
-            onClick: criarViagem,
-            disabled: savingViagem,
-            children: savingViagem ? "Salvando..." : "Criar viagem"
-          }
-        ) })
+        ] })
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "form-row",
+          style: { marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn btn-primary",
+                type: "button",
+                onClick: criarViagem,
+                disabled: savingViagem,
+                children: savingViagem ? "Salvando..." : "Salvar"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn btn-light",
+                type: "button",
+                onClick: fecharFormularioViagem,
+                disabled: savingViagem,
+                children: "Cancelar"
+              }
+            )
+          ]
+        }
+      ),
       formError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red" }, children: formError })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 180px" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "select",
@@ -413,8 +429,8 @@ function ViagensListaIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início a partir de" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: compactDateFieldStyle, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Inicio" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -425,8 +441,8 @@ function ViagensListaIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início até" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: compactDateFieldStyle, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Final" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -437,7 +453,36 @@ function ViagensListaIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-light", type: "button", onClick: buscar, disabled: loading, children: loading ? "Atualizando..." : "Atualizar" }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "form-group",
+          style: {
+            display: "flex",
+            flexDirection: "row",
+            gap: 8,
+            marginBottom: 0,
+            marginLeft: "auto",
+            flexWrap: "nowrap",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            alignSelf: "center"
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-strong", type: "button", onClick: buscar, disabled: loading, children: loading ? "Atualizando..." : "Atualizar" }),
+            podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn btn-primary",
+                type: "button",
+                onClick: abrirFormularioViagem,
+                disabled: showForm,
+                children: "Nova viagem"
+              }
+            )
+          ]
+        }
+      )
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red" }, children: erro }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[760px]", children: [
@@ -461,7 +506,7 @@ function ViagensListaIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.origem || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.clientes?.nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.responsavel_user_id || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.responsavel?.nome_completo || v.responsavel_user_id || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: `/operacao/viagens/${v.id}`, children: "Abrir" }) })
         ] }, v.id))
       ] })

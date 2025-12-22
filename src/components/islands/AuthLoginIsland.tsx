@@ -140,7 +140,6 @@ export default function AuthLoginIsland() {
             <i className="fa-solid fa-plane-departure" aria-hidden />
           </div>
           <h1>{`Bem-vindo ao ${SYSTEM_NAME}`}</h1>
-          <h2>Sistema de Gerenciamento de Vendas para Turismo</h2>
           <p className="auth-subtitle">Use seu e-mail e senha para acessar ou faça seu cadastro</p>
         </div>
 

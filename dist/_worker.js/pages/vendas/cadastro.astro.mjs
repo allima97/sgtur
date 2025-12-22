@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_CtqDhMax.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -46,9 +46,7 @@ function VendasCadastroIsland() {
   const [clientes, setClientes] = reactExports.useState([]);
   const [cidades, setCidades] = reactExports.useState([]);
   const [produtos, setProdutos] = reactExports.useState([]);
-  const [tipos, setTipos] = reactExports.useState(
-    []
-  );
+  const [tipos, setTipos] = reactExports.useState([]);
   const [formVenda, setFormVenda] = reactExports.useState(initialVenda);
   const [recibos, setRecibos] = reactExports.useState([]);
   const [editId, setEditId] = reactExports.useState(null);
@@ -73,21 +71,17 @@ function VendasCadastroIsland() {
       const [c, d, p, tiposResp] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
         supabase.from("cidades").select("id, nome").order("nome"),
-        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").order("nome"),
-        supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades")
+        supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").order("nome"),
+        supabase.from("tipo_produtos").select("id, nome")
       ]);
       setClientes(c.data || []);
       const cidadesLista = d.data || [];
       setCidades(cidadesLista);
       const tiposLista = tiposResp.data || [];
-      const tiposMap = new Map(tiposLista.map((t) => [t.id, t]));
-      const produtosLista = (p.data || []).map((prod) => {
-        const tipoInfo = prod.tipo_produtos;
-        return {
-          ...prod,
-          tipo_info: tipoInfo ? { disponivel_todas_cidades: tipoInfo.disponivel_todas_cidades } : tiposMap.has(prod.tipo_produto) ? { disponivel_todas_cidades: tiposMap.get(prod.tipo_produto || "")?.disponivel_todas_cidades } : void 0
-        };
-      });
+      const produtosLista = (p.data || []).map((prod) => ({
+        ...prod,
+        todas_as_cidades: prod.todas_as_cidades ?? false
+      }));
       setProdutos(produtosLista);
       setTipos(tiposLista);
       if (vendaId) {
@@ -104,15 +98,19 @@ function VendasCadastroIsland() {
   async function carregarVenda(id, cidadesBase, produtosBase, cidadePrefillParam) {
     try {
       setLoadingVenda(true);
-      const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, data_lancamento, data_embarque").eq("id", id).maybeSingle();
+      const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque").eq("id", id).maybeSingle();
       if (vendaErr) throw vendaErr;
       if (!vendaData) {
         setErro("Venda não encontrada para edição.");
         return;
       }
-      let cidadeId = "";
+      let cidadeId = vendaData.destino_cidade_id || "";
       let cidadeNome = "";
-      if (vendaData.destino_id) {
+      if (cidadeId) {
+        const lista = cidadesBase || cidades;
+        const cidadeSelecionada = lista.find((c) => c.id === cidadeId);
+        if (cidadeSelecionada) cidadeNome = cidadeSelecionada.nome;
+      } else if (vendaData.destino_id) {
         const { data: prodData } = await supabase.from("produtos").select("id, cidade_id").eq("id", vendaData.destino_id).maybeSingle();
         cidadeId = prodData?.cidade_id || "";
         const lista = cidadesBase || cidades;
@@ -140,7 +138,7 @@ function VendasCadastroIsland() {
         (recibosData || []).map((r) => ({
           id: r.id,
           produto_id: produtosLista.find((p) => {
-            const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
+            const ehGlobal = !!p.todas_as_cidades;
             return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
           })?.id || "",
           numero_recibo: r.numero_recibo || "",
@@ -224,44 +222,13 @@ function VendasCadastroIsland() {
     return cidades.filter((c) => normalizeText(c.nome).includes(t));
   }, [cidades, buscaDestino]);
   const produtosFiltrados = reactExports.useMemo(() => {
-    const globalTypes = tipos.filter((t2) => t2.disponivel_todas_cidades);
-    let base = [];
-    if (formVenda.destino_id) {
-      const baseProd = produtos.filter((p) => {
-        const ehGlobal = !!p.tipo_info?.disponivel_todas_cidades;
-        return ehGlobal || p.cidade_id === formVenda.destino_id;
-      });
-      const existentesTipo = new Set(
-        baseProd.filter((p) => p.cidade_id === formVenda.destino_id).map((p) => p.tipo_produto)
-      );
-      const virtuais = globalTypes.filter((t2) => !existentesTipo.has(t2.id)).map((t2) => ({
-        id: `virtual-${t2.id}`,
-        nome: t2.nome || "Produto global",
-        cidade_id: formVenda.destino_id,
-        tipo_produto: t2.id,
-        tipo_info: { disponivel_todas_cidades: true },
-        isVirtual: true
-      }));
-      base = [...baseProd, ...virtuais];
-    } else {
-      base = [
-        ...produtos.filter((p) => !!p.tipo_info?.disponivel_todas_cidades),
-        ...globalTypes.map((t2) => ({
-          id: `virtual-${t2.id}`,
-          nome: t2.nome || "Produto global",
-          cidade_id: null,
-          tipo_produto: t2.id,
-          tipo_info: { disponivel_todas_cidades: true },
-          isVirtual: true
-        }))
-      ];
-    }
+    const base = formVenda.destino_id ? produtos.filter((p) => p.todas_as_cidades || p.cidade_id === formVenda.destino_id) : produtos.filter((p) => p.todas_as_cidades);
     if (!buscaProduto.trim()) return base;
-    const t = normalizeText(buscaProduto);
-    return base.filter((c) => normalizeText(c.nome).includes(t));
-  }, [produtos, tipos, buscaProduto, formVenda.destino_id]);
+    const term = normalizeText(buscaProduto);
+    return base.filter((c) => normalizeText(c.nome).includes(term));
+  }, [produtos, buscaProduto, formVenda.destino_id]);
   const existeProdutoGlobal = reactExports.useMemo(
-    () => produtos.some((p) => p.tipo_info?.disponivel_todas_cidades),
+    () => produtos.some((p) => !!p.todas_as_cidades),
     [produtos]
   );
   const cidadeObrigatoria = reactExports.useMemo(() => recibos.length > 0, [recibos.length]);
@@ -302,7 +269,7 @@ function VendasCadastroIsland() {
     setRecibos(
       (prev) => prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades;
+        const ehGlobal = !!prod?.todas_as_cidades;
         if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
         return { ...r, produto_id: "" };
       })
@@ -378,7 +345,7 @@ function VendasCadastroIsland() {
       }
       const possuiProdutoLocal = recibos.some((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
-        const ehGlobal = !!prod?.tipo_info?.disponivel_todas_cidades || (r.produto_id || "").startsWith("virtual-");
+        const ehGlobal = !!prod?.todas_as_cidades || (r.produto_id || "").startsWith("virtual-");
         return prod?.cidade_id && !ehGlobal;
       });
       if (possuiProdutoLocal && !formVenda.destino_id) {
@@ -395,16 +362,63 @@ function VendasCadastroIsland() {
         if (!tipoId) throw new Error("Produto inválido. Selecione novamente.");
         const cidadeDestino = formVenda.destino_id;
         if (!cidadeDestino) throw new Error("Selecione a cidade de destino para usar produtos globais.");
-        const produtoDaCidade = produtos.find((p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino);
-        if (produtoDaCidade) return produtoDaCidade.id;
         const tipoInfo = tipos.find((t) => t.id === tipoId);
+        const isGlobalTipo = !!existente?.todas_as_cidades;
+        const produtoDaCidade = produtos.find(
+          (p) => p.tipo_produto === tipoId && p.cidade_id === cidadeDestino && !p.todas_as_cidades
+        );
+        if (produtoDaCidade) return produtoDaCidade.id;
+        if (isGlobalTipo) {
+          const produtoGlobal = produtos.find((p) => p.tipo_produto === tipoId && !!p.todas_as_cidades);
+          if (produtoGlobal) return produtoGlobal.id;
+          const { data: globalDb, error: globalErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").eq("tipo_produto", tipoId).eq("todas_as_cidades", true).limit(1).maybeSingle();
+          if (globalErr) throw globalErr;
+          if (globalDb?.id) {
+            setProdutos((prev) => {
+              if (prev.some((p) => p.id === globalDb.id)) return prev;
+              return [
+                ...prev,
+                {
+                  id: globalDb.id,
+                  nome: globalDb.nome,
+                  cidade_id: globalDb.cidade_id,
+                  tipo_produto: globalDb.tipo_produto,
+                  todas_as_cidades: !!globalDb.todas_as_cidades
+                }
+              ];
+            });
+            return globalDb.id;
+          }
+          throw new Error(
+            "Produto global selecionado não possui cadastro na tabela de Produtos; cadastre o serviço como global antes de continuar."
+          );
+        }
+        const { data: produtoLocal, error: produtoLocalErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").eq("tipo_produto", tipoId).eq("cidade_id", cidadeDestino).limit(1).maybeSingle();
+        if (produtoLocalErr) throw produtoLocalErr;
+        if (produtoLocal?.id) {
+          setProdutos((prev) => {
+            if (prev.some((p) => p.id === produtoLocal.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: produtoLocal.id,
+                nome: produtoLocal.nome,
+                cidade_id: produtoLocal.cidade_id,
+                tipo_produto: produtoLocal.tipo_produto,
+                todas_as_cidades: !!produtoLocal.todas_as_cidades
+              }
+            ];
+          });
+          return produtoLocal.id;
+        }
         const nomeProd = tipoInfo?.nome || "Produto";
         const { data: novo, error } = await supabase.from("produtos").insert({
           nome: nomeProd,
           destino: nomeProd,
           cidade_id: cidadeDestino,
           tipo_produto: tipoId,
-          ativo: true
+          ativo: true,
+          todas_as_cidades: false
         }).select("id").single();
         if (error) throw error;
         const novoId = novo?.id;
@@ -416,12 +430,12 @@ function VendasCadastroIsland() {
               nome: nomeProd,
               cidade_id: cidadeDestino,
               tipo_produto: tipoId,
-              tipo_info: { disponivel_todas_cidades: tipoInfo?.disponivel_todas_cidades }
+              todas_as_cidades: false
             }
           ]);
           return novoId;
         }
-        throw new Error("Não foi possível criar produto global.");
+        throw new Error("Não foi possível criar produto local.");
       }
       const produtoIdsResolvidos = [];
       for (const r of recibos) {
@@ -435,6 +449,7 @@ function VendasCadastroIsland() {
           cliente_id: formVenda.cliente_id,
           destino_id: produtoDestinoId,
           // FK para produtos
+          destino_cidade_id: formVenda.destino_id || null,
           data_lancamento: formVenda.data_lancamento,
           data_embarque: formVenda.data_embarque || null
         }).eq("id", editId);
@@ -479,6 +494,7 @@ function VendasCadastroIsland() {
           cliente_id: formVenda.cliente_id,
           destino_id: produtoDestinoId,
           // FK para produtos
+          destino_cidade_id: formVenda.destino_id || null,
           data_lancamento: formVenda.data_lancamento,
           data_embarque: formVenda.data_embarque || null
         }).select().single();

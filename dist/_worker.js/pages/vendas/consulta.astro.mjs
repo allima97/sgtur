@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_BFfFlWsu.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DgtdOcH4.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_CtqDhMax.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_D3Eb6w9w.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_ChD594_G.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_XbJI-A09.mjs';
+import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -83,6 +83,7 @@ function VendasConsultaIsland() {
           vendedor_id,
           cliente_id,
           destino_id,
+          destino_cidade_id,
           data_lancamento,
           data_embarque,
           clientes(nome),
@@ -98,7 +99,7 @@ function VendasConsultaIsland() {
       if (error) throw error;
       const cidadeIds = Array.from(
         new Set(
-          (vendasData || []).map((row) => row.destinos?.cidade_id).filter((id) => Boolean(id))
+          (vendasData || []).map((row) => row.destino_cidade_id || row.destinos?.cidade_id).filter((id) => Boolean(id))
         )
       );
       let cidadesMap = {};
@@ -113,7 +114,7 @@ function VendasConsultaIsland() {
         }
       }
       const v = (vendasData || []).map((row) => {
-        const cidadeId = row.destinos?.cidade_id || "";
+        const cidadeId = row.destino_cidade_id || row.destinos?.cidade_id || "";
         return {
           id: row.id,
           vendedor_id: row.vendedor_id,
@@ -145,13 +146,13 @@ function VendasConsultaIsland() {
         let produtosLista = [];
         let tipoProdMap = {};
         if (produtoIds.length > 0) {
-          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, tipo_produtos(disponivel_todas_cidades)").in("tipo_produto", produtoIds);
+          const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("tipo_produto", produtoIds);
           if (!prodErr && produtosData) produtosLista = produtosData;
           else if (prodErr) console.error(prodErr);
-          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome, disponivel_todas_cidades").in("id", produtoIds);
+          const { data: tiposData, error: tipoErr } = await supabase.from("tipo_produtos").select("id, nome").in("id", produtoIds);
           if (!tipoErr && tiposData) {
             tipoProdMap = Object.fromEntries(
-              tiposData.map((t) => [t.id, { nome: t.nome || "Produto", disponivel_todas_cidades: t.disponivel_todas_cidades }])
+              tiposData.map((t) => [t.id, t.nome || "Produto"])
             );
           } else if (tipoErr) {
             console.error(tipoErr);
@@ -160,13 +161,13 @@ function VendasConsultaIsland() {
         const recibosEnriquecidos = (recibosData || []).map((r) => {
           const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
           const candidato = produtosLista.find((p) => {
-            const ehGlobal = !!p?.tipo_produtos?.disponivel_todas_cidades;
+            const ehGlobal = !!p?.todas_as_cidades;
             return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
           });
-          const tipoInfo = tipoProdMap[r.produto_id] || {};
+          const tipoNome = tipoProdMap[r.produto_id];
           return {
             ...r,
-            produto_nome: candidato?.nome || tipoInfo.nome || ""
+            produto_nome: candidato?.nome || tipoNome || ""
           };
         }) || [];
         setRecibos(recibosEnriquecidos);
@@ -285,26 +286,62 @@ function VendasConsultaIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Você não possui permissão para visualizar Vendas." }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "vendas-consulta-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 8 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar venda" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            className: "form-input",
-            placeholder: "Nome, destino ou ID...",
-            value: busca,
-            onChange: (e) => setBusca(e.target.value)
-          }
-        ),
-        filtroLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
-          filtroLabel,
-          " ",
-          userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""
-        ] })
-      ] }),
-      podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-primary", href: "/vendas/cadastro", children: "Nova venda" }) })
-    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "form-row",
+        style: {
+          marginTop: 8,
+          gridTemplateColumns: "1fr auto",
+          alignItems: "center"
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar venda" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Nome, destino ou ID...",
+                value: busca,
+                onChange: (e) => setBusca(e.target.value)
+              }
+            ),
+            filtroLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
+              filtroLabel,
+              " ",
+              userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""
+            ] })
+          ] }),
+          podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "form-group",
+              style: {
+                display: "flex",
+                flexDirection: "row",
+                gap: 8,
+                marginBottom: 0,
+                marginLeft: "auto",
+                flexWrap: "nowrap",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                alignSelf: "center"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "a",
+                {
+                  className: "btn btn-primary",
+                  href: "/vendas/cadastro",
+                  style: { textDecoration: "none" },
+                  children: "Nova venda"
+                }
+              )
+            }
+          )
+        ]
+      }
+    ) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", style: { maxHeight: "65vh", overflowY: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green min-w-[820px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { style: { position: "sticky", top: 0, zIndex: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
