@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
@@ -86,6 +86,9 @@ const permLevel = (p: NivelPermissao | undefined) => {
 };
 
 export default function MenuIsland({ activePage }) {
+  const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
+  const DEFAULT_LOGOUT_MINUTES =
+    Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
   const [userId, setUserId] = useState<string | null>(null);
   const [acessos, setAcessos] = useState<Record<string, NivelPermissao>>({});
   const [cacheLoaded, setCacheLoaded] = useState(false);
@@ -93,6 +96,14 @@ export default function MenuIsland({ activePage }) {
   const [userEmail, setUserEmail] = useState<string>("");
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const AUTO_LOGOUT_MS = DEFAULT_LOGOUT_MINUTES * 60 * 1000;
+  const WARNING_LEAD_TIME_MS = 60 * 1000;
+  const SESSION_EXTENSION_MS = 15 * 60 * 1000;
+  const [remainingMs, setRemainingMs] = useState(AUTO_LOGOUT_MS);
+  const deadlineRef = useRef(Date.now() + AUTO_LOGOUT_MS);
 
   // Admin FINAL vindo do MESMO lugar do RLS (modulo_acesso)
   const isAdminFinal = Object.values(acessos).some((p) => p === "admin");
@@ -126,11 +137,90 @@ export default function MenuIsland({ activePage }) {
   }, [mobileOpen]);
 
   const toggleMobile = () => setMobileOpen((prev) => !prev);
-  const closeMobile = () => setMobileOpen(false);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
+
+  const executarLogout = useCallback(
+    async (mostrarFeedback = true) => {
+      if (mostrarFeedback) setSaindo(true);
+      setShowWarning(false);
+      closeMobile();
+      try {
+        await logoutUsuario();
+      } finally {
+        if (mostrarFeedback) setSaindo(false);
+      }
+    },
+    [closeMobile, setSaindo]
+  );
 
   const handleNavClick = () => {
     if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
   };
+
+  const clearTimers = useCallback(() => {
+    if (logoutTimeoutRef.current) {
+      window.clearTimeout(logoutTimeoutRef.current);
+      logoutTimeoutRef.current = null;
+    }
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleTimers = useCallback(
+    (durationMs = AUTO_LOGOUT_MS) => {
+      setShowWarning(false);
+      clearTimers();
+    deadlineRef.current = Date.now() + durationMs;
+    setRemainingMs(durationMs);
+    logoutTimeoutRef.current = window.setTimeout(() => executarLogout(false), durationMs);
+      const warningDelay = Math.max(durationMs - WARNING_LEAD_TIME_MS, 0);
+      warningTimeoutRef.current = window.setTimeout(() => setShowWarning(true), warningDelay);
+    },
+    [AUTO_LOGOUT_MS, WARNING_LEAD_TIME_MS, clearTimers, executarLogout]
+  );
+
+  const handleExtendSession = () => {
+    scheduleTimers(SESSION_EXTENSION_MS);
+  };
+
+  const handleActivity = useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+    scheduleTimers();
+  }, [scheduleTimers]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    scheduleTimers();
+    const eventosAtividade = ["mousedown", "keydown", "scroll", "touchstart"];
+    eventosAtividade.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+
+    return () => {
+      eventosAtividade.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      clearTimers();
+      setShowWarning(false);
+    };
+  }, [handleActivity, scheduleTimers, mounted, clearTimers]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const diff = Math.max(0, (deadlineRef.current || Date.now()) - Date.now());
+      setRemainingMs(diff);
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const totalSeconds = Math.ceil(Math.max(0, remainingMs) / 1000);
+  const displayMinutes = Math.floor(totalSeconds / 60);
+  const displaySeconds = totalSeconds % 60;
+  const countdownLabel =
+    displayMinutes > 0
+      ? `${displayMinutes}m ${displaySeconds.toString().padStart(2, "0")}s`
+      : `${displaySeconds}s`;
 
   // monta mapa {modulo: permissao} pegando SEMPRE a maior permissão se houver duplicata
   function setPerm(perms: Record<string, NivelPermissao>, key: string, perm: NivelPermissao) {
@@ -233,10 +323,7 @@ export default function MenuIsland({ activePage }) {
   }, []);
 
   async function handleLogout() {
-    setSaindo(true);
-    closeMobile();
-    await logoutUsuario();
-    setSaindo(false);
+    await executarLogout(true);
   }
 
   // verifica permissão mínima no módulo (string já do banco)
@@ -584,7 +671,72 @@ export default function MenuIsland({ activePage }) {
             </li>
           </ul>
         </div>
+
       </aside>
+      <div
+        aria-live="polite"
+        style={{
+          position: "fixed",
+          top: 12,
+          right: 16,
+          zIndex: 950,
+          backgroundColor: "rgba(248, 250, 252, 0.85)",
+          borderRadius: 999,
+          padding: "4px 12px",
+          border: "1px solid rgba(148, 163, 184, 0.6)",
+          fontSize: "0.75rem",
+          color: "#0f172a",
+          backdropFilter: "blur(6px)",
+          boxShadow: "0 10px 30px rgba(15,23,42,0.25)",
+        }}
+      >
+        Sessão ativa • {countdownLabel}
+      </div>
+      {showWarning && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            zIndex: 9999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 12,
+              padding: "24px 32px",
+              boxShadow: "0 30px 60px rgba(15,23,42,0.35)",
+              maxWidth: 420,
+              width: "100%",
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 12 }}>Sessão quase expirando</h3>
+            <p style={{ marginTop: 0, marginBottom: 20 }}>
+              Sua sessão será encerrada automaticamente em 1 minuto por inatividade. Clique em
+              “Continuar Logado” para ganhar mais 15 minutos sem perder o progresso.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" className="btn btn-primary" onClick={handleExtendSession}>
+                Continuar Logado
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => executarLogout(true)}
+              >
+                Sair agora
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
