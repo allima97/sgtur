@@ -90,6 +90,7 @@ export default function ClientesIsland() {
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -156,6 +157,39 @@ export default function ClientesIsland() {
     numero_venda: string | null;
   } | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function resolveCompany() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sessionUser = sessionData?.session?.user;
+        const user =
+          sessionUser || (await supabase.auth.getUser()).data?.user || null;
+        if (!user || !isMounted) return;
+
+        const { data, error } = await supabase
+          .from("users")
+          .select("company_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!isMounted) return;
+        if (error) {
+          console.error("Erro ao buscar company_id dos clientes:", error);
+          return;
+        }
+        setCompanyId(data?.company_id || null);
+      } catch (error) {
+        console.error("Erro ao determinar company_id dos clientes:", error);
+      }
+    }
+
+    resolveCompany();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Acompanhantes
   const [acompanhantes, setAcompanhantes] = useState<Acompanhante[]>([]);
   const [acompLoading, setAcompLoading] = useState(false);
@@ -178,7 +212,7 @@ export default function ClientesIsland() {
   // CARREGAR CLIENTES
   // =====================================
   async function carregar() {
-    if (!podeVer) return;
+    if (!podeVer || !companyId) return;
 
     try {
       setLoading(true);
@@ -187,6 +221,7 @@ export default function ClientesIsland() {
       const { data, error } = await supabase
         .from("clientes")
         .select("*, company_id")
+        .eq("company_id", companyId)
         .order("nome", { ascending: true });
 
       if (error) throw error;
@@ -196,15 +231,17 @@ export default function ClientesIsland() {
       setAcompErro(null);
     } catch (e) {
       console.error(e);
-    setErro("Erro ao carregar clientes.");
-  } finally {
-    setLoading(false);
+      setErro("Erro ao carregar clientes.");
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   useEffect(() => {
-    if (!loadPerm && podeVer) carregar();
-  }, [loadPerm, podeVer]);
+    if (!loadPerm && podeVer && companyId) {
+      carregar();
+    }
+  }, [loadPerm, podeVer, companyId]);
 
   // =====================================
   // FILTRO
@@ -750,6 +787,8 @@ export default function ClientesIsland() {
         (payload as any).company_id = trimmedCompanyId;
       } else if (historicoCliente?.company_id) {
         (payload as any).company_id = historicoCliente.company_id;
+      } else if (companyId) {
+        (payload as any).company_id = companyId;
       }
 
       if (editId) {
