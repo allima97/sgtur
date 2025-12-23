@@ -355,7 +355,7 @@ export default function MenuIsland({ activePage }) {
       name: "Fornecedores",
       href: "/cadastros/fornecedores",
       active: "fornecedores",
-      icon: "🎧",
+      icon: "🌐",
       label: "Fornecedores",
     },
   ];
