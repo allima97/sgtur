@@ -584,6 +584,16 @@ export default function MenuIsland({ activePage }) {
 
               <li>
                 <a
+                  className={`sidebar-link ${activePage === "parametros-cambios" ? "active" : ""}`}
+                  href="/parametros/cambios"
+                  onClick={handleNavClick}
+                >
+                  <span>💱</span>Câmbios
+                </a>
+              </li>
+
+              <li>
+                <a
                   className={`sidebar-link ${activePage === "regras-comissao" ? "active" : ""}`}
                   href="/parametros/regras-comissao"
                   onClick={handleNavClick}

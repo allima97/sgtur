@@ -370,6 +370,14 @@ body {
   text-align: center;
 }
 
+.th-actions .action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
 /* Utilities */
 .mt-2 { margin-top: 8px; }
 .mb-2 { margin-bottom: 8px; }

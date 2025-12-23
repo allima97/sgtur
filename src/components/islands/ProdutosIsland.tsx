@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
@@ -43,6 +43,87 @@ function nivelPrecoLabel(value?: string | null) {
   return match ? match.label : value;
 }
 
+function normalizeNumericInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const allowed = trimmed.replace(/[^\d.,-]/g, "");
+  if (!allowed) return null;
+
+  const hasComma = allowed.includes(",");
+  const hasDot = allowed.includes(".");
+
+  let normalized = allowed;
+
+  if ((hasComma && hasDot) || (hasComma && !hasDot)) {
+    normalized = allowed.replace(/\./g, "").replace(",", ".");
+  } else if (hasDot) {
+    const dotCount = (allowed.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      normalized = allowed.replace(/\./g, "");
+    } else {
+      const parts = allowed.split(".");
+      if (parts[1]?.length !== 2) {
+        normalized = allowed.replace(/\./g, "");
+      }
+    }
+  }
+
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parseDecimalInput(value?: string | null) {
+  if (!value) return null;
+  const num = normalizeNumericInput(value);
+  return num;
+}
+
+function parsePercentInput(value?: string | null) {
+  if (!value) return null;
+  const cleaned = value.replace("%", "").trim();
+  const num = parseDecimalInput(cleaned);
+  if (num == null) return null;
+  if (num > 1) {
+    return num / 100;
+  }
+  return num;
+}
+
+function formatMarginPercent(value?: number | null) {
+  if (value == null || Number.isNaN(value)) return "-";
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function calcularValorVendaString(valorNeto?: string, margem?: string) {
+  const net = parseDecimalInput(valorNeto);
+  const margin = parsePercentInput(margem);
+  if (net == null || margin == null) return "";
+  if (margin >= 1) return "";
+  const sale = net / (1 - margin);
+  if (!Number.isFinite(sale)) return "";
+  return sale.toFixed(2);
+}
+
+function formatValorComMoeda(value?: number | null, moeda?: string) {
+  if (value == null || Number.isNaN(value)) return "-";
+  const formatted = value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${moeda || "R$"} ${formatted}`;
+}
+
+function formatDecimal(value?: number | null, digits = 4) {
+  if (value == null || Number.isNaN(value)) return "-";
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: Math.min(2, digits),
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatNumberPtBr(value?: number | null) {
+  if (value == null || Number.isNaN(value)) return "";
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 type Produto = {
   id: string;
   nome: string;
@@ -59,6 +140,12 @@ type Produto = {
   fornecedor_id?: string | null;
   created_at: string | null;
   todas_as_cidades: boolean;
+  valor_neto?: number | null;
+  margem?: number | null;
+  valor_venda?: number | null;
+  moeda?: string | null;
+  cambio?: number | null;
+  valor_em_reais?: number | null;
 };
 
 type FornecedorOption = { id: string; nome_completo: string | null; nome_fantasia: string | null };
@@ -83,6 +170,18 @@ type FormState = {
   fornecedor_id: string;
   fornecedor_label: string;
   todas_as_cidades: boolean;
+  valor_neto: string;
+  margem: string;
+  valor_venda: string;
+  moeda: string;
+  cambio: string;
+  valor_em_reais: string;
+};
+
+type CambioParametro = {
+  moeda: string;
+  data: string;
+  valor: number | null;
 };
 
 const initialForm: FormState = {
@@ -100,6 +199,12 @@ const initialForm: FormState = {
   fornecedor_id: "",
   fornecedor_label: "",
   todas_as_cidades: false,
+  valor_neto: "",
+  margem: "",
+  valor_venda: "",
+  moeda: "R$",
+  cambio: "",
+  valor_em_reais: "",
 };
 
 export default function ProdutosIsland() {
@@ -127,6 +232,9 @@ export default function ProdutosIsland() {
   const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
+  const [cambiosParametros, setCambiosParametros] = useState<CambioParametro[]>([]);
+  const [ultimaMoedaAuto, setUltimaMoedaAuto] = useState<string | null>(null);
+  const [ultimoValorAuto, setUltimoValorAuto] = useState<string>("");
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -160,7 +268,7 @@ export default function ProdutosIsland() {
         supabase
           .from("produtos")
         .select(
-          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades"
+          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades, valor_neto, margem, valor_venda, moeda, cambio, valor_em_reais"
         )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
@@ -333,6 +441,40 @@ export default function ProdutosIsland() {
   }, [companyId]);
 
   useEffect(() => {
+    if (!companyId) {
+      setCambiosParametros([]);
+      setUltimaMoedaAuto(null);
+      setUltimoValorAuto("");
+      return;
+    }
+
+    let isActive = true;
+
+    async function carregarCambios() {
+      const { data, error } = await supabase
+        .from("parametros_cambios")
+        .select("moeda, data, valor")
+        .eq("company_id", companyId)
+        .order("data", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (!isActive) return;
+      if (error) {
+        console.error("Erro ao carregar câmbios:", error);
+        return;
+      }
+      setCambiosParametros((data || []) as CambioParametro[]);
+      setUltimaMoedaAuto(null);
+      setUltimoValorAuto("");
+    }
+
+    carregarCambios();
+
+    return () => {
+      isActive = false;
+    };
+  }, [companyId]);
+
+  useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarDados(true);
     }
@@ -394,6 +536,19 @@ export default function ProdutosIsland() {
     );
   }, [busca, produtosEnriquecidos]);
 
+  const cambioAtualPorMoeda = useMemo(() => {
+    const mapa: Record<string, { valor: number; data: string }> = {};
+    cambiosParametros.forEach((cambio) => {
+      const key = (cambio.moeda || "R$").trim();
+      if (!key || cambio.valor == null) return;
+      const existente = mapa[key];
+      if (!existente || cambio.data > existente.data) {
+        mapa[key] = { valor: cambio.valor, data: cambio.data };
+      }
+    });
+    return mapa;
+  }, [cambiosParametros]);
+
   const estaEditando = Boolean(editandoId);
   const formLayout = estaEditando
     ? "full"
@@ -404,12 +559,47 @@ export default function ProdutosIsland() {
     : "full";
   const isGlobalMode = formLayout === "global";
 
-  function handleChange<K extends keyof FormState>(campo: K, valor: FormState[K]) {
-    setForm((prev) => ({
-      ...prev,
-      [campo]: valor,
-    }));
-  }
+  const handleChange = useCallback(<K extends keyof FormState>(campo: K, valor: FormState[K]) => {
+    setForm((prev) => {
+      const atualizado = { ...prev, [campo]: valor };
+      if (campo === "valor_neto" || campo === "margem") {
+        const valorNeto = campo === "valor_neto" ? (valor as string) : prev.valor_neto;
+        const margem = campo === "margem" ? (valor as string) : prev.margem;
+        atualizado.valor_venda = calcularValorVendaString(valorNeto, margem);
+      }
+      const valorVendaNum = parseDecimalInput(atualizado.valor_venda);
+      const cambioNum = parseDecimalInput(atualizado.cambio);
+      if (valorVendaNum != null && cambioNum != null) {
+        const valorReais = valorVendaNum * cambioNum;
+        atualizado.valor_em_reais = formatNumberPtBr(valorReais);
+      } else {
+        atualizado.valor_em_reais = "";
+      }
+      return atualizado;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!form.moeda) return;
+    const entrada = cambioAtualPorMoeda[form.moeda];
+    if (!entrada) return;
+    const formatted = entrada.valor.toFixed(2);
+    const deveAtualizar =
+      !form.cambio ||
+      ultimaMoedaAuto !== form.moeda ||
+      (form.cambio === ultimoValorAuto && ultimoValorAuto !== formatted);
+    if (!deveAtualizar) return;
+    handleChange("cambio", formatted);
+    setUltimaMoedaAuto(form.moeda);
+    setUltimoValorAuto(formatted);
+  }, [
+    form.moeda,
+    cambioAtualPorMoeda,
+    form.cambio,
+    ultimaMoedaAuto,
+    ultimoValorAuto,
+    handleChange,
+  ]);
 
   function handleCidadeBusca(valor: string) {
     if (form.todas_as_cidades) return;
@@ -456,6 +646,8 @@ export default function ProdutosIsland() {
 
   function iniciarNovo() {
     setForm(initialForm);
+    setUltimaMoedaAuto(null);
+    setUltimoValorAuto("");
     setEditandoId(null);
     setErro(null);
     setCidadeBusca("");
@@ -484,7 +676,16 @@ export default function ProdutosIsland() {
         fornecedoresLista.find((f) => f.id === produto.fornecedor_id)
       ),
       todas_as_cidades: produto.todas_as_cidades ?? false,
+      valor_neto: produto.valor_neto != null ? produto.valor_neto.toFixed(2) : "",
+      margem:
+        produto.margem != null ? `${(produto.margem * 100).toFixed(2)}%` : "",
+      valor_venda: produto.valor_venda != null ? produto.valor_venda.toFixed(2) : "",
+      moeda: produto.moeda || "R$",
+      cambio: produto.cambio != null ? produto.cambio.toFixed(2) : "",
+      valor_em_reais: formatNumberPtBr(produto.valor_em_reais),
     });
+    setUltimaMoedaAuto(null);
+    setUltimoValorAuto("");
     setCidadeBusca(
       produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
     );
@@ -588,6 +789,12 @@ export default function ProdutosIsland() {
       const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const destinoNormalizado = titleCaseWithExceptions(form.destino);
 
+      const valorNetoNum = parseDecimalInput(form.valor_neto);
+      const margemNum = parsePercentInput(form.margem);
+      const valorVendaNum = parseDecimalInput(form.valor_venda);
+      const cambioNum = parseDecimalInput(form.cambio);
+      const valorEmReaisNum = parseDecimalInput(form.valor_em_reais);
+
       const payload = {
         nome: nomeNormalizado,
         destino: destinoNormalizado,
@@ -602,6 +809,12 @@ export default function ProdutosIsland() {
         ativo: form.ativo,
         fornecedor_id: form.fornecedor_id || null,
         todas_as_cidades: form.todas_as_cidades,
+        valor_neto: valorNetoNum,
+        margem: margemNum,
+        valor_venda: valorVendaNum,
+        moeda: form.moeda.trim() || null,
+        cambio: cambioNum,
+        valor_em_reais: valorEmReaisNum,
       };
 
       if (editandoId) {
@@ -876,10 +1089,10 @@ export default function ProdutosIsland() {
                 </div>
               </div>
             )}
-            <div className="form-row" style={{ marginTop: 12 }}>
-              {!isGlobalMode && (
-                <div className="form-group">
-                  <label className="form-label">Duracao sugerida</label>
+            <div className="form-row" style={{ marginTop: 12 }}>
+              {!isGlobalMode && (
+                <div className="form-group">
+                  <label className="form-label">Duracao sugerida</label>
                   <select
                     className="form-select"
                     value={form.duracao_sugerida}
@@ -922,10 +1135,82 @@ export default function ProdutosIsland() {
                     disabled={permissao === "view"}
                   />
                 </div>
-              )}
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Informacoes importantes</label>
+              )}
+            </div>
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Moeda</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  list="moeda-sugestoes"
+                  value={form.moeda}
+                  onChange={(e) => handleChange("moeda", e.target.value)}
+                  disabled={permissao === "view"}
+                />
+                <datalist id="moeda-sugestoes">
+                  <option value="R$" />
+                  <option value="USD" />
+                  <option value="EUR" />
+                </datalist>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Valor Neto / Moeda Local</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Ex: 1000"
+                  value={form.valor_neto}
+                  onChange={(e) => handleChange("valor_neto", e.target.value)}
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Margem</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Ex: 0.80 (80%)"
+                  value={form.margem}
+                  onChange={(e) => handleChange("margem", e.target.value)}
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Valor Venda / Moeda Local</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={form.valor_venda}
+                  readOnly
+                  placeholder="Calculado automaticamente"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Câmbio</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  inputMode="decimal"
+                  placeholder="Atualizado automaticamente"
+                  value={form.cambio}
+                  onChange={(e) => handleChange("cambio", e.target.value)}
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Valor em R$</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  readOnly
+                  placeholder="Calculado automaticamente"
+                  value={form.valor_em_reais}
+                />
+              </div>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Informacoes importantes</label>
               <textarea
                 className="form-input"
                 rows={3}
@@ -978,6 +1263,11 @@ export default function ProdutosIsland() {
               <th>Cidade</th>
               <th>Fornecedor</th>
               <th>Nivel de preco</th>
+              <th>Valor Neto</th>
+              <th>Margem</th>
+              <th>Valor Venda</th>
+              <th>Câmbio</th>
+              <th>Valor em R$</th>
               <th>Ativo</th>
               <th>Criado em</th>
               <th className="th-actions">Acoes</th>
@@ -986,13 +1276,13 @@ export default function ProdutosIsland() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8}>Carregando produtos...</td>
+                <td colSpan={13}>Carregando produtos...</td>
               </tr>
             )}
 
             {!loading && produtosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={8}>Nenhum produto encontrado.</td>
+                <td colSpan={13}>Nenhum produto encontrado.</td>
               </tr>
             )}
 
@@ -1004,25 +1294,32 @@ export default function ProdutosIsland() {
                   <td>{(p as any).cidade_nome || "-"}</td>
                   <td>{p.fornecedor_nome || "-"}</td>
                   <td>{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
+                  <td>{formatValorComMoeda(p.valor_neto, p.moeda || undefined)}</td>
+                  <td>{formatMarginPercent(p.margem)}</td>
+                  <td>{formatValorComMoeda(p.valor_venda, p.moeda || undefined)}</td>
+                  <td>{formatDecimal(p.cambio)}</td>
+                  <td>{formatValorComMoeda(p.valor_em_reais, "R$")}</td>
                   <td>{p.ativo ? "Sim" : "Nao"}</td>
                   <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">
-                    {permissao !== "view" && (
-                      <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
-                        ✏️
-                      </button>
-                    )}
+                    <div className="action-buttons">
+                      {permissao !== "view" && (
+                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
+                          ✏️
+                        </button>
+                      )}
 
-                    {(permissao === "admin" || permissao === "delete") && (
-                      <button
-                        className="btn-icon btn-danger"
-                        title="Excluir"
-                        onClick={() => excluir(p.id)}
-                        disabled={excluindoId === p.id}
-                      >
-                        {excluindoId === p.id ? "..." : "🗑️"}
-                      </button>
-                    )}
+                      {(permissao === "admin" || permissao === "delete") && (
+                        <button
+                          className="btn-icon btn-danger"
+                          title="Excluir"
+                          onClick={() => excluir(p.id)}
+                          disabled={excluindoId === p.id}
+                        >
+                          {excluindoId === p.id ? "..." : "🗑️"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

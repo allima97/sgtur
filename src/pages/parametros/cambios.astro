@@ -1,0 +1,15 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import ParametrosCambiosIsland from "../../components/islands/ParametrosCambiosIsland.tsx";
+
+const activePage = "parametros-cambios";
+---
+
+<DashboardLayout title="Câmbios" {activePage}>
+  <h1 class="page-title">Câmbios</h1>
+  <p class="page-subtitle">
+    Insira os valores de câmbio utilizados pela empresa para calcular as equivalências em reais.
+  </p>
+  <ParametrosCambiosIsland client:load />
+</DashboardLayout>
