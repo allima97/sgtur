@@ -52,6 +52,7 @@ type ViagemDetalhe = {
   origem: string | null;
   destino: string | null;
   responsavel_user_id: string | null;
+  responsavel?: { nome_completo?: string | null } | null;
   observacoes: string | null;
   venda?: { id: string; cliente_id: string | null; clientes?: { nome?: string | null } | null } | null;
   orcamento?: { id: string; cliente_id: string | null; clientes?: { nome?: string | null } | null } | null;
@@ -65,6 +66,15 @@ interface Props {
 }
 
 const STORAGE_BUCKET = "viagens";
+
+function sanitizeFileName(filename: string) {
+  return filename
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
 
 export default function DossieViagemIsland({ viagemId }: Props) {
   const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
@@ -139,6 +149,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           origem,
           destino,
           responsavel_user_id,
+          responsavel:users!responsavel_user_id (
+            nome_completo
+          ),
           observacoes,
           venda:vendas (
             id,
@@ -401,11 +414,15 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     try {
       setSavingDoc(true);
       setErro(null);
-      const path = `${viagem.id}/${Date.now()}-${docFile.name}`;
+      const safeName = sanitizeFileName(docFile.name);
+      const path = `${viagem.id}/${Date.now()}-${safeName}`;
       const { data: uploadData, error: uploadErr } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(path, docFile, {
+          cacheControl: "3600",
           upsert: false,
+          contentType: docFile.type || undefined,
+          metadata: { mimetype: docFile.type || "application/octet-stream" },
         });
       if (uploadErr) throw uploadErr;
       const publicUrl =
@@ -429,7 +446,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       await carregar();
     } catch (e) {
       console.error(e);
-      setErro("Erro ao salvar documento. Verifique se o bucket de Storage existe e é público.");
+      const message =
+        e instanceof Error
+          ? e.message
+          : "Erro ao salvar documento. Verifique se o bucket de Storage existe e é público.";
+      setErro(message);
     } finally {
       setSavingDoc(false);
     }
@@ -457,11 +478,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
   return (
     <div className="card-base card-purple">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ fontSize: 14, color: "#94a3b8" }}>ID</div>
-          <div style={{ fontWeight: 600 }}>{viagemId}</div>
-        </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <div style={{ display: "flex", gap: 8 }}>
           <a className="btn btn-light" href="/operacao/viagens">
             Voltar
@@ -511,7 +528,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               </div>
               <div className="form-group">
                 <label className="form-label">Responsável</label>
-                <div>{viagem.responsavel_user_id || "-"}</div>
+                <div>{viagem.responsavel?.nome_completo || viagem.responsavel_user_id || "-"}</div>
               </div>
             </div>
             <div className="form-group">

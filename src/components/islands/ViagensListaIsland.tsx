@@ -35,7 +35,7 @@ const initialCadastroForm = {
 };
 
 export default function ViagensListaIsland() {
-  const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
+  const { permissao, loading: loadingPerm, ativo, podeExcluir, podeEditar } = usePermissao("Operacao");
   const podeVer = permissao !== "none";
   const podeCriar =
     permissao === "create" ||
@@ -49,6 +49,7 @@ export default function ViagensListaIsland() {
   const [viagens, setViagens] = useState<Viagem[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [sucesso, setSucesso] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [savingViagem, setSavingViagem] = useState(false);
@@ -63,6 +64,7 @@ export default function ViagensListaIsland() {
   const [userId, setUserId] = useState<string | null>(null);
   const [clientes, setClientes] = useState<{ id: string; nome: string; cpf?: string | null }[]>([]);
   const [clientesErro, setClientesErro] = useState<string | null>(null);
+  const [deletandoViagemId, setDeletandoViagemId] = useState<string | null>(null);
   const [buscandoCidades, setBuscandoCidades] = useState(false);
   const [erroCidades, setErroCidades] = useState<string | null>(null);
   const cidadesAbort = useRef<AbortController | null>(null);
@@ -328,6 +330,30 @@ export default function ViagensListaIsland() {
     }
   }
 
+  async function excluirViagem(v: Viagem) {
+    if (!podeExcluir) return;
+    const confirmar = window.confirm("Tem certeza que deseja excluir esta viagem?");
+    if (!confirmar) return;
+    try {
+      setDeletandoViagemId(v.id);
+      setErro(null);
+      setSucesso(null);
+      const { error } = await supabase.from("viagens").delete().eq("id", v.id);
+      if (error) throw error;
+      setSucesso("Viagem excluída.");
+      await buscar();
+    } catch (err: unknown) {
+      console.error(err);
+      const message =
+        err && typeof err === "object" && "message" in err && typeof err.message === "string"
+          ? err.message
+          : "Erro ao excluir viagem.";
+      setErro(message);
+    } finally {
+      setDeletandoViagemId(null);
+    }
+  }
+
   const proximasViagens = useMemo(() => {
     return [...viagens].sort((a, b) => {
       const da = a.data_inicio || "";
@@ -339,6 +365,7 @@ export default function ViagensListaIsland() {
     });
   }, [viagens]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
+  const totalColunasTabela = 8;
 
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
@@ -536,6 +563,11 @@ export default function ViagensListaIsland() {
           </div>
 
         {erro && <div style={{ color: "red" }}>{erro}</div>}
+        {sucesso && (
+          <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
+            {sucesso}
+          </div>
+        )}
 
         <div className="table-container overflow-x-auto">
           <table className="table-default min-w-[760px]">
@@ -548,18 +580,18 @@ export default function ViagensListaIsland() {
                   <th>Destino</th>
                   <th>Cliente</th>
                   <th>Responsável</th>
-                  <th>Ver</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7}>Carregando viagens...</td>
+                  <td colSpan={totalColunasTabela}>Carregando viagens...</td>
                 </tr>
               )}
               {!loading && proximasViagens.length === 0 && (
                 <tr>
-                  <td colSpan={7}>Nenhuma viagem encontrada.</td>
+                  <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
                 </tr>
               )}
               {proximasViagens.map((v) => (
@@ -571,10 +603,36 @@ export default function ViagensListaIsland() {
                   <td>{v.destino || "-"}</td>
                   <td>{v.clientes?.nome || "-"}</td>
                   <td>{v.responsavel?.nome_completo || v.responsavel_user_id || "-"}</td>
-                  <td>
-                    <a className="btn btn-light" href={`/operacao/viagens/${v.id}`}>
-                      Abrir
+                  <td style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 4 }}>
+                    <a
+                      className="btn-icon"
+                      href={`/operacao/viagens/${v.id}`}
+                      title="Ver viagem"
+                      style={{ padding: "4px 6px" }}
+                    >
+                      👁️
                     </a>
+                    {podeEditar && (
+                      <a
+                        className="btn-icon"
+                        href={`/operacao/viagens/${v.id}?modo=editar`}
+                        title="Editar viagem"
+                        style={{ padding: "4px 6px" }}
+                      >
+                        ✏️
+                      </a>
+                    )}
+                    {podeExcluir && (
+                      <button
+                        className="btn-icon btn-danger"
+                        title="Excluir viagem"
+                        onClick={() => excluirViagem(v)}
+                        disabled={deletandoViagemId === v.id}
+                        style={{ padding: "4px 6px" }}
+                      >
+                        {deletandoViagemId === v.id ? "..." : "🗑️"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

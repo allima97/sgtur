@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { s as supabase } from './systemName_BQeIdnjR.mjs';
+import { s as supabase } from './systemName_Co0aCFY_.mjs';
 
 async function registrarLog({
   user_id,

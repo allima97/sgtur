@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { s as supabase } from './systemName_BQeIdnjR.mjs';
+import { s as supabase } from './systemName_Co0aCFY_.mjs';
 
 const permLevel = (p) => {
   switch (p) {

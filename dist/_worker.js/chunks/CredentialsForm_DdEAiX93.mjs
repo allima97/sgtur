@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { s as supabase, j as jsxRuntimeExports } from './systemName_BQeIdnjR.mjs';
+import { s as supabase, j as jsxRuntimeExports } from './systemName_Co0aCFY_.mjs';
 
 function useRegisterForm(options = {}) {
   const {

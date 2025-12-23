@@ -1,8 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { s as supabase, j as jsxRuntimeExports } from './systemName_BQeIdnjR.mjs';
+import { s as supabase, j as jsxRuntimeExports } from './systemName_Co0aCFY_.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from './usePermissao_Cbgi1VF4.mjs';
-import { L as LoadingUsuarioContext } from './LoadingUsuarioContext_C1Z8rvHv.mjs';
+import { u as usePermissao } from './usePermissao_Chx8mpdX.mjs';
+import { L as LoadingUsuarioContext } from './LoadingUsuarioContext_CGEPCHFN.mjs';
 
 function MetasVendedorIsland() {
   const { permissao, ativo, loading } = usePermissao("Metas");

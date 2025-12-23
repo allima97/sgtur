@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DH7FbtKa.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_Co0aCFY_.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Chx8mpdX.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();

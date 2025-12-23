@@ -57,7 +57,7 @@ type OrcamentosConsultaProps = {
 export default function OrcamentosConsultaIsland({
   suppressLoadingMessage = false,
 }: OrcamentosConsultaProps) {
-  const { ativo, loading: loadingPerm, podeCriar } = usePermissao("Vendas");
+  const { ativo, loading: loadingPerm, podeCriar, podeExcluir } = usePermissao("Vendas");
   const [formAberto, setFormAberto] = useState(false);
   const [lista, setLista] = useState<Orcamento[]>([]);
   const [statusFiltro, setStatusFiltro] = useState<string>("");
@@ -128,6 +128,7 @@ export default function OrcamentosConsultaIsland({
   >({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastCounter, setToastCounter] = useState(0);
+  const [deletandoOrcamentoId, setDeletandoOrcamentoId] = useState<string | null>(null);
   const tipoInteracaoOptions: { value: string; label: string }[] = [
     { value: "anotacao", label: "Anotação interna" },
     { value: "contato", label: "Contato com cliente" },
@@ -426,6 +427,40 @@ export default function OrcamentosConsultaIsland({
       showToast("Erro ao alterar status.", "error");
     } finally {
       setSalvandoStatus(null);
+    }
+  }
+
+  async function excluirOrcamento(o: Orcamento) {
+    if (!podeExcluir) return;
+    const confirmar = window.confirm("Excluir este orçamento e seu histórico?");
+    if (!confirmar) return;
+    try {
+      setDeletandoOrcamentoId(o.id);
+      setErro(null);
+      setSucesso(null);
+      const interacoes = await supabase.from("orcamento_interacoes").delete().eq("orcamento_id", o.id);
+      if (interacoes.error) {
+        console.warn("Não foi possível limpar interações antes de excluir o orçamento.", interacoes.error);
+      }
+      const viagensExcluir = await supabase.from("viagens").delete().eq("orcamento_id", o.id);
+      if (viagensExcluir.error) {
+        console.warn("Não foi possível limpar viagens vinculadas antes de excluir o orçamento.", viagensExcluir.error);
+      }
+      const { error } = await supabase.from("orcamentos").delete().eq("id", o.id);
+      if (error) throw error;
+      setSucesso("Orçamento excluído.");
+      showToast("Orçamento excluído.", "success");
+      await carregar();
+    } catch (err: unknown) {
+      console.error(err);
+      const message =
+        err && typeof err === "object" && "message" in err && typeof err.message === "string"
+          ? err.message
+          : "Erro ao excluir orçamento.";
+      setErro(message);
+      showToast(message, "error");
+    } finally {
+      setDeletandoOrcamentoId(null);
     }
   }
 
@@ -1044,6 +1079,17 @@ export default function OrcamentosConsultaIsland({
                   )}
                 </td>
                 <td style={{ textAlign: "center" }}>
+                  {podeExcluir && (
+                    <button
+                      className="btn-icon btn-danger"
+                      onClick={() => excluirOrcamento(o)}
+                      disabled={deletandoOrcamentoId === o.id}
+                      style={{ marginRight: 6 }}
+                      title="Excluir orçamento"
+                    >
+                      {deletandoOrcamentoId === o.id ? "..." : "🗑️"}
+                    </button>
+                  )}
                   <button
                     className="btn-icon"
                     onClick={() => iniciarEdicao(o)}
@@ -1192,6 +1238,21 @@ export default function OrcamentosConsultaIsland({
                           >
                             Histórico
                           </button>
+                          {podeExcluir && (
+                            <button
+                              className="btn btn-light"
+                              style={{
+                                padding: "4px 8px",
+                                color: "#b91c1c",
+                                borderColor: "#fca5a5",
+                                background: "#fee2e2",
+                              }}
+                              onClick={() => excluirOrcamento(o)}
+                              disabled={deletandoOrcamentoId === o.id}
+                            >
+                              {deletandoOrcamentoId === o.id ? "Excluindo..." : "Excluir"}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

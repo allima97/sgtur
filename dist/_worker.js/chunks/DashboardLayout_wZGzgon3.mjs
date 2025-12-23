@@ -1,9 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, a as createAstro, f as renderHead, e as renderComponent, r as renderSlot, d as renderTemplate } from './astro/server_C6IdV9ex.mjs';
 /* empty css                              */
-import { s as supabase, j as jsxRuntimeExports, S as SYSTEM_NAME } from './systemName_BQeIdnjR.mjs';
+import { s as supabase, j as jsxRuntimeExports, S as SYSTEM_NAME } from './systemName_Co0aCFY_.mjs';
 import { r as reactExports } from './_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from './logs_CDnMuknJ.mjs';
+import { r as registrarLog } from './logs_BveZ35Xh.mjs';
 
 var reactDom = {exports: {}};
 

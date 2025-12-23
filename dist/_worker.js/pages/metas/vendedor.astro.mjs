@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DH7FbtKa.mjs';
-import { M as MetasVendedorIsland } from '../../chunks/MetasVendedorIsland_Q1kWA5zk.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
+import { M as MetasVendedorIsland } from '../../chunks/MetasVendedorIsland_0KyANWQh.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 
 const $$Vendedor = createComponent(($$result, $$props, $$slots) => {

@@ -1,14 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_DH7FbtKa.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
 import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_BQeIdnjR.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_Co0aCFY_.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_Cbgi1VF4.mjs';
-import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_Chx8mpdX.mjs';
+import { r as registrarLog } from '../../chunks/logs_BveZ35Xh.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_C1Z8rvHv.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
 
 const initialForm = {
   nome: "",
@@ -43,6 +43,7 @@ function ClientesIsland() {
   const [busca, setBusca] = reactExports.useState("");
   const [erro, setErro] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(true);
+  const [companyId, setCompanyId] = reactExports.useState(null);
   const [form, setForm] = reactExports.useState(initialForm);
   const [editId, setEditId] = reactExports.useState(null);
   const [salvando, setSalvando] = reactExports.useState(false);
@@ -59,6 +60,30 @@ function ClientesIsland() {
   const [detalheRecibos, setDetalheRecibos] = reactExports.useState([]);
   const [carregandoRecibos, setCarregandoRecibos] = reactExports.useState(false);
   const [detalheOrcamento, setDetalheOrcamento] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let isMounted = true;
+    async function resolveCompany() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sessionUser = sessionData?.session?.user;
+        const user = sessionUser || (await supabase.auth.getUser()).data?.user || null;
+        if (!user || !isMounted) return;
+        const { data, error } = await supabase.from("users").select("company_id").eq("id", user.id).maybeSingle();
+        if (!isMounted) return;
+        if (error) {
+          console.error("Erro ao buscar company_id dos clientes:", error);
+          return;
+        }
+        setCompanyId(data?.company_id || null);
+      } catch (error) {
+        console.error("Erro ao determinar company_id dos clientes:", error);
+      }
+    }
+    resolveCompany();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [acompanhantes, setAcompanhantes] = reactExports.useState([]);
   const [acompLoading, setAcompLoading] = reactExports.useState(false);
   const [acompErro, setAcompErro] = reactExports.useState(null);
@@ -76,11 +101,11 @@ function ClientesIsland() {
   const [acompSalvando, setAcompSalvando] = reactExports.useState(false);
   const [acompExcluindo, setAcompExcluindo] = reactExports.useState(null);
   async function carregar() {
-    if (!podeVer) return;
+    if (!podeVer || !companyId) return;
     try {
       setLoading(true);
       setErro(null);
-      const { data, error } = await supabase.from("clientes").select("*, company_id").order("nome", { ascending: true });
+      const { data, error } = await supabase.from("clientes").select("*, company_id").eq("company_id", companyId).order("nome", { ascending: true });
       if (error) throw error;
       setClientes(data || []);
       setAcompanhantes([]);
@@ -93,8 +118,10 @@ function ClientesIsland() {
     }
   }
   reactExports.useEffect(() => {
-    if (!loadPerm && podeVer) carregar();
-  }, [loadPerm, podeVer]);
+    if (!loadPerm && podeVer && companyId) {
+      carregar();
+    }
+  }, [loadPerm, podeVer, companyId]);
   const filtrados = reactExports.useMemo(() => {
     if (!busca.trim()) return clientes;
     const t = busca.toLowerCase();
@@ -480,6 +507,8 @@ function ClientesIsland() {
         payload.company_id = trimmedCompanyId;
       } else if (historicoCliente?.company_id) {
         payload.company_id = historicoCliente.company_id;
+      } else if (companyId) {
+        payload.company_id = companyId;
       }
       if (editId) {
         const { error } = await supabase.from("clientes").update(payload).eq("id", editId);
@@ -565,14 +594,14 @@ function ClientesIsland() {
       setAcompErro("Selecione um cliente antes de salvar acompanhante.");
       return;
     }
-    const companyId = historicoCliente.company_id || null;
-    if (!companyId) {
+    const companyId2 = historicoCliente.company_id || null;
+    if (!companyId2) {
       setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
       return;
     }
     const payload = {
       cliente_id: historicoCliente.id,
-      company_id: companyId,
+      company_id: companyId2,
       nome_completo: acompForm.nome_completo.trim(),
       cpf: acompForm.cpf?.trim() || null,
       telefone: acompForm.telefone?.trim() || null,

@@ -1,10 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, f as renderHead, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
 /* empty css                                         */
-import { j as jsxRuntimeExports, s as supabase, S as SYSTEM_NAME } from '../../chunks/systemName_BQeIdnjR.mjs';
+import { j as jsxRuntimeExports, s as supabase, S as SYSTEM_NAME } from '../../chunks/systemName_Co0aCFY_.mjs';
 import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
 export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_CDnMuknJ.mjs';
+import { r as registrarLog } from '../../chunks/logs_BveZ35Xh.mjs';
 
 function AuthRecoverIsland() {
   const [email, setEmail] = reactExports.useState("");
