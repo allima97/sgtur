@@ -664,6 +664,8 @@ export default function VendasConsultaIsland() {
                     <tr>
                       <th>Número</th>
                       <th>Produto</th>
+                      <th style={{ textAlign: "center" }}>Início</th>
+                      <th style={{ textAlign: "center" }}>Fim</th>
                       <th>Valor</th>
                       <th>Taxas</th>
                       {podeExcluir && <th>Ações</th>}
@@ -684,10 +686,17 @@ export default function VendasConsultaIsland() {
                               maximumFractionDigits: 2,
                             })}`;
 
+                      const formatarData = (value: string | null | undefined) =>
+                        value
+                          ? new Date(value).toLocaleDateString("pt-BR")
+                          : "-";
+
                       return (
                         <tr key={r.id}>
                           <td>{r.numero_recibo || "-"}</td>
                           <td>{r.produto_nome || "-"}</td>
+                          <td style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
+                          <td style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
                           <td>R$ {valorFmt}</td>
                           <td>{taxasFmt}</td>
                           {podeExcluir && (

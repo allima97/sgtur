@@ -33,6 +33,8 @@ type FormRecibo = {
   numero_recibo: string;
   valor_total: string;
   valor_taxas: string;
+  data_inicio: string;
+  data_fim: string;
 };
 
 type Toast = {
@@ -53,6 +55,8 @@ const initialRecibo: FormRecibo = {
   numero_recibo: "",
   valor_total: "",
   valor_taxas: "0",
+  data_inicio: "",
+  data_fim: "",
 };
 
 function formatarValorDigitado(valor: string) {
@@ -229,6 +233,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
+          data_inicio: r.data_inicio || "",
+          data_fim: r.data_fim || "",
         }))
       );
     } catch (e) {
@@ -652,6 +658,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             numero_recibo: r.numero_recibo.trim(),
             valor_total: valTotalNum,
             valor_taxas: valTaxasNum,
+            data_inicio: r.data_inicio || null,
+            data_fim: r.data_fim || null,
           });
           if (error) throw error;
         }
@@ -708,6 +716,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
             numero_recibo: r.numero_recibo.trim(),
             valor_total: valTotalNum,
             valor_taxas: valTaxasNum,
+            data_inicio: r.data_inicio || null,
+            data_fim: r.data_fim || null,
           });
 
           if (error) throw error;
@@ -933,6 +943,30 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                     onChange={(e) =>
                       updateRecibo(i, "numero_recibo", e.target.value)
                     }
+                    required
+                  />
+                </div>
+
+                {/* DATA INÍCIO */}
+                <div className="form-group flex-1 min-w-[160px]">
+                  <label className="form-label">Início *</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={r.data_inicio}
+                    onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* DATA FIM */}
+                <div className="form-group flex-1 min-w-[160px]">
+                  <label className="form-label">Fim *</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={r.data_fim}
+                    onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
                     required
                   />
                 </div>

@@ -632,7 +632,7 @@ export default function ClientesIsland() {
     try {
       const { data } = await supabase
         .from("vendas_recibos")
-        .select("id, numero_recibo, valor_total, valor_taxas, produto_id")
+        .select("id, numero_recibo, valor_total, valor_taxas, produto_id, data_inicio, data_fim")
         .eq("venda_id", v.id);
       const recsBase =
         (data || []).map((r: any) => ({
@@ -642,6 +642,8 @@ export default function ClientesIsland() {
           valor_taxas: r.valor_taxas,
           produto_id: r.produto_id,
           produto_nome: null as string | null,
+          data_inicio: r.data_inicio,
+          data_fim: r.data_fim,
         })) || [];
 
       const produtoIds = Array.from(
@@ -1736,6 +1738,8 @@ export default function ClientesIsland() {
                     <tr>
                       <th>Número</th>
                       <th>Produto</th>
+                      <th style={{ textAlign: "center" }}>Início</th>
+                      <th style={{ textAlign: "center" }}>Fim</th>
                       <th>Valor</th>
                       <th>Taxas</th>
                     </tr>
@@ -1746,24 +1750,32 @@ export default function ClientesIsland() {
                         <td colSpan={4}>Nenhum recibo encontrado.</td>
                       </tr>
                     )}
-                    {detalheRecibos.map((r, idx) => (
-                      <tr key={idx}>
-                        <td>{r.numero_recibo || "-"}</td>
-                        <td>{r.produto_nome || "-"}</td>
-                        <td>
-                          {(r.valor_total || 0).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}
-                        </td>
-                        <td>
-                          {(r.valor_taxas || 0).toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}
-                        </td>
-                      </tr>
-                    ))}
+                    {detalheRecibos.map((r, idx) => {
+                      const formatarData = (value: string | null | undefined) =>
+                        value
+                          ? new Date(value).toLocaleDateString("pt-BR")
+                          : "-";
+                      return (
+                        <tr key={idx}>
+                          <td>{r.numero_recibo || "-"}</td>
+                          <td>{r.produto_nome || "-"}</td>
+                          <td style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
+                          <td style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
+                          <td>
+                            {(r.valor_total || 0).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </td>
+                          <td>
+                            {(r.valor_taxas || 0).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
