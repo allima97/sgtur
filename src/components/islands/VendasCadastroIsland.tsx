@@ -79,6 +79,19 @@ function moedaParaNumero(valor: string) {
   return num;
 }
 
+function calcularStatusPeriodo(inicio?: string | null, fim?: string | null) {
+  if (!inicio) return "planejada";
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  const dataFim = fim ? new Date(fim) : null;
+
+  if (dataFim && dataFim < hoje) return "concluida";
+  if (dataInicio > hoje) return "confirmada";
+  if (dataFim && hoje > dataFim) return "concluida";
+  return "em_viagem";
+}
+
 export default function VendasCadastroIsland() {
   // =======================================================
   // PERMISSÕES
@@ -468,6 +481,17 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         return;
       }
 
+      const { data: userRow, error: userRowError } = await supabase
+        .from("users")
+        .select("company_id")
+        .eq("id", userId)
+        .maybeSingle();
+      if (userRowError) throw userRowError;
+      const companyId = userRow?.company_id;
+      if (!companyId) {
+        throw new Error("Seu usuário precisa estar vinculado a uma empresa para cadastrar viagens.");
+      }
+
       if (!recibos.length) {
         setErro("Uma venda precisa ter ao menos 1 recibo.");
         showToast("Inclua ao menos um recibo na venda.", "error");
@@ -615,7 +639,118 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
       const produtoDestinoId = produtoIdsResolvidos[0];
 
+      let oldReciboIds: string[] = [];
+      if (editId) {
+        const { data: existingRecibos, error: existingRecibosErr } = await supabase
+          .from("vendas_recibos")
+          .select("id")
+          .eq("venda_id", editId);
+        if (existingRecibosErr) throw existingRecibosErr;
+        oldReciboIds = (existingRecibos || []).map((item) => item.id).filter(Boolean);
+      }
+
+      const getCidadeNome = (cidadeId?: string | null) =>
+        cidades.find((c) => c.id === cidadeId)?.nome || "";
+
       let vendaId = editId;
+
+      async function criarViagemParaRecibo(params: {
+        reciboId?: string | null;
+        dataInicio?: string | null;
+        dataFim?: string | null;
+        tipoNome?: string;
+        produtoNome?: string;
+        numeroRecibo?: string;
+        cidade?: string;
+      }) {
+        if (!params.reciboId) return;
+        if (!vendaId) {
+          throw new Error("Venda não encontrada ao criar viagem.");
+        }
+        const statusPeriodo = calcularStatusPeriodo(params.dataInicio, params.dataFim);
+        const cidadeNome = params.cidade || getCidadeNome(formVenda.destino_id);
+        const destinoLabel = params.produtoNome || params.tipoNome || cidadeNome || null;
+        const origemLabel =
+          cidadeNome && cidadeNome !== destinoLabel
+            ? cidadeNome
+            : params.produtoNome || params.tipoNome || destinoLabel;
+        const { data: viagemData, error: viagemErr } = await supabase
+          .from("viagens")
+          .insert({
+            company_id: companyId,
+            venda_id: vendaId,
+            recibo_id: params.reciboId,
+            cliente_id: formVenda.cliente_id,
+            responsavel_user_id: userId,
+            origem: origemLabel || null,
+            destino: destinoLabel || null,
+            data_inicio: params.dataInicio || null,
+            data_fim: params.dataFim || null,
+            status: statusPeriodo,
+            observacoes: params.numeroRecibo ? `Recibo ${params.numeroRecibo}` : null,
+          })
+          .select("id")
+          .single();
+        if (viagemErr) throw viagemErr;
+        const viagemId = viagemData?.id;
+        if (!viagemId) return;
+        const { error: passageiroError } = await supabase.from("viagem_passageiros").insert({
+          viagem_id: viagemId,
+          cliente_id: formVenda.cliente_id,
+          company_id: companyId,
+          papel: "passageiro",
+          created_by: userId,
+        });
+        if (passageiroError) throw passageiroError;
+      }
+
+      async function salvarReciboEViagem(recibo: FormRecibo, produtoIdResolvido: string) {
+        if (!vendaId) {
+          throw new Error("Venda não encontrada ao salvar recibo.");
+        }
+        const prod = produtos.find((p) => p.id === produtoIdResolvido);
+        const tipoId =
+          prod?.tipo_produto ||
+          (recibo.produto_id?.startsWith("virtual-") ? recibo.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+        if (!tipoId) {
+          throw new Error("Produto do recibo não possui tipo vinculado.");
+        }
+        const valTotalNum = moedaParaNumero(recibo.valor_total);
+        const valTaxasNum = moedaParaNumero(recibo.valor_taxas);
+        if (Number.isNaN(valTotalNum)) {
+          throw new Error("Valor total inválido. Digite um valor monetário.");
+        }
+        if (Number.isNaN(valTaxasNum)) {
+          throw new Error("Valor de taxas inválido. Digite um valor monetário.");
+        }
+        const tipoNome = tipos.find((t) => t.id === tipoId)?.nome || prod?.nome || "";
+        const insertPayload = {
+          venda_id: vendaId,
+          produto_id: tipoId,
+          numero_recibo: recibo.numero_recibo.trim(),
+          valor_total: valTotalNum,
+          valor_taxas: valTaxasNum,
+          data_inicio: recibo.data_inicio || null,
+          data_fim: recibo.data_fim || null,
+        };
+        const { data: insertedRecibo, error: insertErr } = await supabase
+          .from("vendas_recibos")
+          .insert(insertPayload)
+          .select("id, data_inicio, data_fim")
+          .single();
+        if (insertErr) throw insertErr;
+        const cidadeNomeResolvida =
+          getCidadeNome(formVenda.destino_id) || getCidadeNome(prod?.cidade_id);
+        await criarViagemParaRecibo({
+          reciboId: insertedRecibo?.id,
+          dataInicio: insertedRecibo?.data_inicio || null,
+          dataFim: insertedRecibo?.data_fim || null,
+          tipoNome,
+          produtoNome: prod?.nome,
+          numeroRecibo: insertPayload.numero_recibo,
+          cidade: cidadeNomeResolvida || undefined,
+        });
+      }
 
       if (editId) {
         // Atualiza venda existente
@@ -631,37 +766,20 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           .eq("id", editId);
         if (vendaErr) throw vendaErr;
 
+        // removemos viagens vinculadas aos recibos antigos
+        if (oldReciboIds.length > 0) {
+          const { error: cleanupError } = await supabase
+            .from("viagens")
+            .delete()
+            .in("recibo_id", oldReciboIds);
+          if (cleanupError) throw cleanupError;
+        }
+
         // substitui recibos para manter consistência
         await supabase.from("vendas_recibos").delete().eq("venda_id", editId);
 
         for (let idx = 0; idx < recibos.length; idx++) {
-          const r = recibos[idx];
-          const resolvedId = produtoIdsResolvidos[idx];
-          const prod = produtos.find((p) => p.id === resolvedId);
-          const tipoId =
-            prod?.tipo_produto ||
-            (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
-          if (!tipoId) {
-            throw new Error("Produto do recibo não possui tipo vinculado.");
-          }
-          const valTotalNum = moedaParaNumero(r.valor_total);
-          const valTaxasNum = moedaParaNumero(r.valor_taxas);
-          if (Number.isNaN(valTotalNum)) {
-            throw new Error("Valor total inválido. Digite um valor monetário.");
-          }
-          if (Number.isNaN(valTaxasNum)) {
-            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
-          }
-          const { error } = await supabase.from("vendas_recibos").insert({
-            venda_id: editId,
-            produto_id: tipoId, // FK espera tipo_produtos
-            numero_recibo: r.numero_recibo.trim(),
-            valor_total: valTotalNum,
-            valor_taxas: valTaxasNum,
-            data_inicio: r.data_inicio || null,
-            data_fim: r.data_fim || null,
-          });
-          if (error) throw error;
+          await salvarReciboEViagem(recibos[idx], produtoIdsResolvidos[idx]);
         }
 
         await registrarLog({
@@ -693,34 +811,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
         // 2) INSERE RECIBOS
         for (let idx = 0; idx < recibos.length; idx++) {
-          const r = recibos[idx];
-          const resolvedId = produtoIdsResolvidos[idx];
-          const prod = produtos.find((p) => p.id === resolvedId);
-          const tipoId =
-            prod?.tipo_produto ||
-            (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
-          if (!tipoId) {
-            throw new Error("Produto do recibo não possui tipo vinculado.");
-          }
-          const valTotalNum = moedaParaNumero(r.valor_total);
-          const valTaxasNum = moedaParaNumero(r.valor_taxas);
-          if (Number.isNaN(valTotalNum)) {
-            throw new Error("Valor total inválido. Digite um valor monetário.");
-          }
-          if (Number.isNaN(valTaxasNum)) {
-            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
-          }
-          const { error } = await supabase.from("vendas_recibos").insert({
-            venda_id: vendaId,
-            produto_id: tipoId, // FK espera tipo_produtos
-            numero_recibo: r.numero_recibo.trim(),
-            valor_total: valTotalNum,
-            valor_taxas: valTaxasNum,
-            data_inicio: r.data_inicio || null,
-            data_fim: r.data_fim || null,
-          });
-
-          if (error) throw error;
+          await salvarReciboEViagem(recibos[idx], produtoIdsResolvidos[idx]);
         }
 
         // 3) AUDITORIA

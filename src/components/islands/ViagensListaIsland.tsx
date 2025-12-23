@@ -14,6 +14,16 @@ type Viagem = {
   cliente_id: string | null;
   clientes?: { nome: string | null } | null;
   responsavel?: { nome_completo?: string | null } | null;
+  recibo?: {
+    id: string;
+    valor_total: number | null;
+    valor_taxas: number | null;
+    data_inicio: string | null;
+    data_fim: string | null;
+    numero_recibo?: string | null;
+    produto_id: string | null;
+    tipo_produtos?: { id: string; nome?: string | null; tipo?: string | null } | null;
+  } | null;
 };
 
 const STATUS_OPCOES = [
@@ -24,6 +34,32 @@ const STATUS_OPCOES = [
   { value: "concluida", label: "Concluída" },
   { value: "cancelada", label: "Cancelada" },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  planejada: "Planejada",
+  confirmada: "Confirmada",
+  em_viagem: "Em viagem",
+  concluida: "Concluída",
+  cancelada: "Cancelada",
+};
+
+function obterStatusPorPeriodo(inicio?: string | null, fim?: string | null): string | null {
+  if (!inicio) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  const dataFim = fim ? new Date(fim) : null;
+
+  if (dataFim && dataFim < hoje) return "concluida";
+  if (dataInicio > hoje) return "confirmada";
+  if (dataFim && hoje > dataFim) return "concluida";
+  return "em_viagem";
+}
+
+function formatarMoeda(valor?: number | null) {
+  if (valor == null || Number.isNaN(valor)) return "-";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 const initialCadastroForm = {
   origem: "",
@@ -231,7 +267,7 @@ export default function ViagensListaIsland() {
       let query = supabase
         .from("viagens")
         .select(
-          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo)"
+          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
         )
         .order("data_inicio", { ascending: true });
 
@@ -354,6 +390,20 @@ export default function ViagensListaIsland() {
     }
   }
 
+  function obterStatusExibicao(viagem: Viagem) {
+    const periodoStatus = obterStatusPorPeriodo(
+      viagem.recibo?.data_inicio || viagem.data_inicio,
+      viagem.recibo?.data_fim || viagem.data_fim,
+    );
+    if (periodoStatus) {
+      return STATUS_LABELS[periodoStatus] || periodoStatus;
+    }
+    if (viagem.status) {
+      return STATUS_LABELS[viagem.status] || viagem.status;
+    }
+    return "-";
+  }
+
   const proximasViagens = useMemo(() => {
     return [...viagens].sort((a, b) => {
       const da = a.data_inicio || "";
@@ -365,7 +415,7 @@ export default function ViagensListaIsland() {
     });
   }, [viagens]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
-  const totalColunasTabela = 8;
+  const totalColunasTabela = 7;
 
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
@@ -571,18 +621,17 @@ export default function ViagensListaIsland() {
 
         <div className="table-container overflow-x-auto">
           <table className="table-default min-w-[760px]">
-              <thead>
-                <tr>
-                  <th>Início</th>
-                  <th>Fim</th>
-                  <th>Status</th>
-                  <th>Origem</th>
-                  <th>Destino</th>
-                  <th>Cliente</th>
-                  <th>Responsável</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Status</th>
+                <th>Produto</th>
+                <th>Valor</th>
+                <th style={{ textAlign: "center" }}>Ações</th>
+              </tr>
+            </thead>
             <tbody>
               {loading && (
                 <tr>
@@ -594,48 +643,64 @@ export default function ViagensListaIsland() {
                   <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
                 </tr>
               )}
-              {proximasViagens.map((v) => (
-                <tr key={v.id}>
-                  <td>{v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-"}</td>
-                  <td>{v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-"}</td>
-                  <td>{v.status || "-"}</td>
-                  <td>{v.origem || "-"}</td>
-                  <td>{v.destino || "-"}</td>
-                  <td>{v.clientes?.nome || "-"}</td>
-                  <td>{v.responsavel?.nome_completo || v.responsavel_user_id || "-"}</td>
-                  <td style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 4 }}>
-                    <a
-                      className="btn-icon"
-                      href={`/operacao/viagens/${v.id}`}
-                      title="Ver viagem"
-                      style={{ padding: "4px 6px" }}
+              {proximasViagens.map((v) => {
+                const statusLabel = obterStatusExibicao(v);
+                const produtoLabel =
+                  v.recibo?.tipo_produtos?.nome ||
+                  v.recibo?.tipo_produtos?.tipo ||
+                  v.recibo?.produto_id ||
+                  "-";
+                const valorLabel = formatarMoeda(v.recibo?.valor_total);
+                return (
+                  <tr key={v.id}>
+                    <td>{v.clientes?.nome || "-"}</td>
+                    <td>{v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-"}</td>
+                    <td>{v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-"}</td>
+                    <td>{statusLabel}</td>
+                    <td>{produtoLabel}</td>
+                    <td>{valorLabel}</td>
+                    <td
+                      style={{
+                        textAlign: "center",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
-                      👁️
-                    </a>
-                    {podeEditar && (
                       <a
                         className="btn-icon"
-                        href={`/operacao/viagens/${v.id}?modo=editar`}
-                        title="Editar viagem"
+                        href={`/operacao/viagens/${v.id}`}
+                        title="Ver viagem"
                         style={{ padding: "4px 6px" }}
                       >
-                        ✏️
+                        👁️
                       </a>
-                    )}
-                    {podeExcluir && (
-                      <button
-                        className="btn-icon btn-danger"
-                        title="Excluir viagem"
-                        onClick={() => excluirViagem(v)}
-                        disabled={deletandoViagemId === v.id}
-                        style={{ padding: "4px 6px" }}
-                      >
-                        {deletandoViagemId === v.id ? "..." : "🗑️"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      {podeEditar && (
+                        <a
+                          className="btn-icon"
+                          href={`/operacao/viagens/${v.id}?modo=editar`}
+                          title="Editar viagem"
+                          style={{ padding: "4px 6px" }}
+                        >
+                          ✏️
+                        </a>
+                      )}
+                      {podeExcluir && (
+                        <button
+                          className="btn-icon btn-danger"
+                          title="Excluir viagem"
+                          onClick={() => excluirViagem(v)}
+                          disabled={deletandoViagemId === v.id}
+                          style={{ padding: "4px 6px" }}
+                        >
+                          {deletandoViagemId === v.id ? "..." : "🗑️"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
