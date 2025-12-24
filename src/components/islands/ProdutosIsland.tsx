@@ -32,6 +32,8 @@ const nivelPrecosOptions = [
   { value: "Super Premium", label: "Super Premium" },
 ];
 
+const HOSPITALITY_KEYWORDS = new Set(["hotel", "pousada", "resort"]);
+
 function nivelPrecoLabel(value?: string | null) {
   if (!value) return "";
   const normalizedValue = normalizeText(value);
@@ -41,6 +43,19 @@ function nivelPrecoLabel(value?: string | null) {
       normalizeText(nivel.label) === normalizedValue
   );
   return match ? match.label : value;
+}
+
+function ehTipoHospedagem(tipo?: TipoProduto | null) {
+  if (!tipo) return false;
+  const identificado = normalizeText(tipo.nome || tipo.tipo || "");
+  return HOSPITALITY_KEYWORDS.has(identificado);
+}
+
+function gerarIdTemporario() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 function normalizeNumericInput(value: string) {
@@ -178,6 +193,34 @@ type FormState = {
   valor_em_reais: string;
 };
 
+
+type TarifaEntry = {
+  id: string;
+  acomodacao: string;
+  qte_pax: number;
+  tipo: string;
+  validade_de: string;
+  validade_ate: string;
+  valor_neto: number;
+  padrao: "Manual" | "Padrao";
+  margem: number | null;
+  valor_venda: number;
+  valor_em_reais: number;
+  moeda: string;
+  cambio: number;
+};
+
+type TarifaFormState = {
+  acomodacao: string;
+  qte_pax: string;
+  tipo: string;
+  validade_de: string;
+  validade_ate: string;
+  valor_neto: string;
+  padrao: "Manual" | "Padrao";
+  margem: string;
+};
+
 type CambioParametro = {
   moeda: string;
   data: string;
@@ -200,11 +243,22 @@ const initialForm: FormState = {
   fornecedor_label: "",
   todas_as_cidades: false,
   valor_neto: "",
-  margem: "",
+  margem: "20%",
   valor_venda: "",
-  moeda: "R$",
-  cambio: "",
+  moeda: "USD",
+  cambio: "5,00",
   valor_em_reais: "",
+};
+
+const initialTarifaForm: TarifaFormState = {
+  acomodacao: "",
+  qte_pax: "",
+  tipo: "",
+  validade_de: "",
+  validade_ate: "",
+  valor_neto: "",
+  padrao: "Padrao",
+  margem: "",
 };
 
 export default function ProdutosIsland() {
@@ -232,6 +286,11 @@ export default function ProdutosIsland() {
   const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
+  const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
+  const [tarifaModalAberta, setTarifaModalAberta] = useState(false);
+  const [tarifaModalForm, setTarifaModalForm] = useState<TarifaFormState>(initialTarifaForm);
+  const [tarifaModalErro, setTarifaModalErro] = useState<string | null>(null);
+  const [acomodacoes, setAcomodacoes] = useState<string[]>([]);
   const [cambiosParametros, setCambiosParametros] = useState<CambioParametro[]>([]);
   const [ultimaMoedaAuto, setUltimaMoedaAuto] = useState<string | null>(null);
   const [ultimoValorAuto, setUltimoValorAuto] = useState<string>("");
@@ -409,6 +468,8 @@ export default function ProdutosIsland() {
     return () => {
       isMounted = false;
     };
+
+
   }, []);
 
   useEffect(() => {
@@ -434,6 +495,37 @@ export default function ProdutosIsland() {
     }
 
     carregarFornecedores();
+
+    return () => {
+      isActive = false;
+    };
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId) {
+      setAcomodacoes([]);
+      return;
+    }
+
+    let isActive = true;
+
+    async function carregarAcomodacoes() {
+      const { data, error } = await supabase
+        .from("acomodacoes")
+        .select("nome")
+        .order("nome");
+      if (!isActive) return;
+      if (error) {
+        console.error("Erro ao carregar acomodacoes:", error);
+        return;
+      }
+      const lista = (data || [])
+        .map((item: any) => (item?.nome || "").toString().trim())
+        .filter(Boolean);
+      setAcomodacoes(lista);
+    }
+
+    carregarAcomodacoes();
 
     return () => {
       isActive = false;
@@ -549,6 +641,20 @@ export default function ProdutosIsland() {
     return mapa;
   }, [cambiosParametros]);
 
+  const tipoSelecionado = useMemo(
+    () => (form.tipo_produto ? tipos.find((t) => t.id === form.tipo_produto) || null : null),
+    [form.tipo_produto, tipos]
+  );
+  const isHospedagem = ehTipoHospedagem(tipoSelecionado);
+  const tarifaMoeda = form.moeda.trim() || "USD";
+  const tarifaMargemPreview =
+    tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : form.margem || "20%";
+  const tarifaValorVendaPreview = calcularValorVendaString(tarifaModalForm.valor_neto, tarifaMargemPreview);
+  const tarifaValorVendaNum = parseDecimalInput(tarifaValorVendaPreview);
+  const tarifaCambioAtual = parseDecimalInput(form.cambio) ?? 0;
+  const tarifaValorEmReaisPreview =
+    tarifaValorVendaNum != null ? tarifaValorVendaNum * tarifaCambioAtual : 0;
+
   const estaEditando = Boolean(editandoId);
   const formLayout = estaEditando
     ? "full"
@@ -644,6 +750,178 @@ export default function ProdutosIsland() {
     handleChange("fornecedor_id", match ? match.id : "");
   }
 
+  const handleTarifaModalChange = useCallback(
+    (campo: keyof TarifaFormState, valor: string) => {
+      setTarifaModalForm((prev) => {
+        const atualizado = { ...prev, [campo]: valor };
+        if (campo === "padrao" && valor === "Padrao") {
+          atualizado.margem = "";
+        }
+        return atualizado;
+      });
+    },
+    []
+  );
+
+  function abrirModalTarifa() {
+    setTarifaModalForm(initialTarifaForm);
+    setTarifaModalErro(null);
+    setTarifaModalAberta(true);
+  }
+
+  function fecharModalTarifa() {
+    setTarifaModalAberta(false);
+    setTarifaModalForm(initialTarifaForm);
+    setTarifaModalErro(null);
+  }
+
+  function removerTarifa(id: string) {
+    setTarifas((prev) => prev.filter((tarifa) => tarifa.id !== id));
+  }
+
+  async function salvarTarifaModal(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tarifaModalForm.acomodacao.trim()) {
+      setTarifaModalErro("Informe a acomodação.");
+      return;
+    }
+    if (!tarifaModalForm.tipo.trim()) {
+      setTarifaModalErro("Informe o tipo de tarifa.");
+      return;
+    }
+    if (!tarifaModalForm.validade_de || !tarifaModalForm.validade_ate) {
+      setTarifaModalErro("Informe o período de validade.");
+      return;
+    }
+    const qtePax = Number.parseInt(tarifaModalForm.qte_pax, 10);
+    if (!Number.isFinite(qtePax) || qtePax <= 0) {
+      setTarifaModalErro("Informe a quantidade de passageiros.");
+      return;
+    }
+    const valorNetoNum = parseDecimalInput(tarifaModalForm.valor_neto);
+    if (valorNetoNum == null) {
+      setTarifaModalErro("Informe o valor neto.");
+      return;
+    }
+
+    const margemPadrao = tarifaModalForm.padrao === "Manual"
+      ? tarifaModalForm.margem || ""
+      : form.margem || "20%";
+    const valorVendaStr = calcularValorVendaString(tarifaModalForm.valor_neto, margemPadrao);
+    const valorVendaNum = parseDecimalInput(valorVendaStr);
+    if (valorVendaNum == null) {
+      setTarifaModalErro("Não foi possível calcular o valor de venda.");
+      return;
+    }
+
+    const margemNum = parsePercentInput(margemPadrao);
+    const cambioNum = parseDecimalInput(form.cambio) ?? 0;
+    const valorEmReaisNum = valorVendaNum * (cambioNum || 0);
+
+    const novaTarifa: TarifaEntry = {
+      id: gerarIdTemporario(),
+      acomodacao: tarifaModalForm.acomodacao.trim(),
+      qte_pax: qtePax,
+      tipo: tarifaModalForm.tipo.trim(),
+      validade_de: tarifaModalForm.validade_de,
+      validade_ate: tarifaModalForm.validade_ate,
+      valor_neto: valorNetoNum,
+      padrao: tarifaModalForm.padrao,
+      margem: margemNum,
+      valor_venda: valorVendaNum,
+      valor_em_reais: valorEmReaisNum,
+      moeda: form.moeda.trim() || "USD",
+      cambio: cambioNum,
+    };
+    setTarifas((prev) => [...prev, novaTarifa]);
+    if (
+      tarifaModalForm.acomodacao &&
+      !acomodacoes.some(
+        (nome) => normalizeText(nome) === normalizeText(tarifaModalForm.acomodacao.trim())
+      )
+    ) {
+      setAcomodacoes((prev) => [...prev, tarifaModalForm.acomodacao.trim()]);
+    }
+    setTarifaModalErro(null);
+    fecharModalTarifa();
+  }
+
+  async function carregarTarifasProduto(produtoId: string, moedaPadrao: string, cambioPadrao: number) {
+    if (!produtoId) return;
+    try {
+      const { data, error } = await supabase
+        .from("produtos_tarifas")
+        .select(
+          "id, acomodacao, qte_pax, tipo, validade_de, validade_ate, valor_neto, padrao, margem, valor_venda, moeda, cambio, valor_em_reais"
+        )
+        .eq("produto_id", produtoId)
+        .order("validade_de", { ascending: true });
+      if (error) {
+        console.error("Erro ao carregar tarifas do produto:", error);
+        return;
+      }
+      const formatos = (data || []).map((tarifa) => ({
+        id: tarifa.id,
+        acomodacao: tarifa.acomodacao,
+        qte_pax: tarifa.qte_pax ?? 0,
+        tipo: tarifa.tipo || "",
+        validade_de: tarifa.validade_de ? String(tarifa.validade_de).slice(0, 10) : "",
+        validade_ate: tarifa.validade_ate ? String(tarifa.validade_ate).slice(0, 10) : "",
+        valor_neto: tarifa.valor_neto ?? 0,
+        padrao: tarifa.padrao === "Manual" ? "Manual" : "Padrao",
+        margem: tarifa.margem ?? null,
+        valor_venda: tarifa.valor_venda ?? 0,
+        valor_em_reais: tarifa.valor_em_reais ?? 0,
+        moeda: tarifa.moeda || moedaPadrao || "USD",
+        cambio: tarifa.cambio ?? cambioPadrao,
+      }));
+      setTarifas(formatos);
+    } catch (error) {
+      console.error("Erro ao carregar tarifas do produto:", error);
+    }
+  }
+
+  async function sincronizarTarifas(produtoId: string) {
+    if (!produtoId) return;
+    const nomesAcomodacoes = Array.from(
+      new Set(tarifas.map((tarifa) => tarifa.acomodacao.trim()).filter(Boolean))
+    );
+    try {
+      const { error: deleteError } = await supabase
+        .from("produtos_tarifas")
+        .delete()
+        .eq("produto_id", produtoId);
+      if (deleteError) throw deleteError;
+
+      if (tarifas.length) {
+        const payload = tarifas.map(({ id, ...rest }) => ({
+          ...rest,
+          produto_id: produtoId,
+        }));
+        const { error: insertError } = await supabase.from("produtos_tarifas").insert(payload);
+        if (insertError) throw insertError;
+      }
+
+      if (nomesAcomodacoes.length) {
+        const { error: acomodacoesError } = await supabase
+          .from("acomodacoes")
+          .upsert(nomesAcomodacoes.map((nome) => ({ nome })), { onConflict: "nome" });
+        if (acomodacoesError) {
+          console.error("Erro ao atualizar acomodacoes:", acomodacoesError);
+        } else {
+          setAcomodacoes((prev) => {
+            const existentes = new Set(prev.map((item) => normalizeText(item)));
+            const novos = nomesAcomodacoes.filter((nome) => !existentes.has(normalizeText(nome)));
+            return novos.length ? [...prev, ...novos] : prev;
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar tarifas:", error);
+      throw error;
+    }
+  }
+
   function iniciarNovo() {
     setForm(initialForm);
     setUltimaMoedaAuto(null);
@@ -653,6 +931,10 @@ export default function ProdutosIsland() {
     setCidadeBusca("");
     setMostrarSugestoes(false);
     setModoGlobal(null);
+    setTarifas([]);
+    setTarifaModalAberta(false);
+    setTarifaModalForm(initialTarifaForm);
+    setTarifaModalErro(null);
   }
 
   function iniciarEdicao(produto: Produto & { cidade_nome?: string }) {
@@ -684,6 +966,10 @@ export default function ProdutosIsland() {
       cambio: produto.cambio != null ? produto.cambio.toFixed(2) : "",
       valor_em_reais: formatNumberPtBr(produto.valor_em_reais),
     });
+    setTarifas([]);
+    setTarifaModalAberta(false);
+    setTarifaModalForm(initialTarifaForm);
+    setTarifaModalErro(null);
     setUltimaMoedaAuto(null);
     setUltimoValorAuto("");
     setCidadeBusca(
@@ -691,6 +977,7 @@ export default function ProdutosIsland() {
     );
     setMostrarSugestoes(false);
     setMostrarFormulario(true);
+    carregarTarifasProduto(produto.id, produto.moeda || "USD", produto.cambio ?? 0);
   }
 
   function abrirFormularioProduto() {
@@ -817,19 +1104,29 @@ export default function ProdutosIsland() {
         valor_em_reais: valorEmReaisNum,
       };
 
-      if (editandoId) {
-        const { error } = await supabase.from("produtos").update(payload).eq("id", editandoId);
+      let produtoId = editandoId;
+      if (produtoId) {
+        const { error } = await supabase.from("produtos").update(payload).eq("id", produtoId);
         if (error) {
           const msg = erroSupabaseMsg(error);
           throw new Error(msg || error.message);
         }
       } else {
-        const { error } = await supabase.from("produtos").insert(payload);
+        const { data, error } = await supabase
+          .from("produtos")
+          .insert(payload)
+          .select("id")
+          .maybeSingle();
         if (error) {
           const msg = erroSupabaseMsg(error);
           throw new Error(msg || error.message);
         }
+        produtoId = data?.id || null;
+        if (!produtoId) {
+          throw new Error("Não foi possível identificar o produto salvo.");
+        }
       }
+      await sincronizarTarifas(produtoId);
 
       iniciarNovo();
       await carregarDados(carregouTodos);
@@ -925,218 +1222,245 @@ export default function ProdutosIsland() {
         </div>
       )}
 
-      {mostrarFormulario && formLayout !== "selection" && (
-        <div className="card-base card-blue mb-3">
-          <form onSubmit={salvar}>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Nome do produto *</label>
-                <input
-                  className="form-input"
-                  value={form.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
-                  disabled={permissao === "view"}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Tipo *</label>
-                <select
-                  className="form-select"
-                  value={form.tipo_produto}
-                  onChange={(e) => handleChange("tipo_produto", e.target.value)}
-                  disabled={permissao === "view"}
-                >
-                  <option value="">Selecione o tipo</option>
-                  {tipos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {tipoLabel(t) || "(sem nome)"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Destino *</label>
-                <input
-                  className="form-input"
-                  value={form.destino}
-                  onChange={(e) => handleChange("destino", e.target.value)}
-                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
-                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
-                  disabled={permissao === "view" || isGlobalMode}
-                />
-              </div>
-              {!isGlobalMode && (
-                <>
-                  <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
-                    <label className="form-label">Todas as cidades</label>
-                    <select
-                      className="form-select"
-                      value={form.todas_as_cidades ? "true" : "false"}
-                      onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
-                      disabled={permissao === "view"}
-                    >
-                      <option value="false">Nao</option>
-                      <option value="true">Sim</option>
-                    </select>
-                    <small style={{ color: "#64748b" }}>
-                      Produtos globais ficam disponiveis para qualquer cidade e nao salvam cidade especifica.
-                    </small>
-                  </div>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label className="form-label">Cidade *</label>
-                    <input
-                      className="form-input"
-                      placeholder="Digite o nome da cidade"
-                      value={cidadeBusca}
-                      onChange={(e) => handleCidadeBusca(e.target.value)}
-                      onFocus={() => setMostrarSugestoes(true)}
-                      onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                      disabled={permissao === "view" || form.todas_as_cidades}
-                      style={{ marginBottom: 6 }}
-                    />
-                    {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
-                    {erroCidadeBusca && !buscandoCidade && (
-                      <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
-                    )}
-                    {mostrarSugestoes && (
-                      <div
-                        className="card-base"
-                        style={{
-                          marginTop: 4,
-                          maxHeight: 180,
-                          overflowY: "auto",
-                          padding: 6,
-                          border: "1px solid #e5e7eb",
-                        }}
-                      >
-                        {resultadosCidade.length === 0 && !buscandoCidade && (
-                          <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
-                        )}
-                        {resultadosCidade.map((c) => {
-                          const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              className="btn btn-light"
-                              style={{
-                                width: "100%",
-                                justifyContent: "flex-start",
-                                marginBottom: 4,
-                                background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
-                                borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
-                              }}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleChange("cidade_id", c.id);
-                                setCidadeBusca(label);
-                                setMostrarSugestoes(false);
-                                setResultadosCidade([]);
-                              }}
-                            >
-                              {label}
-                              {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>- {c.pais_nome}</span> : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Fornecedor (opcional)</label>
-                <input
-                  className="form-input"
-                  list="fornecedores-list"
-                  placeholder="Escolha um fornecedor"
-                  value={form.fornecedor_label}
-                  onChange={(e) => handleFornecedorInput(e.target.value)}
-                  disabled={permissao === "view"}
-                />
-                <datalist id="fornecedores-list">
-                  {fornecedoresLista.map((fornecedor) => (
-                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            {!isGlobalMode && (
-              <div className="form-row" style={{ marginTop: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Atracao principal</label>
-                  <input
-                    className="form-input"
-                    value={form.atracao_principal}
-                    onChange={(e) => handleChange("atracao_principal", e.target.value)}
-                    placeholder="Ex: Disney, Torre Eiffel..."
-                    disabled={permissao === "view"}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Melhor epoca</label>
-                  <input
-                    className="form-input"
-                    value={form.melhor_epoca}
-                    onChange={(e) => handleChange("melhor_epoca", e.target.value)}
-                    placeholder="Ex: Dezembro a Marco"
-                    disabled={permissao === "view"}
-                  />
-                </div>
-              </div>
-            )}
+      {mostrarFormulario && formLayout !== "selection" && (
+
+        <div className="card-base card-blue mb-3">
+
+          <form onSubmit={salvar}>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Tipo *</label>
+                <select
+                  className="form-select"
+                  value={form.tipo_produto}
+                  onChange={(e) => handleChange("tipo_produto", e.target.value)}
+                  disabled={permissao === "view"}
+                >
+                  <option value="">Selecione o tipo</option>
+                  {tipos.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {tipoLabel(t) || "(sem nome)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!isGlobalMode && (
+              <div className="form-row" style={{ marginTop: 12, gap: 12 }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Cidade *</label>
+                  <input
+                    className="form-input"
+                    placeholder="Digite o nome da cidade"
+                    value={cidadeBusca}
+                    onChange={(e) => handleCidadeBusca(e.target.value)}
+                    onFocus={() => setMostrarSugestoes(true)}
+                    onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+                    disabled={permissao === "view" || form.todas_as_cidades}
+                    style={{ marginBottom: 6 }}
+                  />
+                  {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
+                  {erroCidadeBusca && !buscandoCidade && (
+                    <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
+                  )}
+                  {mostrarSugestoes && (
+                    <div
+                      className="card-base"
+                      style={{
+                        marginTop: 4,
+                        maxHeight: 180,
+                        overflowY: "auto",
+                        padding: 6,
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      {resultadosCidade.length === 0 && !buscandoCidade && (
+                        <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                      )}
+                      {resultadosCidade.map((c) => {
+                        const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="btn btn-light"
+                            style={{
+                              width: "100%",
+                              justifyContent: "flex-start",
+                              marginBottom: 4,
+                              background: form.cidade_id === c.id ? "#e0f2fe" : "#fff",
+                              borderColor: form.cidade_id === c.id ? "#38bdf8" : "#e5e7eb",
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleChange("cidade_id", c.id);
+                              setCidadeBusca(label);
+                              setMostrarSugestoes(false);
+                              setResultadosCidade([]);
+                            }}
+                          >
+                            {label}
+                            {c.pais_nome ? <span style={{ color: "#6b7280", marginLeft: 6 }}>- {c.pais_nome}</span> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <small style={{ color: "#64748b" }}>
+                    Cidade selecionada pode ajudar a preencher o destino automaticamente.
+                  </small>
+                </div>
+                <div className="form-group" style={{ width: 220 }}>
+                  <label className="form-label">Todas as cidades</label>
+                  <select
+                    className="form-select"
+                    value={form.todas_as_cidades ? "true" : "false"}
+                    onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
+                    disabled={permissao === "view"}
+                  >
+                    <option value="false">Nao</option>
+                    <option value="true">Sim</option>
+                  </select>
+                  <small style={{ color: "#64748b" }}>
+                    Produtos globais ficam disponiveis para qualquer cidade e nao salvam cidade especifica.
+                  </small>
+                </div>
+              </div>
+            )}
             <div className="form-row" style={{ marginTop: 12 }}>
-              {!isGlobalMode && (
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Nome do produto *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Fornecedor (opcional)</label>
+                <input
+                  className="form-input"
+                  list="fornecedores-list"
+                  placeholder="Escolha um fornecedor"
+                  value={form.fornecedor_label}
+                  onChange={(e) => handleFornecedorInput(e.target.value)}
+                  disabled={permissao === "view"}
+                />
+                <datalist id="fornecedores-list">
+                  {fornecedoresLista.map((fornecedor) => (
+                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Destino *</label>
+                <input
+                  className="form-input"
+                  value={form.destino}
+                  onChange={(e) => handleChange("destino", e.target.value)}
+                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
+                  disabled={permissao === "view" || isGlobalMode}
+                />
+                <small style={{ color: "#64748b" }}>Cidade escolhida será aplicada quando o destino estiver vazio.</small>
+              </div>
+            </div>
+            {isHospedagem && (
+              <div className="form-row" style={{ marginTop: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Atracao principal</label>
+                  <input
+
+                    className="form-input"
+
+                    value={form.atracao_principal}
+
+                    onChange={(e) => handleChange("atracao_principal", e.target.value)}
+
+                    placeholder="Ex: Disney, Torre Eiffel..."
+
+                    disabled={permissao === "view"}
+
+                  />
+
+                </div>
+
+                <div className="form-group">
+
+                  <label className="form-label">Melhor epoca</label>
+
+                  <input
+
+                    className="form-input"
+
+                    value={form.melhor_epoca}
+
+                    onChange={(e) => handleChange("melhor_epoca", e.target.value)}
+
+                    placeholder="Ex: Dezembro a Marco"
+
+                    disabled={permissao === "view"}
+
+                  />
+
+                </div>
+
+              </div>
+
+            )}
+
+            {isHospedagem && (
+              <div className="form-row" style={{ marginTop: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Duracao sugerida</label>
-                  <select
-                    className="form-select"
-                    value={form.duracao_sugerida}
-                    onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
-                    disabled={permissao === "view"}
-                  >
-                    <option value="">Selecione</option>
-                    <option value="De 1 a 3 dias">De 1 a 3 dias</option>
-                    <option value="De 3 a 5 dias">De 3 a 5 dias</option>
-                    <option value="De 5 a 7 dias">De 5 a 7 dias</option>
-                    <option value="De 7 a 10 dias">De 7 a 10 dias</option>
-                    <option value="10 dias ou mais">10 dias ou mais</option>
-                  </select>
-                </div>
-              )}
-              <div className="form-group" style={isGlobalMode ? { flex: 1 } : undefined}>
-                <label className="form-label">Nivel de preco</label>
-                <select
-                  className="form-select"
-                  value={form.nivel_preco}
-                  onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                  disabled={permissao === "view"}
-                >
-                  <option value="">Selecione</option>
-                  {nivelPrecosOptions.map((nivel) => (
-                    <option key={nivel.value} value={nivel.value}>
-                      {nivel.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {!isGlobalMode && (
-                <div className="form-group">
-                  <label className="form-label">Imagem (URL)</label>
-                  <input
-                    className="form-input"
-                    value={form.imagem_url}
-                    onChange={(e) => handleChange("imagem_url", e.target.value)}
-                    placeholder="URL de uma imagem do destino"
-                    disabled={permissao === "view"}
-                  />
-                </div>
-              )}
-            </div>
+                  <select
+                    className="form-select"
+                    value={form.duracao_sugerida}
+                    onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
+                    disabled={permissao === "view"}
+                  >
+                    <option value="">Selecione</option>
+                    <option value="De 1 a 3 dias">De 1 a 3 dias</option>
+                    <option value="De 3 a 5 dias">De 3 a 5 dias</option>
+                    <option value="De 5 a 7 dias">De 5 a 7 dias</option>
+                    <option value="De 7 a 10 dias">De 7 a 10 dias</option>
+                    <option value="10 dias ou mais">10 dias ou mais</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Nivel de preco</label>
+                  <select
+                    className="form-select"
+                    value={form.nivel_preco}
+                    onChange={(e) => handleChange("nivel_preco", e.target.value)}
+                    disabled={permissao === "view"}
+                  >
+                    <option value="">Selecione</option>
+                    {nivelPrecosOptions.map((nivel) => (
+                      <option key={nivel.value} value={nivel.value}>
+                        {nivel.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Imagem (URL)</label>
+                  <input
+                    className="form-input"
+                    value={form.imagem_url}
+                    onChange={(e) => handleChange("imagem_url", e.target.value)}
+                    placeholder="URL de uma imagem do destino"
+                    disabled={permissao === "view"}
+                  />
+                </div>
+              </div>
+            )}
             <div className="form-row" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Moeda</label>
@@ -1209,39 +1533,278 @@ export default function ProdutosIsland() {
                 />
               </div>
             </div>
+            <div className="form-row" style={{ marginTop: 16, alignItems: "center" }}>
+              <div className="form-group" style={{ flex: 1, gap: 4 }}>
+                <div className="form-label">Padrão do Fornecedor</div>
+                <div className="flex gap-4 flex-wrap" style={{ fontSize: "0.9rem", opacity: 0.85 }}>
+                  <strong>Moeda:</strong> {form.moeda || "USD"}
+                  <strong>Margem:</strong> {form.margem || "20%"}
+                  <strong>Câmbio:</strong> {form.cambio || "5,00"}
+                </div>
+              </div>
+              {isHospedagem && (
+                <div className="form-group" style={{ alignItems: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn btn-light"
+                    onClick={abrirModalTarifa}
+                    disabled={permissao === "view"}
+                  >
+                    Adicionar Tarifa
+                  </button>
+                </div>
+              )}
+            </div>
+            {isHospedagem && (
+              <div className="form-row" style={{ marginTop: 12 }}>
+                <div className="table-container overflow-x-auto">
+                  <table className="table-default table-header-blue min-w-[1080px]">
+                    <thead>
+                      <tr>
+                        <th>Acomodação</th>
+                        <th>Pax</th>
+                        <th>De</th>
+                        <th>Até</th>
+                        <th>Tipo</th>
+                        <th>Valor Neto</th>
+                        <th>Padrão</th>
+                        <th>Margem</th>
+                        <th>Valor Venda</th>
+                        <th>Valor em R$</th>
+                        <th className="th-actions">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tarifas.length === 0 ? (
+                        <tr>
+                          <td colSpan={11}>Nenhuma tarifa cadastrada.</td>
+                        </tr>
+                      ) : (
+                        tarifas.map((tarifa) => (
+                          <tr key={tarifa.id}>
+                            <td>{tarifa.acomodacao}</td>
+                            <td>{tarifa.qte_pax}</td>
+                            <td>{tarifa.validade_de}</td>
+                            <td>{tarifa.validade_ate}</td>
+                            <td>{tarifa.tipo}</td>
+                            <td>{formatValorComMoeda(tarifa.valor_neto, tarifa.moeda)}</td>
+                            <td>{tarifa.padrao}</td>
+                            <td>{formatMarginPercent(tarifa.margem)}</td>
+                            <td>{formatValorComMoeda(tarifa.valor_venda, tarifa.moeda)}</td>
+                            <td>{formatValorComMoeda(tarifa.valor_em_reais, "R$")}</td>
+                            <td className="th-actions">
+                              <button
+                                type="button"
+                                className="btn btn-light"
+                                onClick={() => removerTarifa(tarifa.id)}
+                              >
+                                Remover
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             <div className="form-group" style={{ marginTop: 12 }}>
               <label className="form-label">Informacoes importantes</label>
-              <textarea
-                className="form-input"
-                rows={3}
-                value={form.informacoes_importantes}
-                onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-                placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-                disabled={permissao === "view"}
-              />
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Ativo</label>
-              <select
-                className="form-select"
-                value={form.ativo ? "true" : "false"}
-                onChange={(e) => handleChange("ativo", e.target.value === "true")}
-                disabled={permissao === "view"}
-              >
-                <option value="true">Sim</option>
-                <option value="false">Nao</option>
-              </select>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
-              <button type="submit" className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar produto"}
-              </button>
-              <button type="button" className="btn btn-light" onClick={fecharFormularioProduto} disabled={salvando}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
+              <textarea
+
+                className="form-input"
+
+                rows={3}
+
+                value={form.informacoes_importantes}
+
+                onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+
+                placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
+
+                disabled={permissao === "view"}
+
+              />
+
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+
+              <label className="form-label">Ativo</label>
+
+              <select
+
+                className="form-select"
+
+                value={form.ativo ? "true" : "false"}
+
+                onChange={(e) => handleChange("ativo", e.target.value === "true")}
+
+                disabled={permissao === "view"}
+
+              >
+
+                <option value="true">Sim</option>
+
+                <option value="false">Nao</option>
+
+              </select>
+
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar produto"}
+              </button>
+              <button type="button" className="btn btn-light" onClick={fecharFormularioProduto} disabled={salvando}>
+                Cancelar
+              </button>
+            </div>
+            {tarifaModalAberta && (
+              <div className="modal-backdrop">
+                <div className="modal-panel">
+                  <form onSubmit={salvarTarifaModal}>
+                    <div className="modal-header">
+                      <h3>Adicionar tarifa</h3>
+                      <button type="button" className="btn btn-light" onClick={fecharModalTarifa}>
+                        Fechar
+                      </button>
+                    </div>
+                    <div className="modal-body">
+                      {tarifaModalErro && (
+                        <div style={{ color: "#dc2626", marginBottom: 8 }}>{tarifaModalErro}</div>
+                      )}
+                      <div className="form-row">
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Validade De</label>
+                          <input
+                            type="date"
+                            className="form-input"
+                            value={tarifaModalForm.validade_de}
+                            onChange={(e) => handleTarifaModalChange("validade_de", e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Validade Até</label>
+                          <input
+                            type="date"
+                            className="form-input"
+                            value={tarifaModalForm.validade_ate}
+                            onChange={(e) => handleTarifaModalChange("validade_ate", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ marginTop: 12 }}>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Acomodação</label>
+                          <input
+                            className="form-input"
+                            list="acomodacoes-list"
+                            value={tarifaModalForm.acomodacao}
+                            onChange={(e) => handleTarifaModalChange("acomodacao", e.target.value)}
+                          />
+                          <datalist id="acomodacoes-list">
+                            {acomodacoes.map((nome) => (
+                              <option key={nome} value={nome} />
+                            ))}
+                          </datalist>
+                        </div>
+                        <div className="form-group" style={{ width: 120 }}>
+                          <label className="form-label">Qte Pax</label>
+                          <input
+                            type="number"
+                            min={1}
+                            className="form-input"
+                            value={tarifaModalForm.qte_pax}
+                            onChange={(e) => handleTarifaModalChange("qte_pax", e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Tipo</label>
+                          <input
+                            className="form-input"
+                            list="tipo-tarifa-list"
+                            value={tarifaModalForm.tipo}
+                            onChange={(e) => handleTarifaModalChange("tipo", e.target.value)}
+                          />
+                          <datalist id="tipo-tarifa-list">
+                            {["diária", "pacote"].map((tipo) => (
+                              <option key={tipo} value={tipo} />
+                            ))}
+                          </datalist>
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ marginTop: 12 }}>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Valor Neto ({tarifaMoeda})</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Ex: 1000"
+                            value={tarifaModalForm.valor_neto}
+                            onChange={(e) => handleTarifaModalChange("valor_neto", e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group" style={{ width: 180 }}>
+                          <label className="form-label">Padrão</label>
+                          <select
+                            className="form-select"
+                            value={tarifaModalForm.padrao}
+                            onChange={(e) => handleTarifaModalChange("padrao", e.target.value as "Manual" | "Padrao")}
+                          >
+                            <option value="Padrao">Padrão</option>
+                            <option value="Manual">Manual</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Margem</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Ex: 25%"
+                            value={tarifaModalForm.margem}
+                            onChange={(e) => handleTarifaModalChange("margem", e.target.value)}
+                            disabled={tarifaModalForm.padrao !== "Manual"}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ marginTop: 12, gap: 12 }}>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Valor Venda ({tarifaMoeda})</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={tarifaValorVendaNum != null ? formatValorComMoeda(tarifaValorVendaNum, tarifaMoeda) : ""}
+                            readOnly
+                          />
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label className="form-label">Valor em R$</label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={formatValorComMoeda(tarifaValorEmReaisPreview, "R$")}
+                            readOnly
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button type="button" className="btn btn-light" onClick={fecharModalTarifa}>
+                        Cancelar
+                      </button>
+                      <button type="submit" className="btn btn-primary" disabled={permissao === "view"}>
+                        Salvar tarifa
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+
       )}      {erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>

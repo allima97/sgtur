@@ -18,6 +18,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/favicon",
     "/assets",
     "/public",
+    "/pdfs",
   ];
 
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));

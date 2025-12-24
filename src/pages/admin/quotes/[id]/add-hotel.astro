@@ -1,0 +1,93 @@
+---
+import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
+
+const quoteId = Astro.params.id;
+
+// 1️⃣ Quote + Inquiry
+const { data: quote } = await supabase
+  .from("quote")
+  .select(`
+    id,
+    status,
+    inquiry:inquiry_id (
+      checkin,
+      checkout,
+      adults,
+      children
+    )
+  `)
+  .eq("id", quoteId)
+  .single();
+
+if (!quote || quote.status !== "DRAFT") {
+  throw new Error("Quote inválido ou não editável");
+}
+
+// 2️⃣ Lista rate plans
+const { data: ratePlans } = await supabase
+  .from("rate_plan")
+  .select(`
+    id,
+    codigo,
+    regime,
+    room_type:room_type_id (
+      nome,
+      hotel:hotel_id (
+        id
+      )
+    )
+  `)
+  .eq("ativo", true)
+  .limit(50);
+
+// 3️⃣ Action
+async function adicionarHotel(formData: FormData) {
+  "use server";
+
+  const ratePlanId = String(formData.get("rate_plan_id"));
+
+  const { error } = await supabase.rpc("adicionar_hotel_ao_quote", {
+    p_quote_id: quoteId,
+    p_rate_plan_id: ratePlanId
+  });
+
+  if (error) throw error;
+}
+---
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <h1>Adicionar Hotel ao Carrinho</h1>
+
+    <p>
+      Datas: {quote.inquiry.checkin} → {quote.inquiry.checkout}<br />
+      Pax: {quote.inquiry.adults} adultos, {quote.inquiry.children} crianças
+    </p>
+
+    <hr />
+
+    <ul>
+      {ratePlans?.map((rp) => (
+        <li>
+          <strong>{rp.room_type.nome}</strong><br />
+          Plano: {rp.codigo} — {rp.regime}
+
+          <form method="post" action={adicionarHotel}>
+            <input type="hidden" name="rate_plan_id" value={rp.id} />
+            <button type="submit">
+              ➕ Adicionar ao carrinho
+            </button>
+          </form>
+        </li>
+      ))}
+    </ul>
+
+    <p>
+      <a href={`/admin/quotes/${quoteId}`}>
+        ⬅ Voltar para o carrinho
+      </a>
+    </p>
+  </body>
+</html>

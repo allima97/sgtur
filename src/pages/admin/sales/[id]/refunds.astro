@@ -1,0 +1,123 @@
+---
+import { supabaseServer as supabase } from "../../../../lib/supabaseServer";
+
+const saleId = Astro.params.id;
+
+/* 1️⃣ VENDA */
+const { data: sale, error } = await supabase
+  .from("sale")
+  .select(`
+    id,
+    total,
+    paid_total,
+    balance_due,
+    currency,
+    status,
+    financial_status
+  `)
+  .eq("id", saleId)
+  .single();
+
+if (!sale) {
+  console.error(error);
+  throw new Error("Venda não encontrada");
+}
+
+/* 2️⃣ ACTIONS */
+
+async function estornar(formData: FormData) {
+  "use server";
+
+  const amount = Number(formData.get("amount"));
+  const reason = String(formData.get("reason") ?? "");
+
+  const { error } = await supabase.rpc("registrar_estorno", {
+    p_sale_id: saleId,
+    p_amount: amount,
+    p_reason: reason
+  });
+
+  if (error) throw error;
+}
+
+async function cancelar(formData: FormData) {
+  "use server";
+
+  const reason = String(formData.get("reason"));
+  const penalty = Number(formData.get("penalty") ?? 0);
+
+  const { error } = await supabase.rpc("cancelar_venda", {
+    p_sale_id: saleId,
+    p_reason: reason,
+    p_penalty: penalty
+  });
+
+  if (error) throw error;
+}
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <h1>Estorno / Cancelamento</h1>
+
+    <p>
+      <strong>Status venda:</strong> {sale.status}<br />
+      <strong>Status financeiro:</strong> {sale.financial_status}
+    </p>
+
+    <p>
+      <strong>Total:</strong> {sale.currency} {sale.total}<br />
+      <strong>Pago:</strong> {sale.currency} {sale.paid_total}<br />
+      <strong>Saldo:</strong> {sale.currency} {sale.balance_due}
+    </p>
+
+    <hr />
+
+    <h2>🔁 Estorno</h2>
+    <form method="post" action={estornar}>
+      <input
+        type="number"
+        step="0.01"
+        name="amount"
+        placeholder="Valor do estorno"
+        required
+      />
+      <input
+        type="text"
+        name="reason"
+        placeholder="Motivo do estorno"
+      />
+      <button type="submit">Registrar estorno</button>
+    </form>
+
+    <hr />
+
+    <h2>⛔ Cancelar venda</h2>
+    <form method="post" action={cancelar}>
+      <input
+        type="text"
+        name="reason"
+        placeholder="Motivo do cancelamento"
+        required
+      />
+      <input
+        type="number"
+        step="0.01"
+        name="penalty"
+        placeholder="Multa (se houver)"
+      />
+      <button type="submit">
+        Cancelar venda
+      </button>
+    </form>
+
+    <hr />
+
+    <p>
+      <a href={`/admin/sales/${saleId}`}>⬅ Voltar para a venda</a>
+    </p>
+  </body>
+</html>

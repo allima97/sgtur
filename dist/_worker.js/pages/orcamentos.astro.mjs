@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_CVPGTMFc.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_wZGzgon3.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../chunks/systemName_Co0aCFY_.mjs';
-import { r as reactExports } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../chunks/usePermissao_Chx8mpdX.mjs';
-import { L as LoadingUsuarioContext } from '../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../chunks/systemName_EsfuoaVO.mjs';
+import { r as reactExports } from '../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { u as usePermissao } from '../chunks/usePermissao_DDNDrOh3.mjs';
+import { L as LoadingUsuarioContext } from '../chunks/LoadingUsuarioContext_mmcEZ_Es.mjs';
 
 function OrcamentosCadastroIsland({
   suppressLoadingMessage = false
@@ -252,7 +252,7 @@ function gerarNumeroVenda(data) {
 function OrcamentosConsultaIsland({
   suppressLoadingMessage = false
 }) {
-  const { ativo, loading: loadingPerm, podeCriar } = usePermissao("Vendas");
+  const { ativo, loading: loadingPerm, podeCriar, podeExcluir } = usePermissao("Vendas");
   const [formAberto, setFormAberto] = reactExports.useState(false);
   const [lista, setLista] = reactExports.useState([]);
   const [statusFiltro, setStatusFiltro] = reactExports.useState("");
@@ -309,6 +309,7 @@ function OrcamentosConsultaIsland({
   const [ultimasInteracoes, setUltimasInteracoes] = reactExports.useState({});
   const [toasts, setToasts] = reactExports.useState([]);
   const [toastCounter, setToastCounter] = reactExports.useState(0);
+  const [deletandoOrcamentoId, setDeletandoOrcamentoId] = reactExports.useState(null);
   const tipoInteracaoOptions = [
     { value: "anotacao", label: "Anotação interna" },
     { value: "contato", label: "Contato com cliente" },
@@ -566,6 +567,36 @@ function OrcamentosConsultaIsland({
       showToast("Erro ao alterar status.", "error");
     } finally {
       setSalvandoStatus(null);
+    }
+  }
+  async function excluirOrcamento(o) {
+    if (!podeExcluir) return;
+    const confirmar = window.confirm("Excluir este orçamento e seu histórico?");
+    if (!confirmar) return;
+    try {
+      setDeletandoOrcamentoId(o.id);
+      setErro(null);
+      setSucesso(null);
+      const interacoes2 = await supabase.from("orcamento_interacoes").delete().eq("orcamento_id", o.id);
+      if (interacoes2.error) {
+        console.warn("Não foi possível limpar interações antes de excluir o orçamento.", interacoes2.error);
+      }
+      const viagensExcluir = await supabase.from("viagens").delete().eq("orcamento_id", o.id);
+      if (viagensExcluir.error) {
+        console.warn("Não foi possível limpar viagens vinculadas antes de excluir o orçamento.", viagensExcluir.error);
+      }
+      const { error } = await supabase.from("orcamentos").delete().eq("id", o.id);
+      if (error) throw error;
+      setSucesso("Orçamento excluído.");
+      showToast("Orçamento excluído.", "success");
+      await carregar();
+    } catch (err) {
+      console.error(err);
+      const message = err && typeof err === "object" && "message" in err && typeof err.message === "string" ? err.message : "Erro ao excluir orçamento.";
+      setErro(message);
+      showToast(message, "error");
+    } finally {
+      setDeletandoOrcamentoId(null);
     }
   }
   function iniciarEdicao(o) {
@@ -1111,6 +1142,17 @@ function OrcamentosConsultaIsland({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { style: { textAlign: "center" }, children: [
+              podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  className: "btn-icon btn-danger",
+                  onClick: () => excluirOrcamento(o),
+                  disabled: deletandoOrcamentoId === o.id,
+                  style: { marginRight: 6 },
+                  title: "Excluir orçamento",
+                  children: deletandoOrcamentoId === o.id ? "..." : "🗑️"
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -1244,6 +1286,21 @@ function OrcamentosConsultaIsland({
                                 style: { padding: "4px 8px" },
                                 onClick: () => abrirHistorico(o),
                                 children: "Histórico"
+                              }
+                            ),
+                            podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "button",
+                              {
+                                className: "btn btn-light",
+                                style: {
+                                  padding: "4px 8px",
+                                  color: "#b91c1c",
+                                  borderColor: "#fca5a5",
+                                  background: "#fee2e2"
+                                },
+                                onClick: () => excluirOrcamento(o),
+                                disabled: deletandoOrcamentoId === o.id,
+                                children: deletandoOrcamentoId === o.id ? "Excluindo..." : "Excluir"
                               }
                             )
                           ] })

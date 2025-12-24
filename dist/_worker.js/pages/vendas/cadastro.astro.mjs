@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_Co0aCFY_.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_Chx8mpdX.mjs';
-import { r as registrarLog } from '../../chunks/logs_BveZ35Xh.mjs';
+import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_EsfuoaVO.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_DDNDrOh3.mjs';
+import { r as registrarLog } from '../../chunks/logs_By9JfuIz.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -21,7 +21,9 @@ const initialRecibo = {
   produto_id: "",
   numero_recibo: "",
   valor_total: "",
-  valor_taxas: "0"
+  valor_taxas: "0",
+  data_inicio: "",
+  data_fim: ""
 };
 function formatarValorDigitado(valor) {
   const apenasDigitos = valor.replace(/\D/g, "");
@@ -39,6 +41,17 @@ function moedaParaNumero(valor) {
   const limpo = valor.replace(/\./g, "").replace(",", ".");
   const num = Number(limpo);
   return num;
+}
+function calcularStatusPeriodo(inicio, fim) {
+  if (!inicio) return "planejada";
+  const hoje = /* @__PURE__ */ new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  const dataFim = fim ? new Date(fim) : null;
+  if (dataFim && dataFim < hoje) return "concluida";
+  if (dataInicio > hoje) return "confirmada";
+  if (dataFim && hoje > dataFim) return "concluida";
+  return "em_viagem";
 }
 function VendasCadastroIsland() {
   const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
@@ -143,7 +156,9 @@ function VendasCadastroIsland() {
           })?.id || "",
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
-          valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00"
+          valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
+          data_inicio: r.data_inicio || "",
+          data_fim: r.data_fim || ""
         }))
       );
     } catch (e) {
@@ -330,6 +345,12 @@ function VendasCadastroIsland() {
         setSalvando(false);
         return;
       }
+      const { data: userRow, error: userRowError } = await supabase.from("users").select("company_id").eq("id", userId).maybeSingle();
+      if (userRowError) throw userRowError;
+      const companyId = userRow?.company_id;
+      if (!companyId) {
+        throw new Error("Seu usuário precisa estar vinculado a uma empresa para cadastrar viagens.");
+      }
       if (!recibos.length) {
         setErro("Uma venda precisa ter ao menos 1 recibo.");
         showToast("Inclua ao menos um recibo na venda.", "error");
@@ -443,7 +464,88 @@ function VendasCadastroIsland() {
         produtoIdsResolvidos.push(idResolvido);
       }
       const produtoDestinoId = produtoIdsResolvidos[0];
+      let oldReciboIds = [];
+      if (editId) {
+        const { data: existingRecibos, error: existingRecibosErr } = await supabase.from("vendas_recibos").select("id").eq("venda_id", editId);
+        if (existingRecibosErr) throw existingRecibosErr;
+        oldReciboIds = (existingRecibos || []).map((item) => item.id).filter(Boolean);
+      }
+      const getCidadeNome = (cidadeId) => cidades.find((c) => c.id === cidadeId)?.nome || "";
       let vendaId = editId;
+      async function criarViagemParaRecibo(params) {
+        if (!params.reciboId) return;
+        if (!vendaId) {
+          throw new Error("Venda não encontrada ao criar viagem.");
+        }
+        const statusPeriodo = calcularStatusPeriodo(params.dataInicio, params.dataFim);
+        const cidadeNome = params.cidade || getCidadeNome(formVenda.destino_id);
+        const destinoLabel = params.produtoNome || params.tipoNome || cidadeNome || null;
+        const origemLabel = cidadeNome && cidadeNome !== destinoLabel ? cidadeNome : params.produtoNome || params.tipoNome || destinoLabel;
+        const { data: viagemData, error: viagemErr } = await supabase.from("viagens").insert({
+          company_id: companyId,
+          venda_id: vendaId,
+          recibo_id: params.reciboId,
+          cliente_id: formVenda.cliente_id,
+          responsavel_user_id: userId,
+          origem: origemLabel || null,
+          destino: destinoLabel || null,
+          data_inicio: params.dataInicio || null,
+          data_fim: params.dataFim || null,
+          status: statusPeriodo,
+          observacoes: params.numeroRecibo ? `Recibo ${params.numeroRecibo}` : null
+        }).select("id").single();
+        if (viagemErr) throw viagemErr;
+        const viagemId = viagemData?.id;
+        if (!viagemId) return;
+        const { error: passageiroError } = await supabase.from("viagem_passageiros").insert({
+          viagem_id: viagemId,
+          cliente_id: formVenda.cliente_id,
+          company_id: companyId,
+          papel: "passageiro",
+          created_by: userId
+        });
+        if (passageiroError) throw passageiroError;
+      }
+      async function salvarReciboEViagem(recibo, produtoIdResolvido) {
+        if (!vendaId) {
+          throw new Error("Venda não encontrada ao salvar recibo.");
+        }
+        const prod = produtos.find((p) => p.id === produtoIdResolvido);
+        const tipoId = prod?.tipo_produto || (recibo.produto_id?.startsWith("virtual-") ? recibo.produto_id.replace("virtual-", "") : prod?.tipo_produto);
+        if (!tipoId) {
+          throw new Error("Produto do recibo não possui tipo vinculado.");
+        }
+        const valTotalNum = moedaParaNumero(recibo.valor_total);
+        const valTaxasNum = moedaParaNumero(recibo.valor_taxas);
+        if (Number.isNaN(valTotalNum)) {
+          throw new Error("Valor total inválido. Digite um valor monetário.");
+        }
+        if (Number.isNaN(valTaxasNum)) {
+          throw new Error("Valor de taxas inválido. Digite um valor monetário.");
+        }
+        const tipoNome = tipos.find((t) => t.id === tipoId)?.nome || prod?.nome || "";
+        const insertPayload = {
+          venda_id: vendaId,
+          produto_id: tipoId,
+          numero_recibo: recibo.numero_recibo.trim(),
+          valor_total: valTotalNum,
+          valor_taxas: valTaxasNum,
+          data_inicio: recibo.data_inicio || null,
+          data_fim: recibo.data_fim || null
+        };
+        const { data: insertedRecibo, error: insertErr } = await supabase.from("vendas_recibos").insert(insertPayload).select("id, data_inicio, data_fim").single();
+        if (insertErr) throw insertErr;
+        const cidadeNomeResolvida = getCidadeNome(formVenda.destino_id) || getCidadeNome(prod?.cidade_id);
+        await criarViagemParaRecibo({
+          reciboId: insertedRecibo?.id,
+          dataInicio: insertedRecibo?.data_inicio || null,
+          dataFim: insertedRecibo?.data_fim || null,
+          tipoNome,
+          produtoNome: prod?.nome,
+          numeroRecibo: insertPayload.numero_recibo,
+          cidade: cidadeNomeResolvida || void 0
+        });
+      }
       if (editId) {
         const { error: vendaErr } = await supabase.from("vendas").update({
           cliente_id: formVenda.cliente_id,
@@ -454,32 +556,13 @@ function VendasCadastroIsland() {
           data_embarque: formVenda.data_embarque || null
         }).eq("id", editId);
         if (vendaErr) throw vendaErr;
+        if (oldReciboIds.length > 0) {
+          const { error: cleanupError } = await supabase.from("viagens").delete().in("recibo_id", oldReciboIds);
+          if (cleanupError) throw cleanupError;
+        }
         await supabase.from("vendas_recibos").delete().eq("venda_id", editId);
         for (let idx = 0; idx < recibos.length; idx++) {
-          const r = recibos[idx];
-          const resolvedId = produtoIdsResolvidos[idx];
-          const prod = produtos.find((p) => p.id === resolvedId);
-          const tipoId = prod?.tipo_produto || (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
-          if (!tipoId) {
-            throw new Error("Produto do recibo não possui tipo vinculado.");
-          }
-          const valTotalNum = moedaParaNumero(r.valor_total);
-          const valTaxasNum = moedaParaNumero(r.valor_taxas);
-          if (Number.isNaN(valTotalNum)) {
-            throw new Error("Valor total inválido. Digite um valor monetário.");
-          }
-          if (Number.isNaN(valTaxasNum)) {
-            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
-          }
-          const { error } = await supabase.from("vendas_recibos").insert({
-            venda_id: editId,
-            produto_id: tipoId,
-            // FK espera tipo_produtos
-            numero_recibo: r.numero_recibo.trim(),
-            valor_total: valTotalNum,
-            valor_taxas: valTaxasNum
-          });
-          if (error) throw error;
+          await salvarReciboEViagem(recibos[idx], produtoIdsResolvidos[idx]);
         }
         await registrarLog({
           acao: "venda_atualizada",
@@ -501,30 +584,7 @@ function VendasCadastroIsland() {
         if (vendaErr) throw vendaErr;
         vendaId = vendaData.id;
         for (let idx = 0; idx < recibos.length; idx++) {
-          const r = recibos[idx];
-          const resolvedId = produtoIdsResolvidos[idx];
-          const prod = produtos.find((p) => p.id === resolvedId);
-          const tipoId = prod?.tipo_produto || (r.produto_id?.startsWith("virtual-") ? r.produto_id.replace("virtual-", "") : prod?.tipo_produto);
-          if (!tipoId) {
-            throw new Error("Produto do recibo não possui tipo vinculado.");
-          }
-          const valTotalNum = moedaParaNumero(r.valor_total);
-          const valTaxasNum = moedaParaNumero(r.valor_taxas);
-          if (Number.isNaN(valTotalNum)) {
-            throw new Error("Valor total inválido. Digite um valor monetário.");
-          }
-          if (Number.isNaN(valTaxasNum)) {
-            throw new Error("Valor de taxas inválido. Digite um valor monetário.");
-          }
-          const { error } = await supabase.from("vendas_recibos").insert({
-            venda_id: vendaId,
-            produto_id: tipoId,
-            // FK espera tipo_produtos
-            numero_recibo: r.numero_recibo.trim(),
-            valor_total: valTotalNum,
-            valor_taxas: valTaxasNum
-          });
-          if (error) throw error;
+          await salvarReciboEViagem(recibos[idx], produtoIdsResolvidos[idx]);
         }
         await registrarLog({
           acao: "venda_criada",
@@ -699,6 +759,32 @@ function VendasCadastroIsland() {
                 className: "form-input",
                 value: r.numero_recibo,
                 onChange: (e) => updateRecibo(i, "numero_recibo", e.target.value),
+                required: true
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "date",
+                value: r.data_inicio,
+                onChange: (e) => updateRecibo(i, "data_inicio", e.target.value),
+                required: true
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "date",
+                value: r.data_fim,
+                onChange: (e) => updateRecibo(i, "data_fim", e.target.value),
                 required: true
               }
             )

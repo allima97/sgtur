@@ -1,0 +1,97 @@
+---
+import { supabaseServer as supabase } from "../../lib/supabaseServer";
+
+/* KPIs VENDAS */
+const { data: sales } = await supabase
+  .from("sale")
+  .select("total, paid_total, balance_due, financial_status");
+
+/* KPIs COMISSÃO */
+const { data: commissions } = await supabase
+  .from("commission_ledger")
+  .select("amount, status");
+
+/* ÚLTIMAS VENDAS */
+const { data: recentSales } = await supabase
+  .from("sale")
+  .select("id, total, paid_total, balance_due, financial_status, created_at")
+  .order("created_at", { ascending: false })
+  .limit(10);
+
+/* Agregações */
+const receitaTotal =
+  sales?.reduce((s, r) => s + Number(r.total), 0) ?? 0;
+
+const recebido =
+  sales?.reduce((s, r) => s + Number(r.paid_total), 0) ?? 0;
+
+const aReceber =
+  sales?.reduce((s, r) => s + Number(r.balance_due), 0) ?? 0;
+
+const vendasAbertas =
+  sales?.filter(s =>
+    s.financial_status === "UNPAID" ||
+    s.financial_status === "PARTIALLY_PAID"
+  ).length ?? 0;
+
+const comissaoPendente =
+  commissions?.filter(c => c.status === "PENDING")
+    .reduce((s, c) => s + Number(c.amount), 0) ?? 0;
+
+const comissaoAprovada =
+  commissions?.filter(c => c.status === "APPROVED")
+    .reduce((s, c) => s + Number(c.amount), 0) ?? 0;
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <h1>📊 Dashboard Financeiro</h1>
+
+    <section>
+      <h2>Resumo</h2>
+      <ul>
+        <li><strong>Receita total:</strong> BRL {receitaTotal}</li>
+        <li><strong>Recebido:</strong> BRL {recebido}</li>
+        <li><strong>A receber:</strong> BRL {aReceber}</li>
+        <li><strong>Vendas abertas:</strong> {vendasAbertas}</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Comissões</h2>
+      <ul>
+        <li><strong>Pendente:</strong> BRL {comissaoPendente}</li>
+        <li><strong>Aprovada:</strong> BRL {comissaoAprovada}</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Últimas vendas</h2>
+      <table border="1" cellpadding="6">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Total</th>
+            <th>Pago</th>
+            <th>Saldo</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentSales?.map((s) => (
+            <tr>
+              <td>{s.id}</td>
+              <td>BRL {s.total}</td>
+              <td>BRL {s.paid_total}</td>
+              <td>BRL {s.balance_due}</td>
+              <td>{s.financial_status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  </body>
+</html>

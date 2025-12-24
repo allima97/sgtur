@@ -85,6 +85,28 @@ const permLevel = (p: NivelPermissao | undefined) => {
   }
 };
 
+const FornecedoresIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 32 32"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="14" cy="8" r="4.2" />
+    <path d="M9 18c0-1.5 1.7-3 5-3s5 1.5 5 3" />
+    <path d="M8 25c1.5-3 6-4 8-4s6 1 7 4" />
+    <rect x="11.5" y="19" width="6" height="4" rx="1" />
+    <path d="M21.5 8v16" />
+    <path d="M21.5 8l6 3-6 3" />
+  </svg>
+);
+
 export default function MenuIsland({ activePage }) {
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
@@ -355,7 +377,7 @@ export default function MenuIsland({ activePage }) {
       name: "Fornecedores",
       href: "/cadastros/fornecedores",
       active: "fornecedores",
-      icon: "🌐",
+      icon: <FornecedoresIcon />,
       label: "Fornecedores",
     },
   ];

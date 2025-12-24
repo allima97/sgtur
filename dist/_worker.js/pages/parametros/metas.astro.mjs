@@ -1,9 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_CVPGTMFc.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
-import { M as MetasVendedorIsland } from '../../chunks/MetasVendedorIsland_0KyANWQh.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { M as MetasVendedorIsland } from '../../chunks/MetasVendedorIsland_Rbq7_-in.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
 
 const $$Metas = createComponent(($$result, $$props, $$slots) => {
   const activePage = "parametros-metas";

@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderHead, b as addAttribute, d as renderTemplate } from '../chunks/astro/server_C6IdV9ex.mjs';
+import { c as createComponent, e as renderHead, b as addAttribute, d as renderTemplate } from '../chunks/astro/server_CVPGTMFc.mjs';
 /* empty css                                    */
-export { a as renderers } from '../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_lNEyfHhP.mjs';
 
 const $$TestEnv = createComponent(($$result, $$props, $$slots) => {
   const supabaseUrl = "https://ggqmvruerbaqxthhnxrm.supabase.co";

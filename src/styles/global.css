@@ -107,6 +107,12 @@ body {
   width: 100%;
 }
 
+.sidebar-link svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .sidebar-link:hover {
   background: rgba(148, 163, 184, 0.2);
   opacity: 1;

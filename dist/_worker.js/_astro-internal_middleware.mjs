@@ -1,7 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { d as defineMiddleware, s as sequence } from './chunks/index_BNgdYtCT.mjs';
-import { c as createStorageFromOptions, a as createClient, m as memoryLocalStorageAdapter, V as VERSION, b as applyServerStorage } from './chunks/index_DBMeThb4.mjs';
-import './chunks/astro-designed-error-pages_CYFYtb6K.mjs';
+import { d as defineMiddleware, s as sequence } from './chunks/index_uRyuiMeZ.mjs';
+import { c as createStorageFromOptions, m as memoryLocalStorageAdapter, V as VERSION, a as applyServerStorage } from './chunks/index_j26q7bMs.mjs';
+import { c as createClient } from './chunks/wrapper_6q0T_V9b.mjs';
+import './chunks/astro-designed-error-pages_B9tnExSv.mjs';
 
 function createServerClient(supabaseUrl, supabaseKey, options) {
     const { storage, getAll, setAll, setItems, removedItems } = createStorageFromOptions({
@@ -72,7 +73,8 @@ const onRequest$2 = defineMiddleware(async (context, next) => {
     "/test-env",
     "/favicon",
     "/assets",
-    "/public"
+    "/public",
+    "/pdfs"
   ];
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
   const supabase = createServerClient(

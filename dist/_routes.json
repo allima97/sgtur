@@ -21,6 +21,7 @@
     "/migration-viagens-acompanhantes.sql",
     "/migration-viagens-cliente.sql",
     "/migration-viagens-servicos-documentos.sql",
+    "/pdfs/*",
     "/rls-policies-checklist.md",
     "/rls-policies.sql",
     "/seed-cliente-acompanhantes.sql",

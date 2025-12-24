@@ -1,14 +1,17 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, a as createAstro, e as renderComponent, d as renderTemplate } from '../../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_wZGzgon3.mjs';
-import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/systemName_Co0aCFY_.mjs';
-import { r as reactExports } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../../chunks/usePermissao_Chx8mpdX.mjs';
-import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
+import { c as createComponent, a as createAstro, f as renderComponent, d as renderTemplate } from '../../../chunks/astro/server_CVPGTMFc.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_uGVYbAeU.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/systemName_EsfuoaVO.mjs';
+import { r as reactExports } from '../../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { u as usePermissao } from '../../../chunks/usePermissao_DDNDrOh3.mjs';
+import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_mmcEZ_Es.mjs';
 
 const STORAGE_BUCKET = "viagens";
+function sanitizeFileName(filename) {
+  return filename.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+}
 function DossieViagemIsland({ viagemId }) {
   const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
   const podeVer = permissao !== "none";
@@ -71,6 +74,9 @@ function DossieViagemIsland({ viagemId }) {
           origem,
           destino,
           responsavel_user_id,
+          responsavel:users!responsavel_user_id (
+            nome_completo
+          ),
           observacoes,
           venda:vendas (
             id,
@@ -294,9 +300,13 @@ function DossieViagemIsland({ viagemId }) {
     try {
       setSavingDoc(true);
       setErro(null);
-      const path = `${viagem.id}/${Date.now()}-${docFile.name}`;
+      const safeName = sanitizeFileName(docFile.name);
+      const path = `${viagem.id}/${Date.now()}-${safeName}`;
       const { data: uploadData, error: uploadErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, docFile, {
-        upsert: false
+        cacheControl: "3600",
+        upsert: false,
+        contentType: docFile.type || void 0,
+        metadata: { mimetype: docFile.type || "application/octet-stream" }
       });
       if (uploadErr) throw uploadErr;
       const publicUrl = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(uploadData.path).data.publicUrl;
@@ -317,7 +327,8 @@ function DossieViagemIsland({ viagemId }) {
       await carregar();
     } catch (e) {
       console.error(e);
-      setErro("Erro ao salvar documento. Verifique se o bucket de Storage existe e é público.");
+      const message = e instanceof Error ? e.message : "Erro ao salvar documento. Verifique se o bucket de Storage existe e é público.";
+      setErro(message);
     } finally {
       setSavingDoc(false);
     }
@@ -338,16 +349,10 @@ function DossieViagemIsland({ viagemId }) {
     }
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: 14, color: "#94a3b8" }, children: "ID" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: viagemId })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: "/operacao/viagens", children: "Voltar" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: carregar, disabled: loading, children: loading ? "Atualizando..." : "Atualizar" })
-      ] })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: "/operacao/viagens", children: "Voltar" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: carregar, disabled: loading, children: loading ? "Atualizando..." : "Atualizar" })
+    ] }) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginTop: 10 }, children: erro }),
     !erro && viagem && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
@@ -377,7 +382,7 @@ function DossieViagemIsland({ viagemId }) {
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Responsável" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.responsavel_user_id || "-" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.responsavel?.nome_completo || viagem.responsavel_user_id || "-" })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [

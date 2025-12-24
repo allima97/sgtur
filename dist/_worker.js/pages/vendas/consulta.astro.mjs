@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_Co0aCFY_.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { r as registrarLog } from '../../chunks/logs_BveZ35Xh.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_Chx8mpdX.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
+import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_EsfuoaVO.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { r as registrarLog } from '../../chunks/logs_By9JfuIz.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_DDNDrOh3.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_mmcEZ_Es.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -442,6 +442,8 @@ function VendasConsultaIsland() {
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Número" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Início" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Fim" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas" }),
                 podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
@@ -456,9 +458,12 @@ function VendasConsultaIsland() {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}`;
+                const formatarData = (value) => value ? new Date(value).toLocaleDateString("pt-BR") : "-";
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.numero_recibo || "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.produto_nome || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: formatarData(r.data_inicio) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: formatarData(r.data_fim) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
                     "R$ ",
                     valorFmt

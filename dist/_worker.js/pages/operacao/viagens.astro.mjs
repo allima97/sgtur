@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, e as renderComponent, d as renderTemplate } from '../../chunks/astro/server_C6IdV9ex.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_wZGzgon3.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_DCV0c2xr.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_Co0aCFY_.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_Chx8mpdX.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CGEPCHFN.mjs';
+import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_gyyRaPmR.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_EsfuoaVO.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_DDNDrOh3.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_mmcEZ_Es.mjs';
 
 const STATUS_OPCOES = [
   { value: "", label: "Todas" },
@@ -16,6 +16,28 @@ const STATUS_OPCOES = [
   { value: "concluida", label: "Concluída" },
   { value: "cancelada", label: "Cancelada" }
 ];
+const STATUS_LABELS = {
+  planejada: "Planejada",
+  confirmada: "Confirmada",
+  em_viagem: "Em viagem",
+  concluida: "Concluída",
+  cancelada: "Cancelada"
+};
+function obterStatusPorPeriodo(inicio, fim) {
+  if (!inicio) return null;
+  const hoje = /* @__PURE__ */ new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataInicio = new Date(inicio);
+  const dataFim = fim ? new Date(fim) : null;
+  if (dataFim && dataFim < hoje) return "concluida";
+  if (dataInicio > hoje) return "confirmada";
+  if (dataFim && hoje > dataFim) return "concluida";
+  return "em_viagem";
+}
+function formatarMoeda(valor) {
+  if (valor == null || Number.isNaN(valor)) return "-";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 const initialCadastroForm = {
   origem: "",
   destino: "",
@@ -25,7 +47,7 @@ const initialCadastroForm = {
   cliente_id: ""
 };
 function ViagensListaIsland() {
-  const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
+  const { permissao, loading: loadingPerm, ativo, podeExcluir, podeEditar } = usePermissao("Operacao");
   const podeVer = permissao !== "none";
   const podeCriar = permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
   const [statusFiltro, setStatusFiltro] = reactExports.useState("");
@@ -34,6 +56,7 @@ function ViagensListaIsland() {
   const [viagens, setViagens] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
+  const [sucesso, setSucesso] = reactExports.useState(null);
   const [showForm, setShowForm] = reactExports.useState(false);
   const [formError, setFormError] = reactExports.useState(null);
   const [savingViagem, setSavingViagem] = reactExports.useState(false);
@@ -43,6 +66,7 @@ function ViagensListaIsland() {
   const [userId, setUserId] = reactExports.useState(null);
   const [clientes, setClientes] = reactExports.useState([]);
   const [clientesErro, setClientesErro] = reactExports.useState(null);
+  const [deletandoViagemId, setDeletandoViagemId] = reactExports.useState(null);
   const [buscandoCidades, setBuscandoCidades] = reactExports.useState(false);
   const [erroCidades, setErroCidades] = reactExports.useState(null);
   const cidadesAbort = reactExports.useRef(null);
@@ -177,7 +201,7 @@ function ViagensListaIsland() {
       setLoading(true);
       setErro(null);
       let query = supabase.from("viagens").select(
-        "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo)"
+        "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
       ).order("data_inicio", { ascending: true });
       if (statusFiltro) {
         query = query.eq("status", statusFiltro);
@@ -259,6 +283,39 @@ function ViagensListaIsland() {
       setSavingViagem(false);
     }
   }
+  async function excluirViagem(v) {
+    if (!podeExcluir) return;
+    const confirmar = window.confirm("Tem certeza que deseja excluir esta viagem?");
+    if (!confirmar) return;
+    try {
+      setDeletandoViagemId(v.id);
+      setErro(null);
+      setSucesso(null);
+      const { error } = await supabase.from("viagens").delete().eq("id", v.id);
+      if (error) throw error;
+      setSucesso("Viagem excluída.");
+      await buscar();
+    } catch (err) {
+      console.error(err);
+      const message = err && typeof err === "object" && "message" in err && typeof err.message === "string" ? err.message : "Erro ao excluir viagem.";
+      setErro(message);
+    } finally {
+      setDeletandoViagemId(null);
+    }
+  }
+  function obterStatusExibicao(viagem) {
+    const periodoStatus = obterStatusPorPeriodo(
+      viagem.recibo?.data_inicio || viagem.data_inicio,
+      viagem.recibo?.data_fim || viagem.data_fim
+    );
+    if (periodoStatus) {
+      return STATUS_LABELS[periodoStatus] || periodoStatus;
+    }
+    if (viagem.status) {
+      return STATUS_LABELS[viagem.status] || viagem.status;
+    }
+    return "-";
+  }
   const proximasViagens = reactExports.useMemo(() => {
     return [...viagens].sort((a, b) => {
       const da = a.data_inicio || "";
@@ -270,6 +327,7 @@ function ViagensListaIsland() {
     });
   }, [viagens]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
+  const totalColunasTabela = 7;
   if (loadingPerm) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   }
@@ -485,30 +543,78 @@ function ViagensListaIsland() {
       )
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red" }, children: erro }),
+    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", style: { color: "#0f172a", fontWeight: 700 }, children: sucesso }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[760px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Início" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Fim" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Status" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Origem" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Responsável" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ver" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Ações" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Carregando viagens..." }) }),
-        !loading && proximasViagens.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Nenhuma viagem encontrada." }) }),
-        proximasViagens.map((v) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.status || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.origem || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.clientes?.nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.responsavel?.nome_completo || v.responsavel_user_id || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: `/operacao/viagens/${v.id}`, children: "Abrir" }) })
-        ] }, v.id))
+        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: totalColunasTabela, children: "Carregando viagens..." }) }),
+        !loading && proximasViagens.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: totalColunasTabela, children: "Nenhuma viagem encontrada." }) }),
+        proximasViagens.map((v) => {
+          const statusLabel = obterStatusExibicao(v);
+          const produtoLabel = v.recibo?.tipo_produtos?.nome || v.recibo?.tipo_produtos?.tipo || v.recibo?.produto_id || "-";
+          const valorLabel = formatarMoeda(v.recibo?.valor_total);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.clientes?.nome || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: statusLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtoLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: valorLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "td",
+              {
+                style: {
+                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 4
+                },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "a",
+                    {
+                      className: "btn-icon",
+                      href: `/operacao/viagens/${v.id}`,
+                      title: "Ver viagem",
+                      style: { padding: "4px 6px" },
+                      children: "👁️"
+                    }
+                  ),
+                  podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "a",
+                    {
+                      className: "btn-icon",
+                      href: `/operacao/viagens/${v.id}?modo=editar`,
+                      title: "Editar viagem",
+                      style: { padding: "4px 6px" },
+                      children: "✏️"
+                    }
+                  ),
+                  podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      className: "btn-icon btn-danger",
+                      title: "Excluir viagem",
+                      onClick: () => excluirViagem(v),
+                      disabled: deletandoViagemId === v.id,
+                      style: { padding: "4px 6px" },
+                      children: deletandoViagemId === v.id ? "..." : "🗑️"
+                    }
+                  )
+                ]
+              }
+            )
+          ] }, v.id);
+        })
       ] })
     ] }) })
   ] }) });

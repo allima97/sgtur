@@ -333,6 +333,25 @@ create policy "viagem_documentos_write" on public.viagem_documentos
                              (select u.company_id from public.users u where u.id = auth.uid()))
   );
 
+-- PARAMETROS DE CÂMBIO (multi-tenant por company_id)
+alter table public.parametros_cambios enable row level security;
+
+drop policy if exists "parametros_cambios_select" on public.parametros_cambios;
+create policy "parametros_cambios_select" on public.parametros_cambios
+  for select using (
+    is_admin(auth.uid())
+    or company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                             (select u.company_id from public.users u where u.id = auth.uid()))
+  );
+
+drop policy if exists "parametros_cambios_write" on public.parametros_cambios;
+create policy "parametros_cambios_write" on public.parametros_cambios
+  for all using (
+    is_admin(auth.uid())
+    or company_id = coalesce(current_setting('request.jwt.claims.company_id', true)::uuid,
+                             (select u.company_id from public.users u where u.id = auth.uid()))
+  );
+
 -- CIDADES (lectura pública; manutenção restrita a administradores)
 alter table public.cidades enable row level security;
 drop policy if exists "cidades_select" on public.cidades;

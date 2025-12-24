@@ -1,9 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-export { a as renderers } from '../../chunks/_@astro-renderers_DYCwg6Ew.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
 
 async function processarAlerta(opcoes, secretHeader) {
   {
-    return new Response("Faltam PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY", { status: 500 });
+    return new Response("Unauthorized", { status: 401 });
   }
 }
 const GET = async ({ request }) => {
