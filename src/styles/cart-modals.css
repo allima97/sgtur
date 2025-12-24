@@ -1,0 +1,24 @@
+.modal-overlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.modal-card{
+  width: min(980px, 95vw);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+.modal-head{
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.modal-title{ font-weight: 800; }
+.modal-body{ padding: 16px; }
+.label{ font-size: 12px; opacity: .75; display:block; margin-bottom: 6px; }
+.input{ width: 100%; padding: 10px 12px; border: 1px solid rgba(0,0,0,.15); border-radius: 10px; }
+.card-error{ background: #fee2e2; padding: 10px 12px; border-radius: 10px; }
+.card-warn{ background: #fef9c3; padding: 10px 12px; border-radius: 10px; }
+.card-subtle{ background: rgba(0,0,0,.03); padding: 12px; border-radius: 12px; }

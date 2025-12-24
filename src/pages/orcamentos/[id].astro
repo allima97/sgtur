@@ -1,0 +1,59 @@
+---
+import QuoteCartIsland from "../../components/islands/QuoteCartIsland";
+import { supabase } from "../../lib/supabase";
+
+const { id } = Astro.params;
+
+// 🔐 sessão
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session) {
+  return Astro.redirect("/auth/login");
+}
+
+const userId = session.user.id;
+
+// 📄 quote
+const { data: quote, error: quoteErr } = await supabase
+  .from("quote")
+  .select(
+    "id, client_id, seller_id, status, currency, valid_until, total, created_at, updated_at"
+  )
+  .eq("id", id)
+  .single();
+
+if (quoteErr || !quote) {
+  return new Response("Quote não encontrado", { status: 404 });
+}
+
+// 🛒 itens
+const { data: items } = await supabase
+  .from("quote_item")
+  .select("*")
+  .eq("quote_id", quote.id)
+  .order("created_at", { ascending: true });
+
+// 💸 descontos
+const { data: discounts } = await supabase
+  .from("quote_discount")
+  .select("*")
+  .eq("quote_id", quote.id)
+  .order("created_at", { ascending: true });
+---
+
+<div class="page-content-wrap">
+  <div class="card-base">
+    <h1 class="page-title">Carrinho do Orçamento</h1>
+    <p class="text-muted">Quote ID: {quote.id}</p>
+  </div>
+
+  <QuoteCartIsland
+    client:load
+    initialQuote={quote}
+    initialItems={items ?? []}
+    initialDiscounts={discounts ?? []}
+    userId={userId}
+  />
+</div>

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
 const supabaseUrl =
   process.env.SUPABASE_URL || import.meta.env.SUPABASE_URL;
@@ -22,3 +23,5 @@ export const supabaseServer = createClient(
     },
   }
 );
+
+export { createServerClient };

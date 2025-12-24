@@ -438,16 +438,29 @@ export default function MenuIsland({ activePage }) {
             )}
 
             {can("Orcamentos") && (
-              <li>
-                <a
-                  className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
-                  href="/orcamentos"
-                  onClick={handleNavClick}
-                >
-                  <span>💼</span>Orçamentos
-                </a>
-              </li>
-            )}
+  <>
+    <li>
+      <a
+        className={`sidebar-link ${activePage === "orcamentos-novo" ? "active" : ""}`}
+        href="/orcamentos/novo"
+        onClick={handleNavClick}
+      >
+        <span>➕</span>Novo Orçamento
+      </a>
+    </li>
+
+    <li>
+      <a
+        className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
+        href="/orcamentos"
+        onClick={handleNavClick}
+      >
+        <span>💼</span>Orçamentos
+      </a>
+    </li>
+  </>
+)}
+
 
             {can("Comissionamento") && (
               <li>

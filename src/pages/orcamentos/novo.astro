@@ -1,0 +1,47 @@
+---
+// filepath: /Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/novo.astro
+import { createServerClient } from "@supabase/ssr";
+
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Funções mínimas para cookies no Astro
+const cookies = {
+  getAll: async () => [],
+  setAll: async () => {},
+};
+
+const supabase = createServerClient(supabaseUrl, serviceRoleKey, {
+  cookies,
+});
+
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session) {
+  return Astro.redirect("/auth/login");
+}
+
+const { data: quote, error } = await supabase
+  .from("quote")
+  .insert({
+    seller_id: session.user.id,
+    status: "DRAFT",
+    currency: "BRL",
+    valid_until: new Date(Date.now() + 7 * 86400000)
+      .toISOString()
+      .slice(0, 10),
+  })
+  .select()
+  .single();
+
+if (error || !quote) {
+  console.error("Erro ao criar quote:", error);
+  return new Response(error?.message ?? "Erro ao criar orçamento", {
+    status: 500,
+  });
+}
+
+return Astro.redirect(`/orcamentos/${quote.id}`);
+---
