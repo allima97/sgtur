@@ -1,9 +1,10 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, e as renderHead, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
 /* empty css                                         */
-import { j as jsxRuntimeExports, S as SYSTEM_NAME, s as supabase } from '../../chunks/systemName_EsfuoaVO.mjs';
-import { u as useRegisterForm, C as CredentialsForm } from '../../chunks/CredentialsForm_j3rCaFha.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_BXAzlmjM.mjs';
+import { u as useRegisterForm, C as CredentialsForm } from '../../chunks/CredentialsForm_JSa3MgBE.mjs';
+import { S as SYSTEM_NAME } from '../../chunks/systemName_BvnIpPl_.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
 
 function AuthRegisterIsland() {
   const registerForm = useRegisterForm({

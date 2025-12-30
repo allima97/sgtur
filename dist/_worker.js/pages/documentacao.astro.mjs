@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_CVPGTMFc.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_APQgoOvT.mjs';
 
 const $$Index = createComponent(($$result, $$props, $$slots) => {
   return renderTemplate`import Layout from "../../layouts/DashboardLayout.astro";

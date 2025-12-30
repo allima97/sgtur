@@ -1,1 +1,17 @@
+# Node.js dependencies and artifacts
+/node_modules
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
 
+# Build outputs and caches
+/dist
+/.astro
+/.wrangler
+/public/pdfs
+
+# Environment secrets
+.env*
+
+# IDE + OS junk
+.DS_Store

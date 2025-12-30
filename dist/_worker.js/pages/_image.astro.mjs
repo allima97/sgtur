@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { A as AstroError, w as NoImageMetadata, F as FailedToFetchRemoteImageDimensions, x as ExpectedImageOptions, y as ExpectedImage, z as ExpectedNotESMImage, B as resolveSrc, D as isRemoteImage, H as isCoreRemotePath, J as isESMImportedImage, K as isLocalService, Q as DEFAULT_HASH_PROPS, T as InvalidImageService, U as ImageMissingAlt, V as isRemoteAllowed } from '../chunks/astro/assets-service_6K6GS7BG.mjs';
 import { c as createComponent, a as createAstro, m as maybeRenderHead, b as addAttribute, z as spreadAttributes, d as renderTemplate } from '../chunks/astro/server_CVPGTMFc.mjs';
-export { a as renderers } from '../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../chunks/_@astro-renderers_APQgoOvT.mjs';
 
 function isImageMetadata(src) {
   return src.fsPath && !("fsPath" in src);

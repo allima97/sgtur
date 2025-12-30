@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_gyyRaPmR.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_EsfuoaVO.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_lNEyfHhP.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_DDNDrOh3.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_mmcEZ_Es.mjs';
-import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_eiGioPf_.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_BXAzlmjM.mjs';
+import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
+export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { R as ResponsiveContainer, L as LineChart, X as XAxis, Y as YAxis, T as Tooltip, a as Line } from '../../chunks/LineChart_Gj2xaGnB.mjs';
 
 function formatCurrency(v) {
   return v.toLocaleString("pt-BR", {

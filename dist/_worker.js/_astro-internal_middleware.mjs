@@ -1,64 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { d as defineMiddleware, s as sequence } from './chunks/index_uRyuiMeZ.mjs';
-import { c as createStorageFromOptions, m as memoryLocalStorageAdapter, V as VERSION, a as applyServerStorage } from './chunks/index_j26q7bMs.mjs';
-import { c as createClient } from './chunks/wrapper_6q0T_V9b.mjs';
+import './chunks/index_BpdBu8tT.mjs';
+import { c as createServerClient } from './chunks/createServerClient_ic8pn6ld.mjs';
 import './chunks/astro-designed-error-pages_B9tnExSv.mjs';
-
-function createServerClient(supabaseUrl, supabaseKey, options) {
-    const { storage, getAll, setAll, setItems, removedItems } = createStorageFromOptions({
-        ...options,
-        cookieEncoding: options?.cookieEncoding ?? "base64url",
-    }, true);
-    const client = createClient(supabaseUrl, supabaseKey, {
-        // TODO: resolve type error
-        ...options,
-        global: {
-            ...options?.global,
-            headers: {
-                ...options?.global?.headers,
-                "X-Client-Info": `supabase-ssr/${VERSION} createServerClient`,
-            },
-        },
-        auth: {
-            ...(options?.cookieOptions?.name
-                ? { storageKey: options.cookieOptions.name }
-                : null),
-            ...options?.auth,
-            flowType: "pkce",
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-            persistSession: true,
-            storage,
-            ...(options?.cookies &&
-                "encode" in options.cookies &&
-                options.cookies.encode === "tokens-only"
-                ? {
-                    userStorage: options?.auth?.userStorage ?? memoryLocalStorageAdapter(),
-                }
-                : null),
-        },
-    });
-    client.auth.onAuthStateChange(async (event) => {
-        // The SIGNED_IN event is fired very often, but we don't need to
-        // apply the storage each time it fires, only if there are changes
-        // that need to be set -- which is if setItems / removeItems have
-        // data.
-        const hasStorageChanges = Object.keys(setItems).length > 0 || Object.keys(removedItems).length > 0;
-        if (hasStorageChanges &&
-            (event === "SIGNED_IN" ||
-                event === "TOKEN_REFRESHED" ||
-                event === "USER_UPDATED" ||
-                event === "PASSWORD_RECOVERY" ||
-                event === "SIGNED_OUT" ||
-                event === "MFA_CHALLENGE_VERIFIED")) {
-            await applyServerStorage({ getAll, setAll, setItems, removedItems }, {
-                cookieOptions: options?.cookieOptions ?? null,
-                cookieEncoding: options?.cookieEncoding ?? "base64url",
-            });
-        }
-    });
-    return client;
-}
 
 const supabaseUrl = "https://ggqmvruerbaqxthhnxrm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdncW12cnVlcmJhcXh0aGhueHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NjM0NzgsImV4cCI6MjA4MDMzOTQ3OH0.W3msgFUJMFSMOmAuvmI4QE3azppGYPdzGRZcfe9c9Bc";

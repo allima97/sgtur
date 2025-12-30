@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { c as createComponent, a as createAstro, e as renderHead, d as renderTemplate, b as addAttribute, f as renderComponent, F as Fragment } from '../../../chunks/astro/server_CVPGTMFc.mjs';
 import { c as createClient } from '../../../chunks/wrapper_6q0T_V9b.mjs';
-export { a as renderers } from '../../../chunks/_@astro-renderers_lNEyfHhP.mjs';
+export { a as renderers } from '../../../chunks/_@astro-renderers_APQgoOvT.mjs';
 
 const $$Astro = createAstro();
 const $$id = createComponent(async ($$result, $$props, $$slots) => {

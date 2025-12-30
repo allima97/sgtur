@@ -6,6 +6,8 @@
   "exclude": [
     "/_astro/*",
     "/.DS_Store",
+    "/1-carrinho.md",
+    "/2-wireframe.md",
     "/SGVTUR_DOCUMENTACAO.md",
     "/cron-alerta-comissao.md",
     "/cron-alerta-orcamentos.md",
