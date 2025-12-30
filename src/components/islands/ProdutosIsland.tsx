@@ -1228,8 +1228,8 @@ export default function ProdutosIsland() {
 
           <form onSubmit={salvar}>
 
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row" style={{ marginTop: 12, gap: 12, flexWrap: "wrap" }}>
+              <div className="form-group" style={{ flex: "0 1 220px", minWidth: 180 }}>
                 <label className="form-label">Tipo *</label>
                 <select
                   className="form-select"
@@ -1245,10 +1245,8 @@ export default function ProdutosIsland() {
                   ))}
                 </select>
               </div>
-            </div>
-            {!isGlobalMode && (
-              <div className="form-row" style={{ marginTop: 12, gap: 12 }}>
-                <div className="form-group" style={{ flex: 1 }}>
+              {!isGlobalMode && (
+                <div className="form-group" style={{ flex: "1 1 260px", minWidth: 220 }}>
                   <label className="form-label">Cidade *</label>
                   <input
                     className="form-input"
@@ -1259,6 +1257,7 @@ export default function ProdutosIsland() {
                     onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
                     disabled={permissao === "view" || form.todas_as_cidades}
                     style={{ marginBottom: 6 }}
+                    title="Cidade selecionada pode ajudar a preencher o destino automaticamente."
                   />
                   {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
                   {erroCidadeBusca && !buscandoCidade && (
@@ -1307,10 +1306,50 @@ export default function ProdutosIsland() {
                       })}
                     </div>
                   )}
-                  <small style={{ color: "#64748b" }}>
-                    Cidade selecionada pode ajudar a preencher o destino automaticamente.
-                  </small>
-                </div>
+              </div>
+              )}
+              <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
+                <label className="form-label">Nome do produto *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
+                  disabled={permissao === "view"}
+                />
+              </div>
+              <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
+                <label className="form-label">Fornecedor (opcional)</label>
+                <input
+                  className="form-input"
+                  list="fornecedores-list"
+                  placeholder="Escolha um fornecedor"
+                  value={form.fornecedor_label}
+                  onChange={(e) => handleFornecedorInput(e.target.value)}
+                  disabled={permissao === "view"}
+                />
+                <datalist id="fornecedores-list">
+                  {fornecedoresLista.map((fornecedor) => (
+                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="form-group" style={{ flex: "1 1 260px", minWidth: 220 }}>
+                <label className="form-label">Destino *</label>
+                <input
+                  className="form-input"
+                  value={form.destino}
+                  onChange={(e) => handleChange("destino", e.target.value)}
+                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
+                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
+                  disabled={permissao === "view" || isGlobalMode}
+                  title="Cidade escolhida será aplicada quando o destino estiver vazio."
+                />
+              </div>
+            </div>
+            {!isGlobalMode && form.todas_as_cidades && (
+              <div className="form-row" style={{ marginTop: 12 }}>
                 <div className="form-group" style={{ width: 220 }}>
                   <label className="form-label">Todas as cidades</label>
                   <select
@@ -1328,49 +1367,6 @@ export default function ProdutosIsland() {
                 </div>
               </div>
             )}
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Nome do produto *</label>
-                <input
-                  className="form-input"
-                  value={form.nome}
-                  onChange={(e) => handleChange("nome", e.target.value)}
-                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                  placeholder="Ex: Passeio em Gramado, Pacote Paris..."
-                  disabled={permissao === "view"}
-                />
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Fornecedor (opcional)</label>
-                <input
-                  className="form-input"
-                  list="fornecedores-list"
-                  placeholder="Escolha um fornecedor"
-                  value={form.fornecedor_label}
-                  onChange={(e) => handleFornecedorInput(e.target.value)}
-                  disabled={permissao === "view"}
-                />
-                <datalist id="fornecedores-list">
-                  {fornecedoresLista.map((fornecedor) => (
-                    <option key={fornecedor.id} value={formatFornecedorLabel(fornecedor)} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Destino *</label>
-                <input
-                  className="form-input"
-                  value={form.destino}
-                  onChange={(e) => handleChange("destino", e.target.value)}
-                  onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
-                  placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
-                  disabled={permissao === "view" || isGlobalMode}
-                />
-                <small style={{ color: "#64748b" }}>Cidade escolhida será aplicada quando o destino estiver vazio.</small>
-              </div>
-            </div>
             {isHospedagem && (
               <div className="form-row" style={{ marginTop: 12 }}>
                 <div className="form-group">
