@@ -185,12 +185,6 @@ type FormState = {
   fornecedor_id: string;
   fornecedor_label: string;
   todas_as_cidades: boolean;
-  valor_neto: string;
-  margem: string;
-  valor_venda: string;
-  moeda: string;
-  cambio: string;
-  valor_em_reais: string;
 };
 
 
@@ -242,13 +236,10 @@ const initialForm: FormState = {
   fornecedor_id: "",
   fornecedor_label: "",
   todas_as_cidades: false,
-  valor_neto: "",
-  margem: "20%",
-  valor_venda: "",
-  moeda: "USD",
-  cambio: "5,00",
-  valor_em_reais: "",
 };
+
+const DEFAULT_TARIFA_MOEDA = "USD";
+const DEFAULT_TARIFA_MARGEM = "20%";
 
 const initialTarifaForm: TarifaFormState = {
   acomodacao: "",
@@ -292,8 +283,6 @@ export default function ProdutosIsland() {
   const [tarifaModalErro, setTarifaModalErro] = useState<string | null>(null);
   const [acomodacoes, setAcomodacoes] = useState<string[]>([]);
   const [cambiosParametros, setCambiosParametros] = useState<CambioParametro[]>([]);
-  const [ultimaMoedaAuto, setUltimaMoedaAuto] = useState<string | null>(null);
-  const [ultimoValorAuto, setUltimoValorAuto] = useState<string>("");
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -326,9 +315,9 @@ export default function ProdutosIsland() {
           }),
         supabase
           .from("produtos")
-        .select(
-          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades, valor_neto, margem, valor_venda, moeda, cambio, valor_em_reais"
-        )
+          .select(
+            "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades"
+          )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
       ]);
@@ -535,8 +524,6 @@ export default function ProdutosIsland() {
   useEffect(() => {
     if (!companyId) {
       setCambiosParametros([]);
-      setUltimaMoedaAuto(null);
-      setUltimoValorAuto("");
       return;
     }
 
@@ -555,8 +542,6 @@ export default function ProdutosIsland() {
         return;
       }
       setCambiosParametros((data || []) as CambioParametro[]);
-      setUltimaMoedaAuto(null);
-      setUltimoValorAuto("");
     }
 
     carregarCambios();
@@ -573,10 +558,6 @@ export default function ProdutosIsland() {
   }, [busca, carregouTodos]);
 
   const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
-  const fornecedoresMap = useMemo(
-    () => new Map(fornecedoresLista.map((f) => [f.id, formatFornecedorLabel(f)])),
-    [fornecedoresLista]
-  );
 
   function formatarCidadeNome(cidadeId?: string | null) {
     if (!cidadeId) return "";
@@ -609,10 +590,9 @@ export default function ProdutosIsland() {
         subdivisao_nome: subdivisao?.nome || "",
         pais_nome: pais?.nome || "",
         tipo_nome: tipoLabel(tipo),
-        fornecedor_nome: fornecedoresMap.get(p.fornecedor_id || "") || "",
       };
     });
-  }, [produtos, cidades, subdivisoes, paises, tipos, fornecedoresMap]);
+  }, [produtos, cidades, subdivisoes, paises, tipos]);
 
   const produtosFiltrados = useMemo(() => {
     if (!busca.trim()) return produtosEnriquecidos;
@@ -646,14 +626,15 @@ export default function ProdutosIsland() {
     [form.tipo_produto, tipos]
   );
   const isHospedagem = ehTipoHospedagem(tipoSelecionado);
-  const tarifaMoeda = form.moeda.trim() || "USD";
+  const tarifaMoeda = DEFAULT_TARIFA_MOEDA;
   const tarifaMargemPreview =
-    tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : form.margem || "20%";
+    tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : DEFAULT_TARIFA_MARGEM;
   const tarifaValorVendaPreview = calcularValorVendaString(tarifaModalForm.valor_neto, tarifaMargemPreview);
   const tarifaValorVendaNum = parseDecimalInput(tarifaValorVendaPreview);
-  const tarifaCambioAtual = parseDecimalInput(form.cambio) ?? 0;
+  const tarifaCambioAtual = cambioAtualPorMoeda[tarifaMoeda]?.valor ?? 0;
   const tarifaValorEmReaisPreview =
     tarifaValorVendaNum != null ? tarifaValorVendaNum * tarifaCambioAtual : 0;
+  const tarifaCambioLabel = tarifaCambioAtual ? formatDecimal(tarifaCambioAtual) : "-";
 
   const estaEditando = Boolean(editandoId);
   const formLayout = estaEditando
@@ -665,47 +646,12 @@ export default function ProdutosIsland() {
     : "full";
   const isGlobalMode = formLayout === "global";
 
-  const handleChange = useCallback(<K extends keyof FormState>(campo: K, valor: FormState[K]) => {
-    setForm((prev) => {
-      const atualizado = { ...prev, [campo]: valor };
-      if (campo === "valor_neto" || campo === "margem") {
-        const valorNeto = campo === "valor_neto" ? (valor as string) : prev.valor_neto;
-        const margem = campo === "margem" ? (valor as string) : prev.margem;
-        atualizado.valor_venda = calcularValorVendaString(valorNeto, margem);
-      }
-      const valorVendaNum = parseDecimalInput(atualizado.valor_venda);
-      const cambioNum = parseDecimalInput(atualizado.cambio);
-      if (valorVendaNum != null && cambioNum != null) {
-        const valorReais = valorVendaNum * cambioNum;
-        atualizado.valor_em_reais = formatNumberPtBr(valorReais);
-      } else {
-        atualizado.valor_em_reais = "";
-      }
-      return atualizado;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!form.moeda) return;
-    const entrada = cambioAtualPorMoeda[form.moeda];
-    if (!entrada) return;
-    const formatted = entrada.valor.toFixed(2);
-    const deveAtualizar =
-      !form.cambio ||
-      ultimaMoedaAuto !== form.moeda ||
-      (form.cambio === ultimoValorAuto && ultimoValorAuto !== formatted);
-    if (!deveAtualizar) return;
-    handleChange("cambio", formatted);
-    setUltimaMoedaAuto(form.moeda);
-    setUltimoValorAuto(formatted);
-  }, [
-    form.moeda,
-    cambioAtualPorMoeda,
-    form.cambio,
-    ultimaMoedaAuto,
-    ultimoValorAuto,
-    handleChange,
-  ]);
+  const handleChange = useCallback(
+    <K extends keyof FormState>(campo: K, valor: FormState[K]) => {
+      setForm((prev) => ({ ...prev, [campo]: valor }));
+    },
+    []
+  );
 
   function handleCidadeBusca(valor: string) {
     if (form.todas_as_cidades) return;
@@ -804,9 +750,8 @@ export default function ProdutosIsland() {
       return;
     }
 
-    const margemPadrao = tarifaModalForm.padrao === "Manual"
-      ? tarifaModalForm.margem || ""
-      : form.margem || "20%";
+    const margemPadrao =
+      tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : DEFAULT_TARIFA_MARGEM;
     const valorVendaStr = calcularValorVendaString(tarifaModalForm.valor_neto, margemPadrao);
     const valorVendaNum = parseDecimalInput(valorVendaStr);
     if (valorVendaNum == null) {
@@ -815,7 +760,7 @@ export default function ProdutosIsland() {
     }
 
     const margemNum = parsePercentInput(margemPadrao);
-    const cambioNum = parseDecimalInput(form.cambio) ?? 0;
+    const cambioNum = tarifaCambioAtual;
     const valorEmReaisNum = valorVendaNum * (cambioNum || 0);
 
     const novaTarifa: TarifaEntry = {
@@ -830,7 +775,7 @@ export default function ProdutosIsland() {
       margem: margemNum,
       valor_venda: valorVendaNum,
       valor_em_reais: valorEmReaisNum,
-      moeda: form.moeda.trim() || "USD",
+      moeda: tarifaMoeda,
       cambio: cambioNum,
     };
     setTarifas((prev) => [...prev, novaTarifa]);
@@ -924,8 +869,6 @@ export default function ProdutosIsland() {
 
   function iniciarNovo() {
     setForm(initialForm);
-    setUltimaMoedaAuto(null);
-    setUltimoValorAuto("");
     setEditandoId(null);
     setErro(null);
     setCidadeBusca("");
@@ -958,20 +901,11 @@ export default function ProdutosIsland() {
         fornecedoresLista.find((f) => f.id === produto.fornecedor_id)
       ),
       todas_as_cidades: produto.todas_as_cidades ?? false,
-      valor_neto: produto.valor_neto != null ? produto.valor_neto.toFixed(2) : "",
-      margem:
-        produto.margem != null ? `${(produto.margem * 100).toFixed(2)}%` : "",
-      valor_venda: produto.valor_venda != null ? produto.valor_venda.toFixed(2) : "",
-      moeda: produto.moeda || "R$",
-      cambio: produto.cambio != null ? produto.cambio.toFixed(2) : "",
-      valor_em_reais: formatNumberPtBr(produto.valor_em_reais),
     });
     setTarifas([]);
     setTarifaModalAberta(false);
     setTarifaModalForm(initialTarifaForm);
     setTarifaModalErro(null);
-    setUltimaMoedaAuto(null);
-    setUltimoValorAuto("");
     setCidadeBusca(
       produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
     );
@@ -1076,12 +1010,6 @@ export default function ProdutosIsland() {
       const nomeNormalizado = titleCaseWithExceptions(form.nome);
       const destinoNormalizado = titleCaseWithExceptions(form.destino);
 
-      const valorNetoNum = parseDecimalInput(form.valor_neto);
-      const margemNum = parsePercentInput(form.margem);
-      const valorVendaNum = parseDecimalInput(form.valor_venda);
-      const cambioNum = parseDecimalInput(form.cambio);
-      const valorEmReaisNum = parseDecimalInput(form.valor_em_reais);
-
       const payload = {
         nome: nomeNormalizado,
         destino: destinoNormalizado,
@@ -1096,12 +1024,6 @@ export default function ProdutosIsland() {
         ativo: form.ativo,
         fornecedor_id: form.fornecedor_id || null,
         todas_as_cidades: form.todas_as_cidades,
-        valor_neto: valorNetoNum,
-        margem: margemNum,
-        valor_venda: valorVendaNum,
-        moeda: form.moeda.trim() || null,
-        cambio: cambioNum,
-        valor_em_reais: valorEmReaisNum,
       };
 
       let produtoId = editandoId;
@@ -1457,85 +1379,13 @@ export default function ProdutosIsland() {
                 </div>
               </div>
             )}
-            <div className="form-row" style={{ marginTop: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Moeda</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  list="moeda-sugestoes"
-                  value={form.moeda}
-                  onChange={(e) => handleChange("moeda", e.target.value)}
-                  disabled={permissao === "view"}
-                />
-                <datalist id="moeda-sugestoes">
-                  <option value="R$" />
-                  <option value="USD" />
-                  <option value="EUR" />
-                </datalist>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor Neto / Moeda Local</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Ex: 1000"
-                  value={form.valor_neto}
-                  onChange={(e) => handleChange("valor_neto", e.target.value)}
-                  disabled={permissao === "view"}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Margem</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Ex: 0.80 (80%)"
-                  value={form.margem}
-                  onChange={(e) => handleChange("margem", e.target.value)}
-                  disabled={permissao === "view"}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor Venda / Moeda Local</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={form.valor_venda}
-                  readOnly
-                  placeholder="Calculado automaticamente"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Câmbio</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  inputMode="decimal"
-                  placeholder="Atualizado automaticamente"
-                  value={form.cambio}
-                  onChange={(e) => handleChange("cambio", e.target.value)}
-                  disabled={permissao === "view"}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor em R$</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  readOnly
-                  placeholder="Calculado automaticamente"
-                  value={form.valor_em_reais}
-                />
-              </div>
-            </div>
             <div className="form-row" style={{ marginTop: 16, alignItems: "center" }}>
               <div className="form-group" style={{ flex: 1, gap: 4 }}>
                 <div className="form-label">Padrão do Fornecedor</div>
                 <div className="flex gap-4 flex-wrap" style={{ fontSize: "0.9rem", opacity: 0.85 }}>
-                  <strong>Moeda:</strong> {form.moeda || "USD"}
-                  <strong>Margem:</strong> {form.margem || "20%"}
-                  <strong>Câmbio:</strong> {form.cambio || "5,00"}
+                  <strong>Moeda:</strong> {tarifaMoeda}
+                  <strong>Margem:</strong> {DEFAULT_TARIFA_MARGEM}
+                  <strong>Câmbio:</strong> {tarifaCambioLabel}
                 </div>
               </div>
               {isHospedagem && (
@@ -1820,13 +1670,7 @@ export default function ProdutosIsland() {
               <th>Produto</th>
               <th>Destino</th>
               <th>Cidade</th>
-              <th>Fornecedor</th>
               <th>Nivel de preco</th>
-              <th>Valor Neto</th>
-              <th>Margem</th>
-              <th>Valor Venda</th>
-              <th>Câmbio</th>
-              <th>Valor em R$</th>
               <th>Ativo</th>
               <th>Criado em</th>
               <th className="th-actions">Acoes</th>
@@ -1835,13 +1679,13 @@ export default function ProdutosIsland() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={13}>Carregando produtos...</td>
+                <td colSpan={7}>Carregando produtos...</td>
               </tr>
             )}
 
             {!loading && produtosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={13}>Nenhum produto encontrado.</td>
+                <td colSpan={7}>Nenhum produto encontrado.</td>
               </tr>
             )}
 
@@ -1851,13 +1695,7 @@ export default function ProdutosIsland() {
                   <td>{p.nome}</td>
                   <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
-                  <td>{p.fornecedor_nome || "-"}</td>
                   <td>{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
-                  <td>{formatValorComMoeda(p.valor_neto, p.moeda || undefined)}</td>
-                  <td>{formatMarginPercent(p.margem)}</td>
-                  <td>{formatValorComMoeda(p.valor_venda, p.moeda || undefined)}</td>
-                  <td>{formatDecimal(p.cambio)}</td>
-                  <td>{formatValorComMoeda(p.valor_em_reais, "R$")}</td>
                   <td>{p.ativo ? "Sim" : "Nao"}</td>
                   <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
                   <td className="th-actions">
