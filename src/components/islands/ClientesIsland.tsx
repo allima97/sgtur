@@ -13,6 +13,7 @@ type Cliente = {
   telefone: string;
   whatsapp: string | null;
   email: string | null;
+  classificacao: string | null;
   endereco: string | null;
   numero: string | null;
   complemento: string | null;
@@ -51,6 +52,7 @@ const initialForm = {
   telefone: "",
   whatsapp: "",
   email: "",
+  classificacao: "",
   endereco: "",
   numero: "",
   complemento: "",
@@ -725,6 +727,7 @@ export default function ClientesIsland() {
       telefone: c.telefone,
       whatsapp: c.whatsapp || "",
       email: c.email || "",
+      classificacao: c.classificacao || "",
       endereco: c.endereco || "",
       numero: c.numero || "",
       complemento: c.complemento || "",
@@ -766,6 +769,7 @@ export default function ClientesIsland() {
         telefone: form.telefone.trim(),
         whatsapp: form.whatsapp.trim() || null,
         email: form.email.trim() || null,
+        classificacao: form.classificacao.trim() || null,
         endereco: form.endereco.trim() || null,
         numero: form.numero.trim() || null,
         complemento: form.complemento.trim() || null,
@@ -1082,7 +1086,7 @@ export default function ClientesIsland() {
               style={{
                 marginTop: 12,
                 display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                 gap: 12,
               }}
             >
@@ -1109,6 +1113,21 @@ export default function ClientesIsland() {
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
                 />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Classificação</label>
+                <select
+                  className="form-select"
+                  value={form.classificacao}
+                  onChange={(e) => handleChange("classificacao", e.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  <option value="A" title="Cliente frequente">A</option>
+                  <option value="B" title="Compra mas não é frequente">B</option>
+                  <option value="C" title="Já comprou, mas não é fiel">C</option>
+                  <option value="D" title="Busca preço e a maioria das vezes compra na Internet">D</option>
+                  <option value="E" title="Cliente de internet, nunca compra">E</option>
+                </select>
               </div>
             </div>
 
