@@ -87,7 +87,7 @@ export default function AdminPermissoesIsland() {
     carregar();
   }, []);
 
-  async function carregar() {
+  async function carregar(): Promise<{ usuarios: Usuario[]; acessos: ModuloAcesso[] }> {
     try {
       setLoading(true);
       setErro(null);
@@ -105,7 +105,8 @@ export default function AdminPermissoesIsland() {
 
       if (usersErr) throw usersErr;
 
-      setUsuarios((usersData || []) as Usuario[]);
+      const usuariosCarregados = (usersData || []) as Usuario[];
+      setUsuarios(usuariosCarregados);
 
       // acessos
       const { data: acessosData, error: accErr } = await supabase
@@ -114,10 +115,14 @@ export default function AdminPermissoesIsland() {
 
       if (accErr) throw accErr;
 
-      setAcessos((acessosData || []) as ModuloAcesso[]);
+      const acessosCarregados = (acessosData || []) as ModuloAcesso[];
+      setAcessos(acessosCarregados);
+
+      return { usuarios: usuariosCarregados, acessos: acessosCarregados };
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar permissões.");
+      return { usuarios: [], acessos: [] };
     } finally {
       setLoading(false);
     }
@@ -139,12 +144,13 @@ export default function AdminPermissoesIsland() {
   // ---------------------------------------
   // EDITOR DE PERMISSÕES
   // ---------------------------------------
-  function abrirEditor(u: Usuario) {
+  function abrirEditor(u: Usuario, acessosFonte?: ModuloAcesso[]) {
     setSelecionado(u);
 
     const perms: Record<string, NivelPermissao> = {};
     for (const modulo of MODULOS) {
-      const reg = acessos.find(
+      const ativa = acessosFonte ?? acessos;
+      const reg = ativa.find(
         (a) => a.usuario_id === u.id && a.modulo === modulo,
       );
       perms[modulo] = reg ? reg.permissao : "none";
@@ -207,10 +213,10 @@ export default function AdminPermissoesIsland() {
         },
       });
 
-      await carregar();
-      // manter selecionado na tela
-      const u = usuarios.find((x) => x.id === selecionado.id) || null;
-      if (u) abrirEditor(u);
+      const { usuarios: usuariosAtualizados, acessos: acessosAtualizados } = await carregar();
+      // manter selecionado na tela com dados atualizados
+      const u = usuariosAtualizados.find((x) => x.id === selecionado.id) || null;
+      if (u) abrirEditor(u, acessosAtualizados);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar permissões.");
