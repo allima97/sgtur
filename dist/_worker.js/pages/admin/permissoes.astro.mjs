@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { r as registrarLog } from '../../chunks/logs_BFXSJPZH.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 const MODULOS = [
   "Dashboard",
@@ -62,13 +62,17 @@ function AdminPermissoesIsland() {
       setUsuarioLogadoId(userId);
       const { data: usersData, error: usersErr } = await supabase.from("users").select("id, nome_completo, email, active").order("nome_completo", { ascending: true });
       if (usersErr) throw usersErr;
-      setUsuarios(usersData || []);
+      const usuariosCarregados = usersData || [];
+      setUsuarios(usuariosCarregados);
       const { data: acessosData, error: accErr } = await supabase.from("modulo_acesso").select("*");
       if (accErr) throw accErr;
-      setAcessos(acessosData || []);
+      const acessosCarregados = acessosData || [];
+      setAcessos(acessosCarregados);
+      return { usuarios: usuariosCarregados, acessos: acessosCarregados };
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar permissões.");
+      return { usuarios: [], acessos: [] };
     } finally {
       setLoading(false);
     }
@@ -80,11 +84,12 @@ function AdminPermissoesIsland() {
       (u) => u.nome_completo.toLowerCase().includes(t) || (u.email || "").toLowerCase().includes(t)
     );
   }, [usuarios, busca]);
-  function abrirEditor(u) {
+  function abrirEditor(u, acessosFonte) {
     setSelecionado(u);
     const perms = {};
     for (const modulo of MODULOS) {
-      const reg = acessos.find(
+      const ativa = acessosFonte ?? acessos;
+      const reg = ativa.find(
         (a) => a.usuario_id === u.id && a.modulo === modulo
       );
       perms[modulo] = reg ? reg.permissao : "none";
@@ -134,9 +139,9 @@ function AdminPermissoesIsland() {
           permissoes: formPermissoes
         }
       });
-      await carregar();
-      const u = usuarios.find((x) => x.id === selecionado.id) || null;
-      if (u) abrirEditor(u);
+      const { usuarios: usuariosAtualizados, acessos: acessosAtualizados } = await carregar();
+      const u = usuariosAtualizados.find((x) => x.id === selecionado.id) || null;
+      if (u) abrirEditor(u, acessosAtualizados);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar permissões.");

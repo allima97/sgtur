@@ -1,7 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { a as renderers } from './chunks/_@astro-renderers_APQgoOvT.mjs';
-import { createExports } from './_@astrojs-ssr-adapter.mjs';
-import { manifest } from './manifest_CX1VkuR3.mjs';
+import { r as renderers } from './chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { c as createExports, s as serverEntrypointModule } from './chunks/_@astrojs-ssr-adapter_Bf4wmVsY.mjs';
+import { manifest } from './manifest_CBehjTV7.mjs';
+
+const serverIslandMap = new Map();;
 
 const _page0 = () => import('./pages/_image.astro.mjs');
 const _page1 = () => import('./pages/admin/permissoes.astro.mjs');
@@ -60,7 +62,6 @@ const _page53 = () => import('./pages/test-env.astro.mjs');
 const _page54 = () => import('./pages/vendas/cadastro.astro.mjs');
 const _page55 = () => import('./pages/vendas/consulta.astro.mjs');
 const _page56 = () => import('./pages/index.astro.mjs');
-
 const pageMap = new Map([
     ["node_modules/astro/dist/assets/endpoint/generic.js", _page0],
     ["src/pages/admin/permissoes.astro", _page1],
@@ -120,14 +121,20 @@ const pageMap = new Map([
     ["src/pages/vendas/consulta.astro", _page55],
     ["src/pages/index.astro", _page56]
 ]);
-const serverIslandMap = new Map();
+
 const _manifest = Object.assign(manifest, {
     pageMap,
     serverIslandMap,
     renderers,
+    actions: () => import('./noop-entrypoint.mjs'),
     middleware: () => import('./_astro-internal_middleware.mjs')
 });
+const _args = undefined;
 const _exports = createExports(_manifest);
 const __astrojsSsrVirtualEntry = _exports.default;
+const _start = 'start';
+if (Object.prototype.hasOwnProperty.call(serverEntrypointModule, _start)) {
+	serverEntrypointModule[_start](_manifest, _args);
+}
 
 export { __astrojsSsrVirtualEntry as default, pageMap };

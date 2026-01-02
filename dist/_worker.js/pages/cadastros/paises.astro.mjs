@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -28,6 +28,7 @@ function PaisesIsland() {
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [carregouTodos, setCarregouTodos] = reactExports.useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   async function carregarPaises(todos = false) {
     try {
       setLoading(true);
@@ -74,6 +75,15 @@ function PaisesIsland() {
       codigo_iso: pais.codigo_iso || "",
       continente: pais.continente || ""
     });
+    setMostrarFormulario(true);
+  }
+  function abrirFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+  }
+  function fecharFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -104,9 +114,8 @@ function PaisesIsland() {
         });
         if (error) throw error;
       }
-      setForm(initialForm);
-      setEditandoId(null);
       await carregarPaises(carregouTodos);
+      fecharFormulario();
     } catch (e2) {
       console.error(e2);
       setErro("Erro ao salvar país. Verifique se o nome é único.");
@@ -142,7 +151,38 @@ function PaisesIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "paises-page", children: "Você não possui acesso ao módulo de Cadastros." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "paises-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "form-row",
+        style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar país" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: busca,
+                onChange: (e) => setBusca(e.target.value),
+                placeholder: "Digite parte do nome..."
+              }
+            )
+          ] }),
+          permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              onClick: abrirFormulario,
+              disabled: mostrarFormulario,
+              children: "Adicionar país"
+            }
+          ) })
+        ]
+      }
+    ) }),
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome do país *" }),
@@ -192,29 +232,18 @@ function PaisesIsland() {
             children: salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar país"
           }
         ),
-        editandoId && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             type: "button",
             className: "btn btn-light",
-            onClick: iniciarNovo,
-            children: "Cancelar edição"
+            onClick: fecharFormulario,
+            disabled: salvando,
+            children: "Cancelar"
           }
         )
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar país" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          className: "form-input",
-          value: busca,
-          onChange: (e) => setBusca(e.target.value),
-          placeholder: "Digite parte do nome..."
-        }
-      )
-    ] }) }) }),
     !carregouTodos && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Últimos Países Cadastrados (10). Digite na busca para consultar todos." }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[520px]", children: [

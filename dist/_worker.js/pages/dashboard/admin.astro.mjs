@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { u as useRegisterForm, C as CredentialsForm } from '../../chunks/CredentialsForm_JSa3MgBE.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { u as useRegisterForm, C as CredentialsForm } from '../../chunks/CredentialsForm_Ddl_adwj.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 const defaultCompanyForm = {
   nome_empresa: "",

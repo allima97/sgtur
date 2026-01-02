@@ -1,14 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { r as registrarLog } from '../../chunks/logs_BFXSJPZH.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 const initialForm = {
   nome: "",
@@ -17,6 +17,7 @@ const initialForm = {
   telefone: "",
   whatsapp: "",
   email: "",
+  classificacao: "",
   endereco: "",
   numero: "",
   complemento: "",
@@ -455,6 +456,7 @@ function ClientesIsland() {
       telefone: c.telefone,
       whatsapp: c.whatsapp || "",
       email: c.email || "",
+      classificacao: c.classificacao || "",
       endereco: c.endereco || "",
       numero: c.numero || "",
       complemento: c.complemento || "",
@@ -489,6 +491,7 @@ function ClientesIsland() {
         telefone: form.telefone.trim(),
         whatsapp: form.whatsapp.trim() || null,
         email: form.email.trim() || null,
+        classificacao: form.classificacao.trim() || null,
         endereco: form.endereco.trim() || null,
         numero: form.numero.trim() || null,
         complemento: form.complemento.trim() || null,
@@ -761,7 +764,7 @@ function ClientesIsland() {
             style: {
               marginTop: 12,
               display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: 12
             },
             children: [
@@ -795,6 +798,25 @@ function ClientesIsland() {
                     className: "form-input",
                     value: form.email,
                     onChange: (e) => handleChange("email", e.target.value)
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Classificação" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    className: "form-select",
+                    value: form.classificacao,
+                    onChange: (e) => handleChange("classificacao", e.target.value),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "A", title: "Cliente frequente", children: "A" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "B", title: "Compra mas não é frequente", children: "B" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "C", title: "Já comprou, mas não é fiel", children: "C" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "D", title: "Busca preço e a maioria das vezes compra na Internet", children: "D" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "E", title: "Cliente de internet, nunca compra", children: "E" })
+                    ]
                   }
                 )
               ] })

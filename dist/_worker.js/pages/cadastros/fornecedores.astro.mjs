@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 const LOCALIZACAO_OPCOES = [
   { value: "brasil", label: "Brasil" },
@@ -42,6 +42,10 @@ function formatLocalizacao(value) {
   if (value === "exterior") return "Exterior";
   return value || "-";
 }
+function normalizeSearchValue(value) {
+  if (!value) return "";
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 function FornecedoresIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [companyId, setCompanyId] = reactExports.useState(null);
@@ -52,6 +56,7 @@ function FornecedoresIsland() {
   const [erro, setErro] = reactExports.useState(null);
   const [formError, setFormError] = reactExports.useState(null);
   const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
+  const [busca, setBusca] = reactExports.useState("");
   reactExports.useEffect(() => {
     let isMounted = true;
     async function resolveCompany() {
@@ -123,6 +128,14 @@ function FornecedoresIsland() {
     setMostrarFormulario(false);
   }
   const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
+  const termosBusca = normalizeSearchValue(busca);
+  const fornecedoresFiltrados = reactExports.useMemo(() => {
+    if (!termosBusca) return fornecedores;
+    return fornecedores.filter((f) => {
+      const alvo = `${f.nome_fantasia || ""} ${f.nome_completo || ""}`.trim();
+      return normalizeSearchValue(alvo).includes(termosBusca);
+    });
+  }, [fornecedores, termosBusca]);
   async function salvarFornecedor() {
     if (!companyId) {
       setFormError("Não foi possível determinar sua empresa.");
@@ -150,6 +163,7 @@ function FornecedoresIsland() {
       if (error) throw error;
       setForm(INITIAL_FORM);
       await carregarFornecedores();
+      fecharFormularioFornecedor();
     } catch (error) {
       console.error(error);
       setFormError("Erro ao criar fornecedor.");
@@ -164,19 +178,51 @@ function FornecedoresIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Cadastros." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: "Fornecedores" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#94a3b8" }, children: "Cadastre parceiros nacionais e internacionais." })
-      ] }),
-      podeSalvar && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
         {
-          type: "button",
-          className: "btn btn-primary",
-          onClick: abrirFormularioFornecedor,
-          disabled: mostrarFormulario,
-          children: "Adicionar fornecedor"
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: "Fornecedores" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#94a3b8" }, children: "Cadastre parceiros nacionais e internacionais." })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "form-row",
+          style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar fornecedor" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  value: busca,
+                  onChange: (e) => setBusca(e.target.value),
+                  placeholder: "Nome fantasia ou contato..."
+                }
+              )
+            ] }),
+            podeSalvar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-primary",
+                onClick: abrirFormularioFornecedor,
+                disabled: mostrarFormulario,
+                children: "Adicionar fornecedor"
+              }
+            ) })
+          ]
         }
       )
     ] }),
@@ -414,8 +460,8 @@ function FornecedoresIsland() {
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
           loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando fornecedores..." }) }),
-          !loading && fornecedores.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhum fornecedor cadastrado." }) }),
-          !loading && fornecedores.map((fornecedor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          !loading && fornecedoresFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhum fornecedor cadastrado." }) }),
+          !loading && fornecedoresFiltrados.map((fornecedor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: fornecedor.nome_fantasia || fornecedor.nome_completo || "-" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
               formatLocalizacao(fornecedor.localizacao),

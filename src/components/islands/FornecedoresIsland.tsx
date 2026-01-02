@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -62,6 +62,14 @@ function formatLocalizacao(value: string | null) {
   return value || "-";
 }
 
+function normalizeSearchValue(value?: string | null) {
+  if (!value) return "";
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 export default function FornecedoresIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -72,6 +80,7 @@ export default function FornecedoresIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busca, setBusca] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -162,6 +171,14 @@ export default function FornecedoresIsland() {
   }
 
   const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
+  const termosBusca = normalizeSearchValue(busca);
+  const fornecedoresFiltrados = useMemo(() => {
+    if (!termosBusca) return fornecedores;
+    return fornecedores.filter((f) => {
+      const alvo = `${f.nome_fantasia || ""} ${f.nome_completo || ""}`.trim();
+      return normalizeSearchValue(alvo).includes(termosBusca);
+    });
+  }, [fornecedores, termosBusca]);
 
   async function salvarFornecedor() {
     if (!companyId) {
@@ -190,6 +207,7 @@ export default function FornecedoresIsland() {
       if (error) throw error;
       setForm(INITIAL_FORM);
       await carregarFornecedores();
+      fecharFormularioFornecedor();
     } catch (error) {
       console.error(error);
       setFormError("Erro ao criar fornecedor.");
@@ -208,21 +226,46 @@ export default function FornecedoresIsland() {
 
   return (
     <div className="card-base card-purple">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ fontWeight: 600 }}>Fornecedores</div>
-          <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
+      <div className="card-base mb-3">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600 }}>Fornecedores</div>
+            <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
+          </div>
         </div>
-        {podeSalvar && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={abrirFormularioFornecedor}
-            disabled={mostrarFormulario}
-          >
-            Adicionar fornecedor
-          </button>
-        )}
+        <div
+          className="form-row"
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <div className="form-group" style={{ flex: "1 1 320px" }}>
+            <label className="form-label">Buscar fornecedor</label>
+            <input
+              className="form-input"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Nome fantasia ou contato..."
+            />
+          </div>
+          {podeSalvar && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={abrirFormularioFornecedor}
+                disabled={mostrarFormulario}
+              >
+                Adicionar fornecedor
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {mostrarFormulario && (
@@ -436,12 +479,13 @@ export default function FornecedoresIsland() {
                   <td colSpan={5}>Carregando fornecedores...</td>
                 </tr>
               )}
-              {!loading && fornecedores.length === 0 && (
+              {!loading && fornecedoresFiltrados.length === 0 && (
                 <tr>
                   <td colSpan={5}>Nenhum fornecedor cadastrado.</td>
                 </tr>
               )}
-              {!loading && fornecedores.map((fornecedor) => (
+              {!loading &&
+                fornecedoresFiltrados.map((fornecedor) => (
                 <tr key={fornecedor.id}>
                   <td>{fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}</td>
                   <td>

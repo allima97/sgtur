@@ -1,14 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { r as registrarLog } from '../../chunks/logs_BFXSJPZH.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -39,6 +39,7 @@ function CidadesIsland() {
   const [excluindoId, setExcluindoId] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(true);
   const [carregouTodos, setCarregouTodos] = reactExports.useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   const [loadingBusca, setLoadingBusca] = reactExports.useState(false);
   async function carregar(todos = false) {
     if (!podeVer) return;
@@ -241,11 +242,20 @@ function CidadesIsland() {
       }
     }
     prepararEdicao();
+    setMostrarFormulario(true);
   }
   function iniciarNovo() {
-    if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+  }
+  function abrirFormulario() {
+    if (!podeCriar) return;
+    iniciarNovo();
+    setMostrarFormulario(true);
+  }
+  function fecharFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
   async function salvar(e) {
     e.preventDefault();
@@ -282,8 +292,8 @@ function CidadesIsland() {
           detalhes: payload
         });
       }
-      iniciarNovo();
       carregar(carregouTodos);
+      fecharFormulario();
     } catch (e2) {
       console.error(e2);
       setErro("Erro ao salvar cidade.");
@@ -319,7 +329,38 @@ function CidadesIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Voce nao possui permissao para visualizar Cidades." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cidades-page", children: [
-    (podeCriar || podeEditar) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "form-row",
+        style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Nome, subdivisao ou pais...",
+                value: busca,
+                onChange: (e) => setBusca(e.target.value)
+              }
+            )
+          ] }),
+          podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              onClick: abrirFormulario,
+              disabled: mostrarFormulario,
+              children: "Adicionar cidade"
+            }
+          ) })
+        ]
+      }
+    ) }),
+    (podeCriar || podeEditar) && mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar cidade" : "Nova cidade" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
@@ -370,21 +411,9 @@ function CidadesIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade" }),
-        editId && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: iniciarNovo, children: "Cancelar" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: fecharFormulario, disabled: salvando, children: "Cancelar" })
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cidade" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          className: "form-input",
-          placeholder: "Nome, subdivisao ou pais...",
-          value: busca,
-          onChange: (e) => setBusca(e.target.value)
-        }
-      )
-    ] }) }) }),
     carregando && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" }),
     !carregando && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),

@@ -1,5 +1,5 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
 
 async function processarAlerta(opcoes, secretHeader) {
   {

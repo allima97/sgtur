@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { c as createComponent, f as renderComponent, d as renderTemplate } from '../../chunks/astro/server_CVPGTMFc.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_CdOMU9M7.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_uGVYbAeU.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_BXAzlmjM.mjs';
-import { r as reactExports } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-export { a as renderers } from '../../chunks/_@astro-renderers_APQgoOvT.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_KyAPOmB5.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_CE96PXyc.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
 
 const PERIODO_OPCOES = [
   { id: "mes_atual", label: "Mês atual" },
@@ -50,7 +50,7 @@ function calcPeriodo(preset) {
 }
 function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
-  const metaProdEnabled = import.meta?.env?.PUBLIC_META_PRODUTO_ENABLED !== "false";
+  const metaProdEnabled = undefined                                            !== "false";
   const [user, setUser] = reactExports.useState(null);
   const [parametros, setParametros] = reactExports.useState(null);
   const [metaGeral, setMetaGeral] = reactExports.useState(null);
@@ -305,7 +305,7 @@ function ComissionamentoIsland() {
         }
         const valGeral = baseCom * (pctCom / 100);
         comissaoGeral += valGeral;
-        if (metaProdEnabled && prod.usa_meta_produto && prod.meta_produto_valor && prod.comissao_produto_meta_pct) {
+        if (prod.usa_meta_produto && prod.meta_produto_valor && prod.comissao_produto_meta_pct) {
           const baseMetaProd = baseMetaPorProduto[prodId] || 0;
           const pctMetaProd = baseMetaProd / prod.meta_produto_valor * 100;
           const atingiuMetaProd = pctMetaProd >= 100;
@@ -326,17 +326,17 @@ function ComissionamentoIsland() {
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
-      comissaoMetaProd: metaProdEnabled ? comissaoMetaProd : 0,
-      totalComissao: metaProdEnabled ? comissaoGeral + comissaoDif + comissaoMetaProd : comissaoGeral + comissaoDif,
+      comissaoMetaProd: comissaoMetaProd ,
+      totalComissao: comissaoGeral + comissaoDif + comissaoMetaProd ,
       comissaoDifDetalhe,
-      comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
+      comissaoMetaProdDetalhe: comissaoMetaProdDetalhe ,
       produtosDiferenciados,
       totalVendas: vendas.length
     };
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Vendas." });
-  const metaProdEntries = metaProdEnabled && resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
+  const metaProdEntries = resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
     ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
   ) : [];
   const difProdutos = resumo && resumo.produtosDiferenciados ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false) : [];
@@ -385,7 +385,7 @@ function ComissionamentoIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }, children: "Seus Valores a Receber" }),
-        metaProdEnabled && metaProdEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com meta específica" }),
+        metaProdEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com meta específica" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -396,7 +396,7 @@ function ComissionamentoIsland() {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão (geral)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
-              metaProdEnabled && metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+              metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) }),
                 val === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Meta não atingida" })

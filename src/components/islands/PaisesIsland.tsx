@@ -39,6 +39,7 @@ export default function PaisesIsland() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   async function carregarPaises(todos = false) {
     try {
@@ -99,6 +100,17 @@ export default function PaisesIsland() {
       codigo_iso: pais.codigo_iso || "",
       continente: pais.continente || ""
     });
+    setMostrarFormulario(true);
+  }
+
+  function abrirFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+  }
+
+  function fecharFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
 
   async function salvar(e: React.FormEvent) {
@@ -140,9 +152,8 @@ export default function PaisesIsland() {
         if (error) throw error;
       }
 
-      setForm(initialForm);
-      setEditandoId(null);
       await carregarPaises(carregouTodos);
+      fecharFormulario();
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao salvar país. Verifique se o nome é único.");
@@ -194,67 +205,12 @@ export default function PaisesIsland() {
 
   return (
     <div className="paises-page">
-      <div className="card-base card-blue mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome do país *</label>
-              <input
-                className="form-input"
-                value={form.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                placeholder="Ex: Brasil, Estados Unidos, França..."
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Código ISO</label>
-              <input
-                className="form-input"
-                value={form.codigo_iso}
-                onChange={(e) => handleChange("codigo_iso", e.target.value)}
-                placeholder="Ex: BR, US, FR..."
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Continente</label>
-              <input
-                className="form-input"
-                value={form.continente}
-                onChange={(e) => handleChange("continente", e.target.value)}
-                placeholder="Ex: América do Sul, Europa..."
-              />
-            </div>
-          </div>
-
-          <div className="mt-2" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={salvando || permissao === "view"}
-            >
-              {salvando
-                ? "Salvando..."
-                : editandoId
-                ? "Salvar alterações"
-                : "Adicionar país"}
-            </button>
-            {editandoId && (
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={iniciarNovo}
-              >
-                Cancelar edição
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
       <div className="card-base mb-3">
-        <div className="form-row">
-          <div className="form-group">
+        <div
+          className="form-row"
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <div className="form-group" style={{ flex: "1 1 320px" }}>
             <label className="form-label">Buscar país</label>
             <input
               className="form-input"
@@ -263,8 +219,79 @@ export default function PaisesIsland() {
               placeholder="Digite parte do nome..."
             />
           </div>
+          {permissao !== "view" && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Adicionar país
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {mostrarFormulario && (
+        <div className="card-base card-blue mb-3">
+          <form onSubmit={salvar}>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Nome do país *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Brasil, Estados Unidos, França..."
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Código ISO</label>
+                <input
+                  className="form-input"
+                  value={form.codigo_iso}
+                  onChange={(e) => handleChange("codigo_iso", e.target.value)}
+                  placeholder="Ex: BR, US, FR..."
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Continente</label>
+                <input
+                  className="form-input"
+                  value={form.continente}
+                  onChange={(e) => handleChange("continente", e.target.value)}
+                  placeholder="Ex: América do Sul, Europa..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-2" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={salvando || permissao === "view"}
+              >
+                {salvando
+                  ? "Salvando..."
+                  : editandoId
+                  ? "Salvar alterações"
+                  : "Adicionar país"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={fecharFormulario}
+                disabled={salvando}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {!carregouTodos && (
         <div className="card-base card-config mb-3">

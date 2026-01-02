@@ -121,7 +121,7 @@ function calcPeriodo(preset: string) {
 
 export default function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
-  const metaProdEnabled = (import.meta as any)?.env?.PUBLIC_META_PRODUTO_ENABLED !== "false";
+  const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
   const [user, setUser] = useState<UserCtx | null>(null);
   const [parametros, setParametros] = useState<Parametros | null>(null);
   const [metaGeral, setMetaGeral] = useState<MetaVendedor | null>(null);

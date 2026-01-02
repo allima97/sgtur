@@ -76,6 +76,7 @@ export default function CidadesIsland() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [loadingBusca, setLoadingBusca] = useState(false);
 
   // CARREGAR DADOS
@@ -342,12 +343,23 @@ export default function CidadesIsland() {
     }
 
     prepararEdicao();
+    setMostrarFormulario(true);
   }
 
   function iniciarNovo() {
-    if (!podeCriar) return;
     setEditId(null);
     setForm(initialForm);
+  }
+
+  function abrirFormulario() {
+    if (!podeCriar) return;
+    iniciarNovo();
+    setMostrarFormulario(true);
+  }
+
+  function fecharFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
 
   // SALVAR
@@ -399,8 +411,8 @@ export default function CidadesIsland() {
         });
       }
 
-      iniciarNovo();
       carregar(carregouTodos);
+      fecharFormulario();
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar cidade.");
@@ -445,7 +457,36 @@ export default function CidadesIsland() {
 
   return (
     <div className="cidades-page">
-      {(podeCriar || podeEditar) && (
+      <div className="card-base mb-3">
+        <div
+          className="form-row"
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <div className="form-group" style={{ flex: "1 1 320px" }}>
+            <label className="form-label">Buscar cidade</label>
+            <input
+              className="form-input"
+              placeholder="Nome, subdivisao ou pais..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+          {podeCriar && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Adicionar cidade
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {(podeCriar || podeEditar) && mostrarFormulario && (
         <div className="card-base card-blue mb-3">
           <form onSubmit={salvar}>
             <h3>{editId ? "Editar cidade" : "Nova cidade"}</h3>
@@ -495,29 +536,13 @@ export default function CidadesIsland() {
                 {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade"}
               </button>
 
-              {editId && (
-                <button type="button" className="btn btn-light" onClick={iniciarNovo}>
-                  Cancelar
-                </button>
-              )}
+              <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+                Cancelar
+              </button>
             </div>
           </form>
         </div>
       )}
-
-      <div className="card-base mb-3">
-        <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Buscar cidade</label>
-            <input
-              className="form-input"
-              placeholder="Nome, subdivisao ou pais..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
 
       {carregando && <LoadingUsuarioContext className="mb-3" />}
       {!carregando && erro && (

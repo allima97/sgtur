@@ -49,6 +49,7 @@ export default function SubdivisoesIsland() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   async function carregarDados(todos = false) {
     try {
@@ -125,6 +126,17 @@ export default function SubdivisoesIsland() {
       codigo_admin1: subdivisao.codigo_admin1,
       tipo: subdivisao.tipo || "",
     });
+    setMostrarFormulario(true);
+  }
+
+  function abrirFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(true);
+  }
+
+  function fecharFormulario() {
+    iniciarNovo();
+    setMostrarFormulario(false);
   }
 
   async function salvar(e: React.FormEvent) {
@@ -157,8 +169,8 @@ export default function SubdivisoesIsland() {
         if (error) throw error;
       }
 
-      iniciarNovo();
-      await carregarDados(carregouTodos);
+    await carregarDados(carregouTodos);
+    fecharFormulario();
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar subdivisao.");
@@ -198,83 +210,100 @@ export default function SubdivisoesIsland() {
 
   return (
     <div className="paises-page">
-      <div className="card-base card-blue mb-3">
-        <form onSubmit={salvar}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Nome da subdivisao *</label>
-              <input
-                className="form-input"
-                value={form.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                placeholder="Ex: Sao Paulo, California..."
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Codigo admin1 *</label>
-              <input
-                className="form-input"
-                value={form.codigo_admin1}
-                onChange={(e) => handleChange("codigo_admin1", e.target.value)}
-                placeholder="Ex: SP, CA, NY..."
-              />
-            </div>
-          </div>
-
-          <div className="form-row" style={{ marginTop: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Tipo</label>
-              <input
-                className="form-input"
-                value={form.tipo}
-                onChange={(e) => handleChange("tipo", e.target.value)}
-                placeholder="Ex: Estado, Provincia, Regiao..."
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Pais *</label>
-              <select
-                className="form-select"
-                value={form.pais_id}
-                onChange={(e) => handleChange("pais_id", e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {paises.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-            <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
-              {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Adicionar Estado/Província"}
-            </button>
-            {editandoId && (
-              <button type="button" className="btn btn-light" onClick={iniciarNovo}>
-                Cancelar edicao
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
       <div className="card-base mb-3">
-        <div className="form-group">
-          <label className="form-label">Buscar subdivisao</label>
-          <input
-            className="form-input"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Nome, pais ou codigo..."
-          />
+        <div
+          className="form-row"
+          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          <div className="form-group" style={{ flex: "1 1 320px" }}>
+            <label className="form-label">Buscar subdivisão</label>
+            <input
+              className="form-input"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Nome, país ou código..."
+            />
+          </div>
+          {permissao !== "view" && (
+            <div className="form-group" style={{ alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={abrirFormulario}
+                disabled={mostrarFormulario}
+              >
+                Adicionar Estado/Província
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {mostrarFormulario && (
+        <div className="card-base card-blue mb-3">
+          <form onSubmit={salvar}>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Nome da subdivisão *</label>
+                <input
+                  className="form-input"
+                  value={form.nome}
+                  onChange={(e) => handleChange("nome", e.target.value)}
+                  onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
+                  placeholder="Ex: Sao Paulo, California..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Código admin1 *</label>
+                <input
+                  className="form-input"
+                  value={form.codigo_admin1}
+                  onChange={(e) => handleChange("codigo_admin1", e.target.value)}
+                  placeholder="Ex: SP, CA, NY..."
+                />
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Tipo</label>
+                <input
+                  className="form-input"
+                  value={form.tipo}
+                  onChange={(e) => handleChange("tipo", e.target.value)}
+                  placeholder="Ex: Estado, Provincia, Regiao..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Pais *</label>
+                <select
+                  className="form-select"
+                  value={form.pais_id}
+                  onChange={(e) => handleChange("pais_id", e.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  {paises.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+              <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
+                {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar Estado/Província"}
+              </button>
+              <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {!carregouTodos && (
         <div className="card-base card-config mb-3">
