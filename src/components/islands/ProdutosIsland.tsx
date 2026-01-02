@@ -58,87 +58,6 @@ function gerarIdTemporario() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-function normalizeNumericInput(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const allowed = trimmed.replace(/[^\d.,-]/g, "");
-  if (!allowed) return null;
-
-  const hasComma = allowed.includes(",");
-  const hasDot = allowed.includes(".");
-
-  let normalized = allowed;
-
-  if ((hasComma && hasDot) || (hasComma && !hasDot)) {
-    normalized = allowed.replace(/\./g, "").replace(",", ".");
-  } else if (hasDot) {
-    const dotCount = (allowed.match(/\./g) || []).length;
-    if (dotCount > 1) {
-      normalized = allowed.replace(/\./g, "");
-    } else {
-      const parts = allowed.split(".");
-      if (parts[1]?.length !== 2) {
-        normalized = allowed.replace(/\./g, "");
-      }
-    }
-  }
-
-  const num = Number(normalized);
-  return Number.isFinite(num) ? num : null;
-}
-
-function parseDecimalInput(value?: string | null) {
-  if (!value) return null;
-  const num = normalizeNumericInput(value);
-  return num;
-}
-
-function parsePercentInput(value?: string | null) {
-  if (!value) return null;
-  const cleaned = value.replace("%", "").trim();
-  const num = parseDecimalInput(cleaned);
-  if (num == null) return null;
-  if (num > 1) {
-    return num / 100;
-  }
-  return num;
-}
-
-function formatMarginPercent(value?: number | null) {
-  if (value == null || Number.isNaN(value)) return "-";
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function calcularValorVendaString(valorNeto?: string, margem?: string) {
-  const net = parseDecimalInput(valorNeto);
-  const margin = parsePercentInput(margem);
-  if (net == null || margin == null) return "";
-  if (margin >= 1) return "";
-  const sale = net / (1 - margin);
-  if (!Number.isFinite(sale)) return "";
-  return sale.toFixed(2);
-}
-
-function formatValorComMoeda(value?: number | null, moeda?: string) {
-  if (value == null || Number.isNaN(value)) return "-";
-  const formatted = value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${moeda || "R$"} ${formatted}`;
-}
-
-function formatDecimal(value?: number | null, digits = 4) {
-  if (value == null || Number.isNaN(value)) return "-";
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: Math.min(2, digits),
-    maximumFractionDigits: digits,
-  });
-}
-
-function formatNumberPtBr(value?: number | null) {
-  if (value == null || Number.isNaN(value)) return "";
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 type Produto = {
   id: string;
   nome: string;
@@ -203,24 +122,6 @@ type TarifaEntry = {
   moeda: string;
   cambio: number;
 };
-
-type TarifaFormState = {
-  acomodacao: string;
-  qte_pax: string;
-  tipo: string;
-  validade_de: string;
-  validade_ate: string;
-  valor_neto: string;
-  padrao: "Manual" | "Padrao";
-  margem: string;
-};
-
-type CambioParametro = {
-  moeda: string;
-  data: string;
-  valor: number | null;
-};
-
 const initialForm: FormState = {
   nome: "",
   destino: "",
@@ -236,20 +137,6 @@ const initialForm: FormState = {
   fornecedor_id: "",
   fornecedor_label: "",
   todas_as_cidades: false,
-};
-
-const DEFAULT_TARIFA_MOEDA = "USD";
-const DEFAULT_TARIFA_MARGEM = "20%";
-
-const initialTarifaForm: TarifaFormState = {
-  acomodacao: "",
-  qte_pax: "",
-  tipo: "",
-  validade_de: "",
-  validade_ate: "",
-  valor_neto: "",
-  padrao: "Padrao",
-  margem: "",
 };
 
 export default function ProdutosIsland() {
@@ -278,11 +165,6 @@ export default function ProdutosIsland() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
   const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
-  const [tarifaModalAberta, setTarifaModalAberta] = useState(false);
-  const [tarifaModalForm, setTarifaModalForm] = useState<TarifaFormState>(initialTarifaForm);
-  const [tarifaModalErro, setTarifaModalErro] = useState<string | null>(null);
-  const [acomodacoes, setAcomodacoes] = useState<string[]>([]);
-  const [cambiosParametros, setCambiosParametros] = useState<CambioParametro[]>([]);
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -491,67 +373,6 @@ export default function ProdutosIsland() {
   }, [companyId]);
 
   useEffect(() => {
-    if (!companyId) {
-      setAcomodacoes([]);
-      return;
-    }
-
-    let isActive = true;
-
-    async function carregarAcomodacoes() {
-      const { data, error } = await supabase
-        .from("acomodacoes")
-        .select("nome")
-        .order("nome");
-      if (!isActive) return;
-      if (error) {
-        console.error("Erro ao carregar acomodacoes:", error);
-        return;
-      }
-      const lista = (data || [])
-        .map((item: any) => (item?.nome || "").toString().trim())
-        .filter(Boolean);
-      setAcomodacoes(lista);
-    }
-
-    carregarAcomodacoes();
-
-    return () => {
-      isActive = false;
-    };
-  }, [companyId]);
-
-  useEffect(() => {
-    if (!companyId) {
-      setCambiosParametros([]);
-      return;
-    }
-
-    let isActive = true;
-
-    async function carregarCambios() {
-      const { data, error } = await supabase
-        .from("parametros_cambios")
-        .select("moeda, data, valor")
-        .eq("company_id", companyId)
-        .order("data", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (!isActive) return;
-      if (error) {
-        console.error("Erro ao carregar câmbios:", error);
-        return;
-      }
-      setCambiosParametros((data || []) as CambioParametro[]);
-    }
-
-    carregarCambios();
-
-    return () => {
-      isActive = false;
-    };
-  }, [companyId]);
-
-  useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarDados(true);
     }
@@ -608,33 +429,12 @@ export default function ProdutosIsland() {
     );
   }, [busca, produtosEnriquecidos]);
 
-  const cambioAtualPorMoeda = useMemo(() => {
-    const mapa: Record<string, { valor: number; data: string }> = {};
-    cambiosParametros.forEach((cambio) => {
-      const key = (cambio.moeda || "R$").trim();
-      if (!key || cambio.valor == null) return;
-      const existente = mapa[key];
-      if (!existente || cambio.data > existente.data) {
-        mapa[key] = { valor: cambio.valor, data: cambio.data };
-      }
-    });
-    return mapa;
-  }, [cambiosParametros]);
 
   const tipoSelecionado = useMemo(
     () => (form.tipo_produto ? tipos.find((t) => t.id === form.tipo_produto) || null : null),
     [form.tipo_produto, tipos]
   );
   const isHospedagem = ehTipoHospedagem(tipoSelecionado);
-  const tarifaMoeda = DEFAULT_TARIFA_MOEDA;
-  const tarifaMargemPreview =
-    tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : DEFAULT_TARIFA_MARGEM;
-  const tarifaValorVendaPreview = calcularValorVendaString(tarifaModalForm.valor_neto, tarifaMargemPreview);
-  const tarifaValorVendaNum = parseDecimalInput(tarifaValorVendaPreview);
-  const tarifaCambioAtual = cambioAtualPorMoeda[tarifaMoeda]?.valor ?? 0;
-  const tarifaValorEmReaisPreview =
-    tarifaValorVendaNum != null ? tarifaValorVendaNum * tarifaCambioAtual : 0;
-  const tarifaCambioLabel = tarifaCambioAtual ? formatDecimal(tarifaCambioAtual) : "-";
 
   const estaEditando = Boolean(editandoId);
   const formLayout = estaEditando
@@ -694,101 +494,6 @@ export default function ProdutosIsland() {
       (f) => formatFornecedorLabel(f).toLowerCase() === termo
     );
     handleChange("fornecedor_id", match ? match.id : "");
-  }
-
-  const handleTarifaModalChange = useCallback(
-    (campo: keyof TarifaFormState, valor: string) => {
-      setTarifaModalForm((prev) => {
-        const atualizado = { ...prev, [campo]: valor };
-        if (campo === "padrao" && valor === "Padrao") {
-          atualizado.margem = "";
-        }
-        return atualizado;
-      });
-    },
-    []
-  );
-
-  function abrirModalTarifa() {
-    setTarifaModalForm(initialTarifaForm);
-    setTarifaModalErro(null);
-    setTarifaModalAberta(true);
-  }
-
-  function fecharModalTarifa() {
-    setTarifaModalAberta(false);
-    setTarifaModalForm(initialTarifaForm);
-    setTarifaModalErro(null);
-  }
-
-  function removerTarifa(id: string) {
-    setTarifas((prev) => prev.filter((tarifa) => tarifa.id !== id));
-  }
-
-  async function salvarTarifaModal(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tarifaModalForm.acomodacao.trim()) {
-      setTarifaModalErro("Informe a acomodação.");
-      return;
-    }
-    if (!tarifaModalForm.tipo.trim()) {
-      setTarifaModalErro("Informe o tipo de tarifa.");
-      return;
-    }
-    if (!tarifaModalForm.validade_de || !tarifaModalForm.validade_ate) {
-      setTarifaModalErro("Informe o período de validade.");
-      return;
-    }
-    const qtePax = Number.parseInt(tarifaModalForm.qte_pax, 10);
-    if (!Number.isFinite(qtePax) || qtePax <= 0) {
-      setTarifaModalErro("Informe a quantidade de passageiros.");
-      return;
-    }
-    const valorNetoNum = parseDecimalInput(tarifaModalForm.valor_neto);
-    if (valorNetoNum == null) {
-      setTarifaModalErro("Informe o valor neto.");
-      return;
-    }
-
-    const margemPadrao =
-      tarifaModalForm.padrao === "Manual" ? tarifaModalForm.margem || "" : DEFAULT_TARIFA_MARGEM;
-    const valorVendaStr = calcularValorVendaString(tarifaModalForm.valor_neto, margemPadrao);
-    const valorVendaNum = parseDecimalInput(valorVendaStr);
-    if (valorVendaNum == null) {
-      setTarifaModalErro("Não foi possível calcular o valor de venda.");
-      return;
-    }
-
-    const margemNum = parsePercentInput(margemPadrao);
-    const cambioNum = tarifaCambioAtual;
-    const valorEmReaisNum = valorVendaNum * (cambioNum || 0);
-
-    const novaTarifa: TarifaEntry = {
-      id: gerarIdTemporario(),
-      acomodacao: tarifaModalForm.acomodacao.trim(),
-      qte_pax: qtePax,
-      tipo: tarifaModalForm.tipo.trim(),
-      validade_de: tarifaModalForm.validade_de,
-      validade_ate: tarifaModalForm.validade_ate,
-      valor_neto: valorNetoNum,
-      padrao: tarifaModalForm.padrao,
-      margem: margemNum,
-      valor_venda: valorVendaNum,
-      valor_em_reais: valorEmReaisNum,
-      moeda: tarifaMoeda,
-      cambio: cambioNum,
-    };
-    setTarifas((prev) => [...prev, novaTarifa]);
-    if (
-      tarifaModalForm.acomodacao &&
-      !acomodacoes.some(
-        (nome) => normalizeText(nome) === normalizeText(tarifaModalForm.acomodacao.trim())
-      )
-    ) {
-      setAcomodacoes((prev) => [...prev, tarifaModalForm.acomodacao.trim()]);
-    }
-    setTarifaModalErro(null);
-    fecharModalTarifa();
   }
 
   async function carregarTarifasProduto(produtoId: string, moedaPadrao: string, cambioPadrao: number) {
@@ -853,12 +558,6 @@ export default function ProdutosIsland() {
           .upsert(nomesAcomodacoes.map((nome) => ({ nome })), { onConflict: "nome" });
         if (acomodacoesError) {
           console.error("Erro ao atualizar acomodacoes:", acomodacoesError);
-        } else {
-          setAcomodacoes((prev) => {
-            const existentes = new Set(prev.map((item) => normalizeText(item)));
-            const novos = nomesAcomodacoes.filter((nome) => !existentes.has(normalizeText(nome)));
-            return novos.length ? [...prev, ...novos] : prev;
-          });
         }
       }
     } catch (error) {
@@ -875,9 +574,6 @@ export default function ProdutosIsland() {
     setMostrarSugestoes(false);
     setModoGlobal(null);
     setTarifas([]);
-    setTarifaModalAberta(false);
-    setTarifaModalForm(initialTarifaForm);
-    setTarifaModalErro(null);
   }
 
   function iniciarEdicao(produto: Produto & { cidade_nome?: string }) {
@@ -903,9 +599,6 @@ export default function ProdutosIsland() {
       todas_as_cidades: produto.todas_as_cidades ?? false,
     });
     setTarifas([]);
-    setTarifaModalAberta(false);
-    setTarifaModalForm(initialTarifaForm);
-    setTarifaModalErro(null);
     setCidadeBusca(
       produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
     );
@@ -1051,6 +744,7 @@ export default function ProdutosIsland() {
       await sincronizarTarifas(produtoId);
 
       iniciarNovo();
+      setMostrarFormulario(false);
       await carregarDados(carregouTodos);
     } catch (e: any) {
       console.error(e);
@@ -1379,82 +1073,6 @@ export default function ProdutosIsland() {
                 </div>
               </div>
             )}
-            <div className="form-row" style={{ marginTop: 16, alignItems: "center" }}>
-              <div className="form-group" style={{ flex: 1, gap: 4 }}>
-                <div className="form-label">Padrão do Fornecedor</div>
-                <div className="flex gap-4 flex-wrap" style={{ fontSize: "0.9rem", opacity: 0.85 }}>
-                  <strong>Moeda:</strong> {tarifaMoeda}
-                  <strong>Margem:</strong> {DEFAULT_TARIFA_MARGEM}
-                  <strong>Câmbio:</strong> {tarifaCambioLabel}
-                </div>
-              </div>
-              {isHospedagem && (
-                <div className="form-group" style={{ alignItems: "flex-end" }}>
-                  <button
-                    type="button"
-                    className="btn btn-light"
-                    onClick={abrirModalTarifa}
-                    disabled={permissao === "view"}
-                  >
-                    Adicionar Tarifa
-                  </button>
-                </div>
-              )}
-            </div>
-            {isHospedagem && (
-              <div className="form-row" style={{ marginTop: 12 }}>
-                <div className="table-container overflow-x-auto">
-                  <table className="table-default table-header-blue min-w-[1080px]">
-                    <thead>
-                      <tr>
-                        <th>Acomodação</th>
-                        <th>Pax</th>
-                        <th>De</th>
-                        <th>Até</th>
-                        <th>Tipo</th>
-                        <th>Valor Neto</th>
-                        <th>Padrão</th>
-                        <th>Margem</th>
-                        <th>Valor Venda</th>
-                        <th>Valor em R$</th>
-                        <th className="th-actions">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tarifas.length === 0 ? (
-                        <tr>
-                          <td colSpan={11}>Nenhuma tarifa cadastrada.</td>
-                        </tr>
-                      ) : (
-                        tarifas.map((tarifa) => (
-                          <tr key={tarifa.id}>
-                            <td>{tarifa.acomodacao}</td>
-                            <td>{tarifa.qte_pax}</td>
-                            <td>{tarifa.validade_de}</td>
-                            <td>{tarifa.validade_ate}</td>
-                            <td>{tarifa.tipo}</td>
-                            <td>{formatValorComMoeda(tarifa.valor_neto, tarifa.moeda)}</td>
-                            <td>{tarifa.padrao}</td>
-                            <td>{formatMarginPercent(tarifa.margem)}</td>
-                            <td>{formatValorComMoeda(tarifa.valor_venda, tarifa.moeda)}</td>
-                            <td>{formatValorComMoeda(tarifa.valor_em_reais, "R$")}</td>
-                            <td className="th-actions">
-                              <button
-                                type="button"
-                                className="btn btn-light"
-                                onClick={() => removerTarifa(tarifa.id)}
-                              >
-                                Remover
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
             <div className="form-group" style={{ marginTop: 12 }}>
               <label className="form-label">Informacoes importantes</label>
               <textarea
@@ -1507,147 +1125,6 @@ export default function ProdutosIsland() {
                 Cancelar
               </button>
             </div>
-            {tarifaModalAberta && (
-              <div className="modal-backdrop">
-                <div className="modal-panel">
-                  <form onSubmit={salvarTarifaModal}>
-                    <div className="modal-header">
-                      <h3>Adicionar tarifa</h3>
-                      <button type="button" className="btn btn-light" onClick={fecharModalTarifa}>
-                        Fechar
-                      </button>
-                    </div>
-                    <div className="modal-body">
-                      {tarifaModalErro && (
-                        <div style={{ color: "#dc2626", marginBottom: 8 }}>{tarifaModalErro}</div>
-                      )}
-                      <div className="form-row">
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Validade De</label>
-                          <input
-                            type="date"
-                            className="form-input"
-                            value={tarifaModalForm.validade_de}
-                            onChange={(e) => handleTarifaModalChange("validade_de", e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Validade Até</label>
-                          <input
-                            type="date"
-                            className="form-input"
-                            value={tarifaModalForm.validade_ate}
-                            onChange={(e) => handleTarifaModalChange("validade_ate", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ marginTop: 12 }}>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Acomodação</label>
-                          <input
-                            className="form-input"
-                            list="acomodacoes-list"
-                            value={tarifaModalForm.acomodacao}
-                            onChange={(e) => handleTarifaModalChange("acomodacao", e.target.value)}
-                          />
-                          <datalist id="acomodacoes-list">
-                            {acomodacoes.map((nome) => (
-                              <option key={nome} value={nome} />
-                            ))}
-                          </datalist>
-                        </div>
-                        <div className="form-group" style={{ width: 120 }}>
-                          <label className="form-label">Qte Pax</label>
-                          <input
-                            type="number"
-                            min={1}
-                            className="form-input"
-                            value={tarifaModalForm.qte_pax}
-                            onChange={(e) => handleTarifaModalChange("qte_pax", e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Tipo</label>
-                          <input
-                            className="form-input"
-                            list="tipo-tarifa-list"
-                            value={tarifaModalForm.tipo}
-                            onChange={(e) => handleTarifaModalChange("tipo", e.target.value)}
-                          />
-                          <datalist id="tipo-tarifa-list">
-                            {["diária", "pacote"].map((tipo) => (
-                              <option key={tipo} value={tipo} />
-                            ))}
-                          </datalist>
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ marginTop: 12 }}>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Valor Neto ({tarifaMoeda})</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Ex: 1000"
-                            value={tarifaModalForm.valor_neto}
-                            onChange={(e) => handleTarifaModalChange("valor_neto", e.target.value)}
-                          />
-                        </div>
-                        <div className="form-group" style={{ width: 180 }}>
-                          <label className="form-label">Padrão</label>
-                          <select
-                            className="form-select"
-                            value={tarifaModalForm.padrao}
-                            onChange={(e) => handleTarifaModalChange("padrao", e.target.value as "Manual" | "Padrao")}
-                          >
-                            <option value="Padrao">Padrão</option>
-                            <option value="Manual">Manual</option>
-                          </select>
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Margem</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Ex: 25%"
-                            value={tarifaModalForm.margem}
-                            onChange={(e) => handleTarifaModalChange("margem", e.target.value)}
-                            disabled={tarifaModalForm.padrao !== "Manual"}
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ marginTop: 12, gap: 12 }}>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Valor Venda ({tarifaMoeda})</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            value={tarifaValorVendaNum != null ? formatValorComMoeda(tarifaValorVendaNum, tarifaMoeda) : ""}
-                            readOnly
-                          />
-                        </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Valor em R$</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            value={formatValorComMoeda(tarifaValorEmReaisPreview, "R$")}
-                            readOnly
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="btn btn-light" onClick={fecharModalTarifa}>
-                        Cancelar
-                      </button>
-                      <button type="submit" className="btn btn-primary" disabled={permissao === "view"}>
-                        Salvar tarifa
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </form>
         </div>
 

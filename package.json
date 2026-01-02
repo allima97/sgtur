@@ -7,11 +7,11 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^11.2.0",
+    "@astrojs/cloudflare": "^12.6.12",
     "@astrojs/react": "^4.0.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.0.0",
-    "astro": "^4.0.0",
+    "astro": "^5.16.6",
     "lucide-react": "^0.556.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
