@@ -8,6 +8,7 @@ type Usuario = {
   nome_completo: string;
   uso_individual: boolean;
   company_id: string | null;
+  user_types?: { name: string | null } | null;
 };
 
 type Meta = {
@@ -35,6 +36,10 @@ export default function MetasVendedorIsland() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
   const [produtos, setProdutos] = useState<{ id: string; nome: string }[]>([]);
+
+  const isUsuarioVendedor = (usuario?: Usuario | null) =>
+    !!usuario?.user_types?.name &&
+    usuario.user_types.name.toUpperCase().includes("VENDEDOR");
 
   const [vendedorSelecionado, setVendedorSelecionado] = useState<string>("");
   const [periodo, setPeriodo] = useState<string>(new Date().toISOString().slice(0, 7));
@@ -74,9 +79,9 @@ export default function MetasVendedorIsland() {
 
       const { data: usuarios } = await supabase
         .from("users")
-        .select("id, nome_completo, uso_individual, company_id");
+        .select("id, nome_completo, uso_individual, company_id, user_types(name)");
 
-      const logado = usuarios?.find((u) => u.id === userId) || null;
+      const logado = (usuarios || []).find((u) => u.id === userId) || null;
       setUsuario(logado);
 
       // carregar produtos ativos
@@ -90,12 +95,15 @@ export default function MetasVendedorIsland() {
       const isAdminLocal = permissao === "admin";
       const isEditLocal = permissao === "edit";
 
+      let vendedoresDisponiveis: Usuario[] = [];
       if (logado?.company_id && (isAdminLocal || isEditLocal)) {
-        setVendedores(usuarios?.filter((u) => u.company_id === logado.company_id) || []);
-      } else {
-        // modo individual
-        setVendedores([logado]);
+        vendedoresDisponiveis = (usuarios || [])
+          .filter((u: any) => u.company_id === logado.company_id) as Usuario[];
+      } else if (isUsuarioVendedor(logado)) {
+        vendedoresDisponiveis = [logado];
       }
+      const vendedoresValidos = vendedoresDisponiveis.filter(isUsuarioVendedor);
+      setVendedores(vendedoresValidos);
 
       // carregar parametros_comissao (company)
       const { data: params } = await supabase
@@ -105,8 +113,14 @@ export default function MetasVendedorIsland() {
         .maybeSingle();
       setParametros(params || null);
 
-      await carregarMetas(logado?.id || "");
-      setVendedorSelecionado(logado?.id || "");
+      if (vendedoresValidos.length === 0) {
+        setErro("Nenhum vendedor do tipo VENDEDOR disponível.");
+        return;
+      }
+      const initialVendedor =
+        vendedoresValidos.find((v) => v.id === logado?.id) || vendedoresValidos[0];
+      await carregarMetas(initialVendedor.id);
+      setVendedorSelecionado(initialVendedor.id);
 
     } catch (e) {
       console.error(e);
@@ -212,8 +226,14 @@ export default function MetasVendedorIsland() {
     e.preventDefault();
     setErro(null);
 
-    if (!metaGeral || !vendedorSelecionado) {
+    const vendedorAtual = vendedores.find((v) => v.id === vendedorSelecionado);
+    if (!metaGeral || !vendedorSelecionado || !vendedorAtual) {
       setErro("Meta geral e vendedor são obrigatórios.");
+      return;
+    }
+
+    if (!isUsuarioVendedor(vendedorAtual)) {
+      setErro("Selecione um vendedor com tipo VENDEDOR.");
       return;
     }
 
@@ -381,6 +401,11 @@ export default function MetasVendedorIsland() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-2 md:p-6">
+      {erro && !mostrarFormularioMeta && (
+        <div className="card-base card-config mb-3">
+          <strong>{erro}</strong>
+        </div>
+      )}
 
       <div className="card-base card-blue mb-2">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>

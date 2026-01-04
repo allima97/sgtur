@@ -11,6 +11,7 @@ type Parametros = {
 type UserCtx = {
   id: string;
   nome: string;
+  tipo?: string;
 };
 
 type MetaVendedor = {
@@ -119,12 +120,37 @@ function calcPeriodo(preset: string) {
   return { inicio: formatISODate(inicio), fim: formatISODate(hoje) };
 }
 
+function formatPeriodoLabel(value: string) {
+  if (!value) return "-";
+  const meses = [
+    "jan",
+    "fev",
+    "mar",
+    "abr",
+    "mai",
+    "jun",
+    "jul",
+    "ago",
+    "set",
+    "out",
+    "nov",
+    "dez",
+  ];
+  const partes = value.split("-");
+  if (partes.length < 3) return value;
+  const [ano, mes, dia] = partes;
+  const mesIdx = Number(mes) - 1;
+  const mesLabel = meses[mesIdx] || mes;
+  return `${dia}-${mesLabel}-${ano}`;
+}
+
 export default function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
   const [user, setUser] = useState<UserCtx | null>(null);
   const [parametros, setParametros] = useState<Parametros | null>(null);
   const [metaGeral, setMetaGeral] = useState<MetaVendedor | null>(null);
+  const [metaIds, setMetaIds] = useState<string[]>([]);
   const [metasProduto, setMetasProduto] = useState<MetaProduto[]>([]);
   const [regras, setRegras] = useState<Record<string, Regra>>({});
   const [regraProdutoMap, setRegraProdutoMap] = useState<Record<string, RegraProduto>>({});
@@ -155,22 +181,59 @@ export default function ComissionamentoIsland() {
         setErro("Usuário não autenticado.");
         return;
       }
-      setUser({ id: userId, nome: auth?.user?.email || "" });
-
       const periodoAtual = calcPeriodo(preset);
       const isAdminPermissao = permissao === "admin";
 
-      const { data: paramsData } = await supabase
-        .from("parametros_comissao")
-        .select("usar_taxas_na_meta, foco_valor")
+      const { data: usuarioDb } = await supabase
+        .from("users")
+        .select("id, company_id, user_types(name)")
+        .eq("id", userId)
         .maybeSingle();
+      const tipoUser =
+        ((usuarioDb?.user_types?.name || "") as string).toUpperCase();
+      const isUsuarioVendedor = tipoUser.includes("VENDEDOR");
+      const companyId = (usuarioDb as any)?.company_id || null;
 
-      const { data: metaData } = await supabase
+      setUser({
+        id: userId,
+        nome: auth?.user?.email || "",
+        tipo: tipoUser,
+      });
+
+      const paramsCols = "usar_taxas_na_meta, foco_valor";
+      let paramsData: any = null;
+      if (companyId) {
+        const { data } = await supabase
+          .from("parametros_comissao")
+          .select(paramsCols)
+          .eq("company_id", companyId)
+          .maybeSingle();
+        paramsData = data;
+      }
+      if (!paramsData) {
+        const { data } = await supabase
+          .from("parametros_comissao")
+          .select(paramsCols)
+          .is("company_id", null)
+          .maybeSingle();
+        paramsData = data;
+      }
+
+      const periodoMeta = periodoAtual.inicio.slice(0, 7) + "-01";
+      let metasQuery = supabase
         .from("metas_vendedor")
         .select("id, meta_geral")
-        .eq("vendedor_id", userId)
-        .eq("periodo", periodoAtual.inicio.slice(0, 7) + "-01")
-        .maybeSingle();
+        .eq("periodo", periodoMeta);
+      if (isUsuarioVendedor) {
+        metasQuery = metasQuery.eq("vendedor_id", userId);
+      }
+      const { data: metasData, error: metasError } = await metasQuery;
+      if (metasError) throw metasError;
+      const metasList = (metasData || []) as MetaVendedor[];
+      const metaIds = metasList.map((m) => m.id);
+      const metaSum = metasList.reduce((sum, m) => sum + (m.meta_geral || 0), 0);
+      setMetaIds(metaIds);
+      setMetaGeral(metaIds.length > 0 ? { id: metaIds[0], meta_geral: metaSum } : null);
 
       const tipoProdBaseCols =
         "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
@@ -244,11 +307,16 @@ export default function ComissionamentoIsland() {
         suportaKpi = false;
       }
 
+      const metasProdPromise =
+        metaIds.length > 0
+          ? supabase
+              .from("metas_vendedor_produto")
+              .select("produto_id, valor")
+              .in("meta_vendedor_id", metaIds)
+          : Promise.resolve({ data: [], error: null as null });
+
       const [metasProdDataRes, regrasDataRes, regrasProdDataRes] = await Promise.all([
-        supabase
-          .from("metas_vendedor_produto")
-          .select("produto_id, valor")
-          .eq("meta_vendedor_id", metaData?.id || ""),
+        metasProdPromise,
         supabase
           .from("commission_rule")
           .select("id, tipo, meta_nao_atingida, meta_atingida, super_meta, commission_tier (faixa, de_pct, ate_pct, inc_pct_meta, inc_pct_comissao)"),
@@ -311,7 +379,6 @@ export default function ComissionamentoIsland() {
             } as Parametros)
           : { usar_taxas_na_meta: true, foco_valor: "bruto" }
       );
-      setMetaGeral(metaData as any);
       setMetasProduto((metasProdData || []) as MetaProduto[]);
       setRegras(regrasMap);
       setRegraProdutoMap(regProdMap);
@@ -498,14 +565,10 @@ export default function ComissionamentoIsland() {
 
   const metaProdEntries =
     metaProdEnabled && resumo
-      ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
-          ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
-        )
+      ? Object.entries(resumo.comissaoMetaProdDetalhe || {})
       : [];
-  const difProdutos =
-    resumo && resumo.produtosDiferenciados
-      ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false)
-      : [];
+  const difProdutos = resumo?.produtosDiferenciados || [];
+  const mostraProdutoKpi = metaProdEntries.length > 0 || difProdutos.length > 0;
 
   return (
     <div className="card-base bg-transparent shadow-none p-0">
@@ -521,14 +584,14 @@ export default function ComissionamentoIsland() {
               ))}
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Início</label>
-            <input className="form-input" value={periodo.inicio} readOnly />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Fim</label>
-            <input className="form-input" value={periodo.fim} readOnly />
-          </div>
+            <div className="form-group">
+              <label className="form-label">Início</label>
+              <input className="form-input" value={formatPeriodoLabel(periodo.inicio)} readOnly />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fim</label>
+              <input className="form-input" value={formatPeriodoLabel(periodo.fim)} readOnly />
+            </div>
         </div>
       </div>
 
@@ -580,9 +643,9 @@ export default function ComissionamentoIsland() {
             <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
               Seus Valores a Receber
             </div>
-            {metaProdEnabled && metaProdEntries.length > 0 && (
+            {mostraProdutoKpi && (
               <div style={{ textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }}>
-                Produtos com meta específica
+                Produtos com comissão diferenciada
               </div>
             )}
             <div
