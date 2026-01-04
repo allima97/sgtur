@@ -202,7 +202,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
           ticketMedio: 0,
         };
       const valRecibos = (v.vendas_recibos || []).reduce(
-        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        (acc, r) => acc + Number(r.valor_total || 0),
         0
       );
       const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;

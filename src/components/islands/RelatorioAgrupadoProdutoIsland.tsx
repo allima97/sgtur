@@ -188,15 +188,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
     vendas.forEach((v) => {
       const recibos = v.vendas_recibos || [];
-      if (recibos.length) {
-        recibos.forEach((r) => {
-          const val = Number(r.valor_total || 0) + Number(r.valor_taxas || 0);
-          adicionar(r.produto_id, val);
-        });
-      } else {
-        const val = v.valor_total ?? 0;
-        adicionar(v.produto_id, val);
-      }
+        if (recibos.length) {
+          recibos.forEach((r) => {
+            const val = Number(r.valor_total || 0);
+            adicionar(r.produto_id, val);
+          });
+        } else {
+          const val = v.valor_total ?? 0;
+          adicionar(v.produto_id, val);
+        }
     });
 
     const arr = Array.from(map.values()).map((l) => ({

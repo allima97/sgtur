@@ -269,7 +269,7 @@ export default function RelatorioVendasIsland() {
       const recibos = v.vendas_recibos || [];
       const numeroRecibos = recibos.map((r) => r.numero_recibo).filter(Boolean).join(" / ");
       const valorRecibos = recibos.reduce(
-        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        (acc, r) => acc + Number(r.valor_total || 0),
         0
       );
       const prodRecibo = recibos.find((r) => r.tipo_produtos?.id);

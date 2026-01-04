@@ -79,6 +79,21 @@ function moedaParaNumero(valor: string) {
   return num;
 }
 
+function dataParaInput(value?: string | Date | null) {
+  if (value == null) return "";
+  if (typeof value === "string") {
+    if (value.includes("T")) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().split("T")[0];
+      }
+      return value.split("T")[0];
+    }
+    return value;
+  }
+  return value.toISOString().split("T")[0];
+}
+
 function calcularStatusPeriodo(inicio?: string | null, fim?: string | null) {
   if (!inicio) return "planejada";
   const hoje = new Date();
@@ -222,8 +237,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
       setFormVenda({
         cliente_id: vendaData.cliente_id,
         destino_id: cidadeId,
-        data_lancamento: vendaData.data_lancamento,
-        data_embarque: vendaData.data_embarque || "",
+        data_lancamento: dataParaInput(vendaData.data_lancamento),
+        data_embarque: dataParaInput(vendaData.data_embarque),
       });
       setBuscaDestino(cidadeNome || cidadeId || "");
       setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
@@ -246,8 +261,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
-          data_inicio: r.data_inicio || "",
-          data_fim: r.data_fim || "",
+          data_inicio: dataParaInput(r.data_inicio),
+          data_fim: dataParaInput(r.data_fim),
         }))
       );
     } catch (e) {
