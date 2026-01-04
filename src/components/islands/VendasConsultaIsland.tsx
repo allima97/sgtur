@@ -8,6 +8,15 @@ function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function formatarDataCorretamente(dataString: string | null | undefined): string {
+  if (!dataString) return "-";
+  const partes = dataString.split("T")[0].split("-");
+  if (partes.length !== 3) return "-";
+  const [ano, mes, dia] = partes;
+  const date = new Date(parseInt(ano, 10), parseInt(mes, 10) - 1, parseInt(dia, 10));
+  return date.toLocaleDateString("pt-BR");
+}
+
 type Venda = {
   id: string;
   vendedor_id?: string | null;
@@ -578,9 +587,7 @@ export default function VendasConsultaIsland() {
                       )}
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      {v.data_embarque
-                        ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
-                        : "-"}
+                      {formatarDataCorretamente(v.data_embarque)}
                     </td>
                     <td>
                       R${" "}
@@ -643,13 +650,11 @@ export default function VendasConsultaIsland() {
                 </div>
                 <div>
                   <strong>Lançada em:</strong>{" "}
-                  {new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")}
+                  {formatarDataCorretamente(modalVenda.data_lancamento)}
                 </div>
                 <div>
                   <strong>Embarque:</strong>{" "}
-                  {modalVenda.data_embarque
-                    ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR")
-                    : "-"}
+                  {formatarDataCorretamente(modalVenda.data_embarque)}
                 </div>
               </div>
 
@@ -687,9 +692,7 @@ export default function VendasConsultaIsland() {
                             })}`;
 
                       const formatarData = (value: string | null | undefined) =>
-                        value
-                          ? new Date(value).toLocaleDateString("pt-BR")
-                          : "-";
+                        formatarDataCorretamente(value);
 
                       return (
                         <tr key={r.id}>
