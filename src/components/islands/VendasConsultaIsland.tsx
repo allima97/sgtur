@@ -229,21 +229,22 @@ export default function VendasConsultaIsland() {
         }
       }
 
-      const v = (vendasData || []).map((row: any) => {
-        const cidadeId = row.destino_cidade_id || row.destinos?.cidade_id || "";
-        return {
-          id: row.id,
-          vendedor_id: row.vendedor_id,
-          cliente_id: row.cliente_id,
-          destino_id: row.destino_id,
-          destino_cidade_id: cidadeId,
-          data_lancamento: row.data_lancamento,
-          data_embarque: row.data_embarque,
-          cliente_nome: row.clientes?.nome || "",
-          destino_nome: row.destinos?.nome || "",
-          destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : "",
-        };
-      });
+        const v = (vendasData || []).map((row: any) => {
+          const cidadeId = row.destino_cidade_id || row.destinos?.cidade_id || "";
+          return {
+            id: row.id,
+            vendedor_id: row.vendedor_id,
+            cliente_id: row.cliente_id,
+            destino_id: row.destino_id,
+            destino_cidade_id: cidadeId,
+            data_lancamento: row.data_lancamento,
+            data_embarque: row.data_embarque,
+            cliente_nome: row.clientes?.nome || "",
+            destino_nome: row.destinos?.nome || "",
+            destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : "",
+            clientes: row.clientes,
+          };
+        });
 
       setVendas(v);
 

@@ -449,6 +449,7 @@ export default function ComissionamentoIsland() {
     const produtosDiferenciados: string[] = [];
     let comissaoMetaProd = 0;
     const comissaoMetaProdDetalhe: Record<string, number> = {};
+    let comissaoPassagemFacial = 0;
     const usaFocoFaturamentoLiquido = parametros.foco_faturamento === "liquido";
 
     Object.values(produtos).forEach((p) => {
@@ -494,6 +495,8 @@ export default function ComissionamentoIsland() {
       const baseCom = usaFocoFaturamentoLiquido
         ? liquidoPorProduto[prodId] || 0
         : brutoPorProduto[prodId] || 0;
+      const nomeProdNormalizado = (prod.nome || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const isPassagemFacial = nomeProdNormalizado.includes("passagem facial");
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
@@ -511,7 +514,11 @@ export default function ComissionamentoIsland() {
         const val = baseCom * (pctCom / 100);
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
         if (jogaParaGeral) {
-          comissaoGeral += val;
+          if (isPassagemFacial) {
+            comissaoPassagemFacial += val;
+          } else {
+            comissaoGeral += val;
+          }
         } else {
           comissaoDif += val;
         }
@@ -530,7 +537,14 @@ export default function ComissionamentoIsland() {
           }
         }
         const valGeral = baseCom * (pctCom / 100);
-        comissaoGeral += valGeral;
+        const nomeProd = (prod.nome || "").toLowerCase();
+        const normalizedNome = nomeProd.replace(/\s+/g, " ").trim();
+        const isPassagemFacial = normalizedNome.includes("passagem facial");
+        if (isPassagemFacial) {
+          comissaoPassagemFacial += valGeral;
+        } else {
+          comissaoGeral += valGeral;
+        }
 
         if (metaProdEnabled && prod.usa_meta_produto && prod.meta_produto_valor && prod.comissao_produto_meta_pct) {
           const baseMetaProd = baseMetaPorProduto[prodId] || 0;
@@ -555,7 +569,10 @@ export default function ComissionamentoIsland() {
       comissaoGeral,
       comissaoDif,
       comissaoMetaProd: metaProdEnabled ? comissaoMetaProd : 0,
-      totalComissao: metaProdEnabled ? comissaoGeral + comissaoDif + comissaoMetaProd : comissaoGeral + comissaoDif,
+      comissaoPassagemFacial,
+      totalComissao: metaProdEnabled
+        ? comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial
+        : comissaoGeral + comissaoDif + comissaoPassagemFacial,
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
       produtosDiferenciados,
