@@ -675,7 +675,7 @@ export default function ComissionamentoIsland() {
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
             >
               <div className="kpi-card flex flex-col items-center text-center">
-                <div className="kpi-label">Comissão (geral)</div>
+                <div className="kpi-label">Comissão</div>
                 <div className="kpi-value">
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
