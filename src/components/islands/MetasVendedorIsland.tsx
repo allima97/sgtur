@@ -8,7 +8,7 @@ type Usuario = {
   nome_completo: string;
   uso_individual: boolean;
   company_id: string | null;
-  user_types?: { name: string | null } | null;
+  user_types?: { name: string | null } | { name: string | null }[] | null;
 };
 
 type Meta = {
@@ -27,6 +27,17 @@ type MetaProduto = {
   valor: number;
 };
 
+function extrairNomesTipos(usuario?: Usuario | null) {
+  if (!usuario?.user_types) return [];
+  if (Array.isArray(usuario.user_types)) {
+    return usuario.user_types.map((ut) => ut?.name || "").filter(Boolean);
+  }
+  return [usuario.user_types.name || ""].filter(Boolean);
+}
+
+const isUsuarioVendedor = (usuario?: Usuario | null) =>
+  extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("VENDEDOR"));
+
 export default function MetasVendedorIsland() {
   const { permissao, ativo, loading } = usePermissao("Metas");
   const [parametros, setParametros] = useState<{
@@ -36,10 +47,6 @@ export default function MetasVendedorIsland() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
   const [produtos, setProdutos] = useState<{ id: string; nome: string }[]>([]);
-
-  const isUsuarioVendedor = (usuario?: Usuario | null) =>
-    !!usuario?.user_types?.name &&
-    usuario.user_types.name.toUpperCase().includes("VENDEDOR");
 
   const [vendedorSelecionado, setVendedorSelecionado] = useState<string>("");
   const [periodo, setPeriodo] = useState<string>(new Date().toISOString().slice(0, 7));
@@ -96,9 +103,10 @@ export default function MetasVendedorIsland() {
       const isEditLocal = permissao === "edit";
 
       let vendedoresDisponiveis: Usuario[] = [];
-      if (logado?.company_id && (isAdminLocal || isEditLocal)) {
-        vendedoresDisponiveis = (usuarios || [])
-          .filter((u: any) => u.company_id === logado.company_id) as Usuario[];
+      if (isAdminLocal || isEditLocal) {
+        vendedoresDisponiveis = logado?.company_id
+          ? (usuarios || []).filter((u: any) => u.company_id === logado.company_id) as Usuario[]
+          : (usuarios || []);
       } else if (isUsuarioVendedor(logado)) {
         vendedoresDisponiveis = [logado];
       }
@@ -119,7 +127,7 @@ export default function MetasVendedorIsland() {
       }
       const initialVendedor =
         vendedoresValidos.find((v) => v.id === logado?.id) || vendedoresValidos[0];
-      await carregarMetas(initialVendedor.id);
+      await carregarMetas(initialVendedor.id, logado);
       setVendedorSelecionado(initialVendedor.id);
 
     } catch (e) {
@@ -133,12 +141,19 @@ export default function MetasVendedorIsland() {
   // =============================================
   // 2. CARREGAR METAS DO VENDEDOR SELECIONADO
   // =============================================
-  async function carregarMetas(vendedor_id: string) {
+  async function carregarMetas(vendedor_id: string, usuarioLogado?: Usuario | null) {
     const isAdminLocal = permissao === "admin";
     const isEditLocal = permissao === "edit";
 
+    const usuarioAtual = usuarioLogado ?? usuario;
+
+    if (!usuarioAtual && !isAdminLocal && !isEditLocal) {
+      setListaMetas([]);
+      return;
+    }
+
     // vendedor comum só pode ver as próprias metas
-    if (!isAdminLocal && !isEditLocal && vendedor_id !== usuario?.id) {
+    if (!isAdminLocal && !isEditLocal && vendedor_id !== usuarioAtual?.id) {
       setListaMetas([]);
       return;
     }

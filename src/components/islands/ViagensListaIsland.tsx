@@ -2,6 +2,8 @@
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
 type Viagem = {
   id: string;
@@ -12,7 +14,7 @@ type Viagem = {
   destino: string | null;
   responsavel_user_id: string | null;
   cliente_id: string | null;
-  clientes?: { nome: string | null } | null;
+  clientes?: { nome: string | null; whatsapp?: string | null } | null;
   responsavel?: { nome_completo?: string | null } | null;
   recibo?: {
     id: string;
@@ -267,7 +269,7 @@ export default function ViagensListaIsland() {
       let query = supabase
         .from("viagens")
         .select(
-          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
+          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
         )
         .order("data_inicio", { ascending: true });
 
@@ -651,11 +653,12 @@ export default function ViagensListaIsland() {
                   v.recibo?.produto_id ||
                   "-";
                 const valorLabel = formatarMoeda(v.recibo?.valor_total);
+                const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
                 return (
                   <tr key={v.id}>
                     <td>{v.clientes?.nome || "-"}</td>
-                    <td>{v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-"}</td>
-                    <td>{v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-"}</td>
+                    <td>{formatarDataParaExibicao(v.data_inicio)}</td>
+                    <td>{formatarDataParaExibicao(v.data_fim)}</td>
                     <td>{statusLabel}</td>
                     <td>{produtoLabel}</td>
                     <td>{valorLabel}</td>
@@ -676,6 +679,18 @@ export default function ViagensListaIsland() {
                       >
                         👁️
                       </a>
+                      {whatsappLink && (
+                        <a
+                          className="btn-icon"
+                          href={whatsappLink}
+                          title="Enviar WhatsApp"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ padding: "4px 6px" }}
+                        >
+                          💬
+                        </a>
+                      )}
                       {podeEditar && (
                         <a
                           className="btn-icon"

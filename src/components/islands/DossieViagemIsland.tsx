@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
 
 type ViagemAcompanhante = {
   id: string;
@@ -512,19 +513,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Data início</label>
-                <div>
-                  {viagem.data_inicio
-                    ? new Date(viagem.data_inicio).toLocaleDateString("pt-BR")
-                    : "-"}
-                </div>
+                <div>{formatarDataParaExibicao(viagem.data_inicio)}</div>
               </div>
               <div className="form-group">
                 <label className="form-label">Data fim</label>
-                <div>
-                  {viagem.data_fim
-                    ? new Date(viagem.data_fim).toLocaleDateString("pt-BR")
-                    : "-"}
-                </div>
+                <div>{formatarDataParaExibicao(viagem.data_fim)}</div>
               </div>
               <div className="form-group">
                 <label className="form-label">Responsável</label>
@@ -810,10 +803,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       <td>{s.fornecedor || "-"}</td>
                       <td>{s.descricao || "-"}</td>
                       <td>
-                        {(s.data_inicio
-                          ? new Date(s.data_inicio).toLocaleDateString("pt-BR")
-                          : "-") + " / " +
-                        (s.data_fim ? new Date(s.data_fim).toLocaleDateString("pt-BR") : "-")}
+                        {`${formatarDataParaExibicao(s.data_inicio)} / ${formatarDataParaExibicao(
+                          s.data_fim
+                        )}`}
                       </td>
                       <td>
                         {s.valor !== null && s.valor !== undefined
@@ -935,11 +927,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           ? `${(Number(d.size_bytes) / 1024).toFixed(1)} KB`
                           : "-"}
                       </td>
-                      <td>
-                        {d.created_at
-                          ? new Date(d.created_at).toLocaleDateString("pt-BR")
-                          : "-"}
-                      </td>
+                      <td>{formatarDataParaExibicao(d.created_at)}</td>
                       {podeExcluir && (
                         <td>
                           <button

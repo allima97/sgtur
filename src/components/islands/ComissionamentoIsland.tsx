@@ -6,6 +6,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 type Parametros = {
   usar_taxas_na_meta: boolean;
   foco_valor: "bruto" | "liquido";
+  foco_faturamento: "bruto" | "liquido";
 };
 
 type UserCtx = {
@@ -200,7 +201,7 @@ export default function ComissionamentoIsland() {
         tipo: tipoUser,
       });
 
-      const paramsCols = "usar_taxas_na_meta, foco_valor";
+      const paramsCols = "usar_taxas_na_meta, foco_valor, foco_faturamento";
       let paramsData: any = null;
       if (companyId) {
         const { data } = await supabase
@@ -375,9 +376,11 @@ export default function ComissionamentoIsland() {
         paramsData
           ? ({
               usar_taxas_na_meta: !!paramsData.usar_taxas_na_meta,
-              foco_valor: (paramsData.foco_valor as any) || "bruto",
+              foco_valor: paramsData.foco_valor === "liquido" ? "liquido" : "bruto",
+              foco_faturamento:
+                paramsData.foco_faturamento === "liquido" ? "liquido" : "bruto",
             } as Parametros)
-          : { usar_taxas_na_meta: true, foco_valor: "bruto" }
+          : { usar_taxas_na_meta: true, foco_valor: "bruto", foco_faturamento: "bruto" }
       );
       setMetasProduto((metasProdData || []) as MetaProduto[]);
       setRegras(regrasMap);
@@ -446,6 +449,7 @@ export default function ComissionamentoIsland() {
     const produtosDiferenciados: string[] = [];
     let comissaoMetaProd = 0;
     const comissaoMetaProdDetalhe: Record<string, number> = {};
+    const usaFocoFaturamentoLiquido = parametros.foco_faturamento === "liquido";
 
     Object.values(produtos).forEach((p) => {
       if (p.regra_comissionamento === "diferenciado") {
@@ -487,8 +491,9 @@ export default function ComissionamentoIsland() {
       const prod = produtos[prodId];
       if (!prod) return;
 
-      const baseCom =
-        parametros.foco_valor === "liquido" ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
+      const baseCom = usaFocoFaturamentoLiquido
+        ? liquidoPorProduto[prodId] || 0
+        : brutoPorProduto[prodId] || 0;
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;

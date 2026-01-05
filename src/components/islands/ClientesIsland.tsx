@@ -4,6 +4,7 @@ import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
 type Cliente = {
   id: string;
@@ -84,6 +85,7 @@ export default function ClientesIsland() {
     permissao === "edit" || permissao === "delete" || permissao === "admin";
   const podeExcluir =
     permissao === "delete" || permissao === "admin";
+  const exibeColunaAcoes = podeVer;
 
   // =====================================
   // STATES
@@ -1293,16 +1295,22 @@ export default function ClientesIsland() {
       )}
 
       {/* LISTA */}
-      <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[960px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>CPF</th>
-              <th>Telefone</th>
-              <th>E-mail</th>
-              <th style={{ textAlign: "center" }}>Ativo</th>
-              {(podeEditar || podeExcluir) && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
+        <table className="table-default table-header-blue clientes-table min-w-[820px]">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Telefone</th>
+                <th>E-mail</th>
+                {exibeColunaAcoes && (
+                  <th className="th-actions" style={{ textAlign: "center" }}>
+                    Ações
+                  </th>
+                )}
             </tr>
           </thead>
           <tbody>
@@ -1320,15 +1328,38 @@ export default function ClientesIsland() {
 
             {!loading &&
               filtrados.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.nome}</td>
-                  <td>{c.cpf}</td>
-                  <td>{c.telefone}</td>
-                  <td>{c.email || "-"}</td>
-                  <td style={{ textAlign: "center" }}>{c.active ? "Sim" : "Não"}</td>
+                  <tr key={c.id}>
+                    <td>{c.nome}</td>
+                    <td>{c.cpf}</td>
+                    <td>{c.telefone}</td>
+                    <td>{c.email || "-"}</td>
 
-                  {(podeEditar || podeExcluir) && (
-                    <td className="th-actions" style={{ textAlign: "center" }}>
+                  {exibeColunaAcoes && (
+                    <td
+                      className="th-actions"
+                      style={{
+                        textAlign: "center",
+                        display: "flex",
+                        gap: 6,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      {(() => {
+                        const whatsappLink = construirLinkWhatsApp(c.whatsapp);
+                        if (!whatsappLink) return null;
+                        return (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            title="Abrir WhatsApp"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            💬
+                          </a>
+                        );
+                      })()}
                       <button
                         className="btn-icon"
                         onClick={() => abrirHistorico(c)}

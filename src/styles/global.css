@@ -22,6 +22,7 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,.1);
   --shadow-md: 0 4px 10px rgba(0,0,0,.12);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.18);
+  --color-form-label: #1e293b;
 }
 
 *,
@@ -321,6 +322,7 @@ body {
 .form-label {
   font-size: 0.85rem;
   font-weight: 600;
+  color: var(--color-form-label);
 }
 
 .form-input,
@@ -350,6 +352,57 @@ body {
   font-weight: 700;
   border-bottom: 2px solid var(--color-border);
 }
+
+.table-compact {
+  table-layout: fixed;
+}
+
+.table-compact th,
+.table-compact td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+}
+
+.clientes-table {
+  table-layout: fixed;
+}
+
+.clientes-table th,
+.clientes-table td {
+  padding: 6px 8px;
+}
+
+.clientes-table th:last-child,
+.clientes-table td:last-child {
+  width: 120px;
+}
+
+.clientes-table th:nth-last-child(2),
+.clientes-table td:nth-last-child(2) {
+  padding-right: 0px;
+}
+
+.clientes-table th:last-child,
+.clientes-table td:last-child {
+  padding-left: 1px;
+}
+
+.clientes-table th:nth-child(3),
+.clientes-table td:nth-child(3) {
+  padding-right: 1px;
+}
+
+.clientes-table th:nth-child(4),
+.clientes-table td:nth-child(4) {
+  padding-left: 1px;
+}
+
+.clientes-table th:nth-child(4),
+.clientes-table td:nth-child(4) {
+  padding-right: 4px;
+}
+
 
 .table-header-blue thead th { color: var(--color-blue-title); }
 .table-header-green thead th { color: var(--color-green-title); }

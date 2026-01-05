@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -17,6 +18,19 @@ function formatarDataCorretamente(dataString: string | null | undefined): string
   return date.toLocaleDateString("pt-BR");
 }
 
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function isSeguroRecibo(recibo: Recibo) {
+  const tipo = recibo.tipo_produtos?.tipo?.toLowerCase() || "";
+  const nome = (recibo.tipo_produtos?.nome || recibo.produto_nome || "").toLowerCase();
+  return tipo.includes("seguro") || nome.includes("seguro");
+}
+
 type Venda = {
   id: string;
   vendedor_id?: string | null;
@@ -28,6 +42,7 @@ type Venda = {
   cliente_nome?: string;
   destino_nome?: string;
   destino_cidade_nome?: string;
+  clientes?: { whatsapp?: string | null } | null;
 };
 
 type Recibo = {
@@ -38,6 +53,7 @@ type Recibo = {
   valor_total: number | null;
   valor_taxas: number | null;
   produto_nome?: string | null;
+  tipo_produtos?: { id: string; nome?: string | null; tipo?: string | null } | null;
 };
 
 type Toast = {
@@ -167,7 +183,7 @@ export default function VendasConsultaIsland() {
 
       let query = supabase
         .from("vendas")
-        .select(`
+          .select(`
           id,
           vendedor_id,
           cliente_id,
@@ -175,7 +191,7 @@ export default function VendasConsultaIsland() {
           destino_cidade_id,
           data_lancamento,
           data_embarque,
-          clientes(nome),
+          clientes(nome, whatsapp),
           destinos:produtos!destino_id (
             nome,
             cidade_id
@@ -237,7 +253,7 @@ export default function VendasConsultaIsland() {
       } else {
         const { data: recibosData } = await supabase
           .from("vendas_recibos")
-          .select("*")
+          .select("*, tipo_produtos (id, nome, tipo)")
           .in("venda_id", vendaIds);
 
         const produtoIds = Array.from(
@@ -341,6 +357,40 @@ export default function VendasConsultaIsland() {
   function recibosDaVenda(id: string) {
     return recibos.filter((r) => r.venda_id === id);
   }
+
+  const kpiResumo = useMemo(() => {
+    const agora = new Date();
+    const mesAtual = agora.getMonth();
+    const anoAtual = agora.getFullYear();
+
+    const vendasMesAtual = new Set(
+      vendas
+        .filter((v) => {
+          if (!v.data_lancamento) return false;
+          const data = new Date(v.data_lancamento);
+          return data.getFullYear() === anoAtual && data.getMonth() === mesAtual;
+        })
+        .map((v) => v.id)
+    );
+
+    let totalVendas = 0;
+    let totalTaxas = 0;
+    let totalSeguro = 0;
+    recibos.forEach((r) => {
+      if (!vendasMesAtual.has(r.venda_id)) return;
+      totalVendas += r.valor_total || 0;
+      totalTaxas += r.valor_taxas || 0;
+      if (isSeguroRecibo(r)) {
+        totalSeguro += r.valor_total || 0;
+      }
+    });
+    return {
+      totalVendas,
+      totalTaxas,
+      totalLiquido: totalVendas - totalTaxas,
+      totalSeguro,
+    };
+  }, [recibos, vendas]);
 
   function showToast(message: string, type: "success" | "error" = "success") {
     setToastCounter((prev) => prev + 1);
@@ -474,8 +524,8 @@ export default function VendasConsultaIsland() {
   // ================================
   return (
 
-    <div className="vendas-consulta-page">
-      {/* BUSCA */}
+      <div className="vendas-consulta-page">
+        {/* BUSCA */}
       <div className="card-base mb-3">
         <div
           className="form-row"
@@ -521,11 +571,38 @@ export default function VendasConsultaIsland() {
                 className="btn btn-primary"
                 href="/vendas/cadastro"
                 style={{ textDecoration: "none" }}
-              >
-                Nova venda
-              </a>
-            </div>
-          )}
+            >
+              Nova venda
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+
+      <div className="dashboard-grid-kpi mb-3">
+        <div className="kpi-card kpi-vendas">
+          <div style={{ width: "100%", textAlign: "center" }}>
+            <div className="kpi-label">Total de Vendas</div>
+            <div className="kpi-value">{formatCurrency(kpiResumo.totalVendas)}</div>
+          </div>
+        </div>
+        <div className="kpi-card kpi-diferenciado">
+          <div style={{ width: "100%", textAlign: "center" }}>
+            <div className="kpi-label">Seguro Viagem</div>
+            <div className="kpi-value">{formatCurrency(kpiResumo.totalSeguro)}</div>
+          </div>
+        </div>
+        <div className="kpi-card kpi-meta">
+          <div style={{ width: "100%", textAlign: "center" }}>
+            <div className="kpi-label">Taxas</div>
+            <div className="kpi-value">{formatCurrency(kpiResumo.totalTaxas)}</div>
+          </div>
+        </div>
+        <div className="kpi-card kpi-ticket">
+          <div style={{ width: "100%", textAlign: "center" }}>
+            <div className="kpi-label">Total Líquido</div>
+            <div className="kpi-value">{formatCurrency(kpiResumo.totalLiquido)}</div>
+          </div>
         </div>
       </div>
 
@@ -570,6 +647,7 @@ export default function VendasConsultaIsland() {
                 const produtosVenda = recibosDaVenda(v.id)
                   .map((r) => r.produto_nome || "")
                   .filter(Boolean);
+                const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
 
                 return (
                   <tr key={v.id}>
@@ -601,7 +679,27 @@ export default function VendasConsultaIsland() {
                             maximumFractionDigits: 2,
                           })}`}
                     </td>
-                    <td className="th-actions" style={{ textAlign: "center" }}>
+                    <td
+                      className="th-actions"
+                      style={{
+                        textAlign: "center",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      {whatsappLink && (
+                        <a
+                          className="btn-icon"
+                          href={whatsappLink}
+                          title="Enviar WhatsApp"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          💬
+                        </a>
+                      )}
                       <button
                         className="btn-icon"
                         title="Ver detalhes"
