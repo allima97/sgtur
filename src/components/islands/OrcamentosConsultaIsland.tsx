@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
 type Orcamento = {
   id: string;
@@ -15,7 +16,7 @@ type Orcamento = {
   produto_id?: string | null;
   numero_venda?: string | null;
   venda_criada?: boolean | null;
-  clientes?: { nome: string } | null;
+  clientes?: { nome: string; whatsapp?: string | null } | null;
   destinos?: { nome: string } | null;
   produtos?: { nome: string; tipo?: string } | null;
 };
@@ -184,7 +185,7 @@ export default function OrcamentosConsultaIsland({
             produto_id,
             numero_venda,
             venda_criada,
-            clientes:cliente_id (nome),
+            clientes:cliente_id (nome, whatsapp),
             destinos:produtos!destino_id (nome),
             produtos:tipo_produtos!produto_id (nome, tipo)
           `
@@ -1023,109 +1024,132 @@ export default function OrcamentosConsultaIsland({
                   const ultima = ultimasInteracoes[o.id];
                   const diasInteracao = diasDesdeISO(ultima?.created_at || null);
                   const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
+                  const whatsappLink = construirLinkWhatsApp(o.clientes?.whatsapp);
 
                   return (
                     <tr key={o.id}>
                       <td>{o.data_orcamento?.slice(0, 10) || "—"}</td>
                       <td>{o.clientes?.nome || "—"}</td>
-                <td>{o.destinos?.nome || "—"}</td>
-                <td>{o.produtos?.nome || "—"}</td>
-                <td style={{ textTransform: "capitalize", textAlign: "center" }}>
-                  <select
-                    className="form-select"
-                    value={o.status || ""}
-                    onChange={(e) =>
-                      alterarStatus(o.id, e.target.value as StatusOrcamento)
-                    }
-                    disabled={salvandoStatus === o.id}
-                  >
-                    <option value="novo">Novo</option>
-                    <option value="enviado">Enviado</option>
-                    <option value="negociando">Negociando</option>
-                    <option value="fechado">Fechado</option>
-                      <option value="perdido">Perdido</option>
-                    </select>
-                  </td>
-                <td style={{ textAlign: "center" }}>
-                  {o.valor
-                    ? o.valor.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })
-                    : "—"}
-                  </td>
-                <td style={{ textAlign: "center" }}>{o.data_viagem || "—"}</td>
-                <td style={{ textAlign: "center", fontSize: "0.85rem", color: "#475569" }}>
-                  {ultima?.tipo || "—"}
-                  {ultima?.created_at
-                    ? ` • ${new Date(ultima.created_at).toLocaleDateString("pt-BR")}`
-                    : ""}
-                  {ultima?.mensagem && (
-                    <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {resumoMensagem(ultima.mensagem)}
-                    </div>
-                  )}
-                  {ultima?.anexo_url && (
-                    <div>
-                      <a href={ultima.anexo_url || ""} target="_blank" rel="noreferrer" style={{ color: "#1d4ed8" }}>
-                        Abrir anexo
-                      </a>
-                    </div>
-                  )}
-                  {semInteracaoRecente && (
-                    <div style={{ color: "#b45309", fontWeight: 700 }}>
-                      Sem interação há {Number.isFinite(diasInteracao) ? `${diasInteracao}d` : "—"}
-                    </div>
-                  )}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {podeExcluir && (
-                    <button
-                      className="btn-icon btn-danger"
-                      onClick={() => excluirOrcamento(o)}
-                      disabled={deletandoOrcamentoId === o.id}
-                      style={{ marginRight: 6 }}
-                      title="Excluir orçamento"
-                    >
-                      {deletandoOrcamentoId === o.id ? "..." : "🗑️"}
-                    </button>
-                  )}
-                  <button
-                    className="btn-icon"
-                    onClick={() => iniciarEdicao(o)}
-                    style={{ marginRight: 6 }}
-                    disabled={o.status === "fechado" || o.status === "perdido"}
-                    title={o.status === "fechado" || o.status === "perdido" ? "Orçamento encerrado" : "Editar"}
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    aria-label="Converter em venda"
-                    onClick={() => converterParaVenda(o)}
-                    style={{ padding: "4px 8px", fontSize: "0.95rem", marginLeft: 6 }}
-                    disabled={!o.cliente_id || !o.destino_id || o.status === "fechado" || o.status === "perdido"}
-                    title={
-                      o.status === "fechado" || o.status === "perdido"
-                        ? "Orçamento encerrado"
-                        : !o.cliente_id || !o.destino_id
-                          ? "Selecione cliente e destino para converter"
-                        : "Converter em venda"
-                    }
-                  >
-                    $
-                  </button>
-                  <button
-                    className="btn-icon"
-                    aria-label="Histórico de interações"
-                    onClick={() => abrirHistorico(o)}
-                    style={{ marginLeft: 6 }}
-                    title="Ver histórico / registrar interação"
-                  >
-                    🕒
-                  </button>
-                </td>
-              </tr>
+                      <td>{o.destinos?.nome || "—"}</td>
+                      <td>{o.produtos?.nome || "—"}</td>
+                      <td style={{ textTransform: "capitalize", textAlign: "center" }}>
+                        <select
+                          className="form-select"
+                          value={o.status || ""}
+                          onChange={(e) => alterarStatus(o.id, e.target.value as StatusOrcamento)}
+                          disabled={salvandoStatus === o.id}
+                        >
+                          <option value="novo">Novo</option>
+                          <option value="enviado">Enviado</option>
+                          <option value="negociando">Negociando</option>
+                          <option value="fechado">Fechado</option>
+                          <option value="perdido">Perdido</option>
+                        </select>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        {o.valor
+                          ? o.valor.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })
+                          : "—"}
+                      </td>
+                      <td style={{ textAlign: "center" }}>{o.data_viagem || "—"}</td>
+                      <td style={{ textAlign: "center", fontSize: "0.85rem", color: "#475569" }}>
+                        {ultima?.tipo || "—"}
+                        {ultima?.created_at ? ` • ${new Date(ultima.created_at).toLocaleDateString("pt-BR")}` : ""}
+                        {ultima?.mensagem && (
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {resumoMensagem(ultima.mensagem)}
+                          </div>
+                        )}
+                        {ultima?.anexo_url && (
+                          <div>
+                            <a
+                              href={ultima.anexo_url || ""}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: "#1d4ed8" }}
+                            >
+                              Abrir anexo
+                            </a>
+                          </div>
+                        )}
+                        {semInteracaoRecente && (
+                          <div style={{ color: "#b45309", fontWeight: 700 }}>
+                            Sem interação há {Number.isFinite(diasInteracao) ? `${diasInteracao}d` : "—"}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => excluirOrcamento(o)}
+                            disabled={deletandoOrcamentoId === o.id}
+                            style={{ marginRight: 6 }}
+                            title="Excluir orçamento"
+                          >
+                            {deletandoOrcamentoId === o.id ? "..." : "🗑️"}
+                          </button>
+                        )}
+                        {whatsappLink && (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            title="Enviar WhatsApp"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ marginRight: 6 }}
+                          >
+                            💬
+                          </a>
+                        )}
+                        <button
+                          className="btn-icon"
+                          onClick={() => iniciarEdicao(o)}
+                          style={{ marginRight: 6 }}
+                          disabled={o.status === "fechado" || o.status === "perdido"}
+                          title={
+                            o.status === "fechado" || o.status === "perdido"
+                              ? "Orçamento encerrado"
+                              : "Editar"
+                          }
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="btn btn-primary"
+                          aria-label="Converter em venda"
+                          onClick={() => converterParaVenda(o)}
+                          style={{ padding: "4px 8px", fontSize: "0.95rem", marginLeft: 6 }}
+                          disabled={
+                            !o.cliente_id ||
+                            !o.destino_id ||
+                            o.status === "fechado" ||
+                            o.status === "perdido"
+                          }
+                          title={
+                            o.status === "fechado" || o.status === "perdido"
+                              ? "Orçamento encerrado"
+                              : !o.cliente_id || !o.destino_id
+                              ? "Selecione cliente e destino para converter"
+                              : "Converter em venda"
+                          }
+                        >
+                          $
+                        </button>
+                        <button
+                          className="btn-icon"
+                          aria-label="Histórico de interações"
+                          onClick={() => abrirHistorico(o)}
+                          style={{ marginLeft: 6 }}
+                          title="Ver histórico / registrar interação"
+                        >
+                          🕒
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
         </tbody>
