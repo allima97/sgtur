@@ -30,11 +30,13 @@ type FormVenda = {
 type FormRecibo = {
   id?: string;
   produto_id: string;
+  produto_resolvido_id?: string;
   numero_recibo: string;
   valor_total: string;
   valor_taxas: string;
   data_inicio: string;
   data_fim: string;
+  principal: boolean;
 };
 
 type Toast = {
@@ -52,11 +54,13 @@ const initialVenda: FormVenda = {
 
 const initialRecibo: FormRecibo = {
   produto_id: "",
+  produto_resolvido_id: "",
   numero_recibo: "",
   valor_total: "",
   valor_taxas: "0",
   data_inicio: "",
   data_fim: "",
+  principal: false,
 };
 
 function formatarValorDigitado(valor: string) {
@@ -127,6 +131,7 @@ export default function VendasCadastroIsland() {
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
+  const [reciboEmEdicao, setReciboEmEdicao] = useState<number | null>(null);
 
   const [editId, setEditId] = useState<string | null>(null);
   const [cidadePrefill, setCidadePrefill] = useState<CidadePrefill>({ id: "", nome: "" });
@@ -139,14 +144,14 @@ export default function VendasCadastroIsland() {
   const [toastCounter, setToastCounter] = useState(0);
 
   // AUTOCOMPLETE (cliente, cidade de destino, produto)
-const [buscaCliente, setBuscaCliente] = useState("");
-const [buscaDestino, setBuscaDestino] = useState("");
-const [buscaProduto, setBuscaProduto] = useState("");
-const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
-const [resultadosCidade, setResultadosCidade] = useState<CidadeSugestao[]>([]);
-const [buscandoCidade, setBuscandoCidade] = useState(false);
-const [erroCidade, setErroCidade] = useState<string | null>(null);
-const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const [buscaDestino, setBuscaDestino] = useState("");
+  const [buscaProduto, setBuscaProduto] = useState("");
+  const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
+  const [resultadosCidade, setResultadosCidade] = useState<CidadeSugestao[]>([]);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
+  const [erroCidade, setErroCidade] = useState<string | null>(null);
+  const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
   // =======================================================
   // CARREGAR DADOS INICIAIS
@@ -245,26 +250,35 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
       const { data: recibosData, error: recErr } = await supabase
         .from("vendas_recibos")
-        .select("*")
+        .select("*, produto_resolvido_id")
         .eq("venda_id", id);
       if (recErr) throw recErr;
 
       const produtosLista = produtosBase || produtos;
-      setRecibos(
-        (recibosData || []).map((r: any) => ({
+      const produtoPrincipalIdDaVenda = vendaData.destino_id;
+      const recibosComPrincipal = (recibosData || []).map((r: any) => {
+        const produtoResolvidoId = r.produto_resolvido_id || "";
+        let produtoSelecionado = produtosLista.find((p) => p.id === produtoResolvidoId);
+        if (!produtoSelecionado) {
+          produtoSelecionado = produtosLista.find((p) => {
+            const ehGlobal = !!p.todas_as_cidades;
+            return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
+          });
+        }
+        const produtoId = produtoSelecionado?.id || "";
+        return {
           id: r.id,
-          produto_id:
-            produtosLista.find((p) => {
-              const ehGlobal = !!p.todas_as_cidades;
-              return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
-            })?.id || "",
+          produto_id: produtoId,
+          produto_resolvido_id: produtoId,
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
           data_inicio: dataParaInput(r.data_inicio),
           data_fim: dataParaInput(r.data_fim),
-        }))
-      );
+          principal: produtoSelecionado?.id === produtoPrincipalIdDaVenda,
+        };
+      });
+      setRecibos(garantirReciboPrincipal(recibosComPrincipal));
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar venda para edição.");
@@ -293,11 +307,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   useEffect(() => {
     if (buscaDestino.trim().length < 2) {
       setResultadosCidade([]);
+      setMostrarSugestoesCidade(false);
       return;
     }
 
     const controller = new AbortController();
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setBuscandoCidade(true);
       setErroCidade(null);
       try {
@@ -310,16 +325,16 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           if (error) {
             console.error("Erro ao buscar cidades:", error);
             setErroCidade("Erro ao buscar cidades (RPC). Tentando fallback...");
-            const { data: dataFallback, error: errorFallback } = await supabase
+            const { data: fallbackData, error: fallbackError } = await supabase
               .from("cidades")
-              .select("id, nome")
+              .select("id, nome, subdivisao_nome, pais_nome")
               .ilike("nome", `%${buscaDestino.trim()}%`)
               .order("nome");
-            if (errorFallback) {
-              console.error("Erro no fallback de cidades:", errorFallback);
+            if (fallbackError) {
+              console.error("Erro no fallback de cidades:", fallbackError);
               setErroCidade("Erro ao buscar cidades.");
             } else {
-              setResultadosCidade((dataFallback as CidadeSugestao[]) || []);
+              setResultadosCidade((fallbackData as CidadeSugestao[]) || []);
               setErroCidade(null);
             }
           } else {
@@ -333,7 +348,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
 
     return () => {
       controller.abort();
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [buscaDestino]);
 
@@ -386,22 +401,44 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
     setMostrarSugestoesCidade(true);
   }
 
-  function showToast(message: string, type: "success" | "error" = "success") {
-    setToastCounter((prev) => {
-      const id = prev + 1;
-      setToasts((current) => [...current, { id, message, type }]);
-      setTimeout(() => {
-        setToasts((current) => current.filter((t) => t.id !== id));
-      }, 3500);
-      return id;
-    });
-  }
+function showToast(message: string, type: "success" | "error" = "success") {
+  setToastCounter((prev) => {
+    const id = prev + 1;
+    setToasts((current) => [...current, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((current) => current.filter((t) => t.id !== id));
+    }, 3500);
+    return id;
+  });
+}
 
-  // =======================================================
-  // HANDLERS
-  // =======================================================
+function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
+  if (recibos.length === 0) return [];
+  const principalComProduto = recibos.findIndex(
+    (r) => r.principal && r.produto_id
+  );
+  if (principalComProduto >= 0) {
+    return recibos.map((r, idx) => ({ ...r, principal: idx === principalComProduto }));
+  }
+  const comProduto = recibos.findIndex((r) => r.produto_id);
+  if (comProduto >= 0) {
+    return recibos.map((r, idx) => ({ ...r, principal: idx === comProduto }));
+  }
+  const principalAtual = recibos.findIndex((r) => r.principal);
+  if (principalAtual >= 0) {
+    return recibos.map((r, idx) => ({ ...r, principal: idx === principalAtual }));
+  }
+  return recibos.map((r, idx) => ({ ...r, principal: idx === 0 }));
+}
+
+// =======================================================
+// HANDLERS
+// =======================================================
   function addRecibo() {
-    setRecibos((prev) => [...prev, { ...initialRecibo }]);
+    setRecibos((prev) => {
+      const novo = [...prev, { ...initialRecibo }];
+      return garantirReciboPrincipal(novo);
+    });
   }
 
   function updateRecibo(index: number, campo: string, valor: string) {
@@ -420,18 +457,31 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
   useEffect(() => {
     // Ao trocar a cidade, limpa buscas e produtos que não pertencem a ela
     setBuscaProduto("");
-    setRecibos((prev) =>
-      prev.map((r) => {
+    setRecibos((prev) => {
+      const atualizado = prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
         const ehGlobal = !!prod?.todas_as_cidades;
         if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
-        return { ...r, produto_id: "" };
-      })
-    );
+        return { ...r, produto_id: "", principal: false };
+      });
+      return garantirReciboPrincipal(atualizado);
+    });
   }, [formVenda.destino_id, produtos]);
 
   function removerRecibo(index: number) {
-    setRecibos((prev) => prev.filter((_, i) => i !== index));
+    setRecibos((prev) => {
+      const novo = prev.filter((_, i) => i !== index);
+      return garantirReciboPrincipal(novo);
+    });
+  }
+
+  function marcarReciboPrincipal(index: number) {
+    setRecibos((prev) =>
+      prev.map((recibo, i) => ({
+        ...recibo,
+        principal: i === index,
+      }))
+    );
   }
 
   function resetFormAndGoToConsulta() {
@@ -514,10 +564,12 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         return;
       }
 
-      const produtoDestinoIdRaw = recibos[0]?.produto_id;
+      const principalIndex = recibos.findIndex((r) => r.principal);
+      const principalRecibo = principalIndex >= 0 ? recibos[principalIndex] : recibos[0];
+      const produtoDestinoIdRaw = principalRecibo?.produto_id;
       if (!produtoDestinoIdRaw) {
-        setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
-        showToast("Selecione um produto para o recibo principal.", "error");
+        setErro("Selecione um produto para o recibo principal da venda.");
+        showToast("Selecione o produto principal antes de salvar.", "error");
         setSalvando(false);
         return;
       }
@@ -652,7 +704,8 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         produtoIdsResolvidos.push(idResolvido);
       }
 
-      const produtoDestinoId = produtoIdsResolvidos[0];
+      const indexPrincipalFinal = principalIndex >= 0 ? principalIndex : 0;
+      const produtoDestinoId = produtoIdsResolvidos[indexPrincipalFinal];
 
       let oldReciboIds: string[] = [];
       if (editId) {
@@ -742,6 +795,7 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
         const insertPayload = {
           venda_id: vendaId,
           produto_id: tipoId,
+          produto_resolvido_id: produtoIdResolvido,
           numero_recibo: recibo.numero_recibo.trim(),
           valor_total: valTotalNum,
           valor_taxas: valTaxasNum,
@@ -951,24 +1005,41 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
                 required={cidadeObrigatoria}
                 style={{ marginBottom: 6 }}
               />
-              {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
-              {erroCidade && !buscandoCidade && (
-                <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidade}</div>
-              )}
               {mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && (
                 <div
-                  className="card-base absolute left-0 right-0 mt-1 max-h-44 overflow-y-auto p-1 border border-slate-200 bg-white z-10"
+                  className="card-base card-config"
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    maxHeight: 160,
+                    overflowY: "auto",
+                    zIndex: 20,
+                    padding: "4px 0",
+                  }}
                 >
-                  {resultadosCidade.length === 0 && !buscandoCidade && buscaDestino.trim().length >= 2 && (
-                    <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                  {buscandoCidade && (
+                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
+                      Buscando cidades...
+                    </div>
                   )}
-                  {resultadosCidade.map((c) => {
+                  {!buscandoCidade && erroCidade && (
+                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
+                  )}
+                  {!buscandoCidade && !erroCidade && resultadosCidade.length === 0 && (
+                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
+                      Nenhuma cidade encontrada.
+                    </div>
+                  )}
+                  {!buscandoCidade && !erroCidade && resultadosCidade.map((c) => {
                     const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
                     return (
                       <button
                         key={c.id}
                         type="button"
-                        className={`btn btn-light w-full justify-start mb-1 ${formVenda.destino_id === c.id ? 'bg-sky-100 border-sky-400' : 'bg-white border-slate-200'}`}
+                        className="btn btn-ghost w-full text-left"
+                        style={{ padding: "6px 12px" }}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
@@ -1006,120 +1077,151 @@ const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = useState("");
           {/* RECIBOS */}
           <h4 className="mt-3 font-semibold text-lg">Recibos da Venda</h4>
 
-          {recibos.map((r, i) => (
-            <div key={i} className="card-base mb-2">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* PRODUTO */}
-                <div className="form-group flex-1 min-w-[180px]">
-                  <label className="form-label">Produto *</label>
-                  <input
-                    className="form-input"
-                    list={`listaProdutos-${i}`}
-                    placeholder={
-                      existeProdutoGlobal
-                        ? "Escolha uma cidade ou selecione um produto global..."
-                        : "Selecione uma cidade primeiro e busque o produto..."
-                    }
-                    value={produtos.find((p) => p.id === r.produto_id)?.nome || buscaProduto}
+          {recibos.map((r, i) => {
+            const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
+            const nomeProdutoAtual = produtoSelecionado?.nome || "";
+            return (
+              <div key={i} className="card-base mb-2">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* PRODUTO */}
+                  <div className="form-group flex-1 min-w-[180px]">
+                    <label className="form-label">Produto *</label>
+                    <input
+                      className="form-input"
+                      list={`listaProdutos-${i}`}
+                      placeholder={
+                        existeProdutoGlobal
+                          ? "Escolha uma cidade ou selecione um produto global..."
+                          : "Selecione uma cidade primeiro e busque o produto..."
+                      }
+                      value={
+                        reciboEmEdicao === i
+                          ? buscaProduto || nomeProdutoAtual
+                          : nomeProdutoAtual
+                      }
+                      onFocus={() => {
+                        setReciboEmEdicao(i);
+                        setBuscaProduto("");
+                      }}
                     onChange={(e) => setBuscaProduto(e.target.value)}
                     onBlur={() => {
-                      const achado = produtosFiltrados.find(
-                        (p) => p.nome.toLowerCase() === buscaProduto.toLowerCase()
-                      );
-                      if (achado) {
-                        updateRecibo(i, "produto_id", achado.id);
+                      const texto = buscaProduto.trim();
+                      if (!texto) {
+                        updateRecibo(i, "produto_id", "");
+                      } else {
+                        const achado = produtosFiltrados.find(
+                          (p) => p.nome.toLowerCase() === texto.toLowerCase()
+                        );
+                        if (achado) {
+                          updateRecibo(i, "produto_id", achado.id);
+                        }
                       }
+                      setReciboEmEdicao(null);
+                      setBuscaProduto("");
                     }}
-                    required
-                    disabled={!formVenda.destino_id && !existeProdutoGlobal}
-                  />
-                  <datalist id={`listaProdutos-${i}`}>
-                    {produtosFiltrados.map((p) => (
-                      <option key={p.id} value={p.nome} />
-                    ))}
-                  </datalist>
-                </div>
+                      required
+                      disabled={!formVenda.destino_id && !existeProdutoGlobal}
+                    />
+                    <datalist id={`listaProdutos-${i}`}>
+                      {produtosFiltrados.map((p) => (
+                        <option key={p.id} value={p.nome} />
+                      ))}
+                    </datalist>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="recibo-principal"
+                          checked={r.principal}
+                          onChange={() => marcarReciboPrincipal(i)}
+                          className="form-radio h-4 w-4 text-sky-600"
+                        />
+                        <span className="font-semibold text-[11px]">Produto principal</span>
+                      </label>
+                      <span>Define o produto principal usado nos relatórios.</span>
+                    </div>
+                  </div>
 
-                {/* NÚMERO */}
-                <div className="form-group flex-1 min-w-[120px]">
-                  <label className="form-label">Número recibo *</label>
-                  <input
-                    className="form-input"
-                    value={r.numero_recibo}
-                    onChange={(e) =>
-                      updateRecibo(i, "numero_recibo", e.target.value)
-                    }
-                    required
-                  />
-                </div>
+                  {/* NÚMERO */}
+                  <div className="form-group flex-1 min-w-[120px]">
+                    <label className="form-label">Número recibo *</label>
+                    <input
+                      className="form-input"
+                      value={r.numero_recibo}
+                      onChange={(e) =>
+                        updateRecibo(i, "numero_recibo", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
 
-                {/* DATA INÍCIO */}
-                <div className="form-group flex-1 min-w-[160px]">
-                  <label className="form-label">Início *</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={r.data_inicio}
-                    onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
-                    required
-                  />
-                </div>
+                  {/* DATA INÍCIO */}
+                  <div className="form-group flex-1 min-w-[160px]">
+                    <label className="form-label">Início *</label>
+                    <input
+                      className="form-input"
+                      type="date"
+                      value={r.data_inicio}
+                      onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                {/* DATA FIM */}
-                <div className="form-group flex-1 min-w-[160px]">
-                  <label className="form-label">Fim *</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={r.data_fim}
-                    onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
-                    required
-                  />
-                </div>
+                  {/* DATA FIM */}
+                  <div className="form-group flex-1 min-w-[160px]">
+                    <label className="form-label">Fim *</label>
+                    <input
+                      className="form-input"
+                      type="date"
+                      value={r.data_fim}
+                      onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                {/* VALOR */}
-                <div className="form-group flex-1 min-w-[120px]">
-                  <label className="form-label">Valor total *</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9,.]*"
-                    placeholder="0,00"
-                    value={r.valor_total}
-                    onChange={(e) => updateReciboMonetario(i, "valor_total", e.target.value)}
-                    required
-                  />
-                </div>
+                  {/* VALOR */}
+                  <div className="form-group flex-1 min-w-[120px]">
+                    <label className="form-label">Valor total *</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9,.]*"
+                      placeholder="0,00"
+                      value={r.valor_total}
+                      onChange={(e) => updateReciboMonetario(i, "valor_total", e.target.value)}
+                      required
+                    />
+                  </div>
 
-                {/* TAXAS */}
-                <div className="form-group flex-1 min-w-[120px]">
-                  <label className="form-label">Taxas</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9,.]*"
-                    placeholder="0,00"
-                    value={r.valor_taxas}
-                    onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
-                  />
-                </div>
+                  {/* TAXAS */}
+                  <div className="form-group flex-1 min-w-[120px]">
+                    <label className="form-label">Taxas</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9,.]*"
+                      placeholder="0,00"
+                      value={r.valor_taxas}
+                      onChange={(e) => updateReciboMonetario(i, "valor_taxas", e.target.value)}
+                    />
+                  </div>
 
-                {/* REMOVER */}
-                <div className="form-group flex-none w-20 flex items-end">
-                  <button
-                    type="button"
-                    className="btn-icon btn-danger mt-2"
-                    onClick={() => removerRecibo(i)}
-                  >
-                    🗑️
-                  </button>
+                  {/* REMOVER */}
+                  <div className="form-group flex-none w-20 flex items-end">
+                    <button
+                      type="button"
+                      className="btn-icon btn-danger mt-2"
+                      onClick={() => removerRecibo(i)}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-
+            );
+          })}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

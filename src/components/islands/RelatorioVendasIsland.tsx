@@ -8,15 +8,22 @@ type Cliente = {
   cpf: string | null;
 };
 
-type Destino = {
-  id: string;
-  nome: string;
-};
-
 type Produto = {
   id: string;
   nome: string | null;
-  tipo: string;
+  tipo_produto: string | null;
+  cidade_id: string | null;
+};
+
+type TipoProduto = {
+  id: string;
+  nome: string | null;
+  tipo: string | null;
+};
+
+type Cidade = {
+  id: string;
+  nome: string;
 };
 
 type Venda = {
@@ -24,6 +31,7 @@ type Venda = {
   numero_venda: string | null;
   cliente_id: string;
   destino_id: string;
+  destino_cidade_id?: string | null;
   produto_id: string | null;
   data_lancamento: string;
   data_embarque: string | null;
@@ -34,15 +42,34 @@ type Venda = {
     valor_total: number | null;
     valor_taxas: number | null;
     produto_id: string | null;
+    produto_resolvido_id?: string | null;
     tipo_produtos?: { id: string; nome: string | null; tipo: string | null } | null;
+    produto_resolvido?: { id: string; nome: string | null; tipo: string | null } | null;
   }[];
+  destino_produto?: { id: string; nome: string | null; tipo?: string | null } | null;
+  cliente?: { nome: string | null; cpf: string | null } | null;
+  destino?: { nome: string | null } | null;
+  destino_cidade?: { nome: string | null } | null;
 };
 
-type VendaEnriquecida = Venda & {
+type ReciboEnriquecido = {
+  id: string;
+  venda_id: string;
+  numero_venda: string | null;
   cliente_nome: string;
   cliente_cpf: string;
   destino_nome: string;
   produto_nome: string;
+  produto_tipo: string;
+  produto_tipo_id: string | null;
+  cidade_nome: string;
+  cidade_id: string | null;
+  data_lancamento: string;
+  data_embarque: string | null;
+  numero_recibo: string | null;
+  valor_total: number;
+  valor_taxas: number | null;
+  status: string | null;
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
@@ -95,16 +122,23 @@ function csvEscape(value: string): string {
 
 export default function RelatorioVendasIsland() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [destinos, setDestinos] = useState<Destino[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [tiposProdutos, setTiposProdutos] = useState<TipoProduto[]>([]);
+  const [cidades, setCidades] = useState<Cidade[]>([]);
 
   const [clienteBusca, setClienteBusca] = useState("");
   const [destinoBusca, setDestinoBusca] = useState("");
-  const [produtoBusca, setProdutoBusca] = useState("");
+
+  const [cidadeNomeInput, setCidadeNomeInput] = useState("");
+  const [cidadeFiltro, setCidadeFiltro] = useState("");
+  const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
+  const [cidadeSugestoes, setCidadeSugestoes] = useState<Cidade[]>([]);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
+  const [erroCidade, setErroCidade] = useState<string | null>(null);
+
+  const [tipoSelecionadoId, setTipoSelecionadoId] = useState("");
 
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-  const [destinoSelecionado, setDestinoSelecionado] = useState<Destino | null>(null);
-  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
 
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const hoje = new Date();
@@ -202,32 +236,89 @@ export default function RelatorioVendasIsland() {
       try {
         const [
           { data: clientesData, error: cliErr },
-          { data: destinosData, error: destErr },
           { data: produtosData, error: prodErr },
-        ] =
-          await Promise.all([
-            supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
-            supabase.from("produtos").select("id, nome").order("nome", { ascending: true }),
-            supabase.from("tipo_produtos").select("id, nome, tipo").order("nome", { ascending: true }),
-          ]);
+          { data: tiposProdutosData, error: tiposErr },
+          { data: cidadesData, error: cidadesErr },
+        ] = await Promise.all([
+          supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
+          supabase.from("produtos").select("id, nome, tipo_produto, cidade_id").order("nome", { ascending: true }),
+          supabase.from("tipo_produtos").select("id, nome, tipo").order("nome", { ascending: true }),
+          supabase.from("cidades").select("id, nome").order("nome", { ascending: true }),
+        ]);
 
         if (cliErr) throw cliErr;
-        if (destErr) throw destErr;
         if (prodErr) throw prodErr;
+        if (tiposErr) throw tiposErr;
+        if (cidadesErr) throw cidadesErr;
 
-        setClientes((clientesData || []) as Cliente[]);
-        setDestinos((destinosData || []) as Destino[]);
-        setProdutos((produtosData || []) as Produto[]);
+      setClientes((clientesData || []) as Cliente[]);
+      setProdutos((produtosData || []) as Produto[]);
+      setTiposProdutos((tiposProdutosData || []) as TipoProduto[]);
+      setCidades((cidadesData || []) as Cidade[]);
       } catch (e: any) {
         console.error(e);
         setErro(
-          "Erro ao carregar bases de clientes, destinos e produtos. Verifique o Supabase."
+          "Erro ao carregar bases de clientes e produtos. Verifique o Supabase."
         );
       }
     }
 
     carregarBase();
   }, []);
+
+  useEffect(() => {
+    if (cidadeNomeInput.trim().length < 2) {
+      setCidadeSugestoes([]);
+      setMostrarSugestoesCidade(false);
+      setErroCidade(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setBuscandoCidade(true);
+      setErroCidade(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: cidadeNomeInput.trim(), limite: 8 },
+          { signal: controller.signal }
+        );
+        if (!controller.signal.aborted) {
+          if (error) {
+            throw error;
+          }
+          setCidadeSugestoes((data || []) as Cidade[]);
+          setMostrarSugestoesCidade(true);
+        }
+      } catch (e: any) {
+        if (!controller.signal.aborted) {
+          console.error("Erro ao buscar cidades:", e);
+          setErroCidade("Erro ao buscar cidades. Tente novamente.");
+          setCidadeSugestoes([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setBuscandoCidade(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [cidadeNomeInput]);
+
+  useEffect(() => {
+    if (!cidadeFiltro) {
+      return;
+    }
+    const matched = cidades.find((cidade) => cidade.id === cidadeFiltro);
+    if (matched) {
+      setCidadeNomeInput(matched.nome);
+    }
+  }, [cidadeFiltro, cidades]);
 
   const clientesFiltrados = useMemo(() => {
     if (!clienteBusca.trim()) return clientes;
@@ -241,63 +332,124 @@ export default function RelatorioVendasIsland() {
     });
   }, [clientes, clienteBusca]);
 
-  const destinosFiltrados = useMemo(() => {
-    if (!destinoBusca.trim()) return destinos;
-    const termo = normalizeText(destinoBusca);
-    return destinos.filter((d) => normalizeText(d.nome).includes(termo));
-  }, [destinos, destinoBusca]);
-
-  const produtosFiltrados = useMemo(() => {
-    if (!produtoBusca.trim()) return produtos;
-    const termo = normalizeText(produtoBusca);
-    return produtos.filter((p) => {
-      const nome = normalizeText(p.nome || "");
-      const tipo = normalizeText(p.tipo || "");
-      return nome.includes(termo) || tipo.includes(termo);
+  const tipoNomePorId = useMemo(() => {
+    const map = new Map<string, string>();
+    tiposProdutos.forEach((tipo) => {
+      const tipoLabel = tipo.tipo?.trim() || "";
+      const nomeRaw = tipo.nome?.trim() || "";
+      const nomeLimpo = nomeRaw && !nomeRaw.startsWith("--") ? nomeRaw : "";
+      const label = tipoLabel || nomeLimpo;
+      if (label) {
+        map.set(tipo.id, label);
+      }
     });
-  }, [produtos, produtoBusca]);
+    return map;
+  }, [tiposProdutos]);
 
-  const vendasEnriquecidas: VendaEnriquecida[] = useMemo(() => {
+  const cidadePorId = useMemo(() => {
+    const map = new Map<string, string>();
+    cidades.forEach((cidade) => {
+      if (cidade.id && cidade.nome) {
+        map.set(cidade.id, cidade.nome);
+      }
+    });
+    return map;
+  }, [cidades]);
+
+  const recibosEnriquecidos: ReciboEnriquecido[] = useMemo(() => {
     const cliMap = new Map(clientes.map((c) => [c.id, c]));
-    const destMap = new Map(destinos.map((d) => [d.id, d]));
     const prodMap = new Map(produtos.map((p) => [p.id, p]));
 
-    return vendas.map((v) => {
-      const c = cliMap.get(v.cliente_id);
-      const d = destMap.get(v.destino_id);
-      const p = v.produto_id ? prodMap.get(v.produto_id) : undefined;
+    return vendas.flatMap((v) => {
+      const c = cliMap.get(v.cliente_id) || v.cliente;
+      const clienteNome = c?.nome || "(sem cliente)";
+      const clienteCpf = c?.cpf || "";
+      const produtoDestino = v.destino_produto;
       const recibos = v.vendas_recibos || [];
-      const numeroRecibos = recibos.map((r) => r.numero_recibo).filter(Boolean).join(" / ");
-      const valorRecibos = recibos.reduce(
-        (acc, r) => acc + Number(r.valor_total || 0),
-        0
-      );
-      const prodRecibo = recibos.find((r) => r.tipo_produtos?.id);
-      const valorCalculado = valorRecibos > 0 ? valorRecibos : v.valor_total ?? null;
 
-      return {
-        ...v,
-        numero_venda: v.numero_venda || numeroRecibos || v.id,
-        valor_total: valorCalculado,
-        cliente_nome: c?.nome || "(sem cliente)",
-        cliente_cpf: c?.cpf || "",
-        destino_nome: d?.nome || "(sem destino)",
-        produto_nome:
-          p?.nome ||
-          p?.tipo ||
-          prodRecibo?.tipo_produtos?.nome ||
-          prodRecibo?.tipo_produtos?.tipo ||
-          "(sem produto)",
-      };
+      return recibos.map((recibo, index) => {
+        const produtoResolvido = recibo.produto_resolvido;
+        const tipoRegistro = recibo.tipo_produtos;
+        const tipoId =
+          tipoRegistro?.id ||
+          produtoResolvido?.tipo_produto ||
+          produtoDestino?.tipo_produto ||
+          prodMap.get(recibo.produto_id || "")?.tipo_produto ||
+          null;
+        const tipoLabel =
+          tipoRegistro?.nome ||
+          tipoRegistro?.tipo ||
+          tipoNomePorId.get(tipoId || "") ||
+          tipoId ||
+          "(sem tipo)";
+        const produtoNome =
+          produtoResolvido?.nome ||
+          produtoDestino?.nome ||
+          tipoLabel ||
+          "(sem produto)";
+        const destinoNome =
+          produtoDestino?.nome ||
+          produtoResolvido?.nome ||
+          v.destino?.nome ||
+          "(sem destino)";
+        const cidadeId =
+          v.destino_cidade_id ||
+          produtoResolvido?.cidade_id ||
+          produtoDestino?.cidade_id ||
+          prodMap.get(recibo.produto_id || "")?.cidade_id ||
+          null;
+        const vendaCidadeNome = v.destino_cidade?.nome || "";
+        const cidadeNome =
+          vendaCidadeNome ||
+          (cidadeId && cidadePorId.get(cidadeId) ? cidadePorId.get(cidadeId)! : "");
+
+        return {
+          id: `${v.id}-${index}-${recibo.numero_recibo || "recibo"}`,
+          venda_id: v.id,
+          numero_venda: v.numero_venda || v.id,
+          cliente_nome: clienteNome,
+          cliente_cpf: clienteCpf,
+          destino_nome: destinoNome,
+          produto_nome: produtoNome,
+          produto_tipo: tipoLabel,
+          produto_tipo_id: tipoId,
+          cidade_nome: cidadeNome,
+          cidade_id: cidadeId,
+          data_lancamento: v.data_lancamento,
+          data_embarque: v.data_embarque,
+          numero_recibo: recibo.numero_recibo,
+          valor_total: recibo.valor_total ?? 0,
+          valor_taxas: recibo.valor_taxas ?? null,
+          status: v.status,
+        };
+      });
     });
-  }, [vendas, clientes, destinos, produtos]);
+  }, [vendas, clientes, produtos, tipoNomePorId]);
 
-  const totalVendas = vendasEnriquecidas.length;
-  const somaValores = vendasEnriquecidas.reduce((acc, v) => {
+  const recibosFiltrados = useMemo(() => {
+    const termProd = normalizeText(destinoBusca.trim());
+    const termCidade = normalizeText(cidadeNomeInput.trim());
+    return recibosEnriquecidos.filter((recibo) => {
+      const matchTipo =
+        !tipoSelecionadoId || recibo.produto_tipo_id === tipoSelecionadoId;
+      const matchCidade =
+        !cidadeFiltro && !termCidade
+          ? true
+          : cidadeFiltro
+          ? recibo.cidade_id === cidadeFiltro
+          : normalizeText(recibo.cidade_nome || "").includes(termCidade);
+      const nomeProduto = normalizeText(recibo.produto_nome || "");
+      const matchProduto = !termProd || nomeProduto.includes(termProd);
+      return matchTipo && matchCidade && matchProduto;
+    });
+  }, [recibosEnriquecidos, destinoBusca, tipoSelecionadoId, cidadeFiltro, cidadeNomeInput]);
+
+  const totalRecibos = recibosFiltrados.length;
+  const somaValores = recibosFiltrados.reduce((acc, v) => {
     const val = v.valor_total ?? 0;
     return acc + val;
   }, 0);
-  const ticketMedio = totalVendas > 0 ? somaValores / totalVendas : 0;
+  const ticketMedio = totalRecibos > 0 ? somaValores / totalRecibos : 0;
 
   async function carregarVendas() {
     if (!userCtx) return;
@@ -305,7 +457,7 @@ export default function RelatorioVendasIsland() {
       setLoading(true);
       setErro(null);
 
-      let query = supabase
+        let query = supabase
         .from("vendas")
         .select(
           `
@@ -314,16 +466,22 @@ export default function RelatorioVendasIsland() {
           numero_venda,
           cliente_id,
           destino_id,
+          destino_cidade_id,
           produto_id,
           data_lancamento,
           data_embarque,
           valor_total,
           status,
+          cliente:clientes!cliente_id (nome, cpf),
+          destino_produto:produtos!destino_id (id, nome, tipo_produto, cidade_id),
+          destino_cidade:cidades!destino_cidade_id (nome),
           vendas_recibos (
             numero_recibo,
             valor_total,
             valor_taxas,
             produto_id,
+            produto_resolvido_id,
+            produto_resolvido:produtos!produto_resolvido_id (id, nome, tipo_produto, cidade_id),
             tipo_produtos (id, nome, tipo)
           )
         `
@@ -345,12 +503,6 @@ export default function RelatorioVendasIsland() {
       }
       if (clienteSelecionado) {
         query = query.eq("cliente_id", clienteSelecionado.id);
-      }
-      if (destinoSelecionado) {
-        query = query.eq("destino_id", destinoSelecionado.id);
-      }
-      if (produtoSelecionado) {
-        query = query.eq("produto_id", produtoSelecionado.id);
       }
 
       const vMin = parseFloat(valorMin.replace(",", "."));
@@ -430,33 +582,33 @@ export default function RelatorioVendasIsland() {
   }
 
   function exportarCSV() {
-    if (vendasEnriquecidas.length === 0) {
+    if (recibosFiltrados.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
     const header = [
-      "numero_venda",
+      "numero_recibo",
       "cliente",
       "cpf",
-      "destino",
+      "tipo_produto",
+      "cidade",
       "produto",
       "data_lancamento",
       "data_embarque",
-      "status",
       "valor_total",
     ];
 
-    const linhas = vendasEnriquecidas.map((v) => [
-      v.numero_venda || "",
-      v.cliente_nome,
-      v.cliente_cpf || "",
-      v.destino_nome,
-      v.produto_nome,
-      v.data_lancamento || "",
-      v.data_embarque || "",
-      v.status || "",
-      (v.valor_total ?? 0).toString().replace(".", ","),
+    const linhas = recibosFiltrados.map((r) => [
+      r.numero_recibo || "",
+      r.cliente_nome,
+      r.cliente_cpf || "",
+      r.produto_tipo,
+      r.cidade_nome,
+      r.produto_nome,
+      r.data_lancamento || "",
+      r.data_embarque || "",
+      (r.valor_total ?? 0).toString().replace(".", ","),
     ]);
 
     const all = [header, ...linhas]
@@ -488,21 +640,21 @@ export default function RelatorioVendasIsland() {
       alert("Exportação Excel desabilitada nos parâmetros.");
       return;
     }
-    if (vendasEnriquecidas.length === 0) {
+    if (recibosFiltrados.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const data = vendasEnriquecidas.map((v) => ({
-      "Nº Venda": v.numero_venda || v.id,
-      Cliente: v.cliente_nome,
-      CPF: v.cliente_cpf,
-      Destino: v.destino_nome,
-      Produto: v.produto_nome,
-      "Data lançamento": v.data_lancamento?.slice(0, 10) || "",
-      "Data embarque": v.data_embarque?.slice(0, 10) || "",
-      Status: v.status || "",
-      "Valor total": v.valor_total ?? 0,
+    const data = recibosFiltrados.map((r) => ({
+      "Número recibo": r.numero_recibo || "",
+      Cliente: r.cliente_nome,
+      CPF: r.cliente_cpf,
+      "Tipo produto": r.produto_tipo,
+      Cidade: r.cidade_nome,
+      Produto: r.produto_nome,
+      "Data lançamento": r.data_lancamento?.slice(0, 10) || "",
+      "Data embarque": r.data_embarque?.slice(0, 10) || "",
+      "Valor total": r.valor_total ?? 0,
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -518,7 +670,7 @@ export default function RelatorioVendasIsland() {
       alert("Exportação PDF desabilitada nos parâmetros.");
       return;
     }
-    if (vendasEnriquecidas.length === 0) {
+    if (recibosFiltrados.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
@@ -529,18 +681,26 @@ export default function RelatorioVendasIsland() {
       return;
     }
 
-    const rows = vendasEnriquecidas
+        const rows = recibosFiltrados
       .map(
-        (v) => `
+        (r) => {
+          const valorFormatado = (r.valor_total ?? 0).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          });
+          return `
         <tr>
-          <td>${v.numero_venda || v.id}</td>
-          <td>${v.cliente_nome || ""}</td>
-          <td>${v.destino_nome || ""}</td>
-          <td>${v.produto_nome || ""}</td>
-          <td>${v.data_lancamento?.slice(0, 10) || ""}</td>
-          <td>${v.status || ""}</td>
-          <td>${(v.valor_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-        </tr>`
+          <td>${r.data_lancamento?.slice(0, 10) || ""}</td>
+          <td>${r.numero_recibo || ""}</td>
+          <td>${r.cliente_nome || ""}</td>
+          <td>${r.cliente_cpf || ""}</td>
+          <td>${r.produto_tipo || ""}</td>
+          <td>${r.cidade_nome || ""}</td>
+          <td>${r.produto_nome || ""}</td>
+          <td>${r.data_embarque?.slice(0, 10) || ""}</td>
+          <td>${valorFormatado}</td>
+        </tr>`;
+        }
       )
       .join("");
 
@@ -558,14 +718,16 @@ export default function RelatorioVendasIsland() {
         <body>
           <h3>Relatório de Vendas</h3>
           <table>
-            <thead>
-              <tr>
-                <th>Nº Venda</th>
+          <thead>
+            <tr>
+                <th>Data lançamento</th>
+                <th>Nº Recibo</th>
                 <th>Cliente</th>
-                <th>Destino</th>
+                <th>CPF</th>
+                <th>Tipo produto</th>
+                <th>Cidade</th>
                 <th>Produto</th>
-                <th>Lançamento</th>
-                <th>Status</th>
+                <th>Data embarque</th>
                 <th>Valor</th>
               </tr>
             </thead>
@@ -682,80 +844,115 @@ export default function RelatorioVendasIsland() {
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Destino</label>
+          <div className="form-group relative">
+            <label className="form-label">Cidade</label>
             <input
               className="form-input"
-              value={destinoBusca}
+              placeholder="Digite a cidade"
+              value={cidadeNomeInput}
               onChange={(e) => {
-                setDestinoBusca(e.target.value);
-                setDestinoSelecionado(null);
+                const value = e.target.value;
+                setCidadeNomeInput(value);
+                setCidadeFiltro("");
+                if (value.trim().length > 0) {
+                  setMostrarSugestoesCidade(true);
+                }
               }}
-              placeholder="Nome do destino..."
+              onFocus={() => {
+                if (cidadeNomeInput.trim().length >= 2) {
+                  setMostrarSugestoesCidade(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setMostrarSugestoesCidade(false), 150);
+                if (!cidadeNomeInput.trim()) {
+                  setCidadeFiltro("");
+                  return;
+                }
+                const match = cidades.find((cidade) =>
+                  normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                );
+                if (match) {
+                  setCidadeFiltro(match.id);
+                  setCidadeNomeInput(match.nome);
+                }
+              }}
             />
-            {destinoBusca && !destinoSelecionado && (
-              <div className="card-base" style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}>
-                {destinosFiltrados.length === 0 && (
-                  <div style={{ fontSize: "0.85rem" }}>Nenhum destino encontrado.</div>
-                )}
-                {destinosFiltrados.map((d) => (
-                  <div
-                    key={d.id}
-                    style={{ padding: "4px 6px", cursor: "pointer" }}
-                    onClick={() => {
-                      setDestinoSelecionado(d);
-                      setDestinoBusca(d.nome);
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{d.nome}</div>
+            {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
+              <div
+                className="card-base card-config"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 180,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0",
+                }}
+              >
+                {buscandoCidade && (
+                  <div style={{ padding: "6px 12px", color: "#64748b" }}>
+                    Buscando cidades...
                   </div>
-                ))}
+                )}
+                {!buscandoCidade && erroCidade && (
+                  <div style={{ padding: "6px 12px", color: "#dc2626" }}>
+                    {erroCidade}
+                  </div>
+                )}
+                {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
+                  <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
+                    Nenhuma cidade encontrada.
+                  </div>
+                )}
+                {!buscandoCidade &&
+                  !erroCidade &&
+                  cidadeSugestoes.map((cidade) => (
+                    <button
+                      key={cidade.id}
+                      type="button"
+                      className="btn btn-ghost w-full text-left"
+                      style={{ padding: "6px 12px" }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setCidadeFiltro(cidade.id);
+                        setCidadeNomeInput(cidade.nome);
+                        setMostrarSugestoesCidade(false);
+                      }}
+                    >
+                      {cidade.nome}
+                    </button>
+                  ))}
               </div>
             )}
-            {destinoSelecionado && (
-              <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                Selecionado: <strong>{destinoSelecionado.nome}</strong>
-              </div>
-            )}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tipo Produto</label>
+            <select
+              className="form-select"
+              value={tipoSelecionadoId}
+              onChange={(e) => setTipoSelecionadoId(e.target.value)}
+            >
+              <option value="">Todos os tipos</option>
+              {tiposProdutos.map((tipo) => (
+                <option key={tipo.id} value={tipo.id}>
+                  {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
             <label className="form-label">Produto</label>
             <input
               className="form-input"
-              value={produtoBusca}
-              onChange={(e) => {
-                setProdutoBusca(e.target.value);
-                setProdutoSelecionado(null);
-              }}
-              placeholder="Nome ou tipo..."
+              value={destinoBusca}
+              onChange={(e) => setDestinoBusca(e.target.value)}
+              placeholder="Nome do produto..."
             />
-            {produtoBusca && !produtoSelecionado && (
-              <div className="card-base" style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}>
-                {produtosFiltrados.length === 0 && (
-                  <div style={{ fontSize: "0.85rem" }}>Nenhum produto encontrado.</div>
-                )}
-                {produtosFiltrados.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{ padding: "4px 6px", cursor: "pointer" }}
-                    onClick={() => {
-                      setProdutoSelecionado(p);
-                      setProdutoBusca(p.nome || p.tipo);
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{p.nome || "(sem nome)"}</div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>{p.tipo}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {produtoSelecionado && (
-              <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                Selecionado:{" "}
-                <strong>{produtoSelecionado.nome || produtoSelecionado.tipo}</strong>
-              </div>
-            )}
           </div>
         </div>
 
@@ -851,7 +1048,7 @@ export default function RelatorioVendasIsland() {
         <div className="form-row">
           <div className="form-group">
             <span style={{ fontSize: "0.9rem" }}>
-              <strong>{totalVendas}</strong> venda(s) encontrada(s)
+              <strong>{totalRecibos}</strong> recibo(s) encontrado(s)
             </span>
           </div>
           <div className="form-group">
@@ -880,55 +1077,55 @@ export default function RelatorioVendasIsland() {
       </div>
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple min-w-[1000px]">
+        <table className="table-default table-header-purple min-w-[1100px]">
           <thead>
             <tr>
-              <th>Nº Venda</th>
+              <th>Data lançamento</th>
+              <th>Nº Recibo</th>
               <th>Cliente</th>
               <th>CPF</th>
-              <th>Destino</th>
+              <th>Tipo produto</th>
+              <th>Cidade</th>
               <th>Produto</th>
-              <th>Data lançamento</th>
               <th>Data embarque</th>
-              <th>Status</th>
               <th>Valor total</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr>
+                <tr>
                 <td colSpan={9}>Carregando vendas...</td>
               </tr>
             )}
 
-            {!loading && vendasEnriquecidas.length === 0 && (
+            {!loading && recibosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9}>Nenhuma venda encontrada com os filtros atuais.</td>
+                <td colSpan={9}>Nenhum recibo encontrado com os filtros atuais.</td>
               </tr>
             )}
 
             {!loading &&
-              vendasEnriquecidas.map((v) => (
-                <tr key={v.id}>
-                  <td>{v.numero_venda || "-"}</td>
-                  <td>{v.cliente_nome}</td>
-                  <td>{v.cliente_cpf}</td>
-                  <td>{v.destino_nome}</td>
-                  <td>{v.produto_nome}</td>
+              recibosFiltrados.map((r) => (
+                <tr key={r.id}>
                   <td>
-                    {v.data_lancamento
-                      ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
+                    {r.data_lancamento
+                      ? new Date(r.data_lancamento).toLocaleDateString("pt-BR")
+                      : "-"}
+                  </td>
+                  <td>{r.numero_recibo || "-"}</td>
+                  <td>{r.cliente_nome}</td>
+                  <td>{r.cliente_cpf}</td>
+                  <td>{r.produto_tipo}</td>
+                  <td>{r.cidade_nome || "-"}</td>
+                  <td>{r.produto_nome}</td>
+                  <td>
+                    {r.data_embarque
+                      ? new Date(r.data_embarque).toLocaleDateString("pt-BR")
                       : "-"}
                   </td>
                   <td>
-                    {v.data_embarque
-                      ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td>{v.status || "-"}</td>
-                  <td>
-                    {v.valor_total != null
-                      ? v.valor_total.toLocaleString("pt-BR", {
+                    {r.valor_total != null
+                      ? r.valor_total.toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
                         })
