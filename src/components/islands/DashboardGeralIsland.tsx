@@ -90,6 +90,16 @@ type Viagem = {
   origem: string | null;
   destino: string | null;
   responsavel_user_id: string | null;
+  clientes?: { id: string; nome: string | null } | null;
+  recibo?: {
+    id: string;
+    venda_id: string | null;
+    valor_total: number | null;
+    valor_taxas: number | null;
+    numero_recibo?: string | null;
+    produto_id: string | null;
+    tipo_produtos?: { id: string; nome?: string | null; tipo?: string | null } | null;
+  } | null;
 };
 
 type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
@@ -159,6 +169,13 @@ function normalizeKpiOrder(order: KpiId[], ids: KpiId[]) {
   return [...filtered, ...missing];
 }
 
+function normalizeWidgetOrder(order: WidgetId[]) {
+  const ids = ALL_WIDGETS.map((w) => w.id);
+  const filtered = order.filter((id) => ids.includes(id));
+  const missing = ids.filter((id) => !filtered.includes(id));
+  return [...filtered, ...missing];
+}
+
 function calcularIdade(nascimentoStr: string | null): number | null {
   if (!nascimentoStr) return null;
   const nasc = new Date(nascimentoStr);
@@ -199,6 +216,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [widgetVisible, setWidgetVisible] = useState<Record<WidgetId, boolean>>(() =>
     ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: true }), {} as Record<WidgetId, boolean>)
   );
+  const widgetIds = useMemo(() => ALL_WIDGETS.map((w) => w.id), []);
   const [showCustomize, setShowCustomize] = useState(false);
   const [kpiOrder, setKpiOrder] = useState<KpiId[]>(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = useState<Record<KpiId, boolean>>(() =>
@@ -226,26 +244,23 @@ const DashboardGeralIsland: React.FC = () => {
 
   // Garante que novos widgets entram no order/visibility mesmo com preferências antigas
   useEffect(() => {
-    const ids = ALL_WIDGETS.map((w) => w.id);
     setWidgetOrder((prev) => {
-      const filtered = prev.filter((id) => ids.includes(id));
-      const missing = ids.filter((id) => !filtered.includes(id));
-      const next = [...filtered, ...missing];
+      const next = normalizeWidgetOrder(prev);
       return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
     });
     setWidgetVisible((prev) => {
       const next = { ...prev };
-      ids.forEach((id) => {
+      widgetIds.forEach((id) => {
         if (next[id] === undefined) next[id] = true;
       });
       Object.keys(next).forEach((id) => {
-        if (!ids.includes(id as WidgetId)) {
+        if (!widgetIds.includes(id as WidgetId)) {
           delete next[id as WidgetId];
         }
       });
       return next;
     });
-  }, []);
+  }, [widgetIds]);
 
   const toggleWidget = (id: WidgetId) => {
     const updated = { ...widgetVisible, [id]: !widgetVisible[id] };
@@ -588,10 +603,32 @@ const DashboardGeralIsland: React.FC = () => {
         } else {
           try {
             const hojeIso = new Date().toISOString().slice(0, 10);
+            const limiteData = new Date();
+            limiteData.setDate(limiteData.getDate() + 14);
+            const limiteIso = limiteData.toISOString().slice(0, 10);
             let viagensQuery = supabase
               .from("viagens")
-              .select("id, data_inicio, data_fim, status, origem, destino, responsavel_user_id")
+              .select(`
+                id,
+                data_inicio,
+                data_fim,
+                status,
+                origem,
+                destino,
+                responsavel_user_id,
+                clientes:clientes (id, nome),
+                recibo:vendas_recibos (
+                  id,
+                  venda_id,
+                  valor_total,
+                  valor_taxas,
+                  numero_recibo,
+                  produto_id,
+                  tipo_produtos (id, nome, tipo)
+                )
+              `)
               .gte("data_inicio", hojeIso)
+              .lte("data_inicio", limiteIso)
               .order("data_inicio", { ascending: true })
               .limit(20);
 
@@ -635,6 +672,7 @@ const DashboardGeralIsland: React.FC = () => {
             const ordem = prefData
               .map((p: any) => p.widget as WidgetId)
               .filter((id) => ALL_WIDGETS.some((w) => w.id === id));
+            const normalizedOrder = normalizeWidgetOrder(ordem);
             const vis: Record<WidgetId, boolean> = { ...widgetVisible };
             let kpiFromDb: { order?: KpiId[]; visible?: Record<KpiId, boolean> } = {};
             let chartsFromDb: Record<WidgetId, ChartType> | null = null;
@@ -659,7 +697,7 @@ const DashboardGeralIsland: React.FC = () => {
                 chartsFromDb = { ...(chartsFromDb || {}), ...(p.settings.charts as any) };
               }
             });
-            if (ordem.length > 0) setWidgetOrder(ordem);
+            if (normalizedOrder.length > 0) setWidgetOrder(normalizedOrder);
             setWidgetVisible(vis);
             const kpiIdArray = Array.from(allKpiIds);
             if (kpiFromDb.order && kpiFromDb.order.length > 0)
@@ -674,7 +712,8 @@ const DashboardGeralIsland: React.FC = () => {
             if (local) {
               const parsed = JSON.parse(local);
               if (parsed.order && parsed.visible) {
-                setWidgetOrder(parsed.order);
+                const normalized = normalizeWidgetOrder(parsed.order);
+                if (normalized.length > 0) setWidgetOrder(normalized);
                 setWidgetVisible(parsed.visible);
               }
             }
@@ -713,7 +752,8 @@ const DashboardGeralIsland: React.FC = () => {
           if (local) {
             const parsed = JSON.parse(local);
             if (parsed.order && parsed.visible) {
-              setWidgetOrder(parsed.order);
+              const normalized = normalizeWidgetOrder(parsed.order);
+              if (normalized.length > 0) setWidgetOrder(normalized);
               setWidgetVisible(parsed.visible);
             }
           }
@@ -910,18 +950,98 @@ const DashboardGeralIsland: React.FC = () => {
     });
   }, [clientes]);
 
-  const proximasViagens = useMemo(() => {
-    const sorted = [...viagens]
-      .filter((v) => (v.status || "").toLowerCase() !== "cancelada")
-      .sort((a, b) => {
-        const da = a.data_inicio || "";
-        const db = b.data_inicio || "";
-        if (da === db) return 0;
-        if (!da) return 1;
-        if (!db) return -1;
-        return da < db ? -1 : 1;
+  const proximasViagensAgrupadas = useMemo(() => {
+    const chaveStatusCancelada = (status: string | null | undefined) =>
+      (status || "").toLowerCase() === "cancelada";
+
+    type Agrupamento = {
+      key: string;
+      viagemId: string;
+      clienteNome: string | null;
+      origem: string | null;
+      destino: string | null;
+      status: string | null;
+      dataInicio: string | null;
+      dataFim: string | null;
+      produtosSet: Set<string>;
+    };
+
+    const grupos = new Map<string, Agrupamento>();
+
+    [...viagens]
+      .filter((v) => !chaveStatusCancelada(v.status))
+      .forEach((viagem) => {
+        const key = viagem.recibo?.venda_id || viagem.id;
+        let grupo = grupos.get(key);
+        if (!grupo) {
+          grupo = {
+            key,
+            viagemId: viagem.id,
+            clienteNome: viagem.clientes?.nome || null,
+            origem: viagem.origem,
+            destino: viagem.destino,
+            status: viagem.status,
+            dataInicio: viagem.data_inicio,
+            dataFim: viagem.data_fim,
+            produtosSet: new Set<string>(),
+          };
+          grupos.set(key, grupo);
+        }
+
+        if (viagem.clientes?.nome && !grupo.clienteNome) {
+          grupo.clienteNome = viagem.clientes.nome;
+        }
+        if (viagem.origem && !grupo.origem) {
+          grupo.origem = viagem.origem;
+        }
+        if (viagem.destino && !grupo.destino) {
+          grupo.destino = viagem.destino;
+        }
+        if (viagem.status && !grupo.status) {
+          grupo.status = viagem.status;
+        }
+
+        if (viagem.data_inicio) {
+          if (!grupo.dataInicio || viagem.data_inicio < grupo.dataInicio) {
+            grupo.dataInicio = viagem.data_inicio;
+          }
+        }
+        if (viagem.data_fim) {
+          if (!grupo.dataFim || viagem.data_fim > grupo.dataFim) {
+            grupo.dataFim = viagem.data_fim;
+          }
+        }
+
+        const produtoNome =
+          viagem.recibo?.tipo_produtos?.nome ||
+          viagem.recibo?.produto_id ||
+          "";
+        if (produtoNome) {
+          grupo.produtosSet.add(produtoNome);
+        }
       });
-    return sorted.slice(0, 10);
+
+    const resultado = Array.from(grupos.values())
+      .map((grupo) => ({
+        key: grupo.key,
+        viagemId: grupo.viagemId,
+        clienteNome: grupo.clienteNome,
+        origem: grupo.origem,
+        destino: grupo.destino,
+        status: grupo.status,
+        dataInicio: grupo.dataInicio,
+        dataFim: grupo.dataFim,
+        produtos: Array.from(grupo.produtosSet).filter((p) => !!p),
+      }))
+      .sort((a, b) => {
+        if (!a.dataInicio && !b.dataInicio) return 0;
+        if (!a.dataInicio) return 1;
+        if (!b.dataInicio) return -1;
+        return a.dataInicio < b.dataInicio ? -1 : a.dataInicio > b.dataInicio ? 1 : 0;
+      })
+      .slice(0, 10);
+
+    return resultado;
   }, [viagens]);
 
   const renderPieLegendList = (data: { name: string; value: number }[]) => {
@@ -1373,37 +1493,57 @@ const DashboardGeralIsland: React.FC = () => {
       case "viagens":
         return (
           <div className="card-base card-purple mb-3">
-            <h3 style={{ marginBottom: 8 }}>Próximas viagens ({proximasViagens.length})</h3>
+            <h3 style={{ marginBottom: 8 }}>Próximas viagens ({proximasViagensAgrupadas.length})</h3>
             {permissaoOperacao.permissao === "none" ? (
               <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
             ) : (
               <div className="table-container overflow-x-auto">
-                <table className="table-default min-w-[640px]">
+                <table className="table-default min-w-[760px]">
                   <thead>
                     <tr>
+                      <th>Cliente</th>
+                      <th>Serviços</th>
                       <th>Início</th>
                       <th>Fim</th>
-                      <th>Status</th>
                       <th>Origem</th>
                       <th>Destino</th>
+                      <th>Status</th>
                       <th>Ver</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {proximasViagens.length === 0 && (
+                    {proximasViagensAgrupadas.length === 0 && (
                       <tr>
-                        <td colSpan={6}>Nenhuma viagem futura.</td>
+                        <td colSpan={8}>Nenhuma viagem futura.</td>
                       </tr>
                     )}
-                    {proximasViagens.map((v) => (
-                      <tr key={v.id}>
-                        <td>{v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-"}</td>
-                        <td>{v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-"}</td>
-                        <td>{v.status || "-"}</td>
+                    {proximasViagensAgrupadas.map((v) => (
+                      <tr key={v.key}>
+                        <td>{v.clienteNome || "-"}</td>
+                        <td>
+                          {v.produtos.length === 0 ? (
+                            "-"
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              {v.produtos.map((p, idx) => (
+                                <span key={`${v.key}-prod-${idx}`}>{p}</span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {v.dataInicio
+                            ? new Date(v.dataInicio).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                        <td>
+                          {v.dataFim ? new Date(v.dataFim).toLocaleDateString("pt-BR") : "-"}
+                        </td>
                         <td>{v.origem || "-"}</td>
                         <td>{v.destino || "-"}</td>
+                        <td>{v.status || "-"}</td>
                         <td>
-                          <a className="btn btn-light" href={`/operacao/viagens/${v.id}`}>
+                          <a className="btn btn-light" href={`/operacao/viagens/${v.viagemId}`}>
                             Abrir
                           </a>
                         </td>
