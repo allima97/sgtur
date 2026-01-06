@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
 import {
   ResponsiveContainer,
   BarChart,
@@ -1469,11 +1470,7 @@ const DashboardGeralIsland: React.FC = () => {
                   )}
                   {orcamentosRecentes.map((o) => (
                     <tr key={o.id}>
-                      <td>
-                        {o.data_orcamento
-                          ? new Date(o.data_orcamento).toLocaleDateString("pt-BR")
-                          : "-"}
-                      </td>
+                      <td>{formatarDataParaExibicao(o.data_orcamento)}</td>
                       <td>{o.clientes?.nome || "-"}</td>
                       <td>{o.destinos?.nome || "-"}</td>
                       <td>{o.status || "-"}</td>
@@ -1531,14 +1528,8 @@ const DashboardGeralIsland: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td>
-                          {v.dataInicio
-                            ? new Date(v.dataInicio).toLocaleDateString("pt-BR")
-                            : "-"}
-                        </td>
-                        <td>
-                          {v.dataFim ? new Date(v.dataFim).toLocaleDateString("pt-BR") : "-"}
-                        </td>
+                        <td>{formatarDataParaExibicao(v.dataInicio)}</td>
+                        <td>{formatarDataParaExibicao(v.dataFim)}</td>
                         <td>{v.origem || "-"}</td>
                         <td>{v.destino || "-"}</td>
                         <td>{v.status || "-"}</td>
@@ -1581,11 +1572,7 @@ const DashboardGeralIsland: React.FC = () => {
                     return (
                       <tr key={c.id}>
                         <td>{c.nome}</td>
-                        <td>
-                          {c.nascimento
-                            ? new Date(c.nascimento).toLocaleDateString("pt-BR")
-                            : "-"}
-                        </td>
+                        <td>{formatarDataParaExibicao(c.nascimento)}</td>
                         <td>{idade ?? "-"}</td>
                         <td>{c.telefone || "-"}</td>
                         <td>
@@ -1940,19 +1927,11 @@ const DashboardGeralIsland: React.FC = () => {
             </p>
             <p>
               <strong>Data orçamento:</strong>{" "}
-              {orcamentoSelecionado.data_orcamento
-                ? new Date(
-                    orcamentoSelecionado.data_orcamento
-                  ).toLocaleDateString("pt-BR")
-                : "-"}
+              {formatarDataParaExibicao(orcamentoSelecionado.data_orcamento)}
             </p>
             <p>
               <strong>Data viagem:</strong>{" "}
-              {orcamentoSelecionado.data_viagem
-                ? new Date(
-                    orcamentoSelecionado.data_viagem
-                  ).toLocaleDateString("pt-BR")
-                : "-"}
+              {formatarDataParaExibicao(orcamentoSelecionado.data_viagem)}
             </p>
             <p>
               <strong>Status:</strong>{" "}
@@ -2021,11 +2000,7 @@ const DashboardGeralIsland: React.FC = () => {
             </p>
             <p>
               <strong>Nascimento:</strong>{" "}
-              {clienteSelecionado.nascimento
-                ? new Date(
-                    clienteSelecionado.nascimento
-                  ).toLocaleDateString("pt-BR")
-                : "-"}
+              {formatarDataParaExibicao(clienteSelecionado.nascimento)}
             </p>
             <p>
               <strong>Idade:</strong>{" "}
