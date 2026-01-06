@@ -1500,18 +1500,15 @@ const DashboardGeralIsland: React.FC = () => {
                     <tr>
                       <th>Cliente</th>
                       <th>Serviços</th>
-                      <th>Início</th>
-                      <th>Fim</th>
-                      <th>Origem</th>
+                      <th>Embarque</th>
                       <th>Destino</th>
-                      <th>Status</th>
                       <th>Ver</th>
                     </tr>
                   </thead>
                   <tbody>
                     {proximasViagensAgrupadas.length === 0 && (
                       <tr>
-                        <td colSpan={8}>Nenhuma viagem futura.</td>
+                        <td colSpan={5}>Nenhuma viagem futura.</td>
                       </tr>
                     )}
                     {proximasViagensAgrupadas.map((v) => (
@@ -1529,10 +1526,7 @@ const DashboardGeralIsland: React.FC = () => {
                           )}
                         </td>
                         <td>{formatarDataParaExibicao(v.dataInicio)}</td>
-                        <td>{formatarDataParaExibicao(v.dataFim)}</td>
-                        <td>{v.origem || "-"}</td>
                         <td>{v.destino || "-"}</td>
-                        <td>{v.status || "-"}</td>
                         <td>
                           <a className="btn btn-light" href={`/operacao/viagens/${v.viagemId}`}>
                             Abrir
