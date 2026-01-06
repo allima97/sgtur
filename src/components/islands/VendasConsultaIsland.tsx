@@ -49,6 +49,7 @@ type Recibo = {
   id: string;
   venda_id: string;
   produto_id: string | null;
+  produto_resolvido_id?: string | null;
   numero_recibo: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
@@ -264,6 +265,13 @@ export default function VendasConsultaIsland() {
               .filter((id: string | null | undefined): id is string => Boolean(id))
           )
         );
+        const produtoResolvidoIds = Array.from(
+          new Set(
+            (recibosData || [])
+              .map((r: any) => r.produto_resolvido_id)
+              .filter((id: string | null | undefined): id is string => Boolean(id))
+          )
+        );
 
         const vendaCidadeMap = v.reduce<Record<string, string>>((acc, vendaItem) => {
           if (vendaItem.destino_cidade_id) acc[vendaItem.id] = vendaItem.destino_cidade_id;
@@ -271,6 +279,7 @@ export default function VendasConsultaIsland() {
         }, {});
 
         let produtosLista: any[] = [];
+        let produtosPorIdMap: Record<string, any> = {};
         let tipoProdMap: Record<string, string> = {};
 
         if (produtoIds.length > 0) {
@@ -294,17 +303,38 @@ export default function VendasConsultaIsland() {
           }
         }
 
+        if (produtoResolvidoIds.length > 0) {
+          const { data: produtosResolvidosData, error: prodResolvidoErr } = await supabase
+            .from("produtos")
+            .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
+            .in("id", produtoResolvidoIds);
+          if (!prodResolvidoErr && produtosResolvidosData) {
+            produtosResolvidosData.forEach((p) => {
+              if (p?.id) {
+                produtosPorIdMap[p.id] = p;
+              }
+            });
+          } else if (prodResolvidoErr) {
+            console.error(prodResolvidoErr);
+          }
+        }
+
         const recibosEnriquecidos =
           (recibosData || []).map((r: any) => {
             const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
+            const produtoResolvido =
+              r.produto_resolvido_id && produtosPorIdMap[r.produto_resolvido_id];
             const candidato = produtosLista.find((p) => {
               const ehGlobal = !!p?.todas_as_cidades;
               return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
             });
             const tipoNome = tipoProdMap[r.produto_id as string];
+            const nomeProduto =
+              produtoResolvido?.nome || candidato?.nome || tipoNome || "";
             return {
               ...r,
-              produto_nome: candidato?.nome || tipoNome || "",
+              produto_nome: nomeProduto,
+              produto_resolvido_id: r.produto_resolvido_id ?? null,
             };
           }) || [];
 
