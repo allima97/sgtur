@@ -1,6 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
+import { exportTableToPDF } from "../../lib/pdf";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
+import {
+  ParametrosComissao,
+  Regra,
+  RegraProduto,
+  calcularPctPorRegra,
+} from "../../lib/comissaoUtils";
 
 type Cliente = {
   id: string;
@@ -13,17 +21,42 @@ type Produto = {
   nome: string | null;
   tipo_produto: string | null;
   cidade_id: string | null;
+  regra_comissionamento?: string | null;
+  soma_na_meta?: boolean | null;
+  usa_meta_produto?: boolean | null;
+  meta_produto_valor?: number | null;
+  comissao_produto_meta_pct?: number | null;
+  descontar_meta_geral?: boolean | null;
+  exibe_kpi_comissao?: boolean | null;
 };
 
 type TipoProduto = {
   id: string;
   nome: string | null;
   tipo: string | null;
+  regra_comissionamento?: string | null;
+  soma_na_meta?: boolean | null;
+  usa_meta_produto?: boolean | null;
+  meta_produto_valor?: number | null;
+  comissao_produto_meta_pct?: number | null;
+  descontar_meta_geral?: boolean | null;
+  exibe_kpi_comissao?: boolean | null;
 };
 
 type Cidade = {
   id: string;
   nome: string;
+};
+
+type MetaVendedor = {
+  id: string;
+  meta_geral: number;
+  periodo?: string;
+};
+
+type MetaProduto = {
+  produto_id: string;
+  valor: number;
 };
 
 type Venda = {
@@ -62,6 +95,7 @@ type ReciboEnriquecido = {
   produto_nome: string;
   produto_tipo: string;
   produto_tipo_id: string | null;
+  produto_id: string | null;
   cidade_nome: string;
   cidade_id: string | null;
   data_lancamento: string;
@@ -80,6 +114,7 @@ type UserCtx = {
   usuarioId: string;
   papel: Papel;
   vendedorIds: string[];
+  companyId: string | null;
 };
 
 type ExportFlags = {
@@ -120,6 +155,71 @@ function csvEscape(value: string): string {
   return value;
 }
 
+function isSeguroRecibo(recibo: ReciboEnriquecido) {
+  const tipo = (recibo.produto_tipo || "").toLowerCase();
+  const nome = (recibo.produto_nome || "").toLowerCase();
+  return tipo.includes("seguro") || nome.includes("seguro");
+}
+
+function getPeriodosMeses(inicio: string, fim: string) {
+  const parse = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  let start = parse(inicio) || new Date();
+  let end = parse(fim) || new Date();
+  if (end < start) {
+    [start, end] = [end, start];
+  }
+  const meses: string[] = [];
+  const current = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (current <= last) {
+    const label = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-01`;
+    meses.push(label);
+    current.setMonth(current.getMonth() + 1);
+  }
+  if (meses.length === 0) {
+    const fallback = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+    meses.push(fallback);
+  }
+  return meses;
+}
+
+async function carregarProdutosComissionamento() {
+  const baseCols = "id, nome, tipo_produto, cidade_id";
+  const extraCols =
+    ", regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao";
+
+  const { data, error } = await supabase
+    .from("produtos")
+    .select(`${baseCols}${extraCols}`)
+    .order("nome", { ascending: true });
+
+  if (error && error.code === "42703") {
+    return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
+  }
+
+  return { data, error };
+}
+
+async function carregarTiposProdutosComissionamento() {
+  const baseCols = "id, nome, tipo";
+  const extraCols =
+    ", regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao";
+
+  const { data, error } = await supabase
+    .from("tipo_produtos")
+    .select(`${baseCols}${extraCols}`)
+    .order("nome", { ascending: true });
+
+  if (error && error.code === "42703") {
+    return supabase.from("tipo_produtos").select(baseCols).order("nome", { ascending: true });
+  }
+
+  return { data, error };
+}
+
 export default function RelatorioVendasIsland() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -156,6 +256,21 @@ export default function RelatorioVendasIsland() {
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
+  const [parametrosComissao, setParametrosComissao] =
+    useState<ParametrosComissao | null>(null);
+  const [regrasCommission, setRegrasCommission] = useState<Record<string, Regra>>(
+    {}
+  );
+  const [regraProdutoMap, setRegraProdutoMap] = useState<
+    Record<string, RegraProduto>
+  >({});
+  const [metaPlanejada, setMetaPlanejada] = useState<number>(0);
+  const [metaProdutoMap, setMetaProdutoMap] = useState<Record<string, number>>(
+    {}
+  );
+  const [, setCommissionLoading] = useState(false);
+  const [, setCommissionErro] = useState<string | null>(null);
+  const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
 
   useEffect(() => {
     async function carregarUserCtx() {
@@ -181,6 +296,7 @@ export default function RelatorioVendasIsland() {
           (auth?.user?.user_metadata as any)?.name ||
           "";
         const tipoNorm = String(tipoName || "").toUpperCase();
+        const companyId = (usuarioDb as any)?.company_id || null;
 
         let papel: Papel = "VENDEDOR";
         if (tipoNorm.includes("ADMIN")) papel = "ADMIN";
@@ -203,12 +319,17 @@ export default function RelatorioVendasIsland() {
           vendedorIds = [];
         }
 
-        // carregar flags de exportação
-        const companyId = (usuarioDb as any)?.company_id || null;
+        const defaultParametros: ParametrosComissao = {
+          usar_taxas_na_meta: true,
+          foco_valor: "bruto",
+          foco_faturamento: "bruto",
+        };
         if (companyId) {
           const { data: params } = await supabase
             .from("parametros_comissao")
-            .select("exportacao_pdf, exportacao_excel")
+            .select(
+              "exportacao_pdf, exportacao_excel, usar_taxas_na_meta, foco_valor, foco_faturamento"
+            )
             .eq("company_id", companyId)
             .maybeSingle();
           if (params) {
@@ -216,10 +337,22 @@ export default function RelatorioVendasIsland() {
               pdf: params.exportacao_pdf ?? true,
               excel: params.exportacao_excel ?? true,
             });
+            setParametrosComissao({
+              usar_taxas_na_meta: !!params.usar_taxas_na_meta,
+              foco_valor: params.foco_valor === "liquido" ? "liquido" : "bruto",
+              foco_faturamento:
+                params.foco_faturamento === "liquido" ? "liquido" : "bruto",
+            });
+          } else {
+            setExportFlags({ pdf: true, excel: true });
+            setParametrosComissao(defaultParametros);
           }
+        } else {
+          setExportFlags({ pdf: true, excel: true });
+          setParametrosComissao(defaultParametros);
         }
 
-        setUserCtx({ usuarioId: userId, papel, vendedorIds });
+        setUserCtx({ usuarioId: userId, papel, vendedorIds, companyId });
       } catch (e: any) {
         console.error(e);
         setErro("Erro ao carregar contexto do usuário.");
@@ -241,8 +374,8 @@ export default function RelatorioVendasIsland() {
           { data: cidadesData, error: cidadesErr },
         ] = await Promise.all([
           supabase.from("clientes").select("id, nome, cpf").order("nome", { ascending: true }),
-          supabase.from("produtos").select("id, nome, tipo_produto, cidade_id").order("nome", { ascending: true }),
-          supabase.from("tipo_produtos").select("id, nome, tipo").order("nome", { ascending: true }),
+          carregarProdutosComissionamento(),
+          carregarTiposProdutosComissionamento(),
           supabase.from("cidades").select("id, nome").order("nome", { ascending: true }),
         ]);
 
@@ -265,6 +398,91 @@ export default function RelatorioVendasIsland() {
 
     carregarBase();
   }, []);
+
+  useEffect(() => {
+    if (!userCtx) return;
+    carregarDadosComissao();
+  }, [userCtx, dataInicio, dataFim]);
+
+  async function carregarDadosComissao() {
+    if (!userCtx) return;
+    try {
+      setCommissionLoading(true);
+      setCommissionErro(null);
+      const periodos = getPeriodosMeses(dataInicio, dataFim);
+      let metasQuery = supabase
+        .from("metas_vendedor")
+        .select("id, meta_geral")
+        .in("periodo", periodos);
+      if (userCtx.papel !== "ADMIN" && userCtx.vendedorIds.length > 0) {
+        metasQuery = metasQuery.in("vendedor_id", userCtx.vendedorIds);
+      }
+      const { data: metasData, error: metasError } = await metasQuery;
+      if (metasError) throw metasError;
+      const metaTotal = (metasData || []).reduce(
+        (acc, item) => acc + Number(item.meta_geral || 0),
+        0
+      );
+      setMetaPlanejada(metaTotal);
+      const metaIds = (metasData || []).map((item) => item.id).filter(Boolean);
+      const metasProdPromise =
+        metaIds.length > 0
+          ? supabase
+              .from("metas_vendedor_produto")
+              .select("produto_id, valor")
+              .in("meta_vendedor_id", metaIds)
+          : Promise.resolve({ data: [], error: null as null });
+      const [metasProdRes, regrasRes, regrasProdRes] = await Promise.all([
+        metasProdPromise,
+        supabase
+          .from("commission_rule")
+          .select(
+            "id, tipo, meta_nao_atingida, meta_atingida, super_meta, commission_tier (faixa, de_pct, ate_pct, inc_pct_meta, inc_pct_comissao)"
+          ),
+        supabase
+          .from("product_commission_rule")
+          .select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta"),
+      ]);
+      if (metasProdRes.error) throw metasProdRes.error;
+      if (regrasRes.error) throw regrasRes.error;
+      if (regrasProdRes.error) throw regrasProdRes.error;
+      const regrasMap: Record<string, Regra> = {};
+      (regrasRes.data || []).forEach((rule: any) => {
+        regrasMap[rule.id] = {
+          id: rule.id,
+          tipo: rule.tipo || "GERAL",
+          meta_nao_atingida: rule.meta_nao_atingida,
+          meta_atingida: rule.meta_atingida,
+          super_meta: rule.super_meta,
+          commission_tier: rule.commission_tier || [],
+        };
+      });
+      const regraProdMap: Record<string, RegraProduto> = {};
+      (regrasProdRes.data || []).forEach((rule: any) => {
+        regraProdMap[rule.produto_id] = {
+          produto_id: rule.produto_id,
+          rule_id: rule.rule_id,
+          fix_meta_nao_atingida: rule.fix_meta_nao_atingida,
+          fix_meta_atingida: rule.fix_meta_atingida,
+          fix_super_meta: rule.fix_super_meta,
+        };
+      });
+      const metaProdMap: Record<string, number> = {};
+      (metasProdRes.data || []).forEach((entry: any) => {
+        if (!entry.produto_id) return;
+        metaProdMap[entry.produto_id] =
+          (metaProdMap[entry.produto_id] || 0) + Number(entry.valor || 0);
+      });
+      setRegrasCommission(regrasMap);
+      setRegraProdutoMap(regraProdMap);
+      setMetaProdutoMap(metaProdMap);
+    } catch (e: any) {
+      console.error("Erro ao carregar dados de comissão:", e);
+      setCommissionErro("Erro ao carregar dados de comissão.");
+    } finally {
+      setCommissionLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (cidadeNomeInput.trim().length < 2) {
@@ -403,6 +621,12 @@ export default function RelatorioVendasIsland() {
           vendaCidadeNome ||
           (cidadeId && cidadePorId.get(cidadeId) ? cidadePorId.get(cidadeId)! : "");
 
+        const produtoId =
+          produtoResolvido?.id ||
+          recibo.produto_id ||
+          produtoDestino?.id ||
+          null;
+
         return {
           id: `${v.id}-${index}-${recibo.numero_recibo || "recibo"}`,
           venda_id: v.id,
@@ -413,6 +637,7 @@ export default function RelatorioVendasIsland() {
           produto_nome: produtoNome,
           produto_tipo: tipoLabel,
           produto_tipo_id: tipoId,
+          produto_id: produtoId,
           cidade_nome: cidadeNome,
           cidade_id: cidadeId,
           data_lancamento: v.data_lancamento,
@@ -449,7 +674,229 @@ export default function RelatorioVendasIsland() {
     const val = v.valor_total ?? 0;
     return acc + val;
   }, 0);
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const somaTaxas = recibosFiltrados.reduce((acc, v) => {
+    const taxas = v.valor_taxas ?? 0;
+    return acc + taxas;
+  }, 0);
+  const somaLiquido = recibosFiltrados.reduce((acc, v) => {
+    if (v.valor_total == null) return acc;
+    const total = v.valor_total;
+    const taxas = v.valor_taxas ?? 0;
+    return acc + (total - taxas);
+  }, 0);
   const ticketMedio = totalRecibos > 0 ? somaValores / totalRecibos : 0;
+
+  const produtosMap = useMemo(
+    () => new Map(produtos.map((p) => [p.id, p])),
+    [produtos]
+  );
+
+  const tipoProdutoMap = useMemo(
+    () => new Map(tiposProdutos.map((tipo) => [tipo.id, tipo])),
+    [tiposProdutos]
+  );
+
+  const tipoIdFromProduto = useCallback(
+    (produto?: Produto | TipoProduto) => {
+      if (!produto) return undefined;
+      if ("tipo_produto" in produto) {
+        return produto.tipo_produto || undefined;
+      }
+      return produto.id;
+    },
+    []
+  );
+
+  const getProdutoPorId = useCallback(
+    (prodId: string) => tipoProdutoMap.get(prodId) ?? produtosMap.get(prodId),
+    [produtosMap, tipoProdutoMap]
+  );
+
+  const getRegraProduto = useCallback(
+    (prodId: string, produto?: Produto | TipoProduto) => {
+      const direct = regraProdutoMap[prodId];
+      if (direct) return direct;
+      if (produto) {
+        const tipoId = tipoIdFromProduto(produto);
+        if (tipoId) {
+          return regraProdutoMap[tipoId];
+        }
+      }
+      return undefined;
+    },
+    [regraProdutoMap, tipoIdFromProduto]
+  );
+
+  const commissionAggregates = useMemo(() => {
+    if (!tipoProdutoMap.size) return null;
+    const params = parametrosComissao || {
+      usar_taxas_na_meta: true,
+      foco_valor: "bruto",
+      foco_faturamento: "bruto",
+    };
+    const baseMetaPorProduto: Record<string, number> = {};
+    const liquidoPorProduto: Record<string, number> = {};
+    const brutoPorProduto: Record<string, number> = {};
+    const baseComPorProduto: Record<string, number> = {};
+    let baseMetaTotal = 0;
+    recibosFiltrados.forEach((recibo) => {
+      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+      if (!prodId) return;
+      const produto = getProdutoPorId(prodId);
+      if (!produto) return;
+      const bruto = recibo.valor_total ?? 0;
+      const taxas = recibo.valor_taxas ?? 0;
+      const liquido = bruto - taxas;
+      const valParaMeta = params.usar_taxas_na_meta ? bruto : liquido;
+      baseMetaPorProduto[prodId] = (baseMetaPorProduto[prodId] || 0) + valParaMeta;
+      if (produto.soma_na_meta) {
+        baseMetaTotal += valParaMeta;
+      }
+      liquidoPorProduto[prodId] = (liquidoPorProduto[prodId] || 0) + liquido;
+      brutoPorProduto[prodId] = (brutoPorProduto[prodId] || 0) + bruto;
+      const baseCom =
+        params.foco_faturamento === "liquido" ? liquido : bruto;
+      baseComPorProduto[prodId] = (baseComPorProduto[prodId] || 0) + baseCom;
+    });
+    const pctMetaGeral =
+      metaPlanejada > 0 ? (baseMetaTotal / metaPlanejada) * 100 : 0;
+    return {
+      baseMetaPorProduto,
+      liquidoPorProduto,
+      brutoPorProduto,
+      baseComPorProduto,
+      baseMetaTotal,
+      pctMetaGeral,
+    };
+  }, [recibosFiltrados, parametrosComissao, tipoProdutoMap, metaPlanejada, getProdutoPorId]);
+
+  const calcularPctParaProduto = useCallback(
+    (prodId: string, isSeguro: boolean) => {
+      const aggregates = commissionAggregates;
+      if (!aggregates) return 0;
+      const produto = getProdutoPorId(prodId);
+      if (!produto) return 0;
+      const baseMetaPorProduto = aggregates.baseMetaPorProduto[prodId] || 0;
+      const regraProd = getRegraProduto(prodId, produto);
+      if (produto.regra_comissionamento === "diferenciado" && !isSeguro) {
+        if (!regraProd) return 0;
+        const produtoTipoId = tipoIdFromProduto(produto);
+        const metaProdValor =
+          metaProdutoMap[prodId] ||
+          (produtoTipoId ? metaProdutoMap[produtoTipoId] : 0) ||
+          0;
+        const temMetaProd = metaProdValor > 0;
+        const pctMetaProd = temMetaProd
+          ? (baseMetaPorProduto / metaProdValor) * 100
+          : 0;
+        if (temMetaProd) {
+          if (baseMetaPorProduto < metaProdValor) {
+            return 0;
+          }
+          if (pctMetaProd >= 120) {
+            return (
+              regraProd.fix_super_meta ??
+              regraProd.fix_meta_atingida ??
+              regraProd.fix_meta_nao_atingida ??
+              0
+            );
+          }
+          return (
+            regraProd.fix_meta_atingida ??
+            regraProd.fix_meta_nao_atingida ??
+            0
+          );
+        }
+        return (
+          regraProd.fix_meta_nao_atingida ??
+          regraProd.fix_meta_atingida ??
+          regraProd.fix_super_meta ??
+          0
+        );
+      }
+      const regraId = regraProd?.rule_id;
+      const regra = regraId ? regrasCommission[regraId] : undefined;
+      if (!regra) return 0;
+      let pct = calcularPctPorRegra(regra, aggregates.pctMetaGeral);
+      if (
+        metaProdEnabled &&
+        produto.usa_meta_produto &&
+        produto.meta_produto_valor &&
+        produto.comissao_produto_meta_pct
+      ) {
+        const atingiuMetaProd =
+          produto.meta_produto_valor > 0 &&
+          baseMetaPorProduto >= produto.meta_produto_valor;
+        if (atingiuMetaProd) {
+          const baseCom = aggregates.baseComPorProduto[prodId] || 0;
+          if (baseCom > 0) {
+            const valMetaProd =
+              baseCom *
+              ((produto.comissao_produto_meta_pct || 0) / 100);
+            const valGeral = baseCom * (pct / 100);
+            const diffValor =
+              produto.descontar_meta_geral === false
+                ? valMetaProd
+                : Math.max(valMetaProd - valGeral, 0);
+            if (diffValor > 0) {
+              pct += (diffValor / baseCom) * 100;
+            }
+          }
+        }
+      }
+      return pct;
+    },
+    [
+      commissionAggregates,
+      metaProdEnabled,
+      metaProdutoMap,
+      tipoProdutoMap,
+      regraProdutoMap,
+      regrasCommission,
+      tipoIdFromProduto,
+      getProdutoPorId,
+      getRegraProduto,
+    ]
+  );
+
+  const calcularComissaoRecibo = useCallback(
+    (recibo: ReciboEnriquecido) => {
+      const aggregates = commissionAggregates;
+      if (!aggregates) return 0;
+      const params = parametrosComissao || {
+        usar_taxas_na_meta: true,
+        foco_valor: "bruto",
+        foco_faturamento: "bruto",
+      };
+      const prodId = recibo.produto_tipo_id || recibo.produto_id || "";
+      if (!prodId) return 0;
+      const bruto = recibo.valor_total ?? 0;
+      const taxas = recibo.valor_taxas ?? 0;
+      const liquido = bruto - taxas;
+      const baseCom =
+        params.foco_faturamento === "liquido" ? liquido : bruto;
+      if (baseCom <= 0) return 0;
+      const pct = calcularPctParaProduto(prodId, isSeguroRecibo(recibo));
+      return baseCom * (pct / 100);
+    },
+    [parametrosComissao, commissionAggregates, calcularPctParaProduto]
+  );
+
+  const comissaoPorRecibo = useMemo(() => {
+    const mapa = new Map<string, number>();
+    recibosFiltrados.forEach((recibo) => {
+      mapa.set(recibo.id, calcularComissaoRecibo(recibo));
+    });
+    return mapa;
+  }, [recibosFiltrados, calcularComissaoRecibo]);
+
+  const somaComissao = useMemo(
+    () =>
+      Array.from(comissaoPorRecibo.values()).reduce((acc, val) => acc + val, 0),
+    [comissaoPorRecibo]
+  );
 
   async function carregarVendas() {
     if (!userCtx) return;
@@ -675,69 +1122,77 @@ export default function RelatorioVendasIsland() {
       return;
     }
 
-    const win = window.open("", "_blank");
-    if (!win) {
-      alert("Não foi possível abrir a janela de exportação.");
-      return;
-    }
+    const headers = [
+      "Data lançamento",
+      "Nº Recibo",
+      "Cliente",
+      "CPF",
+      "Tipo produto",
+      "Cidade",
+      "Produto",
+      "Data embarque",
+      "Valor total",
+      "Taxas",
+      "Valor líquido",
+      "Comissão",
+    ];
+    const rows = recibosFiltrados.map((r) => {
+      const valorTotal = r.valor_total ?? null;
+      const valorTaxas = r.valor_taxas ?? null;
+      const valorLiquido =
+        valorTotal != null ? valorTotal - (valorTaxas ?? 0) : null;
+      const comissao = calcularComissaoRecibo(r);
 
-        const rows = recibosFiltrados
-      .map(
-        (r) => {
-          const valorFormatado = (r.valor_total ?? 0).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-          });
-          return `
-        <tr>
-          <td>${r.data_lancamento?.slice(0, 10) || ""}</td>
-          <td>${r.numero_recibo || ""}</td>
-          <td>${r.cliente_nome || ""}</td>
-          <td>${r.cliente_cpf || ""}</td>
-          <td>${r.produto_tipo || ""}</td>
-          <td>${r.cidade_nome || ""}</td>
-          <td>${r.produto_nome || ""}</td>
-          <td>${r.data_embarque?.slice(0, 10) || ""}</td>
-          <td>${valorFormatado}</td>
-        </tr>`;
-        }
-      )
-      .join("");
+      return [
+        r.data_lancamento?.slice(0, 10) || "",
+        r.numero_recibo || "",
+        r.cliente_nome,
+        r.cliente_cpf,
+        r.produto_tipo,
+        r.cidade_nome,
+        r.produto_nome,
+        r.data_embarque?.slice(0, 10) || "",
+        valorTotal != null ? formatCurrency(valorTotal) : "-",
+        valorTaxas != null ? formatCurrency(valorTaxas) : "-",
+        valorLiquido != null ? formatCurrency(valorLiquido) : "-",
+        formatCurrency(comissao),
+      ];
+    });
 
-    win.document.write(`
-      <html>
-        <head>
-          <title>Relatório de Vendas</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 16px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: left; }
-            th { background: #f1f5f9; }
-          </style>
-        </head>
-        <body>
-          <h3>Relatório de Vendas</h3>
-          <table>
-          <thead>
-            <tr>
-                <th>Data lançamento</th>
-                <th>Nº Recibo</th>
-                <th>Cliente</th>
-                <th>CPF</th>
-                <th>Tipo produto</th>
-                <th>Cidade</th>
-                <th>Produto</th>
-                <th>Data embarque</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    win.document.close();
+    const subtitle =
+      dataInicio && dataFim
+        ? `Período: ${formatarDataParaExibicao(
+            dataInicio
+          )} até ${formatarDataParaExibicao(dataFim)}`
+        : dataInicio
+        ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+        : dataFim
+        ? `Até ${formatarDataParaExibicao(dataFim)}`
+        : undefined;
+
+    rows.push([
+      "Totais",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      formatCurrency(somaValores),
+      formatCurrency(somaTaxas),
+      formatCurrency(somaLiquido),
+      formatCurrency(somaComissao),
+    ]);
+
+    exportTableToPDF({
+      title: "Relatório de Vendas",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-vendas",
+      orientation: "landscape",
+    });
   }
 
   return (
@@ -1089,51 +1544,70 @@ export default function RelatorioVendasIsland() {
               <th>Produto</th>
               <th>Data embarque</th>
               <th>Valor total</th>
+              <th>Taxas</th>
+              <th>Valor líquido</th>
+              <th>Comissão</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-                <tr>
-                <td colSpan={9}>Carregando vendas...</td>
+              <tr>
+                <td colSpan={12}>Carregando vendas...</td>
               </tr>
             )}
 
             {!loading && recibosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9}>Nenhum recibo encontrado com os filtros atuais.</td>
+                <td colSpan={12}>Nenhum recibo encontrado com os filtros atuais.</td>
               </tr>
             )}
 
             {!loading &&
-              recibosFiltrados.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    {r.data_lancamento
-                      ? new Date(r.data_lancamento).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td>{r.numero_recibo || "-"}</td>
-                  <td>{r.cliente_nome}</td>
-                  <td>{r.cliente_cpf}</td>
-                  <td>{r.produto_tipo}</td>
-                  <td>{r.cidade_nome || "-"}</td>
-                  <td>{r.produto_nome}</td>
-                  <td>
-                    {r.data_embarque
-                      ? new Date(r.data_embarque).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td>
-                    {r.valor_total != null
-                      ? r.valor_total.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
+              recibosFiltrados.map((r) => {
+                const comissao = comissaoPorRecibo.get(r.id) ?? 0;
+                return (
+                  <tr key={r.id}>
+                    <td>
+                      {r.data_lancamento
+                        ? new Date(r.data_lancamento).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
+                    <td>{r.numero_recibo || "-"}</td>
+                    <td>{r.cliente_nome}</td>
+                    <td>{r.cliente_cpf}</td>
+                    <td>{r.produto_tipo}</td>
+                    <td>{r.cidade_nome || "-"}</td>
+                    <td>{r.produto_nome}</td>
+                    <td>
+                      {r.data_embarque
+                        ? new Date(r.data_embarque).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
+                    <td>
+                      {r.valor_total != null ? formatCurrency(r.valor_total) : "-"}
+                    </td>
+                    <td>
+                      {r.valor_taxas != null ? formatCurrency(r.valor_taxas) : "-"}
+                    </td>
+                    <td>
+                      {r.valor_total != null
+                        ? formatCurrency(r.valor_total - (r.valor_taxas ?? 0))
+                        : "-"}
+                    </td>
+                    <td>{formatCurrency(comissao)}</td>
+                  </tr>
+                );
+              })}
           </tbody>
+          <tfoot>
+            <tr>
+              <th colSpan={8}>Totais</th>
+              <th>{formatCurrency(somaValores)}</th>
+              <th>{formatCurrency(somaTaxas)}</th>
+              <th>{formatCurrency(somaLiquido)}</th>
+              <th>{formatCurrency(somaComissao)}</th>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

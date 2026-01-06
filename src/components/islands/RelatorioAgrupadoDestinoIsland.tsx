@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
+import { exportTableToPDF } from "../../lib/pdf";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
 
 type Destino = {
   id: string;
@@ -402,53 +404,38 @@ export default function RelatorioAgrupadoDestinoIsland() {
       return;
     }
 
-    const win = window.open("", "_blank");
-    if (!win) {
-      alert("Não foi possível abrir a janela de exportação.");
-      return;
-    }
+    const headers = [
+      "Destino",
+      "Qtde",
+      "Faturamento",
+      "Ticket médio",
+    ];
+    const rows = linhas.map((l) => [
+      l.destino_nome,
+      l.quantidade,
+      l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+    ]);
 
-    const rows = linhas
-      .map(
-        (l) => `
-        <tr>
-          <td>${l.destino_nome}</td>
-          <td>${l.quantidade}</td>
-          <td>${l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-          <td>${l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-        </tr>`
-      )
-      .join("");
+    const subtitle =
+      dataInicio && dataFim
+        ? `Período: ${formatarDataParaExibicao(dataInicio)} até ${formatarDataParaExibicao(
+            dataFim
+          )}`
+        : dataInicio
+        ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+        : dataFim
+        ? `Até ${formatarDataParaExibicao(dataFim)}`
+        : undefined;
 
-    win.document.write(`
-      <html>
-        <head>
-          <title>Vendas por Destino</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 16px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: left; }
-            th { background: #f1f5f9; }
-          </style>
-        </head>
-        <body>
-          <h3>Relatório de Vendas por Destino</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Destino</th>
-                <th>Qtde</th>
-                <th>Faturamento</th>
-                <th>Ticket médio</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    win.document.close();
+    exportTableToPDF({
+      title: "Vendas por Destino",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-vendas-por-destino",
+      orientation: "landscape",
+    });
   }
 
   return (

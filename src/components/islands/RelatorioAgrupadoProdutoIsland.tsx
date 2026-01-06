@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { exportTableToPDF } from "../../lib/pdf";
+import { formatarDataParaExibicao } from "../../lib/formatDate";
 
 type Produto = {
   id: string;
@@ -56,6 +58,11 @@ type UserCtx = {
   usuarioId: string;
   papel: Papel;
   vendedorIds: string[];
+};
+
+type ExportFlags = {
+  pdf: boolean;
+  excel: boolean;
 };
 
 function normalizeText(value: string) {
@@ -125,6 +132,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
+  const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
   const [ordemDesc, setOrdemDesc] = useState<boolean>(true);
@@ -308,6 +316,21 @@ export default function RelatorioAgrupadoProdutoIsland() {
           vendedorIds = Array.from(new Set([userId, ...extras]));
         } else if (papel === "ADMIN") {
           vendedorIds = [];
+        }
+
+        const companyId = (usuarioDb as any)?.company_id || null;
+        if (companyId) {
+          const { data: params } = await supabase
+            .from("parametros_comissao")
+            .select("exportacao_pdf, exportacao_excel")
+            .eq("company_id", companyId)
+            .maybeSingle();
+          if (params) {
+            setExportFlags({
+              pdf: params.exportacao_pdf ?? true,
+              excel: params.exportacao_excel ?? true,
+            });
+          }
         }
 
         setUserCtx({ usuarioId: userId, papel, vendedorIds });
@@ -631,6 +654,82 @@ export default function RelatorioAgrupadoProdutoIsland() {
     URL.revokeObjectURL(url);
   }
 
+  function exportarPDF() {
+    if (!exportFlags.pdf) {
+      alert("Exportação PDF desabilitada nos parâmetros.");
+      return;
+    }
+
+    const subtitle =
+      dataInicio && dataFim
+        ? `Período: ${formatarDataParaExibicao(
+            dataInicio
+          )} até ${formatarDataParaExibicao(dataFim)}`
+        : dataInicio
+        ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
+        : dataFim
+        ? `Até ${formatarDataParaExibicao(dataFim)}`
+        : undefined;
+
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+
+      const headers = ["Tipo de Produto", "Qtde", "Faturamento", "Ticket médio"];
+      const rows = linhasFiltradas.map((l) => [
+        l.produto_nome,
+        l.quantidade,
+        formatCurrency(l.total),
+        formatCurrency(l.ticketMedio),
+      ]);
+
+      exportTableToPDF({
+        title: "Vendas por Produto",
+        subtitle,
+        headers,
+        rows,
+        fileName: "relatorio-vendas-por-produto",
+        orientation: "landscape",
+      });
+      return;
+    }
+
+    if (recibosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const headers = [
+      "Recibo",
+      "Produto",
+      "Cidade",
+      "Destino",
+      "Data",
+      "Valor total",
+      "Taxas",
+    ];
+    const rows = recibosFiltrados.map((recibo) => [
+      recibo.numeroRecibo || "-",
+      recibo.produtoNome,
+      recibo.cidadeNome || "-",
+      recibo.destinoNome || "-",
+      recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-",
+      formatCurrency(recibo.valorTotal),
+      formatCurrency(recibo.valorTaxas),
+    ]);
+
+    exportTableToPDF({
+      title: "Produtos por Recibo",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-produtos-por-recibo",
+      orientation: "landscape",
+    });
+  }
+
   return (
     <div className="relatorio-vendas-produto-page">
       <div className="card-base card-purple mb-3">
@@ -795,6 +894,17 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
           <button type="button" className="btn btn-purple" onClick={exportarCSV}>
             Exportar CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={exportarPDF}
+            disabled={!exportFlags.pdf}
+            title={
+              !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
+            }
+          >
+            Exportar PDF
           </button>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
