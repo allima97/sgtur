@@ -634,7 +634,7 @@ export default function ProdutosLoteIsland() {
           </datalist>
 
           <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-            <table className="table-default min-w-[1120px]">
+            <table className="table-default min-w-[1400px]">
               <thead>
                 <tr>
                   <th>Tipo *</th>
@@ -674,6 +674,7 @@ export default function ProdutosLoteIsland() {
                             handleProdutoChange(produto.id, "nome", titleCaseWithExceptions(e.target.value))
                           }
                           placeholder={`Produto ${index + 1}`}
+                          style={{ minWidth: 320 }}
                           disabled={permissao === "view"}
                         />
                       </td>
@@ -687,6 +688,7 @@ export default function ProdutosLoteIsland() {
                             handleProdutoChange(produto.id, "destino", titleCaseWithExceptions(e.target.value))
                           }
                           placeholder="Ex: Disney, Porto de Galinhas"
+                          style={{ minWidth: 320 }}
                           disabled={permissao === "view"}
                         />
                       </td>

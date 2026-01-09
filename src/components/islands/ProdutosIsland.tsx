@@ -1010,7 +1010,7 @@ export default function ProdutosIsland() {
                   )}
               </div>
               )}
-              <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
+              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
                 <label className="form-label">Nome do produto *</label>
                 <input
                   className="form-input"
@@ -1037,7 +1037,7 @@ export default function ProdutosIsland() {
                   ))}
                 </datalist>
               </div>
-              <div className="form-group" style={{ flex: "1 1 260px", minWidth: 220 }}>
+              <div className="form-group" style={{ flex: "1 1 320px", minWidth: 260 }}>
                 <label className="form-label">Destino *</label>
                 <input
                   className="form-input"
