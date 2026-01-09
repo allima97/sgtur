@@ -62,7 +62,7 @@ const initialForm = {
   cep: "",
   rg: "",
   genero: "",
-  nacionalidade: "",
+  nacionalidade: "Brasileira",
   tags: "",
   tipo_cliente: "passageiro",
   company_id: "",
@@ -103,6 +103,7 @@ export default function ClientesIsland() {
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
   const [mostrarFormAcomp, setMostrarFormAcomp] = useState(false);
+  const [abaFormCliente, setAbaFormCliente] = useState<"dados" | "acompanhantes">("dados");
   const [msg, setMsg] = useState<string | null>(null);
   const [mostrarFormCliente, setMostrarFormCliente] = useState(false);
   const [historicoVendas, setHistoricoVendas] = useState<
@@ -327,6 +328,8 @@ export default function ClientesIsland() {
     setAcompanhantes([]);
     setAcompErro(null);
     setAcompEditId(null);
+    setAbaFormCliente("dados");
+    setMostrarFormAcomp(false);
     setMostrarFormCliente(false);
     setMsg(null);
   }
@@ -335,6 +338,8 @@ export default function ClientesIsland() {
     setMostrarFormCliente(false);
     setForm(initialForm);
     setEditId(null);
+    setAbaFormCliente("dados");
+    resetAcompForm(true);
     setMsg(null);
   }
 
@@ -746,6 +751,8 @@ export default function ClientesIsland() {
       ativo: c.ativo,
       active: c.active,
     });
+    setAbaFormCliente("dados");
+    resetAcompForm(true);
     carregarAcompanhantes(c.id);
     setMostrarFormCliente(true);
   }
@@ -908,18 +915,25 @@ export default function ClientesIsland() {
   }
 
   async function salvarAcompanhante() {
-    if (!historicoCliente) {
+    const clienteId = historicoCliente?.id || editId;
+    const companyIdSelecionado =
+      (historicoCliente as any)?.company_id ||
+      form.company_id?.trim() ||
+      clientes.find((c) => c.id === editId)?.company_id ||
+      companyId ||
+      null;
+
+    if (!clienteId) {
       setAcompErro("Selecione um cliente antes de salvar acompanhante.");
       return;
     }
-    const companyId = (historicoCliente as any).company_id || null;
-    if (!companyId) {
+    if (!companyIdSelecionado) {
       setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
       return;
     }
     const payload: any = {
-      cliente_id: historicoCliente.id,
-      company_id: companyId,
+      cliente_id: clienteId,
+      company_id: companyIdSelecionado,
       nome_completo: acompForm.nome_completo.trim(),
       cpf: acompForm.cpf?.trim() || null,
       telefone: acompForm.telefone?.trim() || null,
@@ -942,7 +956,7 @@ export default function ClientesIsland() {
           .from("cliente_acompanhantes")
           .update(payload)
           .eq("id", acompEditId)
-          .eq("cliente_id", historicoCliente.id);
+          .eq("cliente_id", clienteId);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -951,7 +965,7 @@ export default function ClientesIsland() {
         if (error) throw error;
       }
       resetAcompForm(true);
-      await carregarAcompanhantes(historicoCliente.id);
+      await carregarAcompanhantes(clienteId);
     } catch (e) {
       console.error(e);
       setAcompErro("Erro ao salvar acompanhante.");
@@ -961,7 +975,8 @@ export default function ClientesIsland() {
   }
 
   async function excluirAcompanhante(id: string) {
-    if (!podeExcluir || !historicoCliente) return;
+    const clienteId = historicoCliente?.id || editId;
+    if (!podeExcluir || !clienteId) return;
     if (!window.confirm("Remover acompanhante?")) return;
     try {
       setAcompExcluindo(id);
@@ -970,10 +985,10 @@ export default function ClientesIsland() {
         .from("cliente_acompanhantes")
         .delete()
         .eq("id", id)
-        .eq("cliente_id", historicoCliente.id);
+        .eq("cliente_id", clienteId);
       if (error) throw error;
       if (acompEditId === id) resetAcompForm(true);
-      await carregarAcompanhantes(historicoCliente.id);
+      await carregarAcompanhantes(clienteId);
     } catch (e) {
       console.error(e);
       setAcompErro("Erro ao remover acompanhante.");
@@ -1001,6 +1016,179 @@ export default function ClientesIsland() {
   // PERMISSÃO APENAS PARA VER (não mostra form)
   // =====================================
   const modoSomenteLeitura = !podeCriar && !podeEditar;
+  const acompanhantesCard = (
+    <div className="card-base card-blue mb-2">
+      <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
+      {acompErro && (
+        <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
+      )}
+      <div className="table-container overflow-x-auto">
+        <table className="table-default table-header-blue min-w-[720px]">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Telefone</th>
+              <th>Parentesco</th>
+              <th>Ativo</th>
+              {(podeEditar || podeExcluir) && (
+                <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {acompLoading && (
+              <tr>
+                <td colSpan={6}>Carregando acompanhantes...</td>
+              </tr>
+            )}
+            {!acompLoading && acompanhantes.length === 0 && (
+              <tr>
+                <td colSpan={6}>Nenhum acompanhante cadastrado.</td>
+              </tr>
+            )}
+            {!acompLoading &&
+              acompanhantes.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.nome_completo}</td>
+                  <td>{a.cpf || "-"}</td>
+                  <td>{a.telefone || "-"}</td>
+                  <td>{a.grau_parentesco || "-"}</td>
+                  <td>{a.ativo ? "Sim" : "Não"}</td>
+                  {(podeEditar || podeExcluir) && (
+                    <td className="th-actions" style={{ textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }}>
+                      {podeEditar && (
+                        <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
+                          ✏️
+                        </button>
+                      )}
+                      {podeExcluir && (
+                        <button
+                          className="btn-icon btn-danger"
+                          type="button"
+                          onClick={() => excluirAcompanhante(a.id)}
+                          disabled={acompExcluindo === a.id}
+                          title="Excluir"
+                        >
+                          {acompExcluindo === a.id ? "..." : "🗑️"}
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+
+      {podeCriar && (
+        <div className="card-base" style={{ marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>
+            {acompEditId ? "Editar acompanhante" : "Adicionar acompanhante"}
+          </div>
+          {!mostrarFormAcomp && !acompEditId && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                resetAcompForm();
+                setMostrarFormAcomp(true);
+              }}
+            >
+              Adicionar acompanhante
+            </button>
+          )}
+          {(mostrarFormAcomp || acompEditId) && (
+            <>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Nome completo</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.nome_completo}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">CPF</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.cpf}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Telefone</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.telefone}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Parentesco</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.grau_parentesco}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
+                    placeholder="Ex: Esposa, Filho"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">RG</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.rg}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data nascimento</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={acompForm.data_nascimento}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observações</label>
+                  <input
+                    className="form-input"
+                    value={acompForm.observacoes}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group" style={{ alignSelf: "flex-end" }}>
+                  <label className="form-label">Ativo</label>
+                  <input
+                    type="checkbox"
+                    checked={acompForm.ativo}
+                    onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
+                  {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar"}
+                </button>
+                <button
+                  className="btn btn-light"
+                  type="button"
+                  onClick={() => resetAcompForm(true)}
+                  disabled={acompSalvando}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   // =====================================
   // UI
@@ -1012,8 +1200,27 @@ export default function ClientesIsland() {
       {/* FORMULÁRIO */}
       {!modoSomenteLeitura && mostrarFormCliente && (
         <div className="card-base card-blue mb-3">
+          <h3>{editId ? "Editar cliente" : "Novo cliente"}</h3>
+          {editId && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={`btn ${abaFormCliente === "dados" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaFormCliente("dados")}
+              >
+                Dados do cliente
+              </button>
+              <button
+                type="button"
+                className={`btn ${abaFormCliente === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaFormCliente("acompanhantes")}
+              >
+                Acompanhantes
+              </button>
+            </div>
+          )}
+          {(!editId || abaFormCliente === "dados") && (
           <form onSubmit={salvar}>
-            <h3>{editId ? "Editar cliente" : "Novo cliente"}</h3>
 
             <div
               className="form-row"
@@ -1237,6 +1444,12 @@ export default function ClientesIsland() {
               </button>
             </div>
           </form>
+          )}
+          {editId && abaFormCliente === "acompanhantes" && (
+            <div style={{ marginTop: 12 }}>
+              {acompanhantesCard}
+            </div>
+          )}
         </div>
       )}
 
@@ -1275,6 +1488,10 @@ export default function ClientesIsland() {
                 onClick={() => {
                   setForm(initialForm);
                   setEditId(null);
+                  setAcompanhantes([]);
+                  setAcompErro(null);
+                  resetAcompForm(true);
+                  setAbaFormCliente("dados");
                   setMsg(null);
                   setMostrarFormCliente(true);
                 }}
@@ -1416,175 +1633,7 @@ export default function ClientesIsland() {
 
             {!loadingHistorico && (
               <>
-                <div className="card-base card-blue mb-2">
-                  <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
-                  {acompErro && (
-                    <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
-                  )}
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue min-w-[720px]">
-                      <thead>
-                        <tr>
-                          <th>Nome</th>
-                          <th>CPF</th>
-                          <th>Telefone</th>
-                          <th>Parentesco</th>
-                          <th>Ativo</th>
-                          {(podeEditar || podeExcluir) && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {acompLoading && (
-                          <tr>
-                            <td colSpan={6}>Carregando acompanhantes...</td>
-                          </tr>
-                        )}
-                        {!acompLoading && acompanhantes.length === 0 && (
-                          <tr>
-                            <td colSpan={6}>Nenhum acompanhante cadastrado.</td>
-                          </tr>
-                        )}
-                        {!acompLoading &&
-                          acompanhantes.map((a) => (
-                            <tr key={a.id}>
-                              <td>{a.nome_completo}</td>
-                              <td>{a.cpf || "-"}</td>
-                              <td>{a.telefone || "-"}</td>
-                              <td>{a.grau_parentesco || "-"}</td>
-                              <td>{a.ativo ? "Sim" : "Não"}</td>
-                              {(podeEditar || podeExcluir) && (
-                                <td className="th-actions" style={{ textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }}>
-                                  {podeEditar && (
-                                    <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
-                                      ✏️
-                                    </button>
-                                  )}
-                                  {podeExcluir && (
-                                    <button
-                                      className="btn-icon btn-danger"
-                                      type="button"
-                                      onClick={() => excluirAcompanhante(a.id)}
-                                      disabled={acompExcluindo === a.id}
-                                      title="Excluir"
-                                    >
-                                      {acompExcluindo === a.id ? "..." : "🗑️"}
-                                    </button>
-                                  )}
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {podeCriar && (
-                    <div className="card-base" style={{ marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
-                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                        {acompEditId ? "Editar acompanhante" : "Adicionar acompanhante"}
-                      </div>
-                      {!mostrarFormAcomp && !acompEditId && (
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => {
-                            resetAcompForm();
-                            setMostrarFormAcomp(true);
-                          }}
-                        >
-                          Adicionar acompanhante
-                        </button>
-                      )}
-                      {(mostrarFormAcomp || acompEditId) && (
-                        <>
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label className="form-label">Nome completo</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.nome_completo}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">CPF</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.cpf}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Telefone</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.telefone}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Parentesco</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.grau_parentesco}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
-                                placeholder="Ex: Esposa, Filho"
-                              />
-                            </div>
-                          </div>
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label className="form-label">RG</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.rg}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Data nascimento</label>
-                              <input
-                                type="date"
-                                className="form-input"
-                                value={acompForm.data_nascimento}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Observações</label>
-                              <input
-                                className="form-input"
-                                value={acompForm.observacoes}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))}
-                              />
-                            </div>
-                            <div className="form-group" style={{ alignSelf: "flex-end" }}>
-                              <label className="form-label">Ativo</label>
-                              <input
-                                type="checkbox"
-                                checked={acompForm.ativo}
-                                onChange={(e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))}
-                              />
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                            <button className="btn btn-primary" type="button" onClick={salvarAcompanhante} disabled={acompSalvando}>
-                              {acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar"}
-                            </button>
-                            <button
-                              className="btn btn-light"
-                              type="button"
-                              onClick={() => resetAcompForm(true)}
-                              disabled={acompSalvando}
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {acompanhantesCard}
 
                 <div className="card-base mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>

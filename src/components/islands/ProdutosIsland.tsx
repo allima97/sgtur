@@ -8,6 +8,20 @@ function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function dedupeSugestoes(valores: string[]) {
+  const vistos = new Set<string>();
+  const lista: string[] = [];
+  valores.forEach((valor) => {
+    const nome = (valor || "").trim();
+    if (!nome) return;
+    const chave = normalizeText(nome);
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    lista.push(nome);
+  });
+  return lista;
+}
+
 type Pais = { id: string; nome: string };
 type Subdivisao = { id: string; nome: string; pais_id: string };
 type Cidade = { id: string; nome: string; subdivisao_id: string };
@@ -147,6 +161,9 @@ export default function ProdutosIsland() {
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [tipos, setTipos] = useState<TipoProduto[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [destinosCadastro, setDestinosCadastro] = useState<string[]>([]);
+  const [atracoesCadastro, setAtracoesCadastro] = useState<string[]>([]);
+  const [melhoresEpocasCadastro, setMelhoresEpocasCadastro] = useState<string[]>([]);
   const [form, setForm] = useState<FormState>(initialForm);
   const [busca, setBusca] = useState("");
   const [cidadeBusca, setCidadeBusca] = useState("");
@@ -178,6 +195,8 @@ export default function ProdutosIsland() {
         { data: subdivisaoData, error: subErr },
         tipoResp,
         produtosResp,
+        { data: destinosData, error: destinosErr },
+        { data: destinosProdutosData, error: destinosProdutosErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
         supabase.from("subdivisoes").select("id, nome, pais_id").order("nome"),
@@ -202,6 +221,16 @@ export default function ProdutosIsland() {
           )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
+        supabase
+          .from("destinos")
+          .select("id, nome, atracao_principal, melhor_epoca")
+          .order("nome", { ascending: true }),
+        supabase
+          .from("produtos")
+          .select("destino, atracao_principal, melhor_epoca")
+          .not("destino", "is", null)
+          .order("destino", { ascending: true })
+          .limit(500),
       ]);
 
       if (paisErr) {
@@ -289,6 +318,54 @@ export default function ProdutosIsland() {
           }
         } else {
           setCidades([]);
+        }
+      }
+
+      const destinosNomes: string[] = [];
+      const atracoesNomes: string[] = [];
+      const melhoresEpocasNomes: string[] = [];
+      if (!destinosErr && destinosData) {
+        destinosData.forEach((destino: any) => {
+          const nome = (destino?.nome || "").trim();
+          if (nome) destinosNomes.push(nome);
+          const atracao = (destino?.atracao_principal || "").trim();
+          if (atracao) atracoesNomes.push(atracao);
+          const melhorEpoca = (destino?.melhor_epoca || "").trim();
+          if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
+        });
+      }
+      if (!destinosProdutosErr && destinosProdutosData) {
+        destinosProdutosData.forEach((destino: any) => {
+          const nome = (destino?.destino || "").trim();
+          if (nome) destinosNomes.push(nome);
+          const atracao = (destino?.atracao_principal || "").trim();
+          if (atracao) atracoesNomes.push(atracao);
+          const melhorEpoca = (destino?.melhor_epoca || "").trim();
+          if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
+        });
+      }
+
+      if (destinosNomes.length) {
+        setDestinosCadastro(destinosNomes);
+      } else {
+        setDestinosCadastro([]);
+      }
+      if (atracoesNomes.length) {
+        setAtracoesCadastro(atracoesNomes);
+      } else {
+        setAtracoesCadastro([]);
+      }
+      if (melhoresEpocasNomes.length) {
+        setMelhoresEpocasCadastro(melhoresEpocasNomes);
+      } else {
+        setMelhoresEpocasCadastro([]);
+      }
+
+      if (destinosErr && destinosProdutosErr) {
+        erros.push("destinos");
+        if (destinosErr.message) detalhesErro.push(`destinos: ${destinosErr.message}`);
+        if (destinosProdutosErr.message) {
+          detalhesErro.push(`produtos.destino: ${destinosProdutosErr.message}`);
         }
       }
     } catch (e: any) {
@@ -429,6 +506,12 @@ export default function ProdutosIsland() {
     );
   }, [busca, produtosEnriquecidos]);
 
+  const destinosSugestoes = useMemo(() => dedupeSugestoes(destinosCadastro), [destinosCadastro]);
+  const atracoesSugestoes = useMemo(() => dedupeSugestoes(atracoesCadastro), [atracoesCadastro]);
+  const melhoresEpocasSugestoes = useMemo(
+    () => dedupeSugestoes(melhoresEpocasCadastro),
+    [melhoresEpocasCadastro]
+  );
 
   const tipoSelecionado = useMemo(
     () => (form.tipo_produto ? tipos.find((t) => t.id === form.tipo_produto) || null : null),
@@ -955,6 +1038,7 @@ export default function ProdutosIsland() {
                 <label className="form-label">Destino *</label>
                 <input
                   className="form-input"
+                  list="destinos-list"
                   value={form.destino}
                   onChange={(e) => handleChange("destino", e.target.value)}
                   onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
@@ -962,6 +1046,11 @@ export default function ProdutosIsland() {
                   disabled={permissao === "view" || isGlobalMode}
                   title="Cidade escolhida será aplicada quando o destino estiver vazio."
                 />
+                <datalist id="destinos-list">
+                  {destinosSugestoes.map((nome) => (
+                    <option key={nome} value={nome} />
+                  ))}
+                </datalist>
               </div>
             </div>
             {!isGlobalMode && form.todas_as_cidades && (
@@ -991,6 +1080,7 @@ export default function ProdutosIsland() {
 
                     className="form-input"
 
+                    list="atracoes-list"
                     value={form.atracao_principal}
 
                     onChange={(e) => handleChange("atracao_principal", e.target.value)}
@@ -1000,6 +1090,11 @@ export default function ProdutosIsland() {
                     disabled={permissao === "view"}
 
                   />
+                  <datalist id="atracoes-list">
+                    {atracoesSugestoes.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
 
                 </div>
 
@@ -1011,6 +1106,7 @@ export default function ProdutosIsland() {
 
                     className="form-input"
 
+                    list="melhor-epoca-list"
                     value={form.melhor_epoca}
 
                     onChange={(e) => handleChange("melhor_epoca", e.target.value)}
@@ -1020,6 +1116,11 @@ export default function ProdutosIsland() {
                     disabled={permissao === "view"}
 
                   />
+                  <datalist id="melhor-epoca-list">
+                    {melhoresEpocasSugestoes.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
 
                 </div>
 

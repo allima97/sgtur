@@ -7,6 +7,7 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
 type Viagem = {
   id: string;
+  venda_id?: string | null;
   data_inicio: string | null;
   data_fim: string | null;
   status: string | null;
@@ -27,6 +28,7 @@ type Viagem = {
     tipo_produtos?: { id: string; nome?: string | null; tipo?: string | null } | null;
   } | null;
 };
+type ViagemExibicao = Viagem & { recibos: NonNullable<Viagem["recibo"]>[] };
 
 const STATUS_OPCOES = [
   { value: "", label: "Todas" },
@@ -61,6 +63,36 @@ function obterStatusPorPeriodo(inicio?: string | null, fim?: string | null): str
 function formatarMoeda(valor?: number | null) {
   if (valor == null || Number.isNaN(valor)) return "-";
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function obterMinData(datas: Array<string | null | undefined>) {
+  let minTs: number | null = null;
+  let minStr: string | null = null;
+  datas.forEach((data) => {
+    if (!data) return;
+    const ts = Date.parse(data);
+    if (Number.isNaN(ts)) return;
+    if (minTs === null || ts < minTs) {
+      minTs = ts;
+      minStr = data;
+    }
+  });
+  return minStr;
+}
+
+function obterMaxData(datas: Array<string | null | undefined>) {
+  let maxTs: number | null = null;
+  let maxStr: string | null = null;
+  datas.forEach((data) => {
+    if (!data) return;
+    const ts = Date.parse(data);
+    if (Number.isNaN(ts)) return;
+    if (maxTs === null || ts > maxTs) {
+      maxTs = ts;
+      maxStr = data;
+    }
+  });
+  return maxStr;
 }
 
 const initialCadastroForm = {
@@ -269,7 +301,7 @@ export default function ViagensListaIsland() {
       let query = supabase
         .from("viagens")
         .select(
-          "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
+          "id, venda_id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
         )
         .order("data_inicio", { ascending: true });
 
@@ -368,15 +400,22 @@ export default function ViagensListaIsland() {
     }
   }
 
-  async function excluirViagem(v: Viagem) {
+  async function excluirViagem(v: ViagemExibicao) {
     if (!podeExcluir) return;
-    const confirmar = window.confirm("Tem certeza que deseja excluir esta viagem?");
+    const possuiMultiplos = (v.recibos || []).length > 1;
+    const mensagemConfirmacao = possuiMultiplos
+      ? "Tem certeza que deseja excluir esta viagem e seus itens vinculados?"
+      : "Tem certeza que deseja excluir esta viagem?";
+    const confirmar = window.confirm(mensagemConfirmacao);
     if (!confirmar) return;
     try {
       setDeletandoViagemId(v.id);
       setErro(null);
       setSucesso(null);
-      const { error } = await supabase.from("viagens").delete().eq("id", v.id);
+      const deleteQuery = supabase.from("viagens").delete();
+      const { error } = v.venda_id
+        ? await deleteQuery.eq("venda_id", v.venda_id)
+        : await deleteQuery.eq("id", v.id);
       if (error) throw error;
       setSucesso("Viagem excluída.");
       await buscar();
@@ -394,8 +433,8 @@ export default function ViagensListaIsland() {
 
   function obterStatusExibicao(viagem: Viagem) {
     const periodoStatus = obterStatusPorPeriodo(
-      viagem.recibo?.data_inicio || viagem.data_inicio,
-      viagem.recibo?.data_fim || viagem.data_fim,
+      viagem.data_inicio,
+      viagem.data_fim,
     );
     if (periodoStatus) {
       return STATUS_LABELS[periodoStatus] || periodoStatus;
@@ -406,8 +445,47 @@ export default function ViagensListaIsland() {
     return "-";
   }
 
+  const viagensAgrupadas = useMemo<ViagemExibicao[]>(() => {
+    const grupos = new Map<string, { base: Viagem; recibos: NonNullable<Viagem["recibo"]>[] }>();
+
+    viagens.forEach((viagem) => {
+      const chave = viagem.venda_id || viagem.id;
+      const recibosAtual = viagem.recibo ? [viagem.recibo] : [];
+      const existente = grupos.get(chave);
+      if (!existente) {
+        const dataInicio = obterMinData([viagem.data_inicio, viagem.recibo?.data_inicio]);
+        const dataFim = obterMaxData([viagem.data_fim, viagem.recibo?.data_fim]);
+        grupos.set(chave, {
+          base: {
+            ...viagem,
+            data_inicio: dataInicio || viagem.data_inicio,
+            data_fim: dataFim || viagem.data_fim,
+          },
+          recibos: [...recibosAtual],
+        });
+        return;
+      }
+
+      existente.recibos.push(...recibosAtual);
+      const datasInicio = [
+        existente.base.data_inicio,
+        viagem.data_inicio,
+        viagem.recibo?.data_inicio,
+      ];
+      const datasFim = [
+        existente.base.data_fim,
+        viagem.data_fim,
+        viagem.recibo?.data_fim,
+      ];
+      existente.base.data_inicio = obterMinData(datasInicio) || existente.base.data_inicio;
+      existente.base.data_fim = obterMaxData(datasFim) || existente.base.data_fim;
+    });
+
+    return Array.from(grupos.values()).map(({ base, recibos }) => ({ ...base, recibos }));
+  }, [viagens]);
+
   const proximasViagens = useMemo(() => {
-    return [...viagens].sort((a, b) => {
+    return [...viagensAgrupadas].sort((a, b) => {
       const da = a.data_inicio || "";
       const db = b.data_inicio || "";
       if (da === db) return 0;
@@ -415,7 +493,7 @@ export default function ViagensListaIsland() {
       if (!db) return -1;
       return da < db ? -1 : 1;
     });
-  }, [viagens]);
+  }, [viagensAgrupadas]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
   const totalColunasTabela = 7;
 
@@ -647,12 +725,16 @@ export default function ViagensListaIsland() {
               )}
               {proximasViagens.map((v) => {
                 const statusLabel = obterStatusExibicao(v);
+                const recibos = v.recibos || [];
                 const produtoLabel =
-                  v.recibo?.tipo_produtos?.nome ||
-                  v.recibo?.tipo_produtos?.tipo ||
-                  v.recibo?.produto_id ||
-                  "-";
-                const valorLabel = formatarMoeda(v.recibo?.valor_total);
+                  recibos.length > 1
+                    ? `Múltiplos (${recibos.length})`
+                    : recibos[0]?.tipo_produtos?.nome ||
+                      recibos[0]?.tipo_produtos?.tipo ||
+                      recibos[0]?.produto_id ||
+                      "-";
+                const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
+                const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
                 const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
                 return (
                   <tr key={v.id}>
