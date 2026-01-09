@@ -36,6 +36,7 @@ const MAPA_MODULOS: Record<string, string> = {
   Cidades: "cadastros_cidades",
   Destinos: "cadastros_destinos",
   Produtos: "cadastros_produtos",
+  ProdutosLote: "cadastros_produtos",
   Fornecedores: "cadastros_fornecedores",
 
   Relatorios: "relatorios",
@@ -373,6 +374,7 @@ export default function MenuIsland({ activePage }) {
     },
     { name: "Cidades", href: "/cadastros/cidades", active: "cidades", icon: "🏙️", label: "Cidades" },
     { name: "Produtos", href: "/cadastros/produtos", active: "produtos", icon: "🎫", label: "Produtos" },
+    { name: "ProdutosLote", href: "/cadastros/lote", active: "lote", icon: "📦", label: "Lote" },
     {
       name: "Fornecedores",
       href: "/cadastros/fornecedores",

@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ProdutosLoteIsland from "../../components/islands/ProdutosLoteIsland.tsx";
+
+const activePage = "lote";
+---
+
+<DashboardLayout title="Cadastro de Produtos em Lote" {activePage}>
+  <HeaderPage
+    title="Cadastro de Produtos em Lote"
+    subtitle="Defina os dados comuns e adicione varios produtos para salvar de uma vez."
+    color="blue"
+  />
+
+  <ProdutosLoteIsland client:load />
+</DashboardLayout>

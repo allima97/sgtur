@@ -182,6 +182,7 @@ export default function ProdutosIsland() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
   const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
+  const [mostrarInfo, setMostrarInfo] = useState(false);
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -657,6 +658,7 @@ export default function ProdutosIsland() {
     setMostrarSugestoes(false);
     setModoGlobal(null);
     setTarifas([]);
+    setMostrarInfo(false);
   }
 
   function iniciarEdicao(produto: Produto & { cidade_nome?: string }) {
@@ -682,6 +684,7 @@ export default function ProdutosIsland() {
       todas_as_cidades: produto.todas_as_cidades ?? false,
     });
     setTarifas([]);
+    setMostrarInfo(!!produto.informacoes_importantes);
     setCidadeBusca(
       produto.todas_as_cidades ? "" : formatarCidadeNome(produto.cidade_id) || cidade?.nome || ""
     );
@@ -1175,23 +1178,28 @@ export default function ProdutosIsland() {
               </div>
             )}
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Informacoes importantes</label>
-              <textarea
-
-                className="form-input"
-
-                rows={3}
-
-                value={form.informacoes_importantes}
-
-                onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
-
-                placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-
-                disabled={permissao === "view"}
-
-              />
-
+              <div className="flex items-center justify-between">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  Informacoes importantes
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-light"
+                  onClick={() => setMostrarInfo((prev) => !prev)}
+                >
+                  {mostrarInfo ? "-" : "+"}
+                </button>
+              </div>
+              {mostrarInfo && (
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={form.informacoes_importantes}
+                  onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
+                  placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
+                  disabled={permissao === "view"}
+                />
+              )}
             </div>
 
             <div className="form-group" style={{ marginTop: 12 }}>
