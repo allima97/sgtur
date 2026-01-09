@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import CircuitosIsland from "../../components/islands/CircuitosIsland.tsx";
+
+const activePage = "circuitos";
+---
+
+<DashboardLayout title="Cadastro de Circuitos" {activePage}>
+  <HeaderPage
+    title="Cadastro de Circuitos"
+    subtitle="Monte roteiros dia a dia e datas de inicio para uso em orcamentos e vendas."
+    color="blue"
+  />
+
+  <CircuitosIsland client:load />
+</DashboardLayout>
