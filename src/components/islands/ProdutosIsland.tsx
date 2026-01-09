@@ -46,7 +46,7 @@ const nivelPrecosOptions = [
   { value: "Super Premium", label: "Super Premium" },
 ];
 
-const HOSPITALITY_KEYWORDS = new Set(["hotel", "pousada", "resort"]);
+const HOSPITALITY_KEYWORDS = new Set(["hotel", "pousada", "resort", "flat"]);
 
 function nivelPrecoLabel(value?: string | null) {
   if (!value) return "";
