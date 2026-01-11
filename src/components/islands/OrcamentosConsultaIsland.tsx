@@ -19,6 +19,21 @@ type Orcamento = {
   clientes?: { nome: string; whatsapp?: string | null } | null;
   destinos?: { nome: string } | null;
   produtos?: { nome: string; tipo?: string } | null;
+  itens?: OrcamentoItem[];
+};
+
+type OrcamentoItem = {
+  id: string;
+  orcamento_id?: string | null;
+  cidade_id?: string | null;
+  tipo_produto_id?: string | null;
+  produto_id?: string | null;
+  valor: number | null;
+  periodo_inicio: string | null;
+  periodo_fim: string | null;
+  cidade?: { nome: string; subdivisao_nome?: string | null } | null;
+  tipo_produto?: { nome: string | null; tipo?: string | null } | null;
+  produto?: { nome: string | null } | null;
 };
 
 type InteracaoOrcamento = {
@@ -49,6 +64,243 @@ function gerarNumeroVenda(data: Date) {
   const min = String(data.getMinutes()).padStart(2, "0");
   const rand = Math.floor(Math.random() * 900 + 100);
   return `VND-${y}${m}${d}-${h}${min}-${rand}`;
+}
+
+function formatarCidadeLabel(cidade?: { nome: string; subdivisao_nome?: string | null } | null) {
+  if (!cidade?.nome) return "";
+  return cidade.nome;
+}
+
+function stripEstadoCidade(valor: string) {
+  if (!valor) return "";
+  const partes = valor.split(" - ");
+  return (partes[0] || valor).trim();
+}
+
+function normalizarTexto(valor: string) {
+  return (valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function formatarPeriodo(inicio?: string | null, fim?: string | null) {
+  if (!inicio && !fim) return "";
+  if (inicio && fim && fim !== inicio) return `${inicio} a ${fim}`;
+  return inicio || fim || "";
+}
+
+function formatarDataBR(dataIso?: string | null) {
+  if (!dataIso) return "";
+  const [year, month, day] = dataIso.split("-");
+  if (!year || !month || !day) return dataIso;
+  return `${day}/${month}/${year}`;
+}
+
+function formatarItemResumo(item: OrcamentoItem) {
+  const cidade = formatarCidadeLabel(item.cidade);
+  const tipo = item.tipo_produto?.nome || item.tipo_produto?.tipo || "";
+  const produto = item.produto?.nome || "";
+  const periodo = formatarPeriodo(item.periodo_inicio, item.periodo_fim);
+  const partes = [cidade, tipo, produto].filter(Boolean).join(" | ");
+  const detalhes = [
+    periodo,
+    item.valor != null
+      ? Number(item.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  return detalhes ? `${partes} • ${detalhes}` : partes;
+}
+
+function extrairItensNotas(notas?: string | null) {
+  if (!notas) return { cidades: [] as string[], produtos: [] as string[] };
+  const linhas = notas
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!linhas.length) return { cidades: [], produtos: [] };
+  const indice = linhas.findIndex((l) => l.toLowerCase().startsWith("itens do orçamento"));
+  const linhasItens = indice >= 0 ? linhas.slice(indice + 1) : linhas;
+  const cidades: string[] = [];
+  const produtos: string[] = [];
+  for (const linhaOriginal of linhasItens) {
+    let linha = linhaOriginal;
+    const prefixo = linha.match(/^\d+\.\s*(.*)$/);
+    if (prefixo?.[1]) {
+      linha = prefixo[1].trim();
+    }
+    if (!linha.includes("|")) continue;
+    const partes = linha
+      .split("|")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (partes.length >= 3) {
+      if (partes[0]) cidades.push(stripEstadoCidade(partes[0]));
+      if (partes[2]) produtos.push(partes[2]);
+    } else if (partes.length >= 2) {
+      if (partes[0]) cidades.push(stripEstadoCidade(partes[0]));
+      if (partes[1]) produtos.push(partes[1]);
+    }
+  }
+  return {
+    cidades: Array.from(new Set(cidades)),
+    produtos: Array.from(new Set(produtos)),
+  };
+}
+
+function parseValorMonetario(valor?: string | null) {
+  if (!valor) return null;
+  const limpo = valor.replace(/[^0-9,.-]/g, "");
+  if (!limpo) return null;
+  let normalizado = limpo;
+  if (limpo.includes(",") && limpo.includes(".")) {
+    normalizado = limpo.replace(/\./g, "").replace(",", ".");
+  } else if (limpo.includes(",")) {
+    normalizado = limpo.replace(",", ".");
+  }
+  const num = Number(normalizado);
+  return Number.isNaN(num) ? null : num;
+}
+
+function parseCidadeDetalhada(valor: string) {
+  const partes = valor.split(" - ").map((p) => p.trim()).filter(Boolean);
+  if (!partes.length) return { nome: "", subdivisao: null as string | null };
+  return {
+    nome: partes[0],
+    subdivisao: partes.slice(1).join(" - ") || null,
+  };
+}
+
+function parseItensNotasDetalhados(notas?: string | null) {
+  if (!notas) return [];
+  const linhas = notas
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!linhas.length) return [];
+  const indice = linhas.findIndex((l) => l.toLowerCase().startsWith("itens do orçamento"));
+  const linhasItens = indice >= 0 ? linhas.slice(indice + 1) : linhas;
+  const itens: {
+    cidadeNome: string;
+    cidadeEstado?: string | null;
+    tipoNome: string;
+    produtoNome: string;
+    periodoInicio: string | null;
+    periodoFim: string | null;
+    valor: number | null;
+  }[] = [];
+
+  for (const linhaOriginal of linhasItens) {
+    let linha = linhaOriginal;
+    const prefixo = linha.match(/^\d+\.\s*(.*)$/);
+    if (prefixo?.[1]) linha = prefixo[1].trim();
+    if (!linha.includes("|")) continue;
+
+    const partes = linha.split("|").map((p) => p.trim()).filter(Boolean);
+    if (partes.length < 3) continue;
+
+    const cidadePart = partes[0] || "";
+    const tipoPart = partes[1] || "";
+    const produtoPart = partes[2] || "";
+    const periodoPart = partes[3] || "";
+    const valorPart = partes[4] || "";
+
+    const datas =
+      (periodoPart.match(/\d{4}-\d{2}-\d{2}/g) ||
+        linha.match(/\d{4}-\d{2}-\d{2}/g) ||
+        []) as string[];
+    const periodoInicio = datas[0] || null;
+    const periodoFim = datas[1] || datas[0] || null;
+
+    const valor = parseValorMonetario(valorPart) ?? parseValorMonetario(linha);
+    const cidadeInfo = parseCidadeDetalhada(cidadePart);
+
+    itens.push({
+      cidadeNome: cidadeInfo.nome,
+      cidadeEstado: cidadeInfo.subdivisao,
+      tipoNome: tipoPart,
+      produtoNome: produtoPart,
+      periodoInicio,
+      periodoFim,
+      valor,
+    });
+  }
+
+  return itens;
+}
+
+function listarCidadesItens(orcamento: Orcamento) {
+  const cidades =
+    orcamento.itens
+      ?.map((item) => stripEstadoCidade(formatarCidadeLabel(item.cidade)))
+      .filter(Boolean) || [];
+  const unicas = Array.from(new Set(cidades));
+  if (unicas.length) return unicas;
+  return extrairItensNotas(orcamento.notas).cidades.map(stripEstadoCidade);
+}
+
+function listarProdutosItens(orcamento: Orcamento) {
+  const produtos =
+    orcamento.itens?.map((item) => item.produto?.nome || "").filter(Boolean) || [];
+  const unicos = Array.from(new Set(produtos));
+  if (unicos.length) return unicos;
+  const fallbackNotas = extrairItensNotas(orcamento.notas).produtos;
+  if (fallbackNotas.length) return fallbackNotas;
+  const fallback = orcamento.destinos?.nome || "";
+  return fallback ? [fallback] : [];
+}
+
+function podeConverterOrcamento(orcamento: Orcamento) {
+  const itensNotas = parseItensNotasDetalhados(orcamento.notas);
+  return Boolean(
+    orcamento.cliente_id &&
+      (orcamento.destino_id || (orcamento.itens || []).length > 0 || itensNotas.length > 0)
+  );
+}
+
+function normalizarItensConversao(orcamento: Orcamento): OrcamentoItem[] {
+  const itens = (orcamento.itens || []).map((item, index) => ({
+    ...item,
+    id: item.id || `item-${index}`,
+  }));
+  if (itens.length) return itens;
+  const itensNotas = parseItensNotasDetalhados(orcamento.notas);
+  if (itensNotas.length) {
+    return itensNotas.map((item, index) => ({
+      id: `nota-${orcamento.id}-${index + 1}`,
+      orcamento_id: orcamento.id,
+      cidade_id: null,
+      tipo_produto_id: null,
+      produto_id: null,
+      valor: item.valor ?? 0,
+      periodo_inicio: item.periodoInicio || orcamento.data_viagem || null,
+      periodo_fim: item.periodoFim || item.periodoInicio || orcamento.data_viagem || null,
+      cidade: item.cidadeNome
+        ? { nome: stripEstadoCidade(item.cidadeNome), subdivisao_nome: item.cidadeEstado || null }
+        : null,
+      tipo_produto: item.tipoNome ? { nome: item.tipoNome, tipo: null } : null,
+      produto: item.produtoNome ? { nome: item.produtoNome } : null,
+    }));
+  }
+  const fallbackProdutoId = orcamento.destino_id || null;
+  const fallbackTipoId = orcamento.produto_id || null;
+  if (!fallbackProdutoId && !fallbackTipoId) return [];
+  return [
+    {
+      id: `fallback-${orcamento.id}`,
+      orcamento_id: orcamento.id,
+      cidade_id: null,
+      tipo_produto_id: fallbackTipoId,
+      produto_id: fallbackProdutoId,
+      valor: orcamento.valor ?? 0,
+      periodo_inicio: orcamento.data_viagem ?? null,
+      periodo_fim: orcamento.data_viagem ?? null,
+      cidade: null,
+      tipo_produto: orcamento.produtos
+        ? { nome: orcamento.produtos.nome ?? null, tipo: orcamento.produtos.tipo ?? null }
+        : null,
+      produto: orcamento.destinos ? { nome: orcamento.destinos.nome ?? null } : null,
+    },
+  ];
 }
 
 type OrcamentosConsultaProps = {
@@ -96,8 +348,16 @@ export default function OrcamentosConsultaIsland({
   const [draggingStatus, setDraggingStatus] = useState<StatusOrcamento | null>(null);
   const [periodoIni, setPeriodoIni] = useState<string>("");
   const [periodoFim, setPeriodoFim] = useState<string>("");
-  const [valorMin, setValorMin] = useState<string>("");
-  const [valorMax, setValorMax] = useState<string>("");
+  const [importacaoAberta, setImportacaoAberta] = useState(false);
+  const [importacaoClienteId, setImportacaoClienteId] = useState<string>("");
+  const [erroImportacao, setErroImportacao] = useState<string | null>(null);
+  const [importacaoArquivos, setImportacaoArquivos] = useState<File[]>([]);
+  const [salvandoImportacao, setSalvandoImportacao] = useState(false);
+  const [conversaoAberta, setConversaoAberta] = useState<Orcamento | null>(null);
+  const [informarRecibos, setInformarRecibos] = useState(false);
+  const [recibosConversao, setRecibosConversao] = useState<Record<string, string>>({});
+  const [salvandoConversao, setSalvandoConversao] = useState(false);
+  const [erroConversao, setErroConversao] = useState<string | null>(null);
 
   // Histórico de interações
   const [historicoAberto, setHistoricoAberto] = useState<Orcamento | null>(null);
@@ -201,18 +461,53 @@ export default function OrcamentosConsultaIsland({
       if (periodoFim) {
         query = query.lte("data_orcamento", periodoFim);
       }
-      if (valorMin) {
-        query = query.gte("valor", parseFloat(valorMin));
-      }
-      if (valorMax) {
-        query = query.lte("valor", parseFloat(valorMax));
-      }
 
       const { data, error } = await query;
       if (error) throw error;
       const listaNova = (data || []) as Orcamento[];
-      setLista(listaNova);
       const ids = listaNova.map((o) => o.id).filter(Boolean);
+
+      let itensPorOrcamento = new Map<string, OrcamentoItem[]>();
+      if (ids.length) {
+        const { data: itensData, error: itensError } = await supabase
+          .from("orcamento_itens")
+          .select(
+            `
+              id,
+              orcamento_id,
+              cidade_id,
+              tipo_produto_id,
+              produto_id,
+              valor,
+              periodo_inicio,
+              periodo_fim,
+              cidade:cidades (nome, subdivisao_nome),
+              tipo_produto:tipo_produtos (nome, tipo),
+              produto:produtos (nome)
+            `
+          )
+          .in("orcamento_id", ids);
+
+        if (!itensError && itensData) {
+          itensPorOrcamento = itensData.reduce((map, item) => {
+            const orcamentoId = item.orcamento_id || "";
+            if (!orcamentoId) return map;
+            const lista = map.get(orcamentoId) || [];
+            lista.push(item as OrcamentoItem);
+            map.set(orcamentoId, lista);
+            return map;
+          }, new Map<string, OrcamentoItem[]>());
+        } else if (itensError) {
+          console.warn("Itens do orçamento não carregados:", itensError);
+        }
+      }
+
+      const listaComItens = listaNova.map((orcamento) => ({
+        ...orcamento,
+        itens: itensPorOrcamento.get(orcamento.id) || [],
+      }));
+
+      setLista(listaComItens);
       if (ids.length) {
         carregarUltimasInteracoes(ids);
       } else {
@@ -251,6 +546,10 @@ export default function OrcamentosConsultaIsland({
   const filtrados = useMemo(
     () => (somentePendentes ? lista.filter((o) => pendentesIds.has(o.id)) : lista),
     [lista, somentePendentes, pendentesIds]
+  );
+  const itensConversao = useMemo(
+    () => (conversaoAberta ? normalizarItensConversao(conversaoAberta) : []),
+    [conversaoAberta]
   );
 
   const porColuna = useMemo(() => {
@@ -329,8 +628,8 @@ export default function OrcamentosConsultaIsland({
     const header = [
       "id",
       "cliente",
-      "destino",
-      "produto",
+      "cidades",
+      "produtos",
       "status",
       "valor",
       "data_orcamento",
@@ -340,15 +639,20 @@ export default function OrcamentosConsultaIsland({
     const linhas = filtrados.map((o) => [
       o.id,
       o.clientes?.nome || "",
-      o.destinos?.nome || "",
-      o.produtos?.nome || "",
+      listarCidadesItens(o).join(" | "),
+      listarProdutosItens(o).join(" | "),
       o.status || "",
       o.valor ?? "",
       o.data_orcamento || "",
       o.data_viagem || "",
       o.numero_venda || "",
     ]);
-    const csv = [header.join(","), ...linhas.map((l) => l.join(","))].join("\n");
+    const safe = (value: string | number) =>
+      `"${String(value).replace(/"/g, "'")}"`;
+    const csv = [
+      header.map((h) => safe(h)).join(","),
+      ...linhas.map((l) => l.map((v) => safe(v)).join(",")),
+    ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -356,6 +660,61 @@ export default function OrcamentosConsultaIsland({
     a.download = "orcamentos.csv";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function abrirImportacaoCvc() {
+    setErroImportacao(null);
+    setImportacaoClienteId("");
+    setImportacaoArquivos([]);
+    setImportacaoAberta(true);
+  }
+
+  function fecharImportacaoCvc() {
+    setErroImportacao(null);
+    setImportacaoArquivos([]);
+    setImportacaoAberta(false);
+  }
+
+  async function confirmarImportacaoCvc() {
+    if (!importacaoClienteId) {
+      setErroImportacao("Selecione um cliente.");
+      return;
+    }
+    if (importacaoArquivos.length === 0) {
+      setErroImportacao("Selecione o PDF ou imagens para importar.");
+      return;
+    }
+    setSalvandoImportacao(true);
+    try {
+      const arquivosSerializados: Array<{ name: string; type: string; data: string }> = [];
+      for (const file of importacaoArquivos) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Falha ao ler arquivo."));
+          reader.readAsDataURL(file);
+        });
+        arquivosSerializados.push({ name: file.name, type: file.type, data: dataUrl });
+      }
+      try {
+        sessionStorage.setItem(
+          "importacao_pdf_files",
+          JSON.stringify(arquivosSerializados)
+        );
+      } catch (err) {
+        throw new Error(
+          "Nao foi possivel armazenar o arquivo. Tente usar um PDF menor ou imagens separadas."
+        );
+      }
+      const destino = `/orcamentos/novo?import_pdf=1&cliente_id=${encodeURIComponent(
+        importacaoClienteId
+      )}`;
+      window.location.href = destino;
+    } catch (e: any) {
+      setErroImportacao(e?.message || "Erro ao preparar importacao.");
+    } finally {
+      setSalvandoImportacao(false);
+    }
   }
 
   function handleDragStart(id: string) {
@@ -366,6 +725,11 @@ export default function OrcamentosConsultaIsland({
 
   async function handleDrop(status: StatusOrcamento) {
     if (!draggingId) return;
+    if (draggingStatus === "fechado") {
+      setDraggingId(null);
+      setDraggingStatus(null);
+      return;
+    }
     await alterarStatus(draggingId, status);
     setDraggingId(null);
     setDraggingStatus(null);
@@ -411,6 +775,11 @@ export default function OrcamentosConsultaIsland({
 
   async function alterarStatus(id: string, status: StatusOrcamento) {
     try {
+      const atual = lista.find((o) => o.id === id);
+      if (atual?.status === "fechado") {
+        showToast("Orçamento fechado não pode ser alterado.", "error");
+        return;
+      }
       setSalvandoStatus(id);
       setErro(null);
       setSucesso(null);
@@ -507,64 +876,265 @@ export default function OrcamentosConsultaIsland({
   }
 
   async function converterParaVenda(o: Orcamento) {
-    const confirmar = window.confirm("Converter este orçamento em venda?");
-    if (!confirmar) return;
+    setConversaoAberta(o);
+    setInformarRecibos(false);
+    setRecibosConversao({});
+    setErroConversao(null);
+  }
+
+  function fecharConversao() {
+    setConversaoAberta(null);
+    setInformarRecibos(false);
+    setRecibosConversao({});
+    setErroConversao(null);
+  }
+
+  async function confirmarConversaoVenda() {
+    if (!conversaoAberta) return;
     try {
+      setSalvandoConversao(true);
+      setErroConversao(null);
       setSucesso(null);
       setErro(null);
+
+      const itens = normalizarItensConversao(conversaoAberta);
+      if (!itens.length) {
+        throw new Error("Nenhum item encontrado no orçamento para converter.");
+      }
+
+      if (informarRecibos) {
+        const faltando = itens.filter((item) => !recibosConversao[item.id]?.trim());
+        if (faltando.length) {
+          throw new Error("Informe o número do recibo para todos os produtos.");
+        }
+      }
+
+      const itensComIds = itens.map((item, index) => {
+        const possuiTipoNome = Boolean(item.tipo_produto?.nome || item.tipo_produto?.tipo);
+        const possuiProdutoNome = Boolean(item.produto?.nome);
+        return {
+          ...item,
+          id: item.id || `item-${index}`,
+          tipoId:
+            item.tipo_produto_id ||
+            (!possuiTipoNome ? conversaoAberta.produto_id || null : null),
+          produtoResolvidoId:
+            item.produto_id ||
+            (!possuiProdutoNome ? conversaoAberta.destino_id || null : null),
+        };
+      });
+      let tiposDisponiveis = produtos;
+      if (!tiposDisponiveis.length) {
+        const { data: tiposData } = await supabase
+          .from("tipo_produtos")
+          .select("id, nome, tipo")
+          .eq("ativo", true)
+          .order("nome");
+        tiposDisponiveis = (tiposData || []) as { id: string; nome?: string | null; tipo?: string | null }[];
+      }
+
+      const cacheCidade = new Map<string, string | null>();
+      const cacheProduto = new Map<string, string | null>();
+
+      const resolverTipoId = (item: (typeof itensComIds)[number]) => {
+        if (item.tipoId) return item.tipoId;
+        const nome = item.tipo_produto?.nome || item.tipo_produto?.tipo || "";
+        if (!nome) return null;
+        const alvo = normalizarTexto(nome);
+        const encontrado = tiposDisponiveis.find((t) => {
+          const nomeTipo = normalizarTexto(t.nome || "");
+          const tipo = normalizarTexto(t.tipo || "");
+          return alvo === nomeTipo || alvo === tipo;
+        });
+        return encontrado?.id || null;
+      };
+
+      const resolverCidadeId = async (nome?: string | null, estado?: string | null) => {
+        const nomeCidade = (nome || "").trim();
+        if (!nomeCidade) return null;
+        const key = `${normalizarTexto(nomeCidade)}|${normalizarTexto(estado || "")}`;
+        if (cacheCidade.has(key)) return cacheCidade.get(key) || null;
+        let query = supabase.from("cidades").select("id, nome, subdivisao_nome").ilike("nome", nomeCidade);
+        if (estado) {
+          query = query.ilike("subdivisao_nome", estado);
+        }
+        const { data } = await query;
+        let dados = data || [];
+        if (!dados.length) {
+          const { data: fallback } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_nome")
+            .ilike("nome", `%${nomeCidade}%`);
+          dados = fallback || [];
+        }
+        let id = dados[0]?.id || null;
+        if (!id && estado) {
+          const { data: fallback } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_nome")
+            .ilike("nome", nomeCidade);
+          id = fallback?.[0]?.id || null;
+        }
+        cacheCidade.set(key, id);
+        return id;
+      };
+
+      const resolverProdutoId = async (
+        item: (typeof itensComIds)[number],
+        tipoId: string | null,
+        cidadeId: string | null
+      ) => {
+        if (item.produtoResolvidoId) return item.produtoResolvidoId;
+        const nomeProduto = item.produto?.nome || "";
+        if (!nomeProduto) return null;
+        const key = `${normalizarTexto(nomeProduto)}|${tipoId || ""}|${cidadeId || ""}`;
+        if (cacheProduto.has(key)) return cacheProduto.get(key) || null;
+        let query = supabase
+          .from("produtos")
+          .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
+          .ilike("nome", nomeProduto);
+        if (tipoId) {
+          query = query.eq("tipo_produto", tipoId);
+        }
+        let { data } = await query;
+        if (!data || !data.length) {
+          let fallbackQuery = supabase
+            .from("produtos")
+            .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
+            .ilike("nome", `%${nomeProduto}%`);
+          if (tipoId) {
+            fallbackQuery = fallbackQuery.eq("tipo_produto", tipoId);
+          }
+          const { data: fallback } = await fallbackQuery;
+          data = fallback || [];
+        }
+        let escolhido = data?.[0] || null;
+        if (data && data.length) {
+          if (cidadeId) {
+            escolhido =
+              data.find((p) => p.cidade_id === cidadeId) ||
+              data.find((p) => p.todas_as_cidades) ||
+              data[0];
+          } else {
+            escolhido = data[0];
+          }
+        }
+        const id = escolhido?.id || null;
+        cacheProduto.set(key, id);
+        return id;
+      };
+
+      const itensResolvidos = [];
+      for (const item of itensComIds) {
+        const tipoId = resolverTipoId(item);
+        const cidadeId =
+          item.cidade_id ||
+          (await resolverCidadeId(item.cidade?.nome || null, item.cidade?.subdivisao_nome || null));
+        const produtoResolvidoId = await resolverProdutoId(item, tipoId, cidadeId);
+        itensResolvidos.push({
+          ...item,
+          tipoId,
+          cidade_id: cidadeId,
+          produtoResolvidoId,
+        });
+      }
+
+      const itensSemTipo = itensResolvidos.filter((item) => !item.tipoId);
+      if (itensSemTipo.length) {
+        throw new Error("Existem itens sem tipo de produto. Edite o orçamento antes de converter.");
+      }
+
+      const itensSemProduto = itensResolvidos.filter((item) => !item.produtoResolvidoId);
+      if (itensSemProduto.length) {
+        throw new Error("Existem itens sem produto vinculado. Edite o orçamento antes de converter.");
+      }
+
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth?.user?.id;
       if (!userId) throw new Error("Usuário não autenticado.");
+
       const hoje = new Date();
-      const numero = gerarNumeroVenda(hoje);
+      const numeroVenda = gerarNumeroVenda(hoje);
       const dataLanc = hoje.toISOString().slice(0, 10);
+
+      const datasInicio = itensResolvidos
+        .map((item) => item.periodo_inicio)
+        .filter((data): data is string => Boolean(data))
+        .sort();
+      const dataEmbarque = datasInicio[0] || conversaoAberta.data_viagem || null;
+
+      const totalItens = itensResolvidos.reduce((acc, item) => acc + (Number(item.valor) || 0), 0);
+      const totalVenda = totalItens > 0 ? totalItens : Number(conversaoAberta.valor || 0);
+
+      const itemPrincipal = itensResolvidos[0];
+      const destinoId = itemPrincipal.produtoResolvidoId;
+      if (!destinoId) {
+        throw new Error("Não foi possível determinar o produto principal da venda.");
+      }
+      const cidadePrincipal = itensResolvidos.find((item) => item.cidade_id)?.cidade_id || null;
 
       const { data: vendaData, error: vendaErr } = await supabase
         .from("vendas")
         .insert({
           vendedor_id: userId,
-          cliente_id: o.cliente_id,
-          destino_id: o.destino_id,
-          produto_id: o.produto_id,
+          cliente_id: conversaoAberta.cliente_id,
+          destino_id: destinoId,
+          destino_cidade_id: cidadePrincipal,
           data_lancamento: dataLanc,
-          data_embarque: o.data_viagem || null,
-          valor_total: o.valor || 0,
+          data_embarque: dataEmbarque,
+          valor_total: totalVenda,
           status: "aberto",
-          numero_venda: numero,
-          notas: o.notas,
+          numero_venda: numeroVenda,
+          notas: conversaoAberta.notas,
         })
         .select("id, numero_venda")
         .maybeSingle();
 
       if (vendaErr) throw vendaErr;
+      if (!vendaData?.id) throw new Error("Venda não criada.");
 
-      if (vendaData?.id && o.produto_id) {
-        await supabase.from("vendas_recibos").insert({
-          venda_id: vendaData.id,
-          produto_id: o.produto_id,
-          numero_recibo: numero,
-          valor_total: o.valor || 0,
-          valor_taxas: 0,
-        });
-      }
+      const recibosPayload = itensResolvidos.map((item, index) => ({
+        venda_id: vendaData.id,
+        produto_id: item.tipoId,
+        produto_resolvido_id: item.produtoResolvidoId,
+        numero_recibo: informarRecibos
+          ? (recibosConversao[item.id] || "").trim()
+          : `${numeroVenda}-${String(index + 1).padStart(2, "0")}`,
+        valor_total: Number(item.valor) || 0,
+        valor_taxas: 0,
+        data_inicio: item.periodo_inicio || null,
+        data_fim: item.periodo_fim || item.periodo_inicio || null,
+      }));
+
+      const { error: recibosErr } = await supabase.from("vendas_recibos").insert(recibosPayload);
+      if (recibosErr) throw recibosErr;
 
       await supabase
         .from("orcamentos")
         .update({
           status: "fechado",
-          notas: `${
-            o.notas ? `${o.notas}\n` : ""
-          }Convertido para venda ${numero}`,
+          venda_criada: true,
+          numero_venda: vendaData.numero_venda || numeroVenda,
+          notas: `${conversaoAberta.notas ? `${conversaoAberta.notas}\n` : ""}Convertido para venda ${
+            vendaData.numero_venda || numeroVenda
+          }`,
         })
-        .eq("id", o.id);
+        .eq("id", conversaoAberta.id);
 
       setSucesso("Orçamento convertido em venda.");
       showToast("Orçamento convertido em venda.", "success");
+      fecharConversao();
       await carregar();
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
-      setErro("Erro ao converter para venda.");
-      showToast("Erro ao converter para venda.", "error");
+      const message =
+        e && typeof e === "object" && "message" in e && typeof e.message === "string"
+          ? e.message
+          : "Erro ao converter para venda.";
+      setErroConversao(message);
+      showToast(message, "error");
+    } finally {
+      setSalvandoConversao(false);
     }
   }
 
@@ -808,38 +1378,38 @@ export default function OrcamentosConsultaIsland({
               onChange={(e) => setPeriodoFim(e.target.value)}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Valor min</label>
-            <input
-              className="form-input"
-              type="number"
-              value={valorMin}
-              onChange={(e) => setValorMin(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Valor max</label>
-            <input
-              className="form-input"
-              type="number"
-              value={valorMax}
-              onChange={(e) => setValorMax(e.target.value)}
-            />
-          </div>
           {podeCriar && (
             <div
               className="form-group"
               style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}
             >
               <span style={{ visibility: "hidden" }}>botão</span>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => window.dispatchEvent(new CustomEvent("abrir-formulario-orcamento"))}
-                disabled={formAberto}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "nowrap",
+                  gap: 8,
+                  alignItems: "center",
+                  whiteSpace: "nowrap",
+                }}
               >
-                Adicionar orçamento
-              </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => window.dispatchEvent(new CustomEvent("abrir-formulario-orcamento"))}
+                  disabled={formAberto}
+                >
+                  Adicionar orçamento
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={abrirImportacaoCvc}
+                  disabled={formAberto}
+                >
+                  Importar orçamento
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -852,15 +1422,13 @@ export default function OrcamentosConsultaIsland({
           </button>
           <button
             className="btn btn-light min-w-[140px]"
-            onClick={() => {
-              setStatusFiltro("");
-              setPeriodoIni("");
-              setPeriodoFim("");
-              setValorMin("");
-              setValorMax("");
-              carregar();
-            }}
-          >
+              onClick={() => {
+                setStatusFiltro("");
+                setPeriodoIni("");
+                setPeriodoFim("");
+                carregar();
+              }}
+            >
             Limpar filtros
           </button>
           <button
@@ -998,11 +1566,11 @@ export default function OrcamentosConsultaIsland({
               <tr>
                 <th>Data</th>
                 <th>Cliente</th>
-                <th>Destino</th>
-                <th>Produto</th>
+                <th>Cidade</th>
+                <th>Produtos</th>
                 <th style={{ textAlign: "center" }}>Status</th>
-                <th style={{ textAlign: "center" }}>Valor</th>
                 <th style={{ textAlign: "center" }}>Data viagem</th>
+                <th style={{ textAlign: "center" }}>Valor</th>
                 <th style={{ textAlign: "center" }}>Última interação</th>
                 <th style={{ textAlign: "center" }}>Ações</th>
               </tr>
@@ -1028,16 +1596,36 @@ export default function OrcamentosConsultaIsland({
 
                   return (
                     <tr key={o.id}>
-                      <td>{o.data_orcamento?.slice(0, 10) || "—"}</td>
+                      <td>{o.data_orcamento ? formatarDataBR(o.data_orcamento.slice(0, 10)) : "—"}</td>
                       <td>{o.clientes?.nome || "—"}</td>
-                      <td>{o.destinos?.nome || "—"}</td>
-                      <td>{o.produtos?.nome || "—"}</td>
+                      <td>
+                        {listarCidadesItens(o).length > 0 ? (
+                          listarCidadesItens(o).map((cidade) => (
+                            <div key={`${o.id}-cidade-${cidade}`} style={{ fontSize: "0.9rem", color: "#0f172a" }}>
+                              {cidade}
+                            </div>
+                          ))
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td>
+                        {listarProdutosItens(o).length > 0 ? (
+                          listarProdutosItens(o).map((produto) => (
+                            <div key={`${o.id}-produto-${produto}`} style={{ fontSize: "0.9rem", color: "#0f172a" }}>
+                              {produto}
+                            </div>
+                          ))
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td style={{ textTransform: "capitalize", textAlign: "center" }}>
                         <select
                           className="form-select"
                           value={o.status || ""}
                           onChange={(e) => alterarStatus(o.id, e.target.value as StatusOrcamento)}
-                          disabled={salvandoStatus === o.id}
+                          disabled={salvandoStatus === o.id || o.status === "fechado"}
                         >
                           <option value="novo">Novo</option>
                           <option value="enviado">Enviado</option>
@@ -1047,6 +1635,9 @@ export default function OrcamentosConsultaIsland({
                         </select>
                       </td>
                       <td style={{ textAlign: "center" }}>
+                        {o.data_viagem ? formatarDataBR(o.data_viagem) : "—"}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
                         {o.valor
                           ? o.valor.toLocaleString("pt-BR", {
                               style: "currency",
@@ -1054,57 +1645,12 @@ export default function OrcamentosConsultaIsland({
                             })
                           : "—"}
                       </td>
-                      <td style={{ textAlign: "center" }}>{o.data_viagem || "—"}</td>
                       <td style={{ textAlign: "center", fontSize: "0.85rem", color: "#475569" }}>
-                        {ultima?.tipo || "—"}
-                        {ultima?.created_at ? ` • ${new Date(ultima.created_at).toLocaleDateString("pt-BR")}` : ""}
-                        {ultima?.mensagem && (
-                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {resumoMensagem(ultima.mensagem)}
-                          </div>
-                        )}
-                        {ultima?.anexo_url && (
-                          <div>
-                            <a
-                              href={ultima.anexo_url || ""}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: "#1d4ed8" }}
-                            >
-                              Abrir anexo
-                            </a>
-                          </div>
-                        )}
-                        {semInteracaoRecente && (
-                          <div style={{ color: "#b45309", fontWeight: 700 }}>
-                            Sem interação há {Number.isFinite(diasInteracao) ? `${diasInteracao}d` : "—"}
-                          </div>
-                        )}
+                        {ultima?.created_at
+                          ? new Date(ultima.created_at).toLocaleDateString("pt-BR")
+                          : "—"}
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        {podeExcluir && (
-                          <button
-                            className="btn-icon btn-danger"
-                            onClick={() => excluirOrcamento(o)}
-                            disabled={deletandoOrcamentoId === o.id}
-                            style={{ marginRight: 6 }}
-                            title="Excluir orçamento"
-                          >
-                            {deletandoOrcamentoId === o.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                        {whatsappLink && (
-                          <a
-                            className="btn-icon"
-                            href={whatsappLink}
-                            title="Enviar WhatsApp"
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ marginRight: 6 }}
-                          >
-                            💬
-                          </a>
-                        )}
                         <button
                           className="btn-icon"
                           onClick={() => iniciarEdicao(o)}
@@ -1124,16 +1670,15 @@ export default function OrcamentosConsultaIsland({
                           onClick={() => converterParaVenda(o)}
                           style={{ padding: "4px 8px", fontSize: "0.95rem", marginLeft: 6 }}
                           disabled={
-                            !o.cliente_id ||
-                            !o.destino_id ||
+                            !podeConverterOrcamento(o) ||
                             o.status === "fechado" ||
                             o.status === "perdido"
                           }
                           title={
                             o.status === "fechado" || o.status === "perdido"
                               ? "Orçamento encerrado"
-                              : !o.cliente_id || !o.destino_id
-                              ? "Selecione cliente e destino para converter"
+                              : !podeConverterOrcamento(o)
+                              ? "Selecione cliente e produtos para converter"
                               : "Converter em venda"
                           }
                         >
@@ -1143,11 +1688,33 @@ export default function OrcamentosConsultaIsland({
                           className="btn-icon"
                           aria-label="Histórico de interações"
                           onClick={() => abrirHistorico(o)}
-                          style={{ marginLeft: 6 }}
+                          style={{ marginLeft: 6, marginRight: 6 }}
                           title="Ver histórico / registrar interação"
                         >
                           🕒
                         </button>
+                        {whatsappLink && (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            title="Enviar WhatsApp"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ marginRight: 6 }}
+                          >
+                            💬
+                          </a>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => excluirOrcamento(o)}
+                            disabled={deletandoOrcamentoId === o.id}
+                            title="Excluir orçamento"
+                          >
+                            {deletandoOrcamentoId === o.id ? "..." : "🗑️"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1195,11 +1762,15 @@ export default function OrcamentosConsultaIsland({
                     const diasInteracao = diasDesdeISO(ultima?.created_at || null);
                     const semInteracaoRecente = !ultima?.created_at || diasInteracao >= LIMITE_INTERACAO_DIAS;
 
+                    const bloqueado = o.status === "fechado";
                     return (
                       <div
                         key={`kan-card-${o.id}`}
-                        draggable
-                        onDragStart={() => handleDragStart(o.id)}
+                        draggable={!bloqueado}
+                        onDragStart={() => {
+                          if (bloqueado) return;
+                          handleDragStart(o.id);
+                        }}
                         onDragEnd={() => {
                           setDraggingId(null);
                           setDraggingStatus(null);
@@ -1207,9 +1778,10 @@ export default function OrcamentosConsultaIsland({
                         className="card-base"
                         style={{
                           padding: 10,
-                          cursor: "grab",
+                          cursor: bloqueado ? "not-allowed" : "grab",
                           border: "1px solid #e2e8f0",
                           background: "#fff",
+                          opacity: bloqueado ? 0.7 : 1,
                         }}
                       >
                         <div style={{ fontWeight: 700 }}>{o.clientes?.nome || "Cliente não informado"}</div>
@@ -1564,6 +2136,188 @@ export default function OrcamentosConsultaIsland({
                 </div>
               ))}
           </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {importacaoAberta && (
+    <div className="modal-backdrop">
+      <div className="modal-panel" style={{ maxWidth: 520, width: "90vw" }}>
+        <div className="modal-header">
+          <div className="modal-title">Importar orçamento (PDF/Imagem)</div>
+          <button className="btn-ghost" onClick={fecharImportacaoCvc}>
+            ✖
+          </button>
+        </div>
+        <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+          <div className="form-group">
+            <label className="form-label">Cliente *</label>
+            <select
+              className="form-select"
+              value={importacaoClienteId}
+              onChange={(e) => setImportacaoClienteId(e.target.value)}
+            >
+              <option value="">Selecione</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+            {clientes.length === 0 && (
+              <div style={{ fontSize: "0.85rem", color: "#b91c1c", marginTop: 6 }}>
+                Nenhum cliente ativo encontrado. Cadastre um cliente antes de importar.
+              </div>
+            )}
+          </div>
+          <div className="form-group">
+            <label className="form-label">PDF ou imagens *</label>
+            <input
+              className="form-input"
+              type="file"
+              accept="application/pdf,image/*"
+              multiple
+              onChange={(e) => setImportacaoArquivos(Array.from(e.target.files || []))}
+            />
+            {importacaoArquivos.length > 0 && (
+              <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: 6 }}>
+                {importacaoArquivos.map((f) => f.name).join(", ")}
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: "0.9rem", color: "#475569" }}>
+            O arquivo será enviado para o carrinho do orçamento e importado automaticamente.
+          </div>
+          {erroImportacao && <div className="auth-error">{erroImportacao}</div>}
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-light" onClick={fecharImportacaoCvc}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={confirmarImportacaoCvc}
+            disabled={salvandoImportacao}
+          >
+            Importar
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {conversaoAberta && (
+    <div className="modal-backdrop">
+      <div className="modal-panel" style={{ maxWidth: 640, width: "90vw" }}>
+        <div className="modal-header">
+          <div>
+            <div className="modal-title">Converter orçamento em venda</div>
+            <div style={{ fontSize: "0.85rem", color: "#475569" }}>
+              Cliente: {conversaoAberta.clientes?.nome || "—"} | Itens: {itensConversao.length}
+            </div>
+          </div>
+          <button className="btn-ghost" onClick={fecharConversao}>
+            ✖
+          </button>
+        </div>
+        <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+          <div className="form-group">
+            <label className="form-label">Recibos</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}>
+                <input
+                  type="radio"
+                  name="modo-recibo"
+                  checked={!informarRecibos}
+                  onChange={() => setInformarRecibos(false)}
+                />
+                Gerar automaticamente
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}>
+                <input
+                  type="radio"
+                  name="modo-recibo"
+                  checked={informarRecibos}
+                  onChange={() => setInformarRecibos(true)}
+                />
+                Informar manualmente
+              </label>
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#64748b", marginTop: 6 }}>
+              {informarRecibos
+                ? "Digite o número de recibo para cada produto."
+                : "Os recibos serão gerados automaticamente ao converter."}
+            </div>
+          </div>
+
+          <div className="card-base" style={{ background: "#f8fafc" }}>
+            {itensConversao.length === 0 && (
+              <div style={{ color: "#b91c1c" }}>
+                Nenhum item encontrado. Edite o orçamento e tente novamente.
+              </div>
+            )}
+            {itensConversao.map((item, index) => {
+              const cidade = formatarCidadeLabel(item.cidade);
+              const tipo = item.tipo_produto?.nome || item.tipo_produto?.tipo || "";
+              const produto = item.produto?.nome || "Produto";
+              const periodo = formatarPeriodo(item.periodo_inicio, item.periodo_fim);
+              const valor =
+                item.valor != null
+                  ? Number(item.valor).toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })
+                  : "—";
+              const detalhes = [cidade, tipo, periodo && `Período: ${periodo}`]
+                .filter(Boolean)
+                .join(" • ");
+              return (
+                <div
+                  key={item.id || `item-${index}`}
+                  style={{
+                    padding: "10px 0",
+                    borderBottom: index === itensConversao.length - 1 ? "none" : "1px solid #e2e8f0",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <strong style={{ color: "#0f172a" }}>{produto}</strong>
+                    <span style={{ fontSize: "0.9rem", color: "#475569" }}>{valor}</span>
+                  </div>
+                  {detalhes && <div style={{ fontSize: "0.85rem", color: "#64748b" }}>{detalhes}</div>}
+                  {informarRecibos && (
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="Número do recibo"
+                      value={recibosConversao[item.id] || ""}
+                      onChange={(e) =>
+                        setRecibosConversao((prev) => ({ ...prev, [item.id]: e.target.value }))
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {erroConversao && <div className="auth-error">{erroConversao}</div>}
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-light" onClick={fecharConversao} disabled={salvandoConversao}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={confirmarConversaoVenda}
+            disabled={salvandoConversao || itensConversao.length === 0}
+          >
+            {salvandoConversao ? "Convertendo..." : "Converter em venda"}
+          </button>
         </div>
       </div>
     </div>

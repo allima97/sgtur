@@ -11,7 +11,7 @@ const { data: quote } = await supabase
     currency,
     total,
     valid_until,
-    client:client_id ( nome, email ),
+    client_id,
     items:quote_item (
       item_type,
       description_snapshot,
@@ -26,6 +26,12 @@ const { data: quote } = await supabase
 if (!quote) {
   throw new Error("Orçamento não encontrado");
 }
+
+const { data: client } = await supabase
+  .from("clientes")
+  .select("nome, email")
+  .eq("id", quote.client_id)
+  .single();
 ---
 
 <!doctype html>
@@ -49,7 +55,7 @@ if (!quote) {
     <h1>Orçamento</h1>
 
     <p>
-      <strong>Cliente:</strong> {quote.client.nome}<br />
+      <strong>Cliente:</strong> {client?.nome ?? "-"}<br />
       <strong>Validade:</strong> {quote.valid_until}
     </p>
 

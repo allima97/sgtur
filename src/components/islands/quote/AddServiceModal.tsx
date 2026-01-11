@@ -112,12 +112,16 @@ export default function AddServiceModal(props: {
       // Isso preserva unicidade e permite conversão futura.
       const product_id = servicoFornecedorId;
 
+      const resolvedType = itemType === "INSURANCE" ? "TRANSFER" : itemType;
+      const descriptionWithTipo = description_snapshot.startsWith("Tipo:")
+        ? description_snapshot
+        : `Tipo: ${itemType} — ${description_snapshot}`;
       const payload: any = {
         quote_id: props.quoteId,
         product_id,
-        item_type: itemType,
+        item_type: resolvedType,
         quantity: preview.quantity ?? quantity,
-        description_snapshot,
+        description_snapshot: descriptionWithTipo,
         unit_price_snapshot: preview.unit_price_snapshot ?? 0,
         taxes_snapshot: preview.taxes_snapshot ?? 0,
         total_item: preview.total_item ?? 0,

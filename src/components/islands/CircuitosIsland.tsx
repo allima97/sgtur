@@ -15,6 +15,11 @@ type Circuito = {
   created_at: string | null;
 };
 
+type CircuitoLista = Circuito & {
+  cidades_roteiro: string[];
+  roteiro_busca: string;
+};
+
 type CircuitoPreview = {
   circuito: Circuito;
   dias: Array<{ dia_numero: number; titulo: string | null; descricao: string; cidades: string[] }>;
@@ -71,6 +76,48 @@ function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+const ROTULO_CIRCUITO = /^Circuito\s*:/i;
+const ROTULO_OPERADOR = /^Operador\s+por\s*:/i;
+const ROTULO_CODIGO = /^C[óo]digo\s*:/i;
+const ROTULO_DATA_INICIO = /^Data\s+e\s+cidade\s+de\s+in[ií]cio:/i;
+const REGEX_DIA = /^Dia\s+(\d+)\s*:\s*(.*)$/i;
+const ROTULOS_BLOQUEIO = [ROTULO_CIRCUITO, ROTULO_OPERADOR, ROTULO_CODIGO, REGEX_DIA, ROTULO_DATA_INICIO];
+
+function extrairValorRotulo(linhas: string[], rotuloRegex: RegExp) {
+  for (let i = 0; i < linhas.length; i += 1) {
+    const linha = linhas[i];
+    if (!rotuloRegex.test(linha)) continue;
+    const direto = linha.replace(rotuloRegex, "").replace(/^[:\s-]+/, "").trim();
+    const partes: string[] = [];
+    if (direto) partes.push(direto);
+    for (let j = i + 1; j < linhas.length; j += 1) {
+      const proxima = (linhas[j] || "").trim();
+      if (!proxima) {
+        if (partes.length) break;
+        continue;
+      }
+      if (ROTULOS_BLOQUEIO.some((regex) => regex.test(proxima))) break;
+      partes.push(proxima);
+    }
+    if (partes.length) return partes.join(" ").replace(/\s+/g, " ").trim();
+  }
+  return "";
+}
+
+function linhaPareceContinuaTitulo(linha: string) {
+  const limpo = (linha || "").trim();
+  if (!limpo) return false;
+  if (/^(e|ou|\/|&|-)/i.test(limpo)) return true;
+  if (/^[a-zà-öø-ÿ]/.test(limpo)) return true;
+  const letras = limpo.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "");
+  if (letras.length) {
+    const upper = letras.replace(/[^A-ZÀ-ÖØ-Þ]/g, "");
+    if (upper.length / letras.length >= 0.6 && limpo.length <= 60) return true;
+  }
+  if (limpo.length <= 40 && !/[.!?]/.test(limpo)) return true;
+  return false;
+}
+
 function gerarIdTemporario() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -85,25 +132,51 @@ function formatCidadeLabel(cidade: CidadeBusca) {
 
 function parseCircuitoTexto(texto: string) {
   const safe = (texto || "").replace(/\r/g, "");
-  const operadorMatch = safe.match(/Operador\s+por:\s*([^\n]+)/i);
-  const codigoMatch = safe.match(/C[óo]digo:\s*([^\n]+)/i);
-  const circuitoMatch = safe.match(/Circuito:\s*([^\n]+)/i);
+  const linhas = safe.split("\n").map((linha) => linha.trim());
 
-  const operador = operadorMatch?.[1]?.trim() || "";
-  const codigo = codigoMatch?.[1]?.trim() || "";
-  const circuito = circuitoMatch?.[1]?.trim() || "";
+  const operador = extrairValorRotulo(linhas, ROTULO_OPERADOR);
+  const codigo = extrairValorRotulo(linhas, ROTULO_CODIGO);
+  const circuito = extrairValorRotulo(linhas, ROTULO_CIRCUITO);
 
   const dias: Array<{ dia: number; titulo: string; descricao: string }> = [];
-  const regex = /Dia\s+(\d+)\s*:\s*([^\n]*)\n([\s\S]*?)(?=\nDia\s+\d+\s*:|\nData\s+e\s+cidade\s+de\s+in[ií]cio:|$)/gi;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(safe)) !== null) {
-    const dia = Number(match[1]);
-    if (!dia || Number.isNaN(dia)) continue;
-    const titulo = (match[2] || "").trim();
-    const descricao = (match[3] || "").replace(/\n{2,}/g, "\n").trim();
-    if (!descricao) continue;
-    dias.push({ dia, titulo, descricao });
+  let atual: { dia: number; titulo: string[]; descricao: string[] } | null = null;
+
+  function finalizarAtual() {
+    if (!atual) return;
+    const titulo = atual.titulo.join(" ").replace(/\s+/g, " ").trim();
+    const descricao = atual.descricao.join(" ").replace(/\s+/g, " ").trim();
+    if (descricao) {
+      dias.push({ dia: atual.dia, titulo, descricao });
+    }
+    atual = null;
   }
+
+  linhas.forEach((linha) => {
+    if (!linha) return;
+    const matchDia = linha.match(REGEX_DIA);
+    if (matchDia) {
+      finalizarAtual();
+      const diaNumero = Number(matchDia[1]);
+      if (!diaNumero || Number.isNaN(diaNumero)) return;
+      const tituloInicial = (matchDia[2] || "").trim();
+      atual = { dia: diaNumero, titulo: tituloInicial ? [tituloInicial] : [], descricao: [] };
+      return;
+    }
+
+    if (!atual) return;
+    if (ROTULO_DATA_INICIO.test(linha)) {
+      finalizarAtual();
+      return;
+    }
+
+    if (atual.descricao.length === 0 && (atual.titulo.length === 0 || linhaPareceContinuaTitulo(linha))) {
+      atual.titulo.push(linha);
+      return;
+    }
+    atual.descricao.push(linha);
+  });
+
+  finalizarAtual();
 
   return { operador, codigo, circuito, dias };
 }
@@ -156,7 +229,7 @@ const initialForm = {
 export default function CircuitosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
-  const [circuitos, setCircuitos] = useState<Circuito[]>([]);
+  const [circuitos, setCircuitos] = useState<CircuitoLista[]>([]);
   const [form, setForm] = useState(initialForm);
   const [dias, setDias] = useState<CircuitoDia[]>([]);
   const [datas, setDatas] = useState<CircuitoData[]>([]);
@@ -181,16 +254,24 @@ export default function CircuitosIsland() {
   const [previewData, setPreviewData] = useState<CircuitoPreview | null>(null);
   const [importandoPdf, setImportandoPdf] = useState(false);
   const [erroImportacao, setErroImportacao] = useState<string | null>(null);
+  const [draggingDiaId, setDraggingDiaId] = useState<string | null>(null);
+  const [dragOverDiaId, setDragOverDiaId] = useState<string | null>(null);
   const cidadesCacheRef = useRef<Map<string, CidadeSelecionada | null>>(new Map());
 
   const circuitosFiltrados = useMemo(() => {
     const termo = normalizeText(busca.trim());
     if (!termo) return circuitos;
     return circuitos.filter((c) => {
+      const bateCidade = (c.cidades_roteiro || []).some((cidade) =>
+        normalizeText(cidade).includes(termo),
+      );
+      const bateRoteiro = (c.roteiro_busca || "").includes(termo);
       return (
         normalizeText(c.nome).includes(termo) ||
         normalizeText(c.codigo || "").includes(termo) ||
-        normalizeText(c.operador || "").includes(termo)
+        normalizeText(c.operador || "").includes(termo) ||
+        bateCidade ||
+        bateRoteiro
       );
     });
   }, [circuitos, busca]);
@@ -205,10 +286,49 @@ export default function CircuitosIsland() {
       setErro(null);
       const { data, error } = await supabase
         .from("circuitos")
-        .select("id, nome, codigo, operador, resumo, ativo, created_at")
+        .select(`
+          id,
+          nome,
+          codigo,
+          operador,
+          resumo,
+          ativo,
+          created_at,
+          circuito_dias (
+            titulo,
+            descricao,
+            cidades:circuito_dias_cidades (
+              cidades (nome)
+            )
+          )
+        `)
         .order("nome", { ascending: true });
       if (error) throw error;
-      setCircuitos((data || []) as Circuito[]);
+      const formatados = (data || []).map((c: any) => {
+        const cidadesSet = new Set<string>();
+        const textosRoteiro: string[] = [];
+        (c.circuito_dias || []).forEach((dia: any) => {
+          if (dia?.titulo) textosRoteiro.push(dia.titulo);
+          if (dia?.descricao) textosRoteiro.push(dia.descricao);
+          (dia.cidades || []).forEach((item: any) => {
+            const nome = item?.cidades?.nome;
+            if (nome) cidadesSet.add(nome);
+          });
+        });
+        const roteiroBusca = normalizeText([...textosRoteiro, ...Array.from(cidadesSet)].join(" "));
+        return {
+          id: c.id,
+          nome: c.nome,
+          codigo: c.codigo,
+          operador: c.operador,
+          resumo: c.resumo,
+          ativo: c.ativo,
+          created_at: c.created_at,
+          cidades_roteiro: Array.from(cidadesSet),
+          roteiro_busca: roteiroBusca,
+        } as CircuitoLista;
+      });
+      setCircuitos(formatados);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar circuitos.");
@@ -315,6 +435,45 @@ export default function CircuitosIsland() {
     setDias((prev) =>
       prev.map((d) => (d.tempId === tempId ? { ...d, [campo]: valor } : d)),
     );
+  }
+
+  function reordenarDias(origemId: string, destinoId: string) {
+    setDias((prev) => {
+      const origemIdx = prev.findIndex((d) => d.tempId === origemId);
+      const destinoIdx = prev.findIndex((d) => d.tempId === destinoId);
+      if (origemIdx === -1 || destinoIdx === -1 || origemIdx === destinoIdx) return prev;
+      const atualizado = [...prev];
+      const [movido] = atualizado.splice(origemIdx, 1);
+      atualizado.splice(destinoIdx, 0, movido);
+      return atualizado.map((item, idx) => ({ ...item, dia_numero: idx + 1 }));
+    });
+  }
+
+  function iniciarDragDia(tempId: string) {
+    setDraggingDiaId(tempId);
+    setDragOverDiaId(null);
+  }
+
+  function finalizarDragDia() {
+    setDraggingDiaId(null);
+    setDragOverDiaId(null);
+  }
+
+  function handleDragOverDia(event: React.DragEvent, tempId: string) {
+    const hasDragData = Array.from(event.dataTransfer.types || []).includes("text/plain");
+    if ((!draggingDiaId && !hasDragData) || draggingDiaId === tempId) return;
+    event.preventDefault();
+    if (dragOverDiaId !== tempId) {
+      setDragOverDiaId(tempId);
+    }
+  }
+
+  function handleDropDia(event: React.DragEvent, tempId: string) {
+    const dragId = draggingDiaId || event.dataTransfer.getData("text/plain");
+    if (!dragId || dragId === tempId) return;
+    reordenarDias(dragId, tempId);
+    setDraggingDiaId(null);
+    setDragOverDiaId(null);
   }
 
   function adicionarCidadeAoDia(tempId: string, cidade: CidadeBusca) {
@@ -969,7 +1128,7 @@ export default function CircuitosIsland() {
               className="form-input"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, codigo ou operador"
+              placeholder="Busque por nome, codigo, operador ou cidade"
             />
           </div>
           {permissao !== "view" && (
@@ -1218,9 +1377,55 @@ export default function CircuitosIsland() {
 
             {dias.map((dia, idx) => {
               const isContextoDia = cidadeContexto?.tipo === "dia" && cidadeContexto.id === dia.tempId;
+              const isDragOver = dragOverDiaId === dia.tempId;
+              const isDragging = draggingDiaId === dia.tempId;
+              const podeArrastar = permissao !== "view" && dias.length > 1;
               return (
-                <div key={dia.tempId} className="card-base mb-2" style={{ border: "1px solid #e5e7eb", marginTop: 12 }}>
+                <div
+                  key={dia.tempId}
+                  className="card-base mb-2"
+                  style={{
+                    border: isDragOver ? "2px dashed #2563eb" : "1px solid #e5e7eb",
+                    marginTop: 12,
+                    opacity: isDragging ? 0.7 : 1,
+                  }}
+                  onDragOver={(e) => {
+                    if (podeArrastar) handleDragOverDia(e, dia.tempId);
+                  }}
+                  onDrop={(e) => {
+                    if (podeArrastar) {
+                      e.preventDefault();
+                      handleDropDia(e, dia.tempId);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (isDragOver) setDragOverDiaId(null);
+                  }}
+                >
                   <div className="form-row" style={{ marginTop: 12 }}>
+                    <div className="form-group" style={{ alignItems: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="btn btn-light"
+                        draggable={podeArrastar}
+                        disabled={!podeArrastar}
+                        onDragStart={(e) => {
+                          if (!podeArrastar) return;
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", dia.tempId);
+                          iniciarDragDia(dia.tempId);
+                        }}
+                        onDragEnd={finalizarDragDia}
+                        title="Arraste para reordenar"
+                        style={{
+                          cursor: podeArrastar ? "grab" : "not-allowed",
+                          padding: "6px 10px",
+                          fontSize: 12,
+                        }}
+                      >
+                        Mover
+                      </button>
+                    </div>
                     <div className="form-group" style={{ maxWidth: 120 }}>
                       <label className="form-label">Dia</label>
                       <input

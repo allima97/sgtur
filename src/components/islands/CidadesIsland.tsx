@@ -6,7 +6,12 @@ import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 type Pais = {
@@ -78,6 +83,8 @@ export default function CidadesIsland() {
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [loadingBusca, setLoadingBusca] = useState(false);
+  const [subdivisaoBusca, setSubdivisaoBusca] = useState("");
+  const [mostrarSugestoesSubdivisao, setMostrarSugestoesSubdivisao] = useState(false);
 
   // CARREGAR DADOS
   async function carregar(todos = false) {
@@ -161,16 +168,34 @@ export default function CidadesIsland() {
       }
     }
 
+    async function carregarSubdivisoes() {
+      const todas: Subdivisao[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("subdivisoes")
+          .select("id, nome, pais_id, codigo_admin1, tipo")
+          .order("nome")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        todas.push(...((data || []) as Subdivisao[]));
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return todas;
+    }
+
     try {
       setLoading(true);
 
       const [
         { data: paisesData, error: paisesErro },
-        { data: subdivisoesData, error: subdivisoesErro },
+        subdivisoesData,
         cidadesData,
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome"),
+        carregarSubdivisoes(),
         carregarCidades(),
       ]);
 
@@ -180,11 +205,7 @@ export default function CidadesIsland() {
         setPaises(paisesData || []);
       }
 
-      if (subdivisoesErro) {
-        setErro("Erro ao carregar subdivisoes.");
-      } else {
-        setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
-      }
+      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
 
       setCidades((cidadesData as Cidade[]) || []);
       setCarregouTodos(todos);
@@ -302,9 +323,68 @@ export default function CidadesIsland() {
     return [...cidadesNome, ...cidadesOutros];
   }, [busca, cidadesEnriquecidas]);
 
+  const subdivisoesEnriquecidas = useMemo(() => {
+    const paisMap = new Map(paises.map((p) => [p.id, p.nome]));
+    return subdivisoes.map((s) => {
+      const paisNome = paisMap.get(s.pais_id) || "";
+      const codigo = s.codigo_admin1 ? ` (${s.codigo_admin1})` : "";
+      return {
+        ...s,
+        pais_nome: paisNome,
+        label: `${s.nome}${codigo}${paisNome ? ` - ${paisNome}` : ""}`,
+      };
+    });
+  }, [subdivisoes, paises]);
+
+  const subdivisoesFiltradas = useMemo(() => {
+    if (!subdivisaoBusca.trim()) return subdivisoesEnriquecidas;
+    const termo = normalizeText(subdivisaoBusca);
+    return subdivisoesEnriquecidas.filter(
+      (s) =>
+        normalizeText(s.nome).includes(termo) ||
+        normalizeText(s.codigo_admin1 || "").includes(termo) ||
+        normalizeText(s.tipo || "").includes(termo) ||
+        normalizeText((s as any).pais_nome || "").includes(termo) ||
+        normalizeText((s as any).label || "").includes(termo)
+    );
+  }, [subdivisaoBusca, subdivisoesEnriquecidas]);
+
+  useEffect(() => {
+    if (!mostrarFormulario) return;
+    if (!form.subdivisao_id) return;
+    const atual = subdivisoesEnriquecidas.find((s) => s.id === form.subdivisao_id);
+    if (!atual) return;
+    const label = (atual as any).label || atual.nome;
+    if (normalizeText(subdivisaoBusca) !== normalizeText(label)) {
+      setSubdivisaoBusca(label);
+    }
+  }, [form.subdivisao_id, subdivisoesEnriquecidas, mostrarFormulario]);
+
   // CHANGE
   function handleChange(campo: string, valor: any) {
     setForm((f) => ({ ...f, [campo]: valor }));
+  }
+
+  function handleSubdivisaoBusca(valor: string) {
+    setSubdivisaoBusca(valor);
+    if (!valor.trim()) {
+      handleChange("subdivisao_id", "");
+      return;
+    }
+    const termo = normalizeText(valor);
+    const match = subdivisoesEnriquecidas.find(
+      (s) =>
+        normalizeText((s as any).label || s.nome) === termo ||
+        normalizeText(s.nome) === termo ||
+        normalizeText(s.codigo_admin1 || "") === termo
+    );
+    if (match) {
+      handleChange("subdivisao_id", match.id);
+      return;
+    }
+    if (form.subdivisao_id) {
+      handleChange("subdivisao_id", "");
+    }
   }
 
   // EDITAR
@@ -336,6 +416,14 @@ export default function CidadesIsland() {
           subdivisao_id: alvo.subdivisao_id || "",
           descricao: alvo.descricao || "",
         });
+        if (alvo.subdivisao_id) {
+          const subdiv = subdivisoes.find((s) => s.id === alvo.subdivisao_id);
+          const paisNome = subdiv ? paises.find((p) => p.id === subdiv.pais_id)?.nome || "" : "";
+          const label = subdiv ? `${subdiv.nome}${paisNome ? ` - ${paisNome}` : ""}` : "";
+          setSubdivisaoBusca(label);
+        } else {
+          setSubdivisaoBusca("");
+        }
       } catch (err) {
         console.error(err);
         setErro("Nao foi possivel carregar dados da cidade para edicao.");
@@ -349,6 +437,7 @@ export default function CidadesIsland() {
   function iniciarNovo() {
     setEditId(null);
     setForm(initialForm);
+    setSubdivisaoBusca("");
   }
 
   function abrirFormulario() {
@@ -503,21 +592,63 @@ export default function CidadesIsland() {
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group" style={{ position: "relative" }}>
                 <label className="form-label">Subdivisao *</label>
-                <select
-                  className="form-select"
-                  value={form.subdivisao_id}
-                  onChange={(e) => handleChange("subdivisao_id", e.target.value)}
+                <input
+                  className="form-input"
+                  placeholder="Digite a subdivisao"
+                  value={subdivisaoBusca}
+                  onChange={(e) => handleSubdivisaoBusca(e.target.value)}
+                  onFocus={() => setMostrarSugestoesSubdivisao(true)}
+                  onBlur={() => setTimeout(() => setMostrarSugestoesSubdivisao(false), 150)}
                   required
-                >
-                  <option value="">Selecione a subdivisao</option>
-                  {subdivisoes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nome} - {paises.find((p) => p.id === s.pais_id)?.nome || "Sem pais"}
-                    </option>
-                  ))}
-                </select>
+                />
+                {mostrarSugestoesSubdivisao && (
+                  <div
+                    className="card-base"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 20,
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      padding: 6,
+                      marginTop: 4,
+                      border: "1px solid #e5e7eb",
+                      background: "#fff",
+                    }}
+                  >
+                    {subdivisoesFiltradas.length === 0 && (
+                      <div style={{ padding: "4px 6px", color: "#6b7280" }}>
+                        Nenhuma subdivisao encontrada.
+                      </div>
+                    )}
+                    {subdivisoesFiltradas.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="btn btn-light"
+                        style={{
+                          width: "100%",
+                          justifyContent: "flex-start",
+                          marginBottom: 4,
+                          background: form.subdivisao_id === s.id ? "#e0f2fe" : "#fff",
+                          borderColor: form.subdivisao_id === s.id ? "#38bdf8" : "#e5e7eb",
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleChange("subdivisao_id", s.id);
+                          setSubdivisaoBusca((s as any).label || s.nome);
+                          setMostrarSugestoesSubdivisao(false);
+                        }}
+                      >
+                        {(s as any).label || s.nome}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

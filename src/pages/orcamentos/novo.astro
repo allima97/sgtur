@@ -1,32 +1,85 @@
 ---
 // filepath: /Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/novo.astro
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.SUPABASE_URL;
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const serviceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const { cookies } = Astro;
 
-// Funções mínimas para cookies no Astro
-const cookies = {
-  getAll: async () => [],
-  setAll: async () => {},
-};
-
-const supabase = createServerClient(supabaseUrl, serviceRoleKey, {
-  cookies,
+const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+  cookies: {
+    get: (name) => cookies.get(name)?.value ?? "",
+    set: (name, value, options) =>
+      cookies.set(name, value, {
+        ...options,
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: "Lax",
+        path: "/",
+      }),
+    remove: (name, options) =>
+      cookies.delete(name, {
+        ...options,
+        path: "/",
+      }),
+  },
 });
 
 const {
-  data: { session },
-} = await supabase.auth.getSession();
+  data: { user },
+} = await supabaseAuth.auth.getUser();
 
-if (!session) {
+if (!user) {
   return Astro.redirect("/auth/login");
 }
 
-const { data: quote, error } = await supabase
+const importPdf = Astro.url.searchParams.get("import_pdf");
+const clientId = (Astro.url.searchParams.get("cliente_id") || "").trim();
+
+if (!clientId) {
+  return new Response("Cliente obrigatório para criar orçamento.", {
+    status: 400,
+  });
+}
+
+const hoje = new Date();
+const checkin = hoje.toISOString().slice(0, 10);
+const checkout = new Date(hoje.getTime() + 86400000).toISOString().slice(0, 10);
+
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false },
+});
+
+const { data: inquiry, error: inquiryErr } = await supabaseAdmin
+  .from("inquiry")
+  .insert({
+    origin: "SELLER",
+    client_id: clientId,
+    checkin,
+    checkout,
+    adults: 1,
+    children: 0,
+    currency_preference: "BRL",
+    status: "IN_PROGRESS",
+  })
+  .select("id")
+  .single();
+
+if (inquiryErr || !inquiry) {
+  console.error("Erro ao criar inquiry:", inquiryErr);
+  return new Response(inquiryErr?.message ?? "Erro ao criar inquiry", {
+    status: 500,
+  });
+}
+
+const { data: quote, error } = await supabaseAdmin
   .from("quote")
   .insert({
-    seller_id: session.user.id,
+    seller_id: user.id,
+    client_id: clientId,
+    inquiry_id: inquiry.id,
     status: "DRAFT",
     currency: "BRL",
     valid_until: new Date(Date.now() + 7 * 86400000)
@@ -43,5 +96,9 @@ if (error || !quote) {
   });
 }
 
-return Astro.redirect(`/orcamentos/${quote.id}`);
+const redirectUrl = importPdf
+  ? `/orcamentos/${quote.id}?import_pdf=1`
+  : `/orcamentos/${quote.id}`;
+
+return Astro.redirect(redirectUrl);
 ---

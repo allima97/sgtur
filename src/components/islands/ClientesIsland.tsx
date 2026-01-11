@@ -6,6 +6,18 @@ import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 
+function titleCaseAllWords(valor: string) {
+  const trimmed = (valor || "").trim();
+  if (!trimmed) return "";
+  return trimmed
+    .split(/\s+/)
+    .map((palavra) => {
+      const lower = palavra.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
 type Cliente = {
   id: string;
   nome: string;
@@ -212,6 +224,19 @@ export default function ClientesIsland() {
   const [acompEditId, setAcompEditId] = useState<string | null>(null);
   const [acompSalvando, setAcompSalvando] = useState(false);
   const [acompExcluindo, setAcompExcluindo] = useState<string | null>(null);
+  const parentescoOptions = [
+    "Pai",
+    "Mãe",
+    "Esposa",
+    "Marido",
+    "Filho(a)",
+    "Sogro(a)",
+    "Noivo(a)",
+    "Amigo(a)",
+    "Nora",
+    "Genro",
+    "Outros",
+  ];
 
   // =====================================
   // CARREGAR CLIENTES
@@ -931,10 +956,11 @@ export default function ClientesIsland() {
       setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
       return;
     }
+    const nomeNormalizado = titleCaseAllWords(acompForm.nome_completo || "");
     const payload: any = {
       cliente_id: clienteId,
       company_id: companyIdSelecionado,
-      nome_completo: acompForm.nome_completo.trim(),
+      nome_completo: nomeNormalizado.trim(),
       cpf: acompForm.cpf?.trim() || null,
       telefone: acompForm.telefone?.trim() || null,
       grau_parentesco: acompForm.grau_parentesco?.trim() || null,
@@ -1107,6 +1133,12 @@ export default function ClientesIsland() {
                     className="form-input"
                     value={acompForm.nome_completo}
                     onChange={(e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
+                    onBlur={(e) =>
+                      setAcompForm((prev) => ({
+                        ...prev,
+                        nome_completo: titleCaseAllWords(e.target.value || ""),
+                      }))
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -1127,12 +1159,18 @@ export default function ClientesIsland() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Parentesco</label>
-                  <input
-                    className="form-input"
+                  <select
+                    className="form-select"
                     value={acompForm.grau_parentesco}
                     onChange={(e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value }))}
-                    placeholder="Ex: Esposa, Filho"
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {parentescoOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="form-row">

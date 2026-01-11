@@ -5,6 +5,7 @@ import { supabaseBrowser } from "../../../lib/supabase-browser";
 export default function DiscountModal(props: {
   quoteId: string;
   currency: string;
+  appliedBy: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -20,6 +21,7 @@ export default function DiscountModal(props: {
     try {
       const { error } = await supabaseBrowser.from("quote_discount").insert({
         quote_id: props.quoteId,
+        applied_by: props.appliedBy,
         discount_type: discountType,
         value,
         reason: reason || null,
