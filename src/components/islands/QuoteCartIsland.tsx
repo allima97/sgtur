@@ -184,6 +184,10 @@ const OCR_CARD_REGIONS = {
   product: { x1: 0, y1: 0.55, x2: 1, y2: 1 },
 };
 
+const OCR_TEXT_WHITELIST =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÇÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜàáâãäçèéêëìíîïòóôõöùúûü0123456789$%()[]{}<>.,;:/-–—+°'\"#@&=!?* ";
+const OCR_NUMBER_WHITELIST = "0123456789R$.,()AdultoPaxTotal";
+
 const PAGE_SKIP_KEYWORDS = [
   "informacoes importantes",
   "informações importantes",
@@ -488,8 +492,7 @@ async function ocrCanvasRegion(
   if (typeof worker.setParameters === "function") {
     await worker.setParameters({
       tessedit_pageseg_mode: "6",
-      tessedit_char_whitelist:
-        mode === "numbers" ? "0123456789R$.,()AdultoPaxTotal" : "",
+      tessedit_char_whitelist: mode === "numbers" ? OCR_NUMBER_WHITELIST : OCR_TEXT_WHITELIST,
       preserve_interword_spaces: "1",
     });
   }
@@ -505,7 +508,7 @@ async function ocrCanvasLines(worker: any, canvas: HTMLCanvasElement): Promise<T
   if (typeof worker.setParameters === "function") {
     await worker.setParameters({
       tessedit_pageseg_mode: "6",
-      tessedit_char_whitelist: "",
+      tessedit_char_whitelist: OCR_TEXT_WHITELIST,
       preserve_interword_spaces: "1",
     });
   }
@@ -1160,6 +1163,35 @@ function buildParsedBudgetFromExtractedItems(items: ExtractedCardItem[]) {
     },
     reviewCount,
   };
+}
+
+function buildParsedItemKey(item: ParsedBudgetItem) {
+  const typeKey = normalizeProdutoKey(item.tipo_label || item.item_type || "");
+  const descKey = normalizeProdutoKey(item.description_snapshot || "");
+  const totalKey = Number(item.total_item || 0).toFixed(2);
+  return `${typeKey}|${descKey}|${totalKey}`;
+}
+
+function buildParsedBudgetFromParsedItems(items: ParsedBudgetItem[]) {
+  const total = items.reduce((sum, item) => sum + Number(item.total_item || 0), 0);
+  return {
+    items,
+    taxes: 0,
+    discount: 0,
+    total,
+  } as ParsedBudget;
+}
+
+function buildTextFromLineBoxes(
+  lines: TextItemBox[],
+  pageHeight: number,
+  ignoreZone?: { x1: number; y1: number; x2: number; y2: number }
+) {
+  const filtered = ignoreZone
+    ? lines.filter((line) => line.y1 >= ignoreZone.y2 || line.y2 <= ignoreZone.y1)
+    : lines;
+  const grouped = groupTextLines(filtered, pageHeight);
+  return grouped.map((line) => line.text).join("\n").trim();
 }
 
 
@@ -2602,18 +2634,22 @@ export default function QuoteCartIsland(props: {
     const getWorker = async () => {
       if (worker) return worker;
       const { createWorker } = await import("tesseract.js");
-      worker = await createWorker("por");
-      if (typeof worker.load === "function") {
-        await worker.load();
-      }
-      if (typeof worker.reinitialize === "function") {
-        await worker.reinitialize("por");
-      }
-      if (typeof worker.loadLanguage === "function") {
-        await worker.loadLanguage("por");
-      }
-      if (typeof worker.initialize === "function") {
-        await worker.initialize("por");
+      const workerPath = (await import("tesseract.js/dist/worker.min.js?url")).default;
+      const corePath = (await import("tesseract.js-core/tesseract-core.wasm.js?url")).default;
+      worker = await createWorker(
+        "por",
+        undefined,
+        {
+          langPath: "/tessdata",
+          workerPath,
+          corePath,
+        }
+      );
+      if (typeof worker.setParameters === "function") {
+        await worker.setParameters({
+          preserve_interword_spaces: "1",
+          tessedit_pageseg_mode: "6",
+        });
       }
       return worker;
     };
@@ -2622,6 +2658,7 @@ export default function QuoteCartIsland(props: {
       const baseYear = Number.parseInt(quote.valid_until?.slice(0, 4) || "", 10) || new Date().getFullYear();
       const ocrWorker = await getWorker();
       const extractedItems: ExtractedCardItem[] = [];
+      const fallbackParsedItems: ParsedBudgetItem[] = [];
 
       for (let i = 0; i < arquivos.length; i += 1) {
         const file = arquivos[i];
@@ -2673,7 +2710,7 @@ export default function QuoteCartIsland(props: {
                   x1: 0,
                   y1: 0,
                   x2: canvas.width,
-                  y2: canvas.height * 0.33,
+                  y2: canvas.height * 0.4,
                 }
               : undefined;
 
@@ -2696,6 +2733,7 @@ export default function QuoteCartIsland(props: {
               }
             }
 
+            let ocrLines: TextItemBox[] = [];
             let cards: CardBBox[] = [];
             if (textBoxes.length > 0) {
               cards = detectCardsFromTextItems(textBoxes, canvas.width, canvas.height, p);
@@ -2714,7 +2752,7 @@ export default function QuoteCartIsland(props: {
               cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, p);
             }
             if (cards.length === 0) {
-              const ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+              ocrLines = await ocrCanvasLines(ocrWorker, canvas);
               if (ocrLines.length) {
                 cards = detectCardsFromTypeLabels(ocrLines, canvas.width, canvas.height, p);
               }
@@ -2724,7 +2762,17 @@ export default function QuoteCartIsland(props: {
               cards = filtrarCardsPorZona(cards, ignoreZone);
               if (cards.length === 0) cards = cardsBase;
             }
-            if (cards.length === 0) continue;
+            if (cards.length === 0) {
+              const fallbackLines = ocrLines.length ? ocrLines : textBoxes;
+              const fallbackText = buildTextFromLineBoxes(fallbackLines, canvas.height, ignoreZone);
+              if (fallbackText) {
+                const parsedFallback = parseBudgetFromTexts([fallbackText]);
+                if (parsedFallback.items.length) {
+                  fallbackParsedItems.push(...parsedFallback.items);
+                }
+              }
+              continue;
+            }
 
             const itensPagina = await extractItemsFromCards(
               canvas,
@@ -2734,6 +2782,20 @@ export default function QuoteCartIsland(props: {
               p,
               setStatusImportacaoArquivo
             );
+            if (itensPagina.length === 0) {
+              if (!ocrLines.length) {
+                ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+              }
+              const fallbackLines = ocrLines.length ? ocrLines : textBoxes;
+              const fallbackText = buildTextFromLineBoxes(fallbackLines, canvas.height, ignoreZone);
+              if (fallbackText) {
+                const parsedFallback = parseBudgetFromTexts([fallbackText]);
+                if (parsedFallback.items.length) {
+                  fallbackParsedItems.push(...parsedFallback.items);
+                  continue;
+                }
+              }
+            }
             extractedItems.push(...itensPagina);
           }
         } else if (file.type.startsWith("image/")) {
@@ -2746,9 +2808,10 @@ export default function QuoteCartIsland(props: {
             continue;
           }
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          let ocrLines: TextItemBox[] = [];
           let cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, i + 1);
           if (cards.length === 0) {
-            const ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+            ocrLines = await ocrCanvasLines(ocrWorker, canvas);
             if (ocrLines.length) {
               cards = detectCardsFromTypeLabels(ocrLines, canvas.width, canvas.height, i + 1);
             }
@@ -2759,12 +2822,22 @@ export default function QuoteCartIsland(props: {
               x1: 0,
               y1: 0,
               x2: canvas.width,
-              y2: canvas.height * 0.33,
+              y2: canvas.height * 0.4,
             };
             cards = filtrarCardsPorZona(cards, ignoreZone);
             if (cards.length === 0) cards = cardsBase;
           }
-          if (cards.length === 0) continue;
+          if (cards.length === 0) {
+            const fallbackLines = ocrLines;
+            const fallbackText = buildTextFromLineBoxes(fallbackLines, canvas.height);
+            if (fallbackText) {
+              const parsedFallback = parseBudgetFromTexts([fallbackText]);
+              if (parsedFallback.items.length) {
+                fallbackParsedItems.push(...parsedFallback.items);
+              }
+            }
+            continue;
+          }
           const itensImagem = await extractItemsFromCards(
             canvas,
             cards,
@@ -2773,22 +2846,62 @@ export default function QuoteCartIsland(props: {
             i + 1,
             setStatusImportacaoArquivo
           );
+          if (itensImagem.length === 0) {
+            if (!ocrLines.length) {
+              ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+            }
+            const fallbackText = buildTextFromLineBoxes(ocrLines, canvas.height);
+            if (fallbackText) {
+              const parsedFallback = parseBudgetFromTexts([fallbackText]);
+              if (parsedFallback.items.length) {
+                fallbackParsedItems.push(...parsedFallback.items);
+                continue;
+              }
+            }
+          }
           extractedItems.push(...itensImagem);
         }
       }
 
       setStatusImportacaoArquivo("Interpretando dados...");
-      if (extractedItems.length === 0) {
+      let parsedFinal: ParsedBudget | null = null;
+      let reviewCount = 0;
+
+      if (extractedItems.length > 0) {
+        const built = buildParsedBudgetFromExtractedItems(extractedItems);
+        parsedFinal = built.parsed;
+        reviewCount = built.reviewCount;
+      }
+
+      if (fallbackParsedItems.length > 0) {
+        if (!parsedFinal) {
+          parsedFinal = buildParsedBudgetFromParsedItems(fallbackParsedItems);
+        } else {
+          const mergedItems = [...parsedFinal.items];
+          const seen = new Set(mergedItems.map(buildParsedItemKey));
+          fallbackParsedItems.forEach((item) => {
+            const key = buildParsedItemKey(item);
+            if (!seen.has(key)) {
+              mergedItems.push(item);
+              seen.add(key);
+            }
+          });
+          parsedFinal = {
+            ...parsedFinal,
+            items: mergedItems,
+            total: mergedItems.reduce((sum, item) => sum + Number(item.total_item || 0), 0),
+          };
+        }
+      }
+
+      if (!parsedFinal || !parsedFinal.items.length) {
         throw new Error("Nenhum item identificado no PDF/imagem.");
       }
-      const { parsed, reviewCount } = buildParsedBudgetFromExtractedItems(extractedItems);
-      if (!parsed.items.length) {
-        throw new Error("Nenhum item valido identificado no PDF/imagem.");
-      }
-      await aplicarImportacao(parsed);
+
+      await aplicarImportacao(parsedFinal);
 
       setSucessoImportacaoArquivo(
-        `Importacao concluida. Itens: ${parsed.items.length} • Total ${formatCurrency(parsed.total || 0)}${
+        `Importacao concluida. Itens: ${parsedFinal.items.length} • Total ${formatCurrency(parsedFinal.total || 0)}${
           reviewCount > 0 ? ` • Revisar: ${reviewCount}` : ""
         }.`
       );
