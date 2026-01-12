@@ -294,6 +294,13 @@ function normalizeProdutoKey(text: string) {
     .trim();
 }
 
+function extractYearFromText(text: string) {
+  const match = text.match(/20\d{2}/);
+  if (!match) return null;
+  const year = Number.parseInt(match[0], 10);
+  return Number.isFinite(year) ? year : null;
+}
+
 function parsePeriodoIso(text: string, baseYear: number) {
   const normalized = normalizeOcrText(text || "");
   const rangeMatch = normalized.match(
@@ -340,12 +347,14 @@ function parseQuantidadePax(text: string) {
 
 function parseValor(text: string) {
   const matches = text.match(/R\$\s*[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/gi) || [];
-  if (matches.length === 0) return { valor: 0, valor_formatado: "", moeda: "" };
-  const last = matches[matches.length - 1];
+  const fallbackMatches = text.match(/[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/g) || [];
+  const list = matches.length ? matches : fallbackMatches;
+  if (list.length === 0) return { valor: 0, valor_formatado: "", moeda: "" };
+  const last = list[list.length - 1];
   return {
     valor: parseCurrencyValue(last),
     valor_formatado: last.replace(/\s+/g, " ").trim(),
-    moeda: /R\$/i.test(last) ? "BRL" : "",
+    moeda: /R\$/i.test(last) ? "BRL" : "BRL",
   };
 }
 
@@ -492,6 +501,30 @@ async function ocrCanvasRegion(
   };
 }
 
+async function ocrCanvasLines(worker: any, canvas: HTMLCanvasElement): Promise<TextItemBox[]> {
+  if (typeof worker.setParameters === "function") {
+    await worker.setParameters({
+      tessedit_pageseg_mode: "6",
+      tessedit_char_whitelist: "",
+      preserve_interword_spaces: "1",
+    });
+  }
+  const { data } = await worker.recognize(canvas);
+  const lines = (data?.lines || []) as Array<{
+    text?: string;
+    bbox?: { x0: number; y0: number; x1: number; y1: number };
+  }>;
+  return lines
+    .map((line) => ({
+      x1: line.bbox?.x0 ?? 0,
+      y1: line.bbox?.y0 ?? 0,
+      x2: line.bbox?.x1 ?? 0,
+      y2: line.bbox?.y1 ?? 0,
+      text: (line.text || "").trim(),
+    }))
+    .filter((line) => line.text && line.x2 > line.x1 && line.y2 > line.y1);
+}
+
 function extractTextItemsFromPdfPage(page: any, viewport: any, pdfjsLib: any): Promise<TextItemBox[]> {
   return page.getTextContent().then((content: any) => {
     const items = (content.items || []) as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>;
@@ -582,15 +615,15 @@ function detectCardsFromTextItems(
   if (current) cards.push(current);
 
   const minHeight = Math.max(70, pageHeight * 0.07);
-  const minWidth = Math.max(220, pageWidth * 0.45);
+  const minWidth = Math.max(200, pageWidth * 0.25);
   return cards
     .filter((card) => card.lines >= 2)
     .filter((card) => card.y2 - card.y1 >= minHeight && card.x2 - card.x1 >= minWidth)
     .map((card, index) => ({
       pageIndex,
-      x1: clamp(card.x1 - 10, 0, pageWidth),
+      x1: 0,
       y1: clamp(card.y1 - 10, 0, pageHeight),
-      x2: clamp(card.x2 + 10, 0, pageWidth),
+      x2: pageWidth,
       y2: clamp(card.y2 + 10, 0, pageHeight),
     }));
 }
@@ -686,9 +719,9 @@ function detectCardsFromTypeLabels(
     if (y2 - y1 < minHeight) return;
     cards.push({
       pageIndex,
-      x1: clamp(x1 - padding, 0, pageWidth),
+      x1: 0,
       y1,
-      x2: clamp(x2 + padding, 0, pageWidth),
+      x2: pageWidth,
       y2,
     });
   });
@@ -764,12 +797,12 @@ function detectCardsFromImageData(
         maxX = Math.max(maxX, x);
       }
     }
-    if (maxX - minX < pageWidth * 0.4) return;
+    if (maxX - minX < pageWidth * 0.25) return;
     cards.push({
       pageIndex,
-      x1: clamp(minX - 10, 0, pageWidth),
+      x1: 0,
       y1: clamp(block.y1 - 10, 0, pageHeight),
-      x2: clamp(maxX + 10, 0, pageWidth),
+      x2: pageWidth,
       y2: clamp(block.y2 + 10, 0, pageHeight),
     });
   });
@@ -904,7 +937,29 @@ async function extractItemsFromCards(
     const productOcr = await ocrCanvasRegion(ocrWorker, productCanvas, "text");
 
     const qte_pax = parseQuantidadePax(topRightOcr.text);
-    const valorInfo = parseValor(topRightOcr.text);
+    let valorInfo = parseValor(topRightOcr.text);
+    if (valorInfo.valor <= 0) {
+      const width = card.x2 - card.x1;
+      const height = card.y2 - card.y1;
+      const fallbackRegion = cropCanvas(canvas, {
+        x1: card.x1 + width * 0.55,
+        y1: card.y1,
+        x2: card.x2,
+        y2: card.y1 + height * 0.6,
+      });
+      const fallbackOcr = await ocrCanvasRegion(ocrWorker, fallbackRegion, "numbers");
+      valorInfo = parseValor(fallbackOcr.text);
+    }
+    if (valorInfo.valor <= 0) {
+      const fullCard = cropCanvas(canvas, {
+        x1: card.x1,
+        y1: card.y1,
+        x2: card.x2,
+        y2: card.y2,
+      });
+      const cardOcr = await ocrCanvasRegion(ocrWorker, fullCard, "numbers");
+      valorInfo = parseValor(cardOcr.text);
+    }
     let periodoInfo = parsePeriodoIso(middleOcr.text, baseYear);
     if (!periodoInfo.start) {
       periodoInfo = parsePeriodoIso(productOcr.text, baseYear);
@@ -912,7 +967,7 @@ async function extractItemsFromCards(
     const cidade = parseCidade(middleOcr.text) || parseCidade(productOcr.text);
     const produto = parseProduto(productOcr.text) || parseProduto(middleOcr.text);
 
-    if (!tipoValido || valorInfo.valor <= 0) {
+    if (!tipoValido) {
       continue;
     }
 
@@ -946,6 +1001,104 @@ async function extractItemsFromCards(
   return result;
 }
 
+function extractItemsFromTextLayer(
+  boxes: TextItemBox[],
+  pageWidth: number,
+  pageHeight: number,
+  pageIndex: number,
+  baseYear: number,
+  ignoreZone?: { x1: number; y1: number; x2: number; y2: number }
+): ExtractedCardItem[] {
+  const lines = groupTextLines(boxes, pageHeight);
+  if (!lines.length) return [];
+
+  const anchors = lines
+    .map((line, idx) => ({ line, idx }))
+    .filter(({ line }) => isTipoProdutoValido(line.text))
+    .filter(({ line }) => {
+      if (!ignoreZone) return true;
+      return line.y1 >= ignoreZone.y2 || line.y2 <= ignoreZone.y1;
+    });
+  if (!anchors.length) return [];
+
+  const gapLimit = Math.max(24, pageHeight * 0.02);
+  const padding = Math.max(10, pageHeight * 0.01);
+  const items: ExtractedCardItem[] = [];
+
+  anchors.forEach(({ line: anchorLine, idx }, anchorIdx) => {
+    const nextAnchor = anchors[anchorIdx + 1];
+    let endIndex = lines.length - 1;
+    for (let i = idx + 1; i < lines.length; i += 1) {
+      if (nextAnchor && i >= nextAnchor.idx) {
+        endIndex = nextAnchor.idx - 1;
+        break;
+      }
+      const prev = lines[i - 1];
+      if (lines[i].y1 - prev.y2 > gapLimit) {
+        endIndex = i - 1;
+        break;
+      }
+    }
+
+    const slice = lines.slice(idx, endIndex + 1);
+    if (!slice.length) return;
+
+    let y1 = pageHeight;
+    let y2 = 0;
+    slice.forEach((line) => {
+      y1 = Math.min(y1, line.y1);
+      y2 = Math.max(y2, line.y2);
+    });
+
+    const bbox = {
+      x1: 0,
+      y1: clamp(y1 - padding, 0, pageHeight),
+      x2: pageWidth,
+      y2: clamp(y2 + padding, 0, pageHeight),
+    };
+    if (ignoreZone && !(bbox.y1 >= ignoreZone.y2 || bbox.y2 <= ignoreZone.y1)) {
+      return;
+    }
+
+    const textBlock = slice.map((line) => line.text).join("\n");
+    const tipo_produto = parseTipoProduto(anchorLine.text || textBlock);
+    const tipoValido = isTipoProdutoValido(tipo_produto) || isTipoProdutoValido(anchorLine.text);
+    if (!tipoValido) return;
+
+    const qte_pax = parseQuantidadePax(textBlock);
+    const valorInfo = parseValor(textBlock);
+    const periodoInfo = parsePeriodoIso(textBlock, baseYear);
+    const cidade = parseCidade(textBlock);
+    const produto = parseProduto(textBlock);
+
+    const missingFields =
+      (tipo_produto ? 0 : 1) +
+      (valorInfo.valor > 0 ? 0 : 1) +
+      (periodoInfo.start ? 0 : 1) +
+      (produto ? 0 : 1);
+    const confidence = clamp(0.9 - missingFields * 0.18, 0, 1);
+    const needs_review = confidence < 0.6 || missingFields > 0;
+
+    items.push({
+      tipo_produto,
+      qte_pax,
+      periodo_inicio: periodoInfo.start,
+      periodo_fim: periodoInfo.end || periodoInfo.start,
+      cidade,
+      produto,
+      valor: valorInfo.valor,
+      valor_formatado: valorInfo.valor_formatado || "",
+      moeda: valorInfo.moeda || "BRL",
+      pagina: pageIndex,
+      bbox_card: [bbox.x1, bbox.y1, bbox.x2, bbox.y2],
+      confidence,
+      needs_review,
+    });
+  });
+
+  return items;
+}
+
 function buildParsedBudgetFromExtractedItems(items: ExtractedCardItem[]) {
   const dedupedMap = new Map<string, ExtractedCardItem>();
   items.forEach((item) => {
@@ -960,7 +1113,7 @@ function buildParsedBudgetFromExtractedItems(items: ExtractedCardItem[]) {
   });
 
   const filtered = Array.from(dedupedMap.values()).filter(
-    (item) => item.valor > 0 && isTipoProdutoValido(item.tipo_produto)
+    (item) => isTipoProdutoValido(item.tipo_produto) && (item.valor > 0 || item.produto)
   );
   const parsedItems: ParsedBudgetItem[] = filtered.map((item) => {
     const observacoes = item.needs_review
@@ -2508,25 +2661,66 @@ export default function QuoteCartIsland(props: {
               continue;
             }
 
-            let cards: CardBBox[] = [];
+            let pageYear = baseYear;
+            let textBoxes: TextItemBox[] = [];
             try {
-              const textBoxes = await extractTextItemsFromPdfPage(page, viewport, pdfjsLib);
-              cards = detectCardsFromTextItems(textBoxes, canvas.width, canvas.height, p);
+              textBoxes = await extractTextItemsFromPdfPage(page, viewport, pdfjsLib);
             } catch (e) {
-              cards = [];
+              textBoxes = [];
+            }
+            const ignoreZone = p === 1
+              ? {
+                  x1: 0,
+                  y1: 0,
+                  x2: canvas.width,
+                  y2: canvas.height * 0.33,
+                }
+              : undefined;
+
+            if (textBoxes.length > 0) {
+              const allText = textBoxes.map((b) => b.text).join(" ");
+              const yearFromText = extractYearFromText(allText);
+              if (yearFromText) pageYear = yearFromText;
+
+              const itemsFromText = extractItemsFromTextLayer(
+                textBoxes,
+                canvas.width,
+                canvas.height,
+                p,
+                pageYear,
+                ignoreZone
+              );
+              if (itemsFromText.length > 0) {
+                extractedItems.push(...itemsFromText);
+                continue;
+              }
+            }
+
+            let cards: CardBBox[] = [];
+            if (textBoxes.length > 0) {
+              cards = detectCardsFromTextItems(textBoxes, canvas.width, canvas.height, p);
+              const labelCards = detectCardsFromTypeLabels(
+                textBoxes,
+                canvas.width,
+                canvas.height,
+                p
+              );
+              if (labelCards.length > cards.length) {
+                cards = labelCards;
+              }
             }
             if (cards.length === 0) {
               const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
               cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, p);
             }
-            if (p === 1) {
+            if (cards.length === 0) {
+              const ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+              if (ocrLines.length) {
+                cards = detectCardsFromTypeLabels(ocrLines, canvas.width, canvas.height, p);
+              }
+            }
+            if (ignoreZone) {
               const cardsBase = cards;
-              const ignoreZone = {
-                x1: 0,
-                y1: 0,
-                x2: canvas.width,
-                y2: canvas.height * 0.33,
-              };
               cards = filtrarCardsPorZona(cards, ignoreZone);
               if (cards.length === 0) cards = cardsBase;
             }
@@ -2536,7 +2730,7 @@ export default function QuoteCartIsland(props: {
               canvas,
               cards,
               ocrWorker,
-              baseYear,
+              pageYear,
               p,
               setStatusImportacaoArquivo
             );
@@ -2553,6 +2747,12 @@ export default function QuoteCartIsland(props: {
           }
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
           let cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, i + 1);
+          if (cards.length === 0) {
+            const ocrLines = await ocrCanvasLines(ocrWorker, canvas);
+            if (ocrLines.length) {
+              cards = detectCardsFromTypeLabels(ocrLines, canvas.width, canvas.height, i + 1);
+            }
+          }
           if (i === 0) {
             const cardsBase = cards;
             const ignoreZone = {
@@ -2861,16 +3061,15 @@ export default function QuoteCartIsland(props: {
         {items.length === 0 ? (
           <div className="text-muted mt-3">Nenhum item ainda. Importe ou adicione manualmente.</div>
         ) : (
-          <div className="table-wrap mt-3">
-            <table className="table-base">
-              <thead className="table-header-blue">
+          <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
+            <table className="table-default table-header-blue min-w-[980px]">
+              <thead>
                 <tr>
-                  <th>Tipo de produto</th>
-                  <th>Pax</th>
-                  <th>Início</th>
-                  <th>Fim</th>
                   <th>Cidade</th>
+                  <th>Tipo de produto</th>
                   <th>Produto</th>
+                  <th>Período de</th>
+                  <th>Período até</th>
                   <th>Valor</th>
                   <th className="text-right">Ações</th>
                 </tr>
@@ -2878,12 +3077,16 @@ export default function QuoteCartIsland(props: {
               <tbody>
                 {itensDetalhados.map(({ item, tipoLabel, pax, dataInicio, dataFim, cidade, produto, valor }) => (
                   <tr key={item.id}>
+                    <td>{cidade || "—"}</td>
                     <td className="font-semibold">{tipoLabel || item.item_type}</td>
-                    <td>{pax}</td>
+                    <td className="font-medium">
+                      <div>{produto || "—"}</div>
+                      {pax ? (
+                        <div style={{ color: "#64748b", fontSize: "0.75rem" }}>Pax: {pax}</div>
+                      ) : null}
+                    </td>
                     <td>{dataInicio || "—"}</td>
                     <td>{dataFim || dataInicio || "—"}</td>
-                    <td>{cidade || "—"}</td>
-                    <td className="font-medium">{produto || "—"}</td>
                     <td className="font-semibold">{formatCurrency(valor || 0)}</td>
                     <td className="text-right">
                       <div className="flex flex-wrap gap-1 justify-end">
