@@ -106,6 +106,43 @@ type ParsedBudget = {
   total: number | null;
 };
 
+type CardBBox = {
+  pageIndex: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
+type TextItemBox = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  text: string;
+};
+
+type OcrRegionResult = {
+  text: string;
+  confidence: number;
+};
+
+type ExtractedCardItem = {
+  tipo_produto: string;
+  qte_pax: number;
+  periodo_inicio: string;
+  periodo_fim: string;
+  cidade: string | null;
+  produto: string;
+  valor: number;
+  valor_formatado: string;
+  moeda: string;
+  pagina: number;
+  bbox_card: [number, number, number, number];
+  confidence: number;
+  needs_review: boolean;
+};
+
 function normalizeOcrText(value: string) {
   return (value || "")
     .normalize("NFD")
@@ -139,6 +176,739 @@ function extractAllCurrencyValues(line: string) {
     .filter((v) => Number.isFinite(v) && v > 0);
   return values;
 }
+
+const OCR_CARD_REGIONS = {
+  titleLeft: { x1: 0, y1: 0, x2: 0.7, y2: 0.35 },
+  topRight: { x1: 0.7, y1: 0, x2: 1, y2: 0.45 },
+  middle: { x1: 0, y1: 0.3, x2: 1, y2: 0.65 },
+  product: { x1: 0, y1: 0.55, x2: 1, y2: 1 },
+};
+
+const PAGE_SKIP_KEYWORDS = [
+  "informacoes importantes",
+  "informações importantes",
+  "formas de pagamento",
+  "pagamento com cartao",
+  "pagamento com cartão",
+  "outras formas de pagamento",
+  "id do carrinho",
+];
+
+const TIPO_PRODUTO_WHITELIST = [
+  "seguro viagem",
+  "servicos",
+  "serviços",
+  "aereo",
+  "aéreo",
+  "hoteis",
+  "hotéis",
+  "hotel",
+  "hospedagem",
+  "traslado",
+  "transfer",
+  "pacote",
+  "ingresso",
+  "passeio",
+];
+
+const ITEM_KEYWORDS = [
+  "seguro",
+  "servic",
+  "aereo",
+  "hotel",
+  "hosped",
+  "traslad",
+  "transfer",
+  "pacote",
+  "ingress",
+  "passei",
+];
+
+const MONTHS_PT: Record<string, number> = {
+  jan: 1,
+  janeiro: 1,
+  fev: 2,
+  fevereiro: 2,
+  mar: 3,
+  marco: 3,
+  março: 3,
+  abr: 4,
+  abril: 4,
+  mai: 5,
+  maio: 5,
+  jun: 6,
+  junho: 6,
+  jul: 7,
+  julho: 7,
+  ago: 8,
+  agosto: 8,
+  set: 9,
+  setembro: 9,
+  out: 10,
+  outubro: 10,
+  nov: 11,
+  novembro: 11,
+  dez: 12,
+  dezembro: 12,
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function toIsoDate(day: number, month: number, year: number) {
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+function parsePtMonth(raw: string) {
+  const key = normalizeOcrText(raw || "").replace(/[^a-z]/g, "");
+  if (!key) return null;
+  if (MONTHS_PT[key]) return MONTHS_PT[key];
+  const shortened = key.slice(0, 3);
+  return MONTHS_PT[shortened] || null;
+}
+
+function isTipoProdutoValido(text: string) {
+  const normalized = normalizeOcrText(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return false;
+  const compact = normalized.replace(/\s+/g, "");
+  if (TIPO_PRODUTO_WHITELIST.some((tipo) => normalized.includes(normalizeOcrText(tipo)))) {
+    return true;
+  }
+  if (
+    TIPO_PRODUTO_WHITELIST.some((tipo) =>
+      compact.includes(normalizeOcrText(tipo).replace(/\s+/g, ""))
+    )
+  ) {
+    return true;
+  }
+  return ITEM_KEYWORDS.some((keyword) => normalized.includes(keyword) || compact.includes(keyword));
+}
+
+function normalizeProdutoKey(text: string) {
+  return normalizeOcrText(text || "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parsePeriodoIso(text: string, baseYear: number) {
+  const normalized = normalizeOcrText(text || "");
+  const rangeMatch = normalized.match(
+    /(\d{1,2})\s*de\s*([a-zçãõáéíóú]+)\s*-\s*(\d{1,2})\s*de\s*([a-zçãõáéíóú]+)/i
+  );
+  if (rangeMatch) {
+    const startDay = Number(rangeMatch[1]);
+    const startMonth = parsePtMonth(rangeMatch[2]);
+    const endDay = Number(rangeMatch[3]);
+    const endMonth = parsePtMonth(rangeMatch[4]);
+    if (startMonth && endMonth) {
+      let endYear = baseYear;
+      if (endMonth < startMonth) endYear += 1;
+      return {
+        start: toIsoDate(startDay, startMonth, baseYear),
+        end: toIsoDate(endDay, endMonth, endYear),
+      };
+    }
+  }
+
+  const singleMatch = normalized.match(/(\d{1,2})\s*de\s*([a-zçãõáéíóú]+)/i);
+  if (singleMatch) {
+    const day = Number(singleMatch[1]);
+    const month = parsePtMonth(singleMatch[2]);
+    if (month) {
+      const iso = toIsoDate(day, month, baseYear);
+      return { start: iso, end: iso };
+    }
+  }
+
+  return { start: "", end: "" };
+}
+
+function parseQuantidadePax(text: string) {
+  const match =
+    text.match(/total\s*\(\s*(\d+)\s*adulto/i) ||
+    text.match(/total\s*\(\s*(\d+)\s*pax/i) ||
+    text.match(/total\s*\(\s*(\d+)\s*passageiro/i) ||
+    text.match(/total\s*\(\s*(\d+)/i);
+  if (!match) return 1;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function parseValor(text: string) {
+  const matches = text.match(/R\$\s*[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/gi) || [];
+  if (matches.length === 0) return { valor: 0, valor_formatado: "", moeda: "" };
+  const last = matches[matches.length - 1];
+  return {
+    valor: parseCurrencyValue(last),
+    valor_formatado: last.replace(/\s+/g, " ").trim(),
+    moeda: /R\$/i.test(last) ? "BRL" : "",
+  };
+}
+
+function parseCidade(text: string) {
+  const lines = (text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  for (const line of lines) {
+    if (!/ - /i.test(line)) continue;
+    const first = line.split(" - ")[0].trim();
+    if (first && /[A-Za-zÀ-ÿ]/.test(first)) return first;
+  }
+  return null;
+}
+
+function parseProduto(text: string) {
+  const lines = (text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const cleaned = lines.filter((line) => {
+    const normalized = normalizeOcrText(line);
+    if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
+    if (/^r\$/i.test(normalized)) return false;
+    if (normalized.includes("total")) return false;
+    if (normalized.includes("periodo")) return false;
+    if (normalized.includes("diarias")) return false;
+    if (normalized.includes("reembols")) return false;
+    if (normalized.includes("nao reembols")) return false;
+    if (normalized.includes("informacoes")) return false;
+    if (normalized.includes("adulto")) return false;
+    if (normalized.includes("pax")) return false;
+    if (normalized.includes("taxas")) return false;
+    return true;
+  });
+  if (cleaned.length === 0) return "";
+  const withScore = cleaned.map((line) => {
+    const letters = line.replace(/[^A-Za-zÀ-ÿ]/g, "").length;
+    return { line, score: letters };
+  });
+  withScore.sort((a, b) => b.score - a.score);
+  return withScore[0]?.line || cleaned[0] || "";
+}
+
+function parseTipoProduto(text: string) {
+  const lines = (text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const candidate = lines.find((line) => /[A-Za-zÀ-ÿ]/.test(line)) || "";
+  return candidate ? titleCaseWithExceptions(candidate) : "";
+}
+
+function preprocessOcrCanvas(input: HTMLCanvasElement, mode: "text" | "numbers") {
+  const scale = mode === "numbers" ? 2 : 1.6;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(input.width * scale));
+  canvas.height = Math.max(1, Math.round(input.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return input;
+  ctx.drawImage(input, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    sum += gray;
+  }
+  const avg = sum / (data.length / 4);
+  const threshold = avg + (mode === "numbers" ? 10 : 0);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const value = mode === "numbers" ? (gray > threshold ? 255 : 0) : gray;
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+function cropCanvas(
+  source: HTMLCanvasElement,
+  bbox: { x1: number; y1: number; x2: number; y2: number }
+) {
+  const x1 = clamp(Math.floor(bbox.x1), 0, source.width - 1);
+  const y1 = clamp(Math.floor(bbox.y1), 0, source.height - 1);
+  const x2 = clamp(Math.ceil(bbox.x2), x1 + 1, source.width);
+  const y2 = clamp(Math.ceil(bbox.y2), y1 + 1, source.height);
+  const width = Math.max(1, x2 - x1);
+  const height = Math.max(1, y2 - y1);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (ctx) ctx.drawImage(source, x1, y1, width, height, 0, 0, width, height);
+  return canvas;
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function renderImageFileToCanvas(file: File) {
+  const dataUrl = await fileToDataUrl(file);
+  const img = new Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+    img.src = dataUrl;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  if (ctx) ctx.drawImage(img, 0, 0);
+  return canvas;
+}
+
+async function ocrCanvasRegion(
+  worker: any,
+  canvas: HTMLCanvasElement,
+  mode: "text" | "numbers"
+): Promise<OcrRegionResult> {
+  if (typeof worker.setParameters === "function") {
+    await worker.setParameters({
+      tessedit_pageseg_mode: "6",
+      tessedit_char_whitelist:
+        mode === "numbers" ? "0123456789R$.,()AdultoPaxTotal" : "",
+      preserve_interword_spaces: "1",
+    });
+  }
+  const processed = preprocessOcrCanvas(canvas, mode);
+  const { data } = await worker.recognize(processed);
+  return {
+    text: data?.text || "",
+    confidence: typeof data?.confidence === "number" ? data.confidence / 100 : 0,
+  };
+}
+
+function extractTextItemsFromPdfPage(page: any, viewport: any, pdfjsLib: any): Promise<TextItemBox[]> {
+  return page.getTextContent().then((content: any) => {
+    const items = (content.items || []) as Array<{ str?: string; transform?: number[]; width?: number; height?: number }>;
+    const boxes: TextItemBox[] = [];
+    items.forEach((item) => {
+      const text = (item.str || "").trim();
+      if (!text) return;
+      const transform = pdfjsLib.Util.transform(viewport.transform, item.transform || [1, 0, 0, 1, 0, 0]);
+      const x = transform[4];
+      const y = transform[5];
+      const height = Math.hypot(transform[2], transform[3]) || 0;
+      const width = (item.width || 0) * viewport.scale;
+      const yTop = y - height;
+      if (width <= 0 || height <= 0) return;
+      boxes.push({
+        x1: x,
+        y1: yTop,
+        x2: x + width,
+        y2: yTop + height,
+        text,
+      });
+    });
+    return boxes;
+  });
+}
+
+function detectCardsFromTextItems(
+  boxes: TextItemBox[],
+  pageWidth: number,
+  pageHeight: number,
+  pageIndex = 0
+): CardBBox[] {
+  if (!boxes.length) return [];
+  const lineGap = Math.max(8, pageHeight * 0.004);
+  const sorted = [...boxes].sort((a, b) => a.y1 - b.y1);
+  const lines: Array<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    centerY: number;
+    count: number;
+  }> = [];
+
+  sorted.forEach((item) => {
+    const centerY = (item.y1 + item.y2) / 2;
+    const line = lines.find((l) => Math.abs(l.centerY - centerY) <= lineGap);
+    if (!line) {
+      lines.push({
+        x1: item.x1,
+        y1: item.y1,
+        x2: item.x2,
+        y2: item.y2,
+        centerY,
+        count: 1,
+      });
+    } else {
+      line.x1 = Math.min(line.x1, item.x1);
+      line.y1 = Math.min(line.y1, item.y1);
+      line.x2 = Math.max(line.x2, item.x2);
+      line.y2 = Math.max(line.y2, item.y2);
+      line.centerY = (line.centerY * line.count + centerY) / (line.count + 1);
+      line.count += 1;
+    }
+  });
+
+  const sortedLines = lines.sort((a, b) => a.y1 - b.y1);
+  const cardGap = Math.max(18, pageHeight * 0.03);
+  const cards: Array<{ x1: number; y1: number; x2: number; y2: number; lines: number }> = [];
+  let current: { x1: number; y1: number; x2: number; y2: number; lines: number } | null = null;
+
+  sortedLines.forEach((line) => {
+    if (!current) {
+      current = { x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2, lines: 1 };
+      return;
+    }
+    if (line.y1 - current.y2 > cardGap) {
+      cards.push(current);
+      current = { x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2, lines: 1 };
+      return;
+    }
+    current.x1 = Math.min(current.x1, line.x1);
+    current.y1 = Math.min(current.y1, line.y1);
+    current.x2 = Math.max(current.x2, line.x2);
+    current.y2 = Math.max(current.y2, line.y2);
+    current.lines += 1;
+  });
+  if (current) cards.push(current);
+
+  const minHeight = Math.max(70, pageHeight * 0.07);
+  const minWidth = Math.max(220, pageWidth * 0.45);
+  return cards
+    .filter((card) => card.lines >= 2)
+    .filter((card) => card.y2 - card.y1 >= minHeight && card.x2 - card.x1 >= minWidth)
+    .map((card, index) => ({
+      pageIndex,
+      x1: clamp(card.x1 - 10, 0, pageWidth),
+      y1: clamp(card.y1 - 10, 0, pageHeight),
+      x2: clamp(card.x2 + 10, 0, pageWidth),
+      y2: clamp(card.y2 + 10, 0, pageHeight),
+    }));
+}
+
+function detectCardsFromImageData(
+  imageData: ImageData,
+  pageWidth: number,
+  pageHeight: number,
+  pageIndex = 0
+): CardBBox[] {
+  const data = imageData.data;
+  const step = 2;
+  const rowContent: boolean[] = new Array(pageHeight).fill(false);
+  const rowThreshold = 0.015;
+  for (let y = 0; y < pageHeight; y += step) {
+    let darkCount = 0;
+    let samples = 0;
+    for (let x = 0; x < pageWidth; x += step) {
+      const idx = (y * pageWidth + x) * 4;
+      const gray = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+      if (gray < 220) darkCount += 1;
+      samples += 1;
+    }
+    if (samples > 0 && darkCount / samples > rowThreshold) rowContent[y] = true;
+  }
+
+  const blocks: Array<{ y1: number; y2: number }> = [];
+  let inBlock = false;
+  let start = 0;
+  let gap = 0;
+  const gapMax = Math.max(6, Math.round(pageHeight * 0.01));
+  for (let y = 0; y < pageHeight; y += step) {
+    if (rowContent[y]) {
+      if (!inBlock) {
+        inBlock = true;
+        start = y;
+      }
+      gap = 0;
+      continue;
+    }
+    if (!inBlock) continue;
+    gap += step;
+    if (gap <= gapMax) continue;
+    const end = y - gap;
+    if (end > start) blocks.push({ y1: start, y2: end });
+    inBlock = false;
+    gap = 0;
+    start = 0;
+  }
+  if (inBlock && start > 0) {
+    blocks.push({ y1: start, y2: pageHeight });
+  }
+
+  const minHeight = Math.max(70, pageHeight * 0.07);
+  const cards: CardBBox[] = [];
+  blocks.forEach((block, idx) => {
+    if (block.y2 - block.y1 < minHeight) return;
+    let minX = pageWidth;
+    let maxX = 0;
+    for (let x = 0; x < pageWidth; x += step) {
+      let darkCount = 0;
+      let samples = 0;
+      for (let y = block.y1; y <= block.y2; y += step) {
+        const idx2 = (y * pageWidth + x) * 4;
+        const gray = data[idx2] * 0.299 + data[idx2 + 1] * 0.587 + data[idx2 + 2] * 0.114;
+        if (gray < 220) darkCount += 1;
+        samples += 1;
+      }
+      if (samples > 0 && darkCount / samples > 0.02) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+      }
+    }
+    if (maxX - minX < pageWidth * 0.4) return;
+    cards.push({
+      pageIndex,
+      x1: clamp(minX - 10, 0, pageWidth),
+      y1: clamp(block.y1 - 10, 0, pageHeight),
+      x2: clamp(maxX + 10, 0, pageWidth),
+      y2: clamp(block.y2 + 10, 0, pageHeight),
+    });
+  });
+  return cards;
+}
+
+function filtrarCardsPorZona(cards: CardBBox[], zona?: { x1: number; y1: number; x2: number; y2: number }) {
+  if (!zona) return cards;
+  return cards.filter((card) => card.y1 >= zona.y2 || card.y2 <= zona.y1);
+}
+
+function buildCardRegions(card: CardBBox) {
+  const width = card.x2 - card.x1;
+  const height = card.y2 - card.y1;
+  return {
+    titleLeft: {
+      x1: card.x1 + OCR_CARD_REGIONS.titleLeft.x1 * width,
+      y1: card.y1 + OCR_CARD_REGIONS.titleLeft.y1 * height,
+      x2: card.x1 + OCR_CARD_REGIONS.titleLeft.x2 * width,
+      y2: card.y1 + OCR_CARD_REGIONS.titleLeft.y2 * height,
+    },
+    topRight: {
+      x1: card.x1 + OCR_CARD_REGIONS.topRight.x1 * width,
+      y1: card.y1 + OCR_CARD_REGIONS.topRight.y1 * height,
+      x2: card.x1 + OCR_CARD_REGIONS.topRight.x2 * width,
+      y2: card.y1 + OCR_CARD_REGIONS.topRight.y2 * height,
+    },
+    middle: {
+      x1: card.x1 + OCR_CARD_REGIONS.middle.x1 * width,
+      y1: card.y1 + OCR_CARD_REGIONS.middle.y1 * height,
+      x2: card.x1 + OCR_CARD_REGIONS.middle.x2 * width,
+      y2: card.y1 + OCR_CARD_REGIONS.middle.y2 * height,
+    },
+    product: {
+      x1: card.x1 + OCR_CARD_REGIONS.product.x1 * width,
+      y1: card.y1 + OCR_CARD_REGIONS.product.y1 * height,
+      x2: card.x1 + OCR_CARD_REGIONS.product.x2 * width,
+      y2: card.y1 + OCR_CARD_REGIONS.product.y2 * height,
+    },
+  };
+}
+
+function pageHasSkipKeywords(text: string) {
+  const normalized = normalizeOcrText(text || "");
+  return PAGE_SKIP_KEYWORDS.some((keyword) => normalized.includes(normalizeOcrText(keyword)));
+}
+
+function pageHasItemKeywords(text: string) {
+  const normalized = normalizeOcrText(text || "");
+  return ITEM_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+async function shouldSkipPage(
+  page: any,
+  viewport: any,
+  canvas: HTMLCanvasElement,
+  pdfjsLib: any,
+  ocrWorker: any
+) {
+  try {
+    const textBoxes = await extractTextItemsFromPdfPage(page, viewport, pdfjsLib);
+    const topLimit = canvas.height * 0.45;
+    const topText = textBoxes
+      .filter((b) => b.y2 <= topLimit)
+      .map((b) => b.text)
+      .join(" ");
+    const allText = textBoxes.map((b) => b.text).join(" ");
+    if (pageHasSkipKeywords(topText) && !pageHasItemKeywords(allText)) return true;
+  } catch (e) {
+    // ignore and fallback to OCR
+  }
+
+  const topRegion = cropCanvas(canvas, {
+    x1: 0,
+    y1: 0,
+    x2: canvas.width,
+    y2: canvas.height * 0.45,
+  });
+  const topOcr = await ocrCanvasRegion(ocrWorker, topRegion, "text");
+  return pageHasSkipKeywords(topOcr.text) && !pageHasItemKeywords(topOcr.text);
+}
+
+async function shouldSkipCanvas(canvas: HTMLCanvasElement, ocrWorker: any) {
+  const topRegion = cropCanvas(canvas, {
+    x1: 0,
+    y1: 0,
+    x2: canvas.width,
+    y2: canvas.height * 0.45,
+  });
+  const topOcr = await ocrCanvasRegion(ocrWorker, topRegion, "text");
+  return pageHasSkipKeywords(topOcr.text) && !pageHasItemKeywords(topOcr.text);
+}
+
+async function extractItemsFromCards(
+  canvas: HTMLCanvasElement,
+  cards: CardBBox[],
+  ocrWorker: any,
+  baseYear: number,
+  pageNumber: number,
+  onStatus?: (value: string) => void
+): Promise<ExtractedCardItem[]> {
+  const result: ExtractedCardItem[] = [];
+  const sortedCards = [...cards].sort((a, b) => a.y1 - b.y1);
+  for (let idx = 0; idx < sortedCards.length; idx += 1) {
+    const card = sortedCards[idx];
+    if (onStatus) {
+      onStatus(`OCR do card ${idx + 1}/${sortedCards.length} (página ${pageNumber})`);
+    }
+    const regions = buildCardRegions(card);
+    const titleCanvas = cropCanvas(canvas, regions.titleLeft);
+    const titleOcr = await ocrCanvasRegion(ocrWorker, titleCanvas, "text");
+    let tipo_produto = parseTipoProduto(titleOcr.text);
+    let tipoValido = isTipoProdutoValido(tipo_produto) || isTipoProdutoValido(titleOcr.text);
+    let middleOcr: OcrRegionResult | null = null;
+    if (!tipoValido) {
+      const middleCanvasPre = cropCanvas(canvas, regions.middle);
+      middleOcr = await ocrCanvasRegion(ocrWorker, middleCanvasPre, "text");
+      tipo_produto = parseTipoProduto(middleOcr.text);
+      tipoValido = isTipoProdutoValido(tipo_produto) || isTipoProdutoValido(middleOcr.text);
+      if (!tipoValido) {
+        continue;
+      }
+    }
+
+    const topRightCanvas = cropCanvas(canvas, regions.topRight);
+    const productCanvas = cropCanvas(canvas, regions.product);
+    const topRightOcr = await ocrCanvasRegion(ocrWorker, topRightCanvas, "numbers");
+    if (!middleOcr) {
+      const middleCanvas = cropCanvas(canvas, regions.middle);
+      middleOcr = await ocrCanvasRegion(ocrWorker, middleCanvas, "text");
+    }
+    const productOcr = await ocrCanvasRegion(ocrWorker, productCanvas, "text");
+
+    const qte_pax = parseQuantidadePax(topRightOcr.text);
+    const valorInfo = parseValor(topRightOcr.text);
+    let periodoInfo = parsePeriodoIso(middleOcr.text, baseYear);
+    if (!periodoInfo.start) {
+      periodoInfo = parsePeriodoIso(productOcr.text, baseYear);
+    }
+    const cidade = parseCidade(middleOcr.text) || parseCidade(productOcr.text);
+    const produto = parseProduto(productOcr.text) || parseProduto(middleOcr.text);
+
+    if (!tipoValido || valorInfo.valor <= 0) {
+      continue;
+    }
+
+    const missingFields =
+      (tipo_produto ? 0 : 1) +
+      (valorInfo.valor > 0 ? 0 : 1) +
+      (periodoInfo.start ? 0 : 1) +
+      (produto ? 0 : 1);
+    const avgConfidence =
+      (titleOcr.confidence + topRightOcr.confidence + middleOcr.confidence + productOcr.confidence) /
+      4;
+    const confidence = clamp(avgConfidence - missingFields * 0.12, 0, 1);
+    const needs_review = confidence < 0.6 || missingFields > 0;
+
+    result.push({
+      tipo_produto,
+      qte_pax,
+      periodo_inicio: periodoInfo.start,
+      periodo_fim: periodoInfo.end || periodoInfo.start,
+      cidade,
+      produto,
+      valor: valorInfo.valor,
+      valor_formatado: valorInfo.valor_formatado || "",
+      moeda: valorInfo.moeda || "BRL",
+      pagina: pageNumber,
+      bbox_card: [card.x1, card.y1, card.x2, card.y2],
+      confidence,
+      needs_review,
+    });
+  }
+  return result;
+}
+
+function buildParsedBudgetFromExtractedItems(items: ExtractedCardItem[]) {
+  const dedupedMap = new Map<string, ExtractedCardItem>();
+  items.forEach((item) => {
+    const key = [
+      normalizeProdutoKey(item.tipo_produto),
+      normalizeProdutoKey(item.produto),
+      normalizeProdutoKey(item.cidade || ""),
+      item.periodo_inicio || "",
+      item.valor_formatado || item.valor.toFixed(2),
+    ].join("|");
+    if (!dedupedMap.has(key)) dedupedMap.set(key, item);
+  });
+
+  const filtered = Array.from(dedupedMap.values()).filter(
+    (item) => item.valor > 0 && isTipoProdutoValido(item.tipo_produto)
+  );
+  const parsedItems: ParsedBudgetItem[] = filtered.map((item) => {
+    const observacoes = item.needs_review
+      ? `Revisar importacao (conf ${item.confidence.toFixed(2)})`
+      : "";
+    const form: ItemFormState = {
+      id: null,
+      tipoProdutoId: "",
+      tipoProdutoLabel: item.tipo_produto || "",
+      pax: item.qte_pax || 1,
+      dataInicio: item.periodo_inicio || "",
+      dataFim: item.periodo_fim || item.periodo_inicio || "",
+      cidadeNome: item.cidade || "",
+      cidadeId: "",
+      produtoNome: item.produto || "",
+      produtoId: "",
+      endereco: "",
+      valor: item.valor || 0,
+      observacoes,
+      voos: [],
+    };
+    const description = buildItemDescription(form);
+    const quantity = form.pax || 1;
+    const total = Number(item.valor || 0);
+    return {
+      item_type: item.tipo_produto || "TRANSFER",
+      tipo_label: item.tipo_produto || "",
+      description_snapshot: description,
+      quantity,
+      unit_price_snapshot: quantity ? total / quantity : total,
+      total_item: total,
+      taxes_snapshot: 0,
+    };
+  });
+
+  const total = parsedItems.reduce((sum, item) => sum + Number(item.total_item || 0), 0);
+  const reviewCount = filtered.filter((item) => item.needs_review).length;
+  return {
+    parsed: {
+      items: parsedItems,
+      taxes: 0,
+      discount: 0,
+      total,
+    },
+    reviewCount,
+  };
+}
+
 
 function extractSummary(text: string) {
   const lines = text
@@ -1575,7 +2345,6 @@ export default function QuoteCartIsland(props: {
     setSucessoImportacaoArquivo(null);
     setStatusImportacaoArquivo("Lendo arquivos...");
     let worker: any | null = null;
-    const textos: string[] = [];
 
     const getWorker = async () => {
       if (worker) return worker;
@@ -1596,14 +2365,11 @@ export default function QuoteCartIsland(props: {
       return worker;
     };
 
-    const ocrImagem = async (input: File | string) => {
-      const ocrWorker = await getWorker();
-      setStatusImportacaoArquivo("OCR em andamento...");
-      const { data } = await ocrWorker.recognize(input);
-      return data?.text || "";
-    };
-
     try {
+      const baseYear = Number.parseInt(quote.valid_until?.slice(0, 4) || "", 10) || new Date().getFullYear();
+      const ocrWorker = await getWorker();
+      const extractedItems: ExtractedCardItem[] = [];
+
       for (let i = 0; i < arquivos.length; i += 1) {
         const file = arquivos[i];
         setStatusImportacaoArquivo(`Processando ${file.name} (${i + 1}/${arquivos.length})`);
@@ -1625,56 +2391,106 @@ export default function QuoteCartIsland(props: {
             pdf = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
           }
           for (let p = 1; p <= pdf.numPages; p += 1) {
-            setStatusImportacaoArquivo(`Lendo página ${p}/${pdf.numPages} do PDF...`);
+            setStatusImportacaoArquivo(`Renderizando página ${p}/${pdf.numPages} do PDF...`);
             const page = await pdf.getPage(p);
-            const content = await page.getTextContent();
-            const pageText = (content.items as Array<{ str?: string }>).map((it) => it.str || "").join(" ");
-            const normalizedPage = normalizeOcrText(pageText);
-            const pageHasKeywords =
-              normalizedPage.includes("seguro viagem") ||
-              normalizedPage.includes("servicos") ||
-              normalizedPage.includes("aereo") ||
-              normalizedPage.includes("hoteis") ||
-              normalizedPage.includes("orcamento") ||
-              normalizedPage.includes("taxas e impostos") ||
-              normalizedPage.includes("total de");
-            const pageHasMoney =
-              /R\$/i.test(pageText) ||
-              /[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/.test(pageText);
-            const pageHasItems =
-              /total\s*\(\s*\d+\s*(adulto|passageiro|pax)/i.test(pageText) ||
-              /(seguro\s*viagem|servi[cç][oó]s?|a[eé]r[eé]o|hot[eé]is?)/i.test(
-                pageText
-              );
-            const deveOcr = !pageHasItems || !pageHasMoney;
-            if (pageText.trim().length > 20 && pageHasKeywords && !deveOcr) {
-              textos.push(pageText);
-            } else {
-              const viewport = page.getViewport({ scale: 2 });
-              const canvas = document.createElement("canvas");
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              const context = canvas.getContext("2d");
-              if (context) {
-                await page.render({ canvasContext: context, viewport }).promise;
-                const dataUrl = canvas.toDataURL("image/png");
-                const ocrText = await ocrImagem(dataUrl);
-                const combined = [pageText, ocrText].filter(Boolean).join(" ");
-                textos.push(combined);
-              }
+            const scale = 350 / 72;
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement("canvas");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext("2d");
+            if (!context) continue;
+            await page.render({ canvasContext: context, viewport }).promise;
+
+            const skip = await shouldSkipPage(page, viewport, canvas, pdfjsLib, ocrWorker);
+            if (skip) {
+              setStatusImportacaoArquivo(`Página ${p} ignorada (informações gerais).`);
+              continue;
             }
+
+            let cards: CardBBox[] = [];
+            try {
+              const textBoxes = await extractTextItemsFromPdfPage(page, viewport, pdfjsLib);
+              cards = detectCardsFromTextItems(textBoxes, canvas.width, canvas.height, p);
+            } catch (e) {
+              cards = [];
+            }
+            if (cards.length === 0) {
+              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+              cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, p);
+            }
+            if (p === 1) {
+              const cardsBase = cards;
+              const ignoreZone = {
+                x1: 0,
+                y1: 0,
+                x2: canvas.width,
+                y2: canvas.height * 0.33,
+              };
+              cards = filtrarCardsPorZona(cards, ignoreZone);
+              if (cards.length === 0) cards = cardsBase;
+            }
+            if (cards.length === 0) continue;
+
+            const itensPagina = await extractItemsFromCards(
+              canvas,
+              cards,
+              ocrWorker,
+              baseYear,
+              p,
+              setStatusImportacaoArquivo
+            );
+            extractedItems.push(...itensPagina);
           }
         } else if (file.type.startsWith("image/")) {
-          textos.push(await ocrImagem(file));
+          const canvas = await renderImageFileToCanvas(file);
+          const context = canvas.getContext("2d");
+          if (!context) continue;
+          const skipImage = await shouldSkipCanvas(canvas, ocrWorker);
+          if (skipImage) {
+            setStatusImportacaoArquivo(`Imagem ${file.name} ignorada (informações gerais).`);
+            continue;
+          }
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          let cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, i + 1);
+          if (i === 0) {
+            const cardsBase = cards;
+            const ignoreZone = {
+              x1: 0,
+              y1: 0,
+              x2: canvas.width,
+              y2: canvas.height * 0.33,
+            };
+            cards = filtrarCardsPorZona(cards, ignoreZone);
+            if (cards.length === 0) cards = cardsBase;
+          }
+          if (cards.length === 0) continue;
+          const itensImagem = await extractItemsFromCards(
+            canvas,
+            cards,
+            ocrWorker,
+            baseYear,
+            i + 1,
+            setStatusImportacaoArquivo
+          );
+          extractedItems.push(...itensImagem);
         }
       }
 
       setStatusImportacaoArquivo("Interpretando dados...");
-      const parsed = parseBudgetFromTexts(textos);
+      if (extractedItems.length === 0) {
+        throw new Error("Nenhum item identificado no PDF/imagem.");
+      }
+      const { parsed, reviewCount } = buildParsedBudgetFromExtractedItems(extractedItems);
+      if (!parsed.items.length) {
+        throw new Error("Nenhum item valido identificado no PDF/imagem.");
+      }
       await aplicarImportacao(parsed);
 
       setSucessoImportacaoArquivo(
-        `Importacao concluida. Itens: ${parsed.items.length} • Total ${formatCurrency(parsed.total || 0)}.`
+        `Importacao concluida. Itens: ${parsed.items.length} • Total ${formatCurrency(parsed.total || 0)}${
+          reviewCount > 0 ? ` • Revisar: ${reviewCount}` : ""
+        }.`
       );
       setArquivosImportacao([]);
       await refresh();

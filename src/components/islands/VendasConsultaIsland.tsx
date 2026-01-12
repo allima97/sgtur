@@ -31,6 +31,32 @@ function isSeguroRecibo(recibo: Recibo) {
   return tipo.includes("seguro") || nome.includes("seguro");
 }
 
+function obterResumoReciboComplementar(recibo?: Recibo, venda?: Venda) {
+  const numero = recibo?.numero_recibo ? `Recibo ${recibo.numero_recibo}` : "Recibo";
+  const cliente = venda?.cliente_nome || "Cliente";
+  const titulo = `${numero} - ${cliente}`.trim();
+  const produto = recibo?.produto_nome || "";
+  const destino = venda?.destino_cidade_nome || venda?.destino_nome || "";
+  const valor = typeof recibo?.valor_total === "number" ? formatCurrency(recibo.valor_total) : "";
+  const detalhes = [produto, destino, valor].filter(Boolean).join(" - ");
+  return { titulo, detalhes };
+}
+
+function criarChaveBuscaReciboComplementar(recibo?: Recibo, venda?: Venda) {
+  const texto = [
+    recibo?.numero_recibo,
+    recibo?.id,
+    recibo?.produto_nome,
+    venda?.cliente_nome,
+    venda?.destino_nome,
+    venda?.destino_cidade_nome,
+    venda?.id,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return normalizeText(texto);
+}
+
 type Venda = {
   id: string;
   vendedor_id?: string | null;
@@ -53,8 +79,16 @@ type Recibo = {
   numero_recibo: string | null;
   valor_total: number | null;
   valor_taxas: number | null;
+  data_inicio?: string | null;
+  data_fim?: string | null;
   produto_nome?: string | null;
   tipo_produtos?: { id: string; nome?: string | null; tipo?: string | null } | null;
+};
+
+type ReciboComplementar = {
+  id: string;
+  venda_id: string;
+  recibo_id: string;
 };
 
 type Toast = {
@@ -92,6 +126,7 @@ export default function VendasConsultaIsland() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [recibos, setRecibos] = useState<Recibo[]>([]);
+  const [recibosComplementares, setRecibosComplementares] = useState<ReciboComplementar[]>([]);
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +137,10 @@ export default function VendasConsultaIsland() {
   const [salvando, setSalvando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [excluindoRecibo, setExcluindoRecibo] = useState<string | null>(null);
+  const [buscaReciboComplementar, setBuscaReciboComplementar] = useState("");
+  const [mostrarComplementares, setMostrarComplementares] = useState(false);
+  const [vinculandoComplementar, setVinculandoComplementar] = useState(false);
+  const [removendoComplementar, setRemovendoComplementar] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastCounter, setToastCounter] = useState(0);
 
@@ -252,6 +291,7 @@ export default function VendasConsultaIsland() {
       const vendaIds = v.map((i) => i.id);
       if (vendaIds.length === 0) {
         setRecibos([]);
+        setRecibosComplementares([]);
       } else {
         const { data: recibosData } = await supabase
           .from("vendas_recibos")
@@ -339,6 +379,17 @@ export default function VendasConsultaIsland() {
           }) || [];
 
         setRecibos(recibosEnriquecidos);
+
+        const { data: complementaresData, error: complementaresError } = await supabase
+          .from("vendas_recibos_complementares")
+          .select("id, venda_id, recibo_id")
+          .in("venda_id", vendaIds);
+        if (complementaresError) {
+          console.error(complementaresError);
+          setRecibosComplementares([]);
+        } else {
+          setRecibosComplementares((complementaresData || []) as ReciboComplementar[]);
+        }
       }
 
       if (pendingOpenId) {
@@ -358,6 +409,13 @@ export default function VendasConsultaIsland() {
   useEffect(() => {
     if (!loadPerm && podeVer && userCtx) carregar();
   }, [loadPerm, podeVer, userCtx]);
+
+  useEffect(() => {
+    setBuscaReciboComplementar("");
+    setMostrarComplementares(false);
+    setRemovendoComplementar(null);
+    setVinculandoComplementar(false);
+  }, [modalVenda?.id]);
 
   const filtroLabel = useMemo(() => {
     if (!userCtx) return "";
@@ -382,11 +440,69 @@ export default function VendasConsultaIsland() {
     );
   }, [vendas, busca]);
 
+  const vendasPorId = useMemo(() => {
+    return Object.fromEntries(vendas.map((v) => [v.id, v]));
+  }, [vendas]);
+
+  const recibosPorId = useMemo(() => {
+    return Object.fromEntries(recibos.map((r) => [r.id, r]));
+  }, [recibos]);
+
+  const complementaresAtuais = useMemo(() => {
+    if (!modalVenda) return [];
+    return complementaresDaVenda(modalVenda.id);
+  }, [modalVenda, recibosComplementares]);
+
+  const complementaresAtuaisIds = useMemo(() => {
+    return new Set(complementaresAtuais.map((item) => item.recibo_id));
+  }, [complementaresAtuais]);
+
+  const sugestoesReciboComplementar = useMemo(() => {
+    if (!modalVenda) return [];
+    const termo = normalizeText(buscaReciboComplementar.trim());
+    if (termo.length < 2) return [];
+    return recibos
+      .filter((r) => r.venda_id !== modalVenda.id)
+      .filter((r) => !complementaresAtuaisIds.has(r.id))
+      .map((r) => {
+        const vendaRef = vendasPorId[r.venda_id];
+        return {
+          recibo: r,
+          venda: vendaRef,
+          resumo: obterResumoReciboComplementar(r, vendaRef),
+          chaveBusca: criarChaveBuscaReciboComplementar(r, vendaRef),
+        };
+      })
+      .filter((item) => item.chaveBusca.includes(termo))
+      .slice(0, 6);
+  }, [
+    buscaReciboComplementar,
+    modalVenda,
+    recibos,
+    complementaresAtuaisIds,
+    vendasPorId,
+  ]);
+
   // ================================
   // RECIBOS POR VENDA
   // ================================
   function recibosDaVenda(id: string) {
     return recibos.filter((r) => r.venda_id === id);
+  }
+
+  function complementaresDaVenda(id: string) {
+    return recibosComplementares.filter((r) => r.venda_id === id);
+  }
+
+  function obterReciboReferenciaDaVenda(venda?: Venda | null) {
+    if (!venda) return null;
+    const lista = recibosDaVenda(venda.id);
+    if (lista.length === 0) return null;
+    if (venda.destino_id) {
+      const principal = lista.find((r) => r.produto_resolvido_id === venda.destino_id);
+      if (principal) return principal;
+    }
+    return lista[0];
   }
 
   const kpiResumo = useMemo(() => {
@@ -493,6 +609,142 @@ export default function VendasConsultaIsland() {
       showToast("Erro ao excluir recibo.", "error");
     } finally {
       setExcluindoRecibo(null);
+    }
+  }
+
+  // ================================
+  // RECIBOS COMPLEMENTARES
+  // ================================
+  async function vincularReciboComplementar(reciboId: string, vendaId: string) {
+    if (!podeEditar) return;
+    const recibo = recibosPorId[reciboId];
+    if (!recibo) {
+      showToast("Recibo não encontrado.", "error");
+      return;
+    }
+    if (recibo.venda_id === vendaId) {
+      showToast("Este recibo já pertence a esta venda.", "error");
+      return;
+    }
+    const jaVinculado = recibosComplementares.some(
+      (item) => item.venda_id === vendaId && item.recibo_id === reciboId
+    );
+    if (jaVinculado) {
+      showToast("Recibo já vinculado como complementar.", "error");
+      return;
+    }
+    const vendaAtual = vendasPorId[vendaId];
+    if (!vendaAtual) {
+      showToast("Venda atual não encontrada.", "error");
+      return;
+    }
+    const vendaRecibo = vendasPorId[recibo.venda_id];
+    if (!vendaRecibo) {
+      showToast("Venda do recibo complementar não encontrada.", "error");
+      return;
+    }
+    const reciboReferenciaAtual = obterReciboReferenciaDaVenda(vendaAtual);
+    if (!reciboReferenciaAtual) {
+      showToast("Venda atual sem recibo para vínculo cruzado.", "error");
+      return;
+    }
+    const cruzadoJaVinculado = recibosComplementares.some(
+      (item) => item.venda_id === vendaRecibo.id && item.recibo_id === reciboReferenciaAtual.id
+    );
+
+    try {
+      setVinculandoComplementar(true);
+
+      const vinculoPrimario = { venda_id: vendaId, recibo_id: reciboId };
+      const vinculoCruzado = { venda_id: vendaRecibo.id, recibo_id: reciboReferenciaAtual.id };
+
+      const { error: primarioError } = await supabase
+        .from("vendas_recibos_complementares")
+        .upsert(vinculoPrimario, { onConflict: "venda_id,recibo_id", ignoreDuplicates: true });
+      if (primarioError) throw primarioError;
+
+      if (!cruzadoJaVinculado) {
+        const { error: cruzadoError } = await supabase
+          .from("vendas_recibos_complementares")
+          .upsert(vinculoCruzado, { onConflict: "venda_id,recibo_id", ignoreDuplicates: true });
+        if (cruzadoError) {
+          await supabase
+            .from("vendas_recibos_complementares")
+            .delete()
+            .match(vinculoPrimario);
+          throw cruzadoError;
+        }
+      }
+
+      await registrarLog({
+        acao: "recibo_complementar_vinculado",
+        modulo: "Vendas",
+        detalhes: {
+          venda_id: vendaId,
+          recibo_id: reciboId,
+          venda_cruzada_id: vendaRecibo.id,
+          recibo_cruzado_id: reciboReferenciaAtual.id,
+        },
+      });
+
+      await carregar();
+      setBuscaReciboComplementar("");
+      showToast("Recibo complementar vinculado.", "success");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao vincular recibo complementar.");
+      showToast("Erro ao vincular recibo complementar.", "error");
+    } finally {
+      setVinculandoComplementar(false);
+    }
+  }
+
+  async function removerReciboComplementar(link: ReciboComplementar) {
+    if (!podeEditar) return;
+    if (!confirm("Remover recibo complementar?")) return;
+
+    try {
+      setRemovendoComplementar(link.id);
+
+      const recibo = recibosPorId[link.recibo_id];
+      const vendaAtual = vendasPorId[link.venda_id];
+      const vendaRecibo = recibo ? vendasPorId[recibo.venda_id] : undefined;
+      const idsParaRemover = new Set([link.id]);
+
+      if (vendaAtual && vendaRecibo) {
+        const recibosVendaAtual = new Set(recibosDaVenda(vendaAtual.id).map((r) => r.id));
+        recibosComplementares.forEach((item) => {
+          if (item.venda_id === vendaRecibo.id && recibosVendaAtual.has(item.recibo_id)) {
+            idsParaRemover.add(item.id);
+          }
+        });
+      }
+
+      const idsLista = Array.from(idsParaRemover);
+      const { error } = await supabase
+        .from("vendas_recibos_complementares")
+        .delete()
+        .in("id", idsLista);
+      if (error) throw error;
+
+      await registrarLog({
+        acao: "recibo_complementar_removido",
+        modulo: "Vendas",
+        detalhes: {
+          venda_id: link.venda_id,
+          recibo_id: link.recibo_id,
+          ids_removidos: idsLista,
+        },
+      });
+
+      await carregar();
+      showToast("Recibo complementar removido.", "success");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao remover recibo complementar.");
+      showToast("Erro ao remover recibo complementar.", "error");
+    } finally {
+      setRemovendoComplementar(null);
     }
   }
 
@@ -847,6 +1099,165 @@ export default function VendasConsultaIsland() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* RECIBOS COMPLEMENTARES */}
+              <div style={{ marginTop: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <h4 style={{ margin: 0 }}>Recibos complementares</h4>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setMostrarComplementares((prev) => !prev)}
+                  >
+                    {mostrarComplementares
+                      ? "Ocultar"
+                      : `Mostrar (${complementaresAtuais.length})`}
+                  </button>
+                </div>
+
+                {mostrarComplementares && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      border: "1px dashed #cbd5e1",
+                      borderRadius: 12,
+                      padding: 12,
+                      background: "#f8fafc",
+                      display: "grid",
+                      gap: 12,
+                    }}
+                  >
+                    {podeEditar && (
+                      <div className="form-row" style={{ marginBottom: 4 }}>
+                        <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
+                          <label className="form-label">Buscar recibo</label>
+                          <input
+                            className="form-input"
+                            placeholder="Número, cliente ou destino..."
+                            value={buscaReciboComplementar}
+                            onChange={(e) => setBuscaReciboComplementar(e.target.value)}
+                          />
+                          <small style={{ color: "#64748b" }}>
+                            Digite ao menos 2 caracteres para localizar recibos.
+                          </small>
+                        </div>
+                      </div>
+                    )}
+
+                    {podeEditar &&
+                      buscaReciboComplementar.trim().length >= 2 &&
+                      sugestoesReciboComplementar.length === 0 && (
+                        <div style={{ color: "#64748b" }}>
+                          Nenhum recibo encontrado com essa busca.
+                        </div>
+                      )}
+
+                    {podeEditar && sugestoesReciboComplementar.length > 0 && (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {sugestoesReciboComplementar.map((item) => {
+                          const detalhes = item.resumo.detalhes;
+                          return (
+                            <button
+                              key={item.recibo.id}
+                              type="button"
+                              onClick={() =>
+                                vincularReciboComplementar(item.recibo.id, modalVenda.id)
+                              }
+                              disabled={vinculandoComplementar}
+                              style={{
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 12,
+                                textAlign: "left",
+                                border: "1px solid #e2e8f0",
+                                background: "#fff",
+                                borderRadius: 10,
+                                padding: "8px 10px",
+                                cursor: vinculandoComplementar ? "not-allowed" : "pointer",
+                                opacity: vinculandoComplementar ? 0.6 : 1,
+                              }}
+                            >
+                              <div style={{ display: "grid", gap: 2 }}>
+                                <span style={{ fontWeight: 600 }}>{item.resumo.titulo}</span>
+                                {detalhes && (
+                                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                                    {detalhes}
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                style={{ color: "#16a34a", fontWeight: 700, fontSize: "0.85rem" }}
+                              >
+                                {vinculandoComplementar ? "Salvando..." : "Adicionar"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {complementaresAtuais.length === 0 && (
+                        <div style={{ color: "#64748b" }}>
+                          Nenhum recibo complementar vinculado.
+                        </div>
+                      )}
+
+                      {complementaresAtuais.map((link) => {
+                        const recibo = recibosPorId[link.recibo_id];
+                        const vendaRef = recibo ? vendasPorId[recibo.venda_id] : undefined;
+                        const resumo = recibo
+                          ? obterResumoReciboComplementar(recibo, vendaRef)
+                          : { titulo: "Recibo complementar", detalhes: `ID: ${link.recibo_id}` };
+                        return (
+                          <div
+                            key={link.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              border: "1px solid #e2e8f0",
+                              background: "#fff",
+                              borderRadius: 10,
+                              padding: "8px 10px",
+                            }}
+                          >
+                            <div style={{ display: "grid", gap: 2 }}>
+                              <span style={{ fontWeight: 600 }}>{resumo.titulo}</span>
+                              {resumo.detalhes && (
+                                <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                                  {resumo.detalhes}
+                                </span>
+                              )}
+                            </div>
+                            {podeEditar && (
+                              <button
+                                type="button"
+                                className="btn-icon"
+                                title="Remover recibo complementar"
+                                onClick={() => removerReciboComplementar(link)}
+                                disabled={removendoComplementar === link.id}
+                              >
+                                {removendoComplementar === link.id ? "..." : "✕"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
