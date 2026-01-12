@@ -595,6 +595,106 @@ function detectCardsFromTextItems(
     }));
 }
 
+function groupTextLines(boxes: TextItemBox[], pageHeight: number) {
+  if (!boxes.length) return [];
+  const lineGap = Math.max(6, pageHeight * 0.0035);
+  const sorted = [...boxes].sort((a, b) => a.y1 - b.y1);
+  const lines: Array<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    centerY: number;
+    texts: Array<{ x: number; text: string }>;
+    count: number;
+  }> = [];
+  sorted.forEach((item) => {
+    const centerY = (item.y1 + item.y2) / 2;
+    const line = lines.find((l) => Math.abs(l.centerY - centerY) <= lineGap);
+    if (!line) {
+      lines.push({
+        x1: item.x1,
+        y1: item.y1,
+        x2: item.x2,
+        y2: item.y2,
+        centerY,
+        texts: [{ x: item.x1, text: item.text }],
+        count: 1,
+      });
+    } else {
+      line.x1 = Math.min(line.x1, item.x1);
+      line.y1 = Math.min(line.y1, item.y1);
+      line.x2 = Math.max(line.x2, item.x2);
+      line.y2 = Math.max(line.y2, item.y2);
+      line.centerY = (line.centerY * line.count + centerY) / (line.count + 1);
+      line.texts.push({ x: item.x1, text: item.text });
+      line.count += 1;
+    }
+  });
+  return lines
+    .sort((a, b) => a.y1 - b.y1)
+    .map((line) => ({
+      x1: line.x1,
+      y1: line.y1,
+      x2: line.x2,
+      y2: line.y2,
+      text: line.texts.sort((a, b) => a.x - b.x).map((t) => t.text).join(" ").trim(),
+    }));
+}
+
+function detectCardsFromTypeLabels(
+  boxes: TextItemBox[],
+  pageWidth: number,
+  pageHeight: number,
+  pageIndex = 0
+) {
+  const lines = groupTextLines(boxes, pageHeight);
+  if (lines.length === 0) return [];
+  const anchors = lines
+    .map((line, idx) => ({ line, idx }))
+    .filter(({ line }) => isTipoProdutoValido(line.text));
+  if (anchors.length === 0) return [];
+  const cards: CardBBox[] = [];
+  const padding = Math.max(12, pageHeight * 0.012);
+  const minHeight = Math.max(90, pageHeight * 0.09);
+  const gapLimit = Math.max(24, pageHeight * 0.02);
+
+  anchors.forEach(({ line: anchorLine, idx }, anchorIdx) => {
+    const nextAnchor = anchors[anchorIdx + 1];
+    let endIndex = lines.length - 1;
+    for (let i = idx + 1; i < lines.length; i += 1) {
+      if (nextAnchor && i >= nextAnchor.idx) {
+        endIndex = nextAnchor.idx - 1;
+        break;
+      }
+      const prev = lines[i - 1];
+      if (lines[i].y1 - prev.y2 > gapLimit) {
+        endIndex = i - 1;
+        break;
+      }
+    }
+    const slice = lines.slice(idx, endIndex + 1);
+    if (!slice.length) return;
+    let x1 = pageWidth;
+    let x2 = 0;
+    slice.forEach((line) => {
+      x1 = Math.min(x1, line.x1);
+      x2 = Math.max(x2, line.x2);
+    });
+    const y1 = Math.max(0, anchorLine.y1 - padding);
+    const y2 = Math.min(pageHeight, slice[slice.length - 1].y2 + padding);
+    if (y2 - y1 < minHeight) return;
+    cards.push({
+      pageIndex,
+      x1: clamp(x1 - padding, 0, pageWidth),
+      y1,
+      x2: clamp(x2 + padding, 0, pageWidth),
+      y2,
+    });
+  });
+  return cards;
+}
+
 function detectCardsFromImageData(
   imageData: ImageData,
   pageWidth: number,
