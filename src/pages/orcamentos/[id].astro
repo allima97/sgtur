@@ -39,7 +39,9 @@ if (!user) {
 
 const { data: quote, error: quoteErr } = await supabase
   .from("quote")
-  .select("id, status, currency, total, average_confidence, source_file_path, source_file_url")
+  .select(
+    "id, status, status_negociacao, currency, total, average_confidence, source_file_path, source_file_url, client_id, created_at, cliente:client_id (id, nome, cpf)"
+  )
   .eq("id", id)
   .single();
 
@@ -50,9 +52,10 @@ if (quoteErr || !quote) {
 const { data: items } = await supabase
   .from("quote_item")
   .select(
-    "id, item_type, title, product_name, city_name, quantity, unit_price, total_amount, start_date, end_date, currency, confidence"
+    "id, item_type, title, product_name, city_name, quantity, unit_price, total_amount, taxes_amount, start_date, end_date, currency, confidence, order_index"
   )
   .eq("quote_id", quote.id)
+  .order("order_index", { ascending: true })
   .order("created_at", { ascending: true });
 
 const activePage = "orcamentos";

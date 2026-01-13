@@ -446,7 +446,7 @@ export default function MenuIsland({ activePage }) {
                 <li>
                   <a
                     className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
-                    href="/orcamentos/importar"
+                    href="/orcamentos/consulta"
                     onClick={handleNavClick}
                   >
                     <span>💼</span>Orçamentos
@@ -606,6 +606,16 @@ export default function MenuIsland({ activePage }) {
                   onClick={handleNavClick}
                 >
                   <span>💱</span>Câmbios
+                </a>
+              </li>
+
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "parametros-orcamentos" ? "active" : ""}`}
+                  href="/parametros/orcamentos"
+                  onClick={handleNavClick}
+                >
+                  <span>🧾</span>Orçamentos (PDF)
                 </a>
               </li>
 

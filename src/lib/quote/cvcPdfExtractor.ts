@@ -85,6 +85,17 @@ const ITEM_KEYWORDS = [
   "passei",
 ];
 
+const TEXT_STOP_KEYWORDS = [
+  "resumo da viagem",
+  "informacoes importantes",
+  "informações importantes",
+  "comprar produtos",
+  "posso te ajudar",
+  "telefone de contato",
+  "id do carrinho",
+  "taxas inclusas",
+];
+
 const MONTHS_PT: Record<string, number> = {
   jan: 1,
   janeiro: 1,
@@ -882,6 +893,7 @@ async function extractItemsFromCards(
       quantity: qtePax || 1,
       unit_price: qtePax > 0 ? totalAmount / qtePax : totalAmount,
       total_amount: totalAmount,
+      taxes_amount: 0,
       start_date: periodoInfo.start || "",
       end_date: periodoInfo.end || periodoInfo.start || "",
       currency: valorInfo.moeda || "BRL",
@@ -968,6 +980,7 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       quantity: quantity || 1,
       unit_price: quantity > 0 ? totalAmount / quantity : totalAmount,
       total_amount: totalAmount,
+      taxes_amount: 0,
       start_date: periodo.start || "",
       end_date: periodo.end || periodo.start || "",
       currency: valorInfo.moeda || "BRL",
@@ -975,6 +988,176 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       segments: [],
       raw: {
         page: pageNumber,
+        block_text: blockText,
+      },
+    });
+  });
+
+  return items;
+}
+
+type TextBlock = {
+  typeHint: string;
+  lines: string[];
+};
+
+function isTextStopLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  return TEXT_STOP_KEYWORDS.some((keyword) => normalized.includes(normalizeOcrText(keyword)));
+}
+
+function detectSectionLabel(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return "";
+  if (normalized === "servicos") return "Serviços";
+  if (normalized === "aereo") return "Aéreo";
+  if (normalized === "hoteis" || normalized === "hotel" || normalized === "hospedagem") return "Hotel";
+  if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
+  return "";
+}
+
+function splitTextBlocks(text: string): TextBlock[] {
+  const lines = (text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const blocks: TextBlock[] = [];
+  let currentType = "";
+  let current: string[] = [];
+  let started = false;
+
+  for (const line of lines) {
+    const normalized = normalizeOcrText(line);
+    if (!normalized) continue;
+    if (isTextStopLine(line)) break;
+
+    const sectionType = detectSectionLabel(line);
+    if (sectionType) {
+      if (current.length) {
+        blocks.push({ typeHint: currentType, lines: current });
+        current = [];
+      }
+      currentType = sectionType;
+      started = true;
+      continue;
+    }
+
+    if (normalized === "selecionado") {
+      if (current.length) {
+        blocks.push({ typeHint: currentType, lines: current });
+        current = [];
+      }
+      started = true;
+      continue;
+    }
+
+    if (!started) continue;
+    if (normalized === "detalhes") continue;
+
+    current.push(line);
+  }
+
+  if (current.length) {
+    blocks.push({ typeHint: currentType, lines: current });
+  }
+
+  return blocks.filter((block) => block.lines.some((line) => /[A-Za-zÀ-ÿ]/.test(line)));
+}
+
+function isLikelyAirportCode(line: string) {
+  return /^[A-Z]{3,4}$/.test(line.trim());
+}
+
+function isLikelyTimeLine(line: string) {
+  return /^\d{1,2}:\d{2}$/.test(line.trim());
+}
+
+function isLikelyDateLine(normalized: string) {
+  return /\d{1,2}\s*de\s*[a-zçãõáéíóú]{3,}/i.test(normalized);
+}
+
+function pickProductLineFromBlock(lines: string[], itemType: string) {
+  const candidates = lines.filter((line) => {
+    const normalized = normalizeOcrText(line);
+    if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
+    if (normalized === "selecionado" || normalized === "detalhes") return false;
+    if (normalized.includes("total")) return false;
+    if (normalized.includes("reembols")) return false;
+    if (normalized.includes("nao reembols")) return false;
+    if (normalized.includes("facil")) return false;
+    if (normalized.includes("classe")) return false;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) return false;
+    if (normalized.includes("dias") && normalized.includes("noites")) return false;
+    if (normalized.includes("total (")) return false;
+    if (isLikelyDateLine(normalized)) return false;
+    if (isLikelyTimeLine(line)) return false;
+    if (isLikelyAirportCode(line)) return false;
+    if (normalized.startsWith("gol") && (normalized.includes("ida") || normalized.includes("volta"))) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return "";
+
+  const tipoNorm = normalizeOcrText(itemType);
+  const scored = candidates.map((line) => {
+    const normalized = normalizeOcrText(line);
+    let score = line.length;
+    if (tipoNorm === "aereo" && normalized.includes(" - ")) score += 30;
+    if (tipoNorm === "servicos" && /(transporte|transfer|traslado|passeio|ingresso)/.test(normalized)) {
+      score += 20;
+    }
+    if (tipoNorm === "hotel" && /(hotel|resort|pousada|all inclusive)/.test(normalized)) {
+      score += 20;
+    }
+    if (normalized.startsWith("(")) score += 10;
+    return { line, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.line || "";
+}
+
+function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[] {
+  const blocks = splitTextBlocks(text);
+  if (!blocks.length) return [];
+
+  const items: QuoteItemDraft[] = [];
+
+  blocks.forEach((block) => {
+    const blockText = block.lines.join("\n");
+    const tipo =
+      block.typeHint ||
+      inferTipoLabelFromText(blockText, "") ||
+      detectCardTypeLabel(block.lines) ||
+      "Serviços";
+    const valorInfo = parseValor(blockText);
+    if (valorInfo.valor <= 0) return;
+    const periodo = parsePeriodoIso(blockText, baseYear);
+    const quantidade = parseQuantidadePax(blockText);
+    const cidade = parseCidade(blockText);
+    const produto = pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText);
+    const totalAmount = valorInfo.valor;
+    const quantity = quantidade || 1;
+    const title = produto || tipo || "Item";
+
+    items.push({
+      temp_id: buildTempId(),
+      item_type: tipo,
+      title,
+      product_name: produto || title,
+      city_name: cidade || "",
+      quantity,
+      unit_price: quantity > 0 ? totalAmount / quantity : totalAmount,
+      total_amount: totalAmount,
+      taxes_amount: 0,
+      start_date: periodo.start || "",
+      end_date: periodo.end || periodo.start || "",
+      currency: valorInfo.moeda || "BRL",
+      confidence: 0.6,
+      segments: [],
+      raw: {
+        source: "text",
+        type_hint: block.typeHint,
         block_text: blockText,
       },
     });
@@ -993,6 +1176,205 @@ function validateForConfirm(items: QuoteItemDraft[]) {
       item.total_amount > 0
     );
   });
+}
+
+async function loadImageFromFile(file: File) {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+      img.src = url;
+    });
+    return image;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function extractCvcQuoteFromText(text: string, options: ExtractOptions = {}): Promise<ImportResult> {
+  if (!text || !text.trim()) {
+    throw new Error("Texto obrigatorio.");
+  }
+
+  const logs: ImportLogDraft[] = [];
+  const debugImages: ImportDebugImage[] = [];
+  const onProgress = options.onProgress || (() => {});
+  onProgress("Processando texto...");
+  const baseYear = extractYearFromText(text) || new Date().getFullYear();
+  const extractedItems = parseItemsFromCvcText(text, baseYear);
+  const deduped = dedupeItems(extractedItems);
+
+  if (!deduped.length) {
+    throw new Error("Nenhum item identificado no texto.");
+  }
+
+  const total = deduped.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const averageConfidence = deduped.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / deduped.length;
+  const extractedAt = new Date().toISOString();
+
+  const rawJson = {
+    source: "CVC_TEXT",
+    extracted_at: extractedAt,
+    text_length: text.length,
+    raw_text: text,
+    items: deduped.map((item) => ({
+      item_type: item.item_type,
+      title: item.title,
+      product_name: item.product_name,
+      city_name: item.city_name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_amount: item.total_amount,
+      taxes_amount: item.taxes_amount,
+      start_date: item.start_date,
+      end_date: item.end_date,
+      confidence: item.confidence,
+      raw: item.raw,
+    })),
+  };
+
+  const draft: QuoteDraft = {
+    source: "CVC_TEXT",
+    status: "IMPORTED",
+    currency: "BRL",
+    total,
+    average_confidence: averageConfidence,
+    items: deduped,
+    meta: {
+      file_name: "texto-colado",
+      page_count: 1,
+      extracted_at: extractedAt,
+    },
+    raw_json: rawJson,
+  };
+
+  logs.push({ level: "INFO", message: `Texto importado com ${deduped.length} itens.` });
+
+  return {
+    draft,
+    logs,
+    debug_images: debugImages,
+  };
+}
+
+export async function extractCvcQuoteFromImage(file: File, options: ExtractOptions = {}): Promise<ImportResult> {
+  if (!file) {
+    throw new Error("Arquivo de imagem obrigatorio.");
+  }
+
+  const debug = Boolean(options.debug);
+  const logs: ImportLogDraft[] = [];
+  const debugImages: ImportDebugImage[] = [];
+  const onProgress = options.onProgress || (() => {});
+  const worker = await getOcrWorker({ debug });
+
+  onProgress("Carregando imagem...");
+  const image = await loadImageFromFile(file);
+  const scale = image.width < 1800 ? 2 : 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Nao foi possivel renderizar a imagem.");
+  }
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  onProgress("OCR da imagem...");
+  const fullOcr = await ocrCanvasRegion(worker, canvas, "text");
+  const baseYear = extractYearFromText(fullOcr.text) || new Date().getFullYear();
+
+  let cards: CardBBox[] = [];
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  cards = detectCardsFromImageData(imageData, canvas.width, canvas.height, 1);
+
+  if (cards.length === 0) {
+    const ocrLines = await ocrCanvasLines(worker, canvas);
+    if (ocrLines.length) {
+      cards = detectCardsFromTypeLabels(ocrLines, canvas.width, canvas.height, 1);
+    }
+  }
+
+  const ignoreZone = {
+    x1: 0,
+    y1: 0,
+    x2: canvas.width,
+    y2: canvas.height * 0.4,
+  };
+  if (cards.length > 0) {
+    const filtered = filterCardsByZone(cards, ignoreZone);
+    if (filtered.length) cards = filtered;
+  }
+
+  let extractedItems: QuoteItemDraft[] = [];
+  if (cards.length > 0) {
+    onProgress("OCR dos cards...");
+    extractedItems = await extractItemsFromCards(canvas, cards, worker, baseYear, 1, debug, debugImages);
+  }
+
+  if (extractedItems.length === 0) {
+    const fallbackItems = parseItemsFromFullText(fullOcr.text, baseYear, 1);
+    if (fallbackItems.length) {
+      extractedItems = fallbackItems;
+      logs.push({ level: "INFO", message: "Imagem importada via fallback de texto." });
+    }
+  }
+
+  const deduped = dedupeItems(extractedItems);
+  if (!deduped.length) {
+    throw new Error("Nenhum item identificado no PDF/imagem.");
+  }
+
+  const total = deduped.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const averageConfidence = deduped.length
+    ? deduped.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / deduped.length
+    : 0;
+  const extractedAt = new Date().toISOString();
+
+  const rawJson = {
+    source: "CVC_IMAGE",
+    file_name: file.name,
+    page_count: 1,
+    extracted_at: extractedAt,
+    ocr_text: fullOcr.text,
+    items: deduped.map((item) => ({
+      item_type: item.item_type,
+      title: item.title,
+      product_name: item.product_name,
+      city_name: item.city_name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_amount: item.total_amount,
+      taxes_amount: item.taxes_amount,
+      start_date: item.start_date,
+      end_date: item.end_date,
+      confidence: item.confidence,
+      raw: item.raw,
+    })),
+  };
+
+  const draft: QuoteDraft = {
+    source: "CVC_IMAGE",
+    status: validateForConfirm(deduped) ? "IMPORTED" : "IMPORTED",
+    currency: "BRL",
+    total,
+    average_confidence: averageConfidence,
+    items: deduped,
+    meta: {
+      file_name: file.name,
+      page_count: 1,
+      extracted_at: extractedAt,
+    },
+    raw_json: rawJson,
+  };
+
+  return {
+    draft,
+    logs,
+    debug_images: debugImages,
+  };
 }
 
 export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions = {}): Promise<ImportResult> {
@@ -1149,6 +1531,7 @@ export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_amount: item.total_amount,
+      taxes_amount: item.taxes_amount,
       start_date: item.start_date,
       end_date: item.end_date,
       confidence: item.confidence,

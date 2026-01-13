@@ -1,5 +1,7 @@
 export type QuoteStatus = "DRAFT" | "IMPORTED" | "CONFIRMED" | "FAILED";
 
+export type QuoteSource = "CVC_PDF" | "CVC_IMAGE" | "CVC_TEXT";
+
 export type QuoteSegmentDraft = {
   segment_type: string;
   data: Record<string, unknown>;
@@ -15,16 +17,18 @@ export type QuoteItemDraft = {
   quantity: number;
   unit_price: number;
   total_amount: number;
+  taxes_amount: number;
   start_date: string;
   end_date: string;
   currency: string;
   confidence: number;
+  order_index?: number;
   raw: Record<string, unknown>;
   segments: QuoteSegmentDraft[];
 };
 
 export type QuoteDraft = {
-  source: "CVC_PDF";
+  source: QuoteSource;
   status: QuoteStatus;
   currency: string;
   total: number;

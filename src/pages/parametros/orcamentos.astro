@@ -1,0 +1,17 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import QuotePrintSettingsIsland from "../../components/islands/QuotePrintSettingsIsland.tsx";
+
+const activePage = "parametros-orcamentos";
+---
+
+<DashboardLayout title="Parametros de Orcamentos" {activePage}>
+  <HeaderPage
+    title="Parametros de Orcamentos"
+    subtitle="Configure cabecalho e rodape do PDF por consultor."
+    color="purple"
+  />
+
+  <QuotePrintSettingsIsland client:load />
+</DashboardLayout>

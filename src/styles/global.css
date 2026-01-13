@@ -364,6 +364,72 @@ body {
   padding: 6px 8px;
 }
 
+.quote-items-table {
+  table-layout: auto;
+  min-width: 1280px;
+}
+
+.quote-items-table .form-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.quote-items-table th:nth-child(1),
+.quote-items-table td:nth-child(1) {
+  min-width: 80px;
+}
+
+.quote-items-table th:nth-child(2),
+.quote-items-table td:nth-child(2) {
+  min-width: 120px;
+}
+
+.quote-items-table th:nth-child(3),
+.quote-items-table td:nth-child(3) {
+  min-width: 320px;
+}
+
+.quote-items-table th:nth-child(4),
+.quote-items-table td:nth-child(4) {
+  min-width: 180px;
+}
+
+.quote-items-table th:nth-child(5),
+.quote-items-table td:nth-child(5) {
+  min-width: 150px;
+}
+
+.quote-items-table th:nth-child(6),
+.quote-items-table td:nth-child(6) {
+  min-width: 150px;
+}
+
+.quote-items-table th:nth-child(7),
+.quote-items-table td:nth-child(7) {
+  min-width: 80px;
+}
+
+.quote-items-table th:nth-child(8),
+.quote-items-table td:nth-child(8) {
+  min-width: 140px;
+}
+
+.quote-items-table input[type="date"] {
+  min-width: 140px;
+}
+
+.quote-items-table .order-cell {
+  text-align: center;
+}
+
+.quote-items-table .order-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .clientes-table {
   table-layout: fixed;
 }

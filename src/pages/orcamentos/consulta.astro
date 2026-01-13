@@ -1,0 +1,19 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import QuoteListIsland from "../../components/islands/QuoteListIsland.tsx";
+
+const activePage = "orcamentos";
+---
+
+<DashboardLayout title="Consulta de Orcamentos" {activePage}>
+  <HeaderPage
+    title="Consulta de Orcamentos"
+    subtitle="Listagem de orcamentos importados e confirmados."
+    color="purple"
+  >
+    <a class="btn btn-primary" href="/orcamentos/importar">Importar orcamento</a>
+  </HeaderPage>
+
+  <QuoteListIsland client:load />
+</DashboardLayout>

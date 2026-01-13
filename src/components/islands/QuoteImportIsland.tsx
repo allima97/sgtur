@@ -1,7 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { extractCvcQuoteFromPdf } from "../../lib/quote/cvcPdfExtractor";
+import {
+  extractCvcQuoteFromImage,
+  extractCvcQuoteFromPdf,
+  extractCvcQuoteFromText,
+} from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
+import { supabaseBrowser } from "../../lib/supabase-browser";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
+
+type ImportMode = "pdf" | "image" | "text";
+type ClienteOption = { id: string; nome: string; cpf?: string | null };
+
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function normalizeCpf(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
 
 function normalizeNumber(value: string) {
   const cleaned = value.replace(/[^0-9,.-]/g, "");
@@ -28,7 +44,9 @@ function validateItem(item: QuoteItemDraft) {
 }
 
 export default function QuoteImportIsland() {
+  const [importMode, setImportMode] = useState<ImportMode>("pdf");
   const [file, setFile] = useState<File | null>(null);
+  const [textInput, setTextInput] = useState("");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -37,12 +55,77 @@ export default function QuoteImportIsland() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [debug, setDebug] = useState(false);
+  const [clientes, setClientes] = useState<ClienteOption[]>([]);
+  const [clientesErro, setClientesErro] = useState<string | null>(null);
+  const [clienteBusca, setClienteBusca] = useState("");
+  const [clienteId, setClienteId] = useState<string>("");
+  const [carregandoClientes, setCarregandoClientes] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     setDebug(params.has("debug"));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function carregarClientes() {
+      setCarregandoClientes(true);
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("clientes")
+          .select("id, nome, cpf")
+          .order("nome", { ascending: true })
+          .limit(500);
+        if (error) throw error;
+        if (!active) return;
+        setClientes((data || []) as ClienteOption[]);
+        setClientesErro(null);
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+        if (!active) return;
+        setClientesErro("Nao foi possivel carregar os clientes.");
+      } finally {
+        if (active) setCarregandoClientes(false);
+      }
+    }
+    carregarClientes();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setDraft(null);
+    setImportResult(null);
+    setStatus(null);
+    setError(null);
+    setSuccessId(null);
+    setExtracting(false);
+    setSaving(false);
+    if (importMode !== "text") {
+      setTextInput("");
+    }
+    if (importMode === "text") {
+      setFile(null);
+    }
+  }, [importMode]);
+
+  const clientesFiltrados = useMemo(() => {
+    if (!clienteBusca.trim()) return clientes;
+    const termo = normalizeText(clienteBusca);
+    const cpfTermo = normalizeCpf(clienteBusca);
+    return clientes.filter((c) => {
+      if (normalizeText(c.nome).includes(termo)) return true;
+      if (cpfTermo && normalizeCpf(c.cpf || "") === cpfTermo) return true;
+      return false;
+    });
+  }, [clientes, clienteBusca]);
+
+  const clienteSelecionado = useMemo(
+    () => clientes.find((c) => c.id === clienteId) || null,
+    [clientes, clienteId]
+  );
 
   const canConfirm = useMemo(() => {
     if (!draft?.items?.length) return false;
@@ -51,34 +134,100 @@ export default function QuoteImportIsland() {
 
   function updateDraftItems(items: QuoteItemDraft[]) {
     if (!draft) return;
-    const total = items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
-    const avgConf = items.length
-      ? items.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / items.length
+    const ordered = items.map((item, index) => ({
+      ...item,
+      order_index: index,
+      taxes_amount: Number(item.taxes_amount || 0),
+    }));
+    const subtotal = ordered.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+    const taxesTotal = ordered.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
+    const total = subtotal + taxesTotal;
+    const avgConf = ordered.length
+      ? ordered.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / ordered.length
       : 0;
     setDraft({
       ...draft,
-      items,
+      items: ordered,
       total,
       average_confidence: avgConf,
     });
   }
 
-  async function handleExtract() {
-    if (!file) {
-      setError("Selecione um PDF para importar.");
+  function handleClienteChange(value: string) {
+    setClienteBusca(value);
+    const texto = normalizeText(value);
+    const cpfTexto = normalizeCpf(value);
+    const achado = clientes.find((c) => {
+      const cpf = normalizeCpf(c.cpf || "");
+      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
+    });
+    if (achado) {
+      setClienteId(achado.id);
       return;
     }
+    if (clienteId) setClienteId("");
+  }
+
+  function handleClienteBlur() {
+    if (!clienteBusca.trim()) return;
+    const texto = normalizeText(clienteBusca);
+    const cpfTexto = normalizeCpf(clienteBusca);
+    const achado = clientesFiltrados.find((c) => {
+      const cpf = normalizeCpf(c.cpf || "");
+      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
+    });
+    if (achado) {
+      setClienteId(achado.id);
+      setClienteBusca("");
+    }
+  }
+
+  async function handleExtract() {
     setExtracting(true);
     setError(null);
     setSuccessId(null);
     setStatus("Iniciando OCR...");
     try {
-      const result = await extractCvcQuoteFromPdf(file, {
-        debug,
-        onProgress: (message) => setStatus(message),
-      });
+      let result: ImportResult | null = null;
+      if (importMode === "text") {
+        const text = textInput.trim();
+        if (!text) {
+          setError("Cole o texto do orcamento para importar.");
+          setExtracting(false);
+          return;
+        }
+        const textFile = new File([text], `orcamento-texto-${Date.now()}.txt`, {
+          type: "text/plain",
+        });
+        setFile(textFile);
+        setStatus("Processando texto...");
+        result = await extractCvcQuoteFromText(text, {
+          debug,
+          onProgress: (message) => setStatus(message),
+        });
+      } else {
+        if (!file) {
+          setError(importMode === "image" ? "Selecione uma imagem para importar." : "Selecione um PDF para importar.");
+          setExtracting(false);
+          return;
+        }
+        result =
+          importMode === "image"
+            ? await extractCvcQuoteFromImage(file, { debug, onProgress: (message) => setStatus(message) })
+            : await extractCvcQuoteFromPdf(file, { debug, onProgress: (message) => setStatus(message) });
+      }
+
+      if (!result) {
+        setError("Falha ao extrair itens.");
+        return;
+      }
       setImportResult(result);
-      setDraft(result.draft);
+      const orderedItems = result.draft.items.map((item, index) => ({
+        ...item,
+        order_index: index,
+        taxes_amount: Number(item.taxes_amount || 0),
+      }));
+      setDraft({ ...result.draft, items: orderedItems });
       setStatus("Extracao concluida.");
     } catch (err: any) {
       setError(err?.message || "Erro ao extrair itens.");
@@ -89,6 +238,15 @@ export default function QuoteImportIsland() {
 
   async function handleSave() {
     if (!draft || !file) return;
+    const resolvedClientId =
+      clienteId ||
+      clientes.find((c) => normalizeText(c.nome) === normalizeText(clienteBusca))?.id ||
+      clientes.find((c) => normalizeCpf(c.cpf || "") === normalizeCpf(clienteBusca))?.id ||
+      "";
+    if (!resolvedClientId) {
+      setError("Selecione um cliente antes de salvar.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccessId(null);
@@ -96,6 +254,7 @@ export default function QuoteImportIsland() {
       const result = await saveQuoteDraft({
         draft,
         file,
+        clientId: resolvedClientId,
         importResult: importResult || undefined,
         debug,
       });
@@ -126,29 +285,115 @@ export default function QuoteImportIsland() {
     updateDraftItems(next);
   }
 
+  function moveItem(index: number, direction: "up" | "down") {
+    if (!draft) return;
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= draft.items.length) return;
+    const next = [...draft.items];
+    const [removed] = next.splice(index, 1);
+    next.splice(target, 0, removed);
+    updateDraftItems(next);
+  }
+
   return (
     <div className="page-content-wrap">
       <div className="card-base" style={{ marginBottom: 16 }}>
-        <h2 className="page-title">Importacao de PDF (CVC)</h2>
+        <h2 className="page-title">Importacao de orcamentos (CVC)</h2>
         <p className="page-subtitle">
-          Envie um PDF para gerar um draft. Revise e confirme para salvar.
+          Escolha PDF, imagem ou texto. Revise e confirme para salvar.
         </p>
         <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
-            <label className="form-label">Arquivo PDF</label>
+            <label className="form-label">Cliente *</label>
             <input
-              type="file"
-              accept="application/pdf"
               className="form-input"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              list="listaClientes"
+              placeholder="Buscar cliente..."
+              value={clienteSelecionado?.nome || clienteBusca}
+              onChange={(e) => handleClienteChange(e.target.value)}
+              onBlur={handleClienteBlur}
+              required
             />
+            <datalist id="listaClientes">
+              {clientesFiltrados.slice(0, 200).map((c) => (
+                <option
+                  key={c.id}
+                  value={c.nome}
+                  label={c.cpf ? `CPF: ${c.cpf}` : undefined}
+                />
+              ))}
+            </datalist>
+            {carregandoClientes && (
+              <small style={{ color: "#64748b" }}>Carregando clientes...</small>
+            )}
+            {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
           </div>
+        </div>
+        <div className="form-row" style={{ marginTop: 12 }}>
+          <div className="form-group">
+            <label className="form-label">Tipo de importacao</label>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === "pdf"}
+                  onChange={() => setImportMode("pdf")}
+                />
+                PDF
+              </label>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === "image"}
+                  onChange={() => setImportMode("image")}
+                />
+                Imagem
+              </label>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === "text"}
+                  onChange={() => setImportMode("text")}
+                />
+                Texto
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="form-row" style={{ marginTop: 12 }}>
+          {importMode !== "text" ? (
+            <div className="form-group">
+              <label className="form-label">
+                {importMode === "image" ? "Arquivo de imagem" : "Arquivo PDF"}
+              </label>
+              <input
+                type="file"
+                accept={importMode === "image" ? "image/*" : "application/pdf"}
+                className="form-input"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </div>
+          ) : (
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Texto do orcamento</label>
+              <textarea
+                className="form-input"
+                rows={8}
+                placeholder="Cole aqui o texto do orçamento"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+              />
+            </div>
+          )}
           <div className="form-group" style={{ alignSelf: "flex-end" }}>
             <button
               type="button"
               className="btn btn-primary"
               onClick={handleExtract}
-              disabled={!file || extracting}
+              disabled={(importMode === "text" ? !textInput.trim() : !file) || extracting}
             >
               {extracting ? "Extraindo..." : "Extrair"}
             </button>
@@ -164,10 +409,11 @@ export default function QuoteImportIsland() {
           <div style={{ marginBottom: 12, fontSize: 14 }}>
             Total estimado: R$ {formatCurrency(draft.total)}
           </div>
-          <div className="table-container">
-            <table className="table-default table-compact">
+          <div className="table-container overflow-x-auto">
+            <table className="table-default table-compact quote-items-table">
               <thead>
                 <tr>
+                  <th className="order-cell">Ordem</th>
                   <th>Tipo</th>
                   <th>Produto</th>
                   <th>Cidade</th>
@@ -175,7 +421,7 @@ export default function QuoteImportIsland() {
                   <th>Fim</th>
                   <th>Qtd</th>
                   <th>Total</th>
-                  <th>Conf</th>
+                  <th>Taxas</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,6 +429,30 @@ export default function QuoteImportIsland() {
                   const needsReview = item.confidence < 0.7 || !validateItem(item);
                   return (
                     <tr key={item.temp_id} style={needsReview ? { background: "#fef3c7" } : undefined}>
+                      <td className="order-cell">
+                        <div className="order-controls">
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Mover para cima"
+                            onClick={() => moveItem(index, "up")}
+                            disabled={index === 0}
+                            style={{ padding: "2px 6px" }}
+                          >
+                            ⬆️
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Mover para baixo"
+                            onClick={() => moveItem(index, "down")}
+                            disabled={index === draft.items.length - 1}
+                            style={{ padding: "2px 6px" }}
+                          >
+                            ⬇️
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <input
                           className="form-input"
@@ -236,7 +506,13 @@ export default function QuoteImportIsland() {
                           onChange={(e) => updateItem(index, { total_amount: normalizeNumber(e.target.value) })}
                         />
                       </td>
-                      <td>{item.confidence.toFixed(2)}</td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={formatCurrency(item.taxes_amount || 0)}
+                          onChange={(e) => updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -249,7 +525,7 @@ export default function QuoteImportIsland() {
               type="button"
               className="btn btn-primary"
               onClick={handleSave}
-              disabled={saving || !draft.items.length}
+              disabled={saving || !draft.items.length || !file}
             >
               {saving ? "Salvando..." : "Confirmar e salvar"}
             </button>
