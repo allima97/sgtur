@@ -446,7 +446,7 @@ export default function MenuIsland({ activePage }) {
                 <li>
                   <a
                     className={`sidebar-link ${activePage === "orcamentos" ? "active" : ""}`}
-                    href="/orcamentos"
+                    href="/orcamentos/importar"
                     onClick={handleNavClick}
                   >
                     <span>💼</span>Orçamentos

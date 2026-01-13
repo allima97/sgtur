@@ -1,9 +1,9 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { d as defineMiddleware, s as sequence } from './chunks/index_BVW8YRCK.mjs';
-import './chunks/index_BpdBu8tT.mjs';
-import { c as createServerClient } from './chunks/createServerClient_DoNhbnH4.mjs';
-import './chunks/astro-designed-error-pages_DiTdm4hE.mjs';
-import './chunks/astro/server_Cob7n0Cm.mjs';
+import { d as defineMiddleware, s as sequence } from './chunks/index_HDWYj-Kx.mjs';
+import './chunks/index_CjYnf4g_.mjs';
+import { c as createServerClient } from './chunks/createServerClient_BmgXZ1CZ.mjs';
+import './chunks/astro-designed-error-pages_935dJdAC.mjs';
+import './chunks/astro/server_C9jQHs-i.mjs';
 
 const supabaseUrl = "https://ggqmvruerbaqxthhnxrm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdncW12cnVlcmJhcXh0aGhueHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NjM0NzgsImV4cCI6MjA4MDMzOTQ3OH0.W3msgFUJMFSMOmAuvmI4QE3azppGYPdzGRZcfe9c9Bc";

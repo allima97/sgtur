@@ -1,11 +1,16 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
+function normalizeText(value) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 function hojeISO() {
   return (/* @__PURE__ */ new Date()).toISOString().substring(0, 10);
 }
@@ -29,6 +34,12 @@ function csvEscape(value) {
   }
   return value;
 }
+function formatCurrency(value) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
 function RelatorioAgrupadoProdutoIsland() {
   const [produtos, setProdutos] = reactExports.useState([]);
   const [dataInicio, setDataInicio] = reactExports.useState(() => {
@@ -37,14 +48,30 @@ function RelatorioAgrupadoProdutoIsland() {
     return formatISO(inicio);
   });
   const [dataFim, setDataFim] = reactExports.useState(hojeISO());
-  const [statusFiltro, setStatusFiltro] = reactExports.useState("todos");
+  const [buscaProduto, setBuscaProduto] = reactExports.useState("");
+  const [produtosCadastro, setProdutosCadastro] = reactExports.useState([]);
+  const [tipoReciboSelecionado, setTipoReciboSelecionado] = reactExports.useState("");
+  const [cidadeFiltro, setCidadeFiltro] = reactExports.useState("");
+  const [cidadeNomeInput, setCidadeNomeInput] = reactExports.useState("");
+  const [mostrarSugestoesCidadeFiltro, setMostrarSugestoesCidadeFiltro] = reactExports.useState(false);
+  const [cidadesLista, setCidadesLista] = reactExports.useState([]);
+  const [cidadeSugestoes, setCidadeSugestoes] = reactExports.useState([]);
+  const [buscandoCidade, setBuscandoCidade] = reactExports.useState(false);
+  const [erroCidade, setErroCidade] = reactExports.useState(null);
   const [vendas, setVendas] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(false);
   const [erro, setErro] = reactExports.useState(null);
   const [userCtx, setUserCtx] = reactExports.useState(null);
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
+  const [cidadesMap, setCidadesMap] = reactExports.useState({});
+  const [exportFlags, setExportFlags] = reactExports.useState({ pdf: true, excel: true });
   const [ordenacao, setOrdenacao] = reactExports.useState("total");
   const [ordemDesc, setOrdemDesc] = reactExports.useState(true);
+  const [activeTab, setActiveTab] = reactExports.useState("recibos");
+  const tabOptions = [
+    { id: "recibos", label: "Produtos por recibo" },
+    { id: "agrupado", label: "Resumo por tipo" }
+  ];
   reactExports.useEffect(() => {
     async function carregarBase() {
       try {
@@ -58,6 +85,103 @@ function RelatorioAgrupadoProdutoIsland() {
     }
     carregarBase();
   }, []);
+  reactExports.useEffect(() => {
+    async function carregarProdutosCadastro() {
+      try {
+        const { data, error } = await supabase.from("produtos").select("tipo_produto, nome").order("nome", { ascending: true });
+        if (error) throw error;
+        setProdutosCadastro(data || []);
+      } catch (e) {
+        console.error("Erro ao carregar produtos cadastros:", e);
+      }
+    }
+    carregarProdutosCadastro();
+  }, []);
+  reactExports.useEffect(() => {
+    async function carregarCidades() {
+      try {
+        const { data, error } = await supabase.from("cidades").select("id, nome").order("nome", { ascending: true });
+        if (error) throw error;
+        const map = {};
+        const lista = [];
+        (data || []).forEach((cidade) => {
+          if (cidade?.id && cidade?.nome) {
+            map[cidade.id] = cidade.nome;
+            lista.push({ id: cidade.id, nome: cidade.nome });
+          }
+        });
+        setCidadesMap(map);
+        setCidadesLista(lista);
+      } catch (e) {
+        console.error("Erro ao carregar cidades:", e);
+      }
+    }
+    carregarCidades();
+  }, []);
+  reactExports.useEffect(() => {
+    if (cidadeNomeInput.trim().length < 2) {
+      setCidadeSugestoes([]);
+      setErroCidade(null);
+      setBuscandoCidade(false);
+      setMostrarSugestoesCidadeFiltro(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setBuscandoCidade(true);
+      setErroCidade(null);
+      try {
+        const { data, error } = await supabase.rpc(
+          "buscar_cidades",
+          { q: cidadeNomeInput.trim(), limite: 8 },
+          { signal: controller.signal }
+        );
+        if (!controller.signal.aborted) {
+          if (error) {
+            console.error("Erro ao buscar cidades (RPC):", error);
+            throw error;
+          }
+          setCidadeSugestoes(data || []);
+          setMostrarSugestoesCidadeFiltro(true);
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          console.error("Erro ao buscar cidades:", e);
+          setErroCidade("Erro ao buscar cidades. Tente novamente.");
+          setCidadeSugestoes([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setBuscandoCidade(false);
+        }
+      }
+    }, 300);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [cidadeNomeInput]);
+  reactExports.useEffect(() => {
+    if (!cidadeFiltro) return;
+    const selec = cidadesLista.find((cidade) => cidade.id === cidadeFiltro);
+    if (selec) {
+      setCidadeNomeInput(selec.nome);
+    }
+  }, [cidadeFiltro, cidadesLista]);
+  const nomeProdutosPorTipo = reactExports.useMemo(() => {
+    const map = /* @__PURE__ */ new Map();
+    produtosCadastro.forEach(({ tipo_produto, nome }) => {
+      if (!tipo_produto || !nome) return;
+      const trimmed = nome.trim();
+      if (!trimmed) return;
+      const atual = map.get(tipo_produto) || [];
+      if (!atual.includes(trimmed)) {
+        atual.push(trimmed);
+        map.set(tipo_produto, atual);
+      }
+    });
+    return map;
+  }, [produtosCadastro]);
   reactExports.useEffect(() => {
     async function carregarUserCtx() {
       try {
@@ -85,6 +209,16 @@ function RelatorioAgrupadoProdutoIsland() {
         } else if (papel === "ADMIN") {
           vendedorIds = [];
         }
+        const companyId = usuarioDb?.company_id || null;
+        if (companyId) {
+          const { data: params } = await supabase.from("parametros_comissao").select("exportacao_pdf, exportacao_excel").eq("company_id", companyId).maybeSingle();
+          if (params) {
+            setExportFlags({
+              pdf: params.exportacao_pdf ?? true,
+              excel: params.exportacao_excel ?? true
+            });
+          }
+        }
         setUserCtx({ usuarioId: userId, papel, vendedorIds });
       } catch (e) {
         console.error(e);
@@ -95,10 +229,14 @@ function RelatorioAgrupadoProdutoIsland() {
     }
     carregarUserCtx();
   }, []);
+  const tipoProdutosNomeMap = reactExports.useMemo(
+    () => new Map(produtos.map((p) => [p.id, p.nome || ""])),
+    [produtos]
+  );
   const linhas = reactExports.useMemo(() => {
     const prodMap = new Map(produtos.map((p) => [p.id, p]));
     const map = /* @__PURE__ */ new Map();
-    const adicionar = (prodId, valor) => {
+    const adicionar = (prodId, valor, destinoNome, destinoId) => {
       const key = prodId || "sem-produto";
       const base = prodId ? prodMap.get(prodId) : void 0;
       const nome = base?.nome || base?.tipo || "(sem produto)";
@@ -107,22 +245,37 @@ function RelatorioAgrupadoProdutoIsland() {
         produto_nome: nome,
         quantidade: 0,
         total: 0,
-        ticketMedio: 0
+        ticketMedio: 0,
+        destinoNomes: [],
+        destinoIds: []
       };
       atual.quantidade += 1;
       atual.total += valor;
+      if (destinoNome) {
+        const nomeLimpo = destinoNome.trim();
+        if (nomeLimpo && !atual.destinoNomes.includes(nomeLimpo)) {
+          atual.destinoNomes.push(nomeLimpo);
+        }
+      }
+      if (destinoId != null && destinoId !== "") {
+        if (!atual.destinoIds.includes(destinoId)) {
+          atual.destinoIds.push(destinoId);
+        }
+      }
       map.set(key, atual);
     };
     vendas.forEach((v) => {
+      const destinoNome = v.destinos?.nome || "";
+      const destinoId = v.destino_cidade_id || v.destinos?.cidade_id || null;
       const recibos = v.vendas_recibos || [];
       if (recibos.length) {
         recibos.forEach((r) => {
-          const val = Number(r.valor_total || 0) + Number(r.valor_taxas || 0);
-          adicionar(r.produto_id, val);
+          const val = Number(r.valor_total || 0);
+          adicionar(r.produto_id, val, destinoNome, destinoId);
         });
       } else {
         const val = v.valor_total ?? 0;
-        adicionar(v.produto_id, val);
+        adicionar(v.produto_id, val, destinoNome, destinoId);
       }
     });
     const arr = Array.from(map.values()).map((l) => ({
@@ -142,9 +295,90 @@ function RelatorioAgrupadoProdutoIsland() {
     });
     return arr;
   }, [vendas, produtos, ordenacao, ordemDesc]);
-  const totalGeral = linhas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhas.reduce((acc, l) => acc + l.quantidade, 0);
+  const recibosDetalhados = reactExports.useMemo(() => {
+    const rows = [];
+    const nomeFallback = (tipoId) => tipoProdutosNomeMap.get(tipoId || "") || "(sem produto)";
+    vendas.forEach((v) => {
+      const cidadeId = v.destino_cidade_id || v.destinos?.cidade_id || null;
+      const cidadeNome = v.destino_cidade?.nome || (cidadeId && cidadesMap[cidadeId] ? cidadesMap[cidadeId] : null);
+      const destinoNome = v.destinos?.nome || null;
+      const recibos = v.vendas_recibos || [];
+      if (recibos.length) {
+        recibos.forEach((r) => {
+          const produtoNome = r.produtos?.nome || nomeFallback(r.produto_id);
+          rows.push({
+            vendaId: v.id,
+            numeroRecibo: r.numero_recibo || null,
+            tipoId: r.produto_id || null,
+            produtoNome,
+            valorTotal: Number(r.valor_total || 0),
+            valorTaxas: Number(r.valor_taxas || 0),
+            dataLancamento: v.data_lancamento,
+            status: v.status,
+            destinoNome,
+            cidadeNome,
+            cidadeId
+          });
+        });
+      } else {
+        rows.push({
+          vendaId: v.id,
+          numeroRecibo: null,
+          tipoId: v.produto_id || null,
+          produtoNome: nomeFallback(v.produto_id),
+          valorTotal: v.valor_total ?? 0,
+          valorTaxas: 0,
+          dataLancamento: v.data_lancamento,
+          status: v.status,
+          destinoNome,
+          cidadeNome,
+          cidadeId
+        });
+      }
+    });
+    return rows;
+  }, [vendas, tipoProdutosNomeMap, cidadesMap]);
+  const recibosFiltrados = reactExports.useMemo(() => {
+    const hasTerm = buscaProduto.trim().length > 0;
+    const term = normalizeText(buscaProduto);
+    return recibosDetalhados.filter((recibo) => {
+      if (cidadeFiltro && recibo.cidadeId !== cidadeFiltro) {
+        return false;
+      }
+      if (tipoReciboSelecionado && recibo.tipoId !== tipoReciboSelecionado) {
+        return false;
+      }
+      if (!hasTerm) return true;
+      const destino = normalizeText(recibo.destinoNome || "");
+      const produto = normalizeText(recibo.produtoNome || "");
+      return destino.includes(term) || produto.includes(term);
+    });
+  }, [recibosDetalhados, buscaProduto, tipoReciboSelecionado, cidadeFiltro]);
+  const linhasFiltradas = reactExports.useMemo(() => {
+    const term = normalizeText(buscaProduto);
+    const hasTerm = term.length > 0;
+    return linhas.filter((l) => {
+      if (cidadeFiltro) {
+        const temCidade = l.destinoIds.some((id) => id === cidadeFiltro);
+        if (!temCidade) {
+          return false;
+        }
+      }
+      if (!hasTerm) return true;
+      if (normalizeText(l.produto_nome).includes(term)) return true;
+      if (l.destinoNomes.some((nome) => normalizeText(nome).includes(term))) return true;
+      const tipo = l.produto_id || "";
+      const nomesExtra = nomeProdutosPorTipo.get(tipo) || [];
+      if (nomesExtra.some((nome) => normalizeText(nome).includes(term))) return true;
+      return false;
+    });
+  }, [linhas, buscaProduto, nomeProdutosPorTipo, cidadeFiltro]);
+  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
+  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
+  const totalRecibosCount = recibosFiltrados.length;
+  const totalRecibosValor = recibosFiltrados.reduce((acc, r) => acc + r.valorTotal, 0);
+  const totalRecibosTaxas = recibosFiltrados.reduce((acc, r) => acc + r.valorTaxas, 0);
   function aplicarPeriodoPreset(tipo) {
     const hoje = /* @__PURE__ */ new Date();
     if (tipo === "7") {
@@ -187,11 +421,20 @@ function RelatorioAgrupadoProdutoIsland() {
           cliente_id,
           destino_id,
           produto_id,
+          destino_cidade_id,
           data_lancamento,
           data_embarque,
           valor_total,
           status,
-          vendas_recibos (produto_id, valor_total, valor_taxas)
+          destino_cidade:destino_cidade_id (nome),
+          destinos:produtos!destino_id (nome, cidade_id),
+          vendas_recibos (
+            numero_recibo,
+            produto_id,
+            valor_total,
+            valor_taxas,
+            produtos:tipo_produtos!produto_id (nome, tipo)
+          )
         `
       ).order("data_lancamento", { ascending: false });
       if (userCtx.papel !== "ADMIN") {
@@ -202,9 +445,6 @@ function RelatorioAgrupadoProdutoIsland() {
       }
       if (dataFim) {
         query = query.lte("data_lancamento", dataFim);
-      }
-      if (statusFiltro !== "todos") {
-        query = query.eq("status", statusFiltro);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -230,12 +470,12 @@ function RelatorioAgrupadoProdutoIsland() {
     }
   }, [userCtx]);
   function exportarCSV() {
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
     const header = ["produto", "quantidade", "total", "ticket_medio"];
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.produto_nome,
       l.quantidade.toString(),
       l.total.toFixed(2).replace(".", ","),
@@ -258,6 +498,67 @@ function RelatorioAgrupadoProdutoIsland() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+  function exportarPDF() {
+    if (!exportFlags.pdf) {
+      alert("Exportação PDF desabilitada nos parâmetros.");
+      return;
+    }
+    const subtitle = dataInicio && dataFim ? `Período: ${formatarDataParaExibicao(
+      dataInicio
+    )} até ${formatarDataParaExibicao(dataFim)}` : dataInicio ? `A partir de ${formatarDataParaExibicao(dataInicio)}` : dataFim ? `Até ${formatarDataParaExibicao(dataFim)}` : void 0;
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+      const headers2 = ["Tipo de Produto", "Qtde", "Faturamento", "Ticket médio"];
+      const rows2 = linhasFiltradas.map((l) => [
+        l.produto_nome,
+        l.quantidade,
+        formatCurrency(l.total),
+        formatCurrency(l.ticketMedio)
+      ]);
+      exportTableToPDF({
+        title: "Vendas por Produto",
+        subtitle,
+        headers: headers2,
+        rows: rows2,
+        fileName: "relatorio-vendas-por-produto",
+        orientation: "landscape"
+      });
+      return;
+    }
+    if (recibosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    const headers = [
+      "Recibo",
+      "Produto",
+      "Cidade",
+      "Destino",
+      "Data",
+      "Valor total",
+      "Taxas"
+    ];
+    const rows = recibosFiltrados.map((recibo) => [
+      recibo.numeroRecibo || "-",
+      recibo.produtoNome,
+      recibo.cidadeNome || "-",
+      recibo.destinoNome || "-",
+      recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-",
+      formatCurrency(recibo.valorTotal),
+      formatCurrency(recibo.valorTaxas)
+    ]);
+    exportTableToPDF({
+      title: "Produtos por Recibo",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-produtos-por-recibo",
+      orientation: "landscape"
+    });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-produto-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
@@ -286,20 +587,103 @@ function RelatorioAgrupadoProdutoIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              className: "form-input",
+              placeholder: "Digite a cidade",
+              value: cidadeNomeInput,
+              onChange: (e) => {
+                setCidadeNomeInput(e.target.value);
+                setCidadeFiltro("");
+                setMostrarSugestoesCidadeFiltro(true);
+              },
+              onFocus: () => {
+                if (cidadeNomeInput.trim().length > 0) {
+                  setMostrarSugestoesCidadeFiltro(true);
+                }
+              },
+              onBlur: () => {
+                setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
+                if (!cidadeNomeInput.trim()) {
+                  setCidadeFiltro("");
+                  return;
+                }
+                const match = cidadesLista.find(
+                  (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                );
+                if (match) {
+                  setCidadeFiltro(match.id);
+                  setCidadeNomeInput(match.nome);
+                }
+              }
+            }
+          ),
+          mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "card-base card-config",
+              style: {
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                maxHeight: 160,
+                overflowY: "auto",
+                zIndex: 20,
+                padding: "4px 0"
+              },
+              children: [
+                buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-ghost w-full text-left",
+                    style: { padding: "6px 12px" },
+                    onMouseDown: (e) => {
+                      e.preventDefault();
+                      setCidadeFiltro(cidade.id);
+                      setCidadeNomeInput(cidade.nome);
+                      setMostrarSugestoesCidadeFiltro(false);
+                    },
+                    children: cidade.nome
+                  },
+                  cidade.id
+                ))
+              ]
+            }
+          )
+        ] }),
+        activeTab === "recibos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de Produto" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               className: "form-select",
-              value: statusFiltro,
-              onChange: (e) => setStatusFiltro(e.target.value),
+              value: tipoReciboSelecionado,
+              onChange: (e) => setTipoReciboSelecionado(e.target.value),
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
+                produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome || p.tipo || p.id }, p.id))
               ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar produto" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              className: "form-input",
+              placeholder: "Nome do produto",
+              value: buscaProduto,
+              onChange: (e) => setBuscaProduto(e.target.value)
             }
           )
         ] })
@@ -342,8 +726,29 @@ function RelatorioAgrupadoProdutoIsland() {
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" })
-      ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-light",
+            onClick: exportarPDF,
+            disabled: !exportFlags.pdf,
+            title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+            children: "Exportar PDF"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: tabOptions.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: `btn ${activeTab === tab.id ? "btn-primary" : "btn-outline"}`,
+          onClick: () => setActiveTab(tab.id),
+          children: tab.label
+        },
+        tab.id
+      )) })
     ] }),
     loadingUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Carregando contexto do usuário..." }),
     userCtx && userCtx.papel !== "ADMIN" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config mb-3", style: { color: "#334155" }, children: [
@@ -352,82 +757,113 @@ function RelatorioAgrupadoProdutoIsland() {
       "."
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-        "Produtos: ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: linhas.length })
+    activeTab === "agrupado" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Produtos: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: linhasFiltradas.length })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Faturamento total: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(totalGeral) })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Ticket médio geral: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(ticketGeral) })
+        ] }) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-        "Faturamento total:",
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: totalGeral.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        }) })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-        "Ticket médio geral:",
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: ticketGeral.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[620px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo de Produto" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              style: { cursor: "pointer" },
+              onClick: () => mudarOrdenacao("quantidade"),
+              children: [
+                "Qtde ",
+                ordenacao === "quantidade" ? ordemDesc ? "↓" : "↑" : ""
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              style: { cursor: "pointer" },
+              onClick: () => mudarOrdenacao("total"),
+              children: [
+                "Faturamento ",
+                ordenacao === "total" ? ordemDesc ? "↓" : "↑" : ""
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              style: { cursor: "pointer" },
+              onClick: () => mudarOrdenacao("ticket"),
+              children: [
+                "Ticket médio ",
+                ordenacao === "ticket" ? ordemDesc ? "↓" : "↑" : ""
+              ]
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+          loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando..." }) }),
+          !loading && linhasFiltradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum produto encontrado com os filtros atuais." }) }),
+          !loading && linhasFiltradas.map((l, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.produto_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.quantidade }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatCurrency(l.total) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatCurrency(l.ticketMedio) })
+          ] }, l.produto_id ?? `sem-${idx}`))
+        ] })
       ] }) })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[620px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            style: { cursor: "pointer" },
-            onClick: () => mudarOrdenacao("quantidade"),
-            children: [
-              "Qtde ",
-              ordenacao === "quantidade" ? ordemDesc ? "↓" : "↑" : ""
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            style: { cursor: "pointer" },
-            onClick: () => mudarOrdenacao("total"),
-            children: [
-              "Faturamento ",
-              ordenacao === "total" ? ordemDesc ? "↓" : "↑" : ""
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            style: { cursor: "pointer" },
-            onClick: () => mudarOrdenacao("ticket"),
-            children: [
-              "Ticket médio ",
-              ordenacao === "ticket" ? ordemDesc ? "↓" : "↑" : ""
-            ]
-          }
-        )
+    ] }),
+    activeTab === "recibos" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Recibos: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: totalRecibosCount })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Total recebido: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(totalRecibosValor) })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Taxas: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(totalRecibosTaxas) })
+        ] }) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando..." }) }),
-        !loading && linhas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum produto encontrado com os filtros atuais." }) }),
-        !loading && linhas.map((l, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.produto_nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.quantidade }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.total.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.ticketMedio.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          }) })
-        ] }, l.produto_id ?? `sem-${idx}`))
-      ] })
-    ] }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[720px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Recibo" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cidade" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "right" }, children: "Valor total" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "right" }, children: "Taxas" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+          loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Carregando..." }) }),
+          !loading && recibosFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, children: "Nenhum recibo encontrado com os filtros atuais." }) }),
+          !loading && recibosFiltrados.map((recibo) => {
+            const dataLabel = recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.numeroRecibo || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.produtoNome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.cidadeNome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.destinoNome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: dataLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "right" }, children: formatCurrency(recibo.valorTotal) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "right" }, children: formatCurrency(recibo.valorTaxas) })
+            ] }, `${recibo.vendaId}-${recibo.numeroRecibo || "sem"}`);
+          })
+        ] })
+      ] }) })
+    ] })
   ] });
 }
 

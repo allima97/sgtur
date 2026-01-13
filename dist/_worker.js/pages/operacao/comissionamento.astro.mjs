@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
 
 const PERIODO_OPCOES = [
   { id: "mes_atual", label: "Mês atual" },
@@ -48,12 +48,36 @@ function calcPeriodo(preset) {
   }
   return { inicio: formatISODate(inicio), fim: formatISODate(hoje) };
 }
+function formatPeriodoLabel(value) {
+  if (!value) return "-";
+  const meses = [
+    "jan",
+    "fev",
+    "mar",
+    "abr",
+    "mai",
+    "jun",
+    "jul",
+    "ago",
+    "set",
+    "out",
+    "nov",
+    "dez"
+  ];
+  const partes = value.split("-");
+  if (partes.length < 3) return value;
+  const [ano, mes, dia] = partes;
+  const mesIdx = Number(mes) - 1;
+  const mesLabel = meses[mesIdx] || mes;
+  return `${dia}-${mesLabel}-${ano}`;
+}
 function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = undefined                                            !== "false";
   const [user, setUser] = reactExports.useState(null);
   const [parametros, setParametros] = reactExports.useState(null);
   const [metaGeral, setMetaGeral] = reactExports.useState(null);
+  const [metaIds, setMetaIds] = reactExports.useState([]);
   const [metasProduto, setMetasProduto] = reactExports.useState([]);
   const [regras, setRegras] = reactExports.useState({});
   const [regraProdutoMap, setRegraProdutoMap] = reactExports.useState({});
@@ -81,11 +105,39 @@ function ComissionamentoIsland() {
         setErro("Usuário não autenticado.");
         return;
       }
-      setUser({ id: userId, nome: auth?.user?.email || "" });
       const periodoAtual = calcPeriodo(preset);
       const isAdminPermissao = permissao === "admin";
-      const { data: paramsData } = await supabase.from("parametros_comissao").select("usar_taxas_na_meta, foco_valor").maybeSingle();
-      const { data: metaData } = await supabase.from("metas_vendedor").select("id, meta_geral").eq("vendedor_id", userId).eq("periodo", periodoAtual.inicio.slice(0, 7) + "-01").maybeSingle();
+      const { data: usuarioDb } = await supabase.from("users").select("id, company_id, user_types(name)").eq("id", userId).maybeSingle();
+      const tipoUser = (usuarioDb?.user_types?.name || "").toUpperCase();
+      const isUsuarioVendedor = tipoUser.includes("VENDEDOR");
+      const companyId = usuarioDb?.company_id || null;
+      setUser({
+        id: userId,
+        nome: auth?.user?.email || "",
+        tipo: tipoUser
+      });
+      const paramsCols = "usar_taxas_na_meta, foco_valor, foco_faturamento";
+      let paramsData = null;
+      if (companyId) {
+        const { data } = await supabase.from("parametros_comissao").select(paramsCols).eq("company_id", companyId).maybeSingle();
+        paramsData = data;
+      }
+      if (!paramsData) {
+        const { data } = await supabase.from("parametros_comissao").select(paramsCols).is("company_id", null).maybeSingle();
+        paramsData = data;
+      }
+      const periodoMeta = periodoAtual.inicio.slice(0, 7) + "-01";
+      let metasQuery = supabase.from("metas_vendedor").select("id, meta_geral").eq("periodo", periodoMeta);
+      if (isUsuarioVendedor) {
+        metasQuery = metasQuery.eq("vendedor_id", userId);
+      }
+      const { data: metasData, error: metasError } = await metasQuery;
+      if (metasError) throw metasError;
+      const metasList = metasData || [];
+      const metaIds2 = metasList.map((m) => m.id);
+      const metaSum = metasList.reduce((sum, m) => sum + (m.meta_geral || 0), 0);
+      setMetaIds(metaIds2);
+      setMetaGeral(metaIds2.length > 0 ? { id: metaIds2[0], meta_geral: metaSum } : null);
       const tipoProdBaseCols = "id, nome, regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral";
       const tentarSelectProdutos = async (incluiExibe) => {
         const cols = incluiExibe ? `${tipoProdBaseCols}, exibe_kpi_comissao` : tipoProdBaseCols;
@@ -139,8 +191,9 @@ function ComissionamentoIsland() {
         vendasDataRes = await fallbackQuery;
         suportaKpi = false;
       }
+      const metasProdPromise = metaIds2.length > 0 ? supabase.from("metas_vendedor_produto").select("produto_id, valor").in("meta_vendedor_id", metaIds2) : Promise.resolve({ data: [], error: null });
       const [metasProdDataRes, regrasDataRes, regrasProdDataRes] = await Promise.all([
-        supabase.from("metas_vendedor_produto").select("produto_id, valor").eq("meta_vendedor_id", metaData?.id || ""),
+        metasProdPromise,
         supabase.from("commission_rule").select("id, tipo, meta_nao_atingida, meta_atingida, super_meta, commission_tier (faixa, de_pct, ate_pct, inc_pct_meta, inc_pct_comissao)"),
         supabase.from("product_commission_rule").select("produto_id, rule_id, fix_meta_nao_atingida, fix_meta_atingida, fix_super_meta")
       ]);
@@ -188,10 +241,10 @@ function ComissionamentoIsland() {
       setParametros(
         paramsData ? {
           usar_taxas_na_meta: !!paramsData.usar_taxas_na_meta,
-          foco_valor: paramsData.foco_valor || "bruto"
-        } : { usar_taxas_na_meta: true, foco_valor: "bruto" }
+          foco_valor: paramsData.foco_valor === "liquido" ? "liquido" : "bruto",
+          foco_faturamento: paramsData.foco_faturamento === "liquido" ? "liquido" : "bruto"
+        } : { usar_taxas_na_meta: true, foco_valor: "bruto", foco_faturamento: "bruto" }
       );
-      setMetaGeral(metaData);
       setMetasProduto(metasProdData || []);
       setRegras(regrasMap);
       setRegraProdutoMap(regProdMap);
@@ -242,6 +295,8 @@ function ComissionamentoIsland() {
     const produtosDiferenciados = [];
     let comissaoMetaProd = 0;
     const comissaoMetaProdDetalhe = {};
+    let comissaoPassagemFacial = 0;
+    const usaFocoFaturamentoLiquido = parametros.foco_faturamento === "liquido";
     Object.values(produtos).forEach((p) => {
       if (p.regra_comissionamento === "diferenciado") {
         produtosDiferenciados.push(p.id);
@@ -273,7 +328,9 @@ function ComissionamentoIsland() {
     Object.keys(brutoPorProduto).forEach((prodId) => {
       const prod = produtos[prodId];
       if (!prod) return;
-      const baseCom = parametros.foco_valor === "liquido" ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
+      const baseCom = usaFocoFaturamentoLiquido ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
+      const nomeProdNormalizado = (prod.nome || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const isPassagemFacial = nomeProdNormalizado.includes("passagem facial");
       if (prod.regra_comissionamento === "diferenciado") {
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
@@ -285,7 +342,11 @@ function ComissionamentoIsland() {
         const val = baseCom * (pctCom / 100);
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
         if (jogaParaGeral) {
-          comissaoGeral += val;
+          if (isPassagemFacial) {
+            comissaoPassagemFacial += val;
+          } else {
+            comissaoGeral += val;
+          }
         } else {
           comissaoDif += val;
         }
@@ -304,7 +365,14 @@ function ComissionamentoIsland() {
           }
         }
         const valGeral = baseCom * (pctCom / 100);
-        comissaoGeral += valGeral;
+        const nomeProd = (prod.nome || "").toLowerCase();
+        const normalizedNome = nomeProd.replace(/\s+/g, " ").trim();
+        const isPassagemFacial2 = normalizedNome.includes("passagem facial");
+        if (isPassagemFacial2) {
+          comissaoPassagemFacial += valGeral;
+        } else {
+          comissaoGeral += valGeral;
+        }
         if (prod.usa_meta_produto && prod.meta_produto_valor && prod.comissao_produto_meta_pct) {
           const baseMetaProd = baseMetaPorProduto[prodId] || 0;
           const pctMetaProd = baseMetaProd / prod.meta_produto_valor * 100;
@@ -327,7 +395,8 @@ function ComissionamentoIsland() {
       comissaoGeral,
       comissaoDif,
       comissaoMetaProd: comissaoMetaProd ,
-      totalComissao: comissaoGeral + comissaoDif + comissaoMetaProd ,
+      comissaoPassagemFacial,
+      totalComissao: comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial ,
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: comissaoMetaProdDetalhe ,
       produtosDiferenciados,
@@ -336,10 +405,9 @@ function ComissionamentoIsland() {
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Vendas." });
-  const metaProdEntries = resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}).filter(
-    ([pid]) => produtos[pid]?.exibe_kpi_comissao !== false
-  ) : [];
-  const difProdutos = resumo && resumo.produtosDiferenciados ? resumo.produtosDiferenciados.filter((pid) => produtos[pid]?.exibe_kpi_comissao !== false) : [];
+  const metaProdEntries = resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}) : [];
+  const difProdutos = resumo?.produtosDiferenciados || [];
+  const mostraProdutoKpi = metaProdEntries.length > 0 || difProdutos.length > 0;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base bg-transparent shadow-none p-0", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row mb-0", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
@@ -348,11 +416,11 @@ function ComissionamentoIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: periodo.inicio, readOnly: true })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.inicio), readOnly: true })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: periodo.fim, readOnly: true })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.fim), readOnly: true })
       ] })
     ] }) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
@@ -385,7 +453,7 @@ function ComissionamentoIsland() {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }, children: "Seus Valores a Receber" }),
-        metaProdEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com meta específica" }),
+        mostraProdutoKpi && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com comissão diferenciada" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -393,7 +461,7 @@ function ComissionamentoIsland() {
             style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão (geral)" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
               metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [

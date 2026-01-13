@@ -554,26 +554,8 @@ const DashboardGeralIsland: React.FC = () => {
 
         if (vendasErr) throw vendasErr;
 
-        // ----- ORÇAMENTOS -----
-        const { data: orcData, error: orcErr } = await supabase
-          .from("orcamentos")
-          .select(
-            `
-          id,
-          data_orcamento,
-          data_viagem,
-          status,
-          valor,
-          notas,
-          clientes:clientes (id, nome),
-          destinos:produtos!destino_id (id, nome)
-        `
-          )
-          .gte("data_orcamento", inicio)
-          .lte("data_orcamento", fim)
-          .order("data_orcamento", { ascending: false });
-
-        if (orcErr) throw orcErr;
+        // ----- ORCAMENTOS (resetado) -----
+        const orcData: any[] = [];
 
         // ----- METAS -----
         let metasQuery = supabase

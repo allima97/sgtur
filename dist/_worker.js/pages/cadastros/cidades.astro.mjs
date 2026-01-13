@@ -1,17 +1,17 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
 
 function normalizeText(value) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 const initialForm = {
   nome: "",
@@ -41,6 +41,8 @@ function CidadesIsland() {
   const [carregouTodos, setCarregouTodos] = reactExports.useState(false);
   const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   const [loadingBusca, setLoadingBusca] = reactExports.useState(false);
+  const [subdivisaoBusca, setSubdivisaoBusca] = reactExports.useState("");
+  const [mostrarSugestoesSubdivisao, setMostrarSugestoesSubdivisao] = reactExports.useState(false);
   async function carregar(todos = false) {
     if (!podeVer) return;
     async function carregarCidades() {
@@ -96,15 +98,28 @@ function CidadesIsland() {
         }
       }
     }
+    async function carregarSubdivisoes() {
+      const todas = [];
+      const pageSize = 1e3;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome").range(from, from + pageSize - 1);
+        if (error) throw error;
+        todas.push(...data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return todas;
+    }
     try {
       setLoading(true);
       const [
         { data: paisesData, error: paisesErro },
-        { data: subdivisoesData, error: subdivisoesErro },
+        subdivisoesData,
         cidadesData
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
-        supabase.from("subdivisoes").select("id, nome, pais_id, codigo_admin1, tipo").order("nome"),
+        carregarSubdivisoes(),
         carregarCidades()
       ]);
       if (paisesErro) {
@@ -112,11 +127,7 @@ function CidadesIsland() {
       } else {
         setPaises(paisesData || []);
       }
-      if (subdivisoesErro) {
-        setErro("Erro ao carregar subdivisoes.");
-      } else {
-        setSubdivisoes(subdivisoesData || []);
-      }
+      setSubdivisoes(subdivisoesData || []);
       setCidades(cidadesData || []);
       setCarregouTodos(todos);
     } catch (e) {
@@ -211,8 +222,55 @@ function CidadesIsland() {
     );
     return [...cidadesNome, ...cidadesOutros];
   }, [busca, cidadesEnriquecidas]);
+  const subdivisoesEnriquecidas = reactExports.useMemo(() => {
+    const paisMap = new Map(paises.map((p) => [p.id, p.nome]));
+    return subdivisoes.map((s) => {
+      const paisNome = paisMap.get(s.pais_id) || "";
+      const codigo = s.codigo_admin1 ? ` (${s.codigo_admin1})` : "";
+      return {
+        ...s,
+        pais_nome: paisNome,
+        label: `${s.nome}${codigo}${paisNome ? ` - ${paisNome}` : ""}`
+      };
+    });
+  }, [subdivisoes, paises]);
+  const subdivisoesFiltradas = reactExports.useMemo(() => {
+    if (!subdivisaoBusca.trim()) return subdivisoesEnriquecidas;
+    const termo = normalizeText(subdivisaoBusca);
+    return subdivisoesEnriquecidas.filter(
+      (s) => normalizeText(s.nome).includes(termo) || normalizeText(s.codigo_admin1 || "").includes(termo) || normalizeText(s.tipo || "").includes(termo) || normalizeText(s.pais_nome || "").includes(termo) || normalizeText(s.label || "").includes(termo)
+    );
+  }, [subdivisaoBusca, subdivisoesEnriquecidas]);
+  reactExports.useEffect(() => {
+    if (!mostrarFormulario) return;
+    if (!form.subdivisao_id) return;
+    const atual = subdivisoesEnriquecidas.find((s) => s.id === form.subdivisao_id);
+    if (!atual) return;
+    const label = atual.label || atual.nome;
+    if (normalizeText(subdivisaoBusca) !== normalizeText(label)) {
+      setSubdivisaoBusca(label);
+    }
+  }, [form.subdivisao_id, subdivisoesEnriquecidas, mostrarFormulario]);
   function handleChange(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
+  }
+  function handleSubdivisaoBusca(valor) {
+    setSubdivisaoBusca(valor);
+    if (!valor.trim()) {
+      handleChange("subdivisao_id", "");
+      return;
+    }
+    const termo = normalizeText(valor);
+    const match = subdivisoesEnriquecidas.find(
+      (s) => normalizeText(s.label || s.nome) === termo || normalizeText(s.nome) === termo || normalizeText(s.codigo_admin1 || "") === termo
+    );
+    if (match) {
+      handleChange("subdivisao_id", match.id);
+      return;
+    }
+    if (form.subdivisao_id) {
+      handleChange("subdivisao_id", "");
+    }
   }
   function iniciarEdicao(c) {
     if (!podeEditar) return;
@@ -236,6 +294,14 @@ function CidadesIsland() {
           subdivisao_id: alvo.subdivisao_id || "",
           descricao: alvo.descricao || ""
         });
+        if (alvo.subdivisao_id) {
+          const subdiv = subdivisoes.find((s) => s.id === alvo.subdivisao_id);
+          const paisNome = subdiv ? paises.find((p) => p.id === subdiv.pais_id)?.nome || "" : "";
+          const label = subdiv ? `${subdiv.nome}${paisNome ? ` - ${paisNome}` : ""}` : "";
+          setSubdivisaoBusca(label);
+        } else {
+          setSubdivisaoBusca("");
+        }
       } catch (err) {
         console.error(err);
         setErro("Nao foi possivel carregar dados da cidade para edicao.");
@@ -247,6 +313,7 @@ function CidadesIsland() {
   function iniciarNovo() {
     setEditId(null);
     setForm(initialForm);
+    setSubdivisaoBusca("");
   }
   function abrirFormulario() {
     if (!podeCriar) return;
@@ -376,22 +443,61 @@ function CidadesIsland() {
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Subdivisao *" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
             {
-              className: "form-select",
-              value: form.subdivisao_id,
-              onChange: (e) => handleChange("subdivisao_id", e.target.value),
-              required: true,
+              className: "form-input",
+              placeholder: "Digite a subdivisao",
+              value: subdivisaoBusca,
+              onChange: (e) => handleSubdivisaoBusca(e.target.value),
+              onFocus: () => setMostrarSugestoesSubdivisao(true),
+              onBlur: () => setTimeout(() => setMostrarSugestoesSubdivisao(false), 150),
+              required: true
+            }
+          ),
+          mostrarSugestoesSubdivisao && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "card-base",
+              style: {
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                zIndex: 20,
+                maxHeight: 200,
+                overflowY: "auto",
+                padding: 6,
+                marginTop: 4,
+                border: "1px solid #e5e7eb",
+                background: "#fff"
+              },
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione a subdivisao" }),
-                subdivisoes.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: s.id, children: [
-                  s.nome,
-                  " - ",
-                  paises.find((p) => p.id === s.pais_id)?.nome || "Sem pais"
-                ] }, s.id))
+                subdivisoesFiltradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 6px", color: "#6b7280" }, children: "Nenhuma subdivisao encontrada." }),
+                subdivisoesFiltradas.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-light",
+                    style: {
+                      width: "100%",
+                      justifyContent: "flex-start",
+                      marginBottom: 4,
+                      background: form.subdivisao_id === s.id ? "#e0f2fe" : "#fff",
+                      borderColor: form.subdivisao_id === s.id ? "#38bdf8" : "#e5e7eb"
+                    },
+                    onMouseDown: (e) => {
+                      e.preventDefault();
+                      handleChange("subdivisao_id", s.id);
+                      setSubdivisaoBusca(s.label || s.nome);
+                      setMostrarSugestoesSubdivisao(false);
+                    },
+                    children: s.label || s.nome
+                  },
+                  s.id
+                ))
               ]
             }
           )

@@ -12,6 +12,7 @@
     "/cron-alerta-comissao.md",
     "/cron-alerta-orcamentos.md",
     "/cron-log-alertas.sql",
+    "/importacao-cvc.md",
     "/migration-clientes-active.sql",
     "/migration-clientes-campos-endereco.sql",
     "/migration-clientes-company-id.sql",
@@ -27,6 +28,7 @@
     "/rls-policies.sql",
     "/seed-cliente-acompanhantes.sql",
     "/sgtur-plano-modulos.md",
+    "/tessdata/*",
     "/pdfs/*"
   ]
 }

@@ -1,12 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
+import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
+import { c as construirLinkWhatsApp } from '../../chunks/whatsapp_-onX4vYF.mjs';
 
 const STATUS_OPCOES = [
   { value: "", label: "Todas" },
@@ -37,6 +39,34 @@ function obterStatusPorPeriodo(inicio, fim) {
 function formatarMoeda(valor) {
   if (valor == null || Number.isNaN(valor)) return "-";
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+function obterMinData(datas) {
+  let minTs = null;
+  let minStr = null;
+  datas.forEach((data) => {
+    if (!data) return;
+    const ts = Date.parse(data);
+    if (Number.isNaN(ts)) return;
+    if (minTs === null || ts < minTs) {
+      minTs = ts;
+      minStr = data;
+    }
+  });
+  return minStr;
+}
+function obterMaxData(datas) {
+  let maxTs = null;
+  let maxStr = null;
+  datas.forEach((data) => {
+    if (!data) return;
+    const ts = Date.parse(data);
+    if (Number.isNaN(ts)) return;
+    if (maxTs === null || ts > maxTs) {
+      maxTs = ts;
+      maxStr = data;
+    }
+  });
+  return maxStr;
 }
 const initialCadastroForm = {
   origem: "",
@@ -201,7 +231,7 @@ function ViagensListaIsland() {
       setLoading(true);
       setErro(null);
       let query = supabase.from("viagens").select(
-        "id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
+        "id, venda_id, data_inicio, data_fim, status, origem, destino, responsavel_user_id, cliente_id, clientes (nome, whatsapp), responsavel:users!responsavel_user_id (nome_completo), recibo:vendas_recibos (id, valor_total, valor_taxas, data_inicio, data_fim, numero_recibo, produto_id, tipo_produtos (id, nome, tipo))"
       ).order("data_inicio", { ascending: true });
       if (statusFiltro) {
         query = query.eq("status", statusFiltro);
@@ -236,23 +266,11 @@ function ViagensListaIsland() {
       setFormError("Origem, destino e data de inÃ­cio sÇőo obrigatÃ³rios.");
       return;
     }
-    let orcamentoId = null;
     try {
       setSavingViagem(true);
       setFormError(null);
       const origemLabel = cadastroForm.origem.trim();
       const destinoLabel = cadastroForm.destino.trim();
-      const { data: orcamentoData, error: orcamentoError } = await supabase.from("orcamentos").insert({
-        cliente_id: cadastroForm.cliente_id,
-        status: "novo",
-        data_viagem: cadastroForm.data_inicio,
-        notas: `Viagem criada via Operacao: ${origemLabel} -> ${destinoLabel}`
-      }).select("id").single();
-      if (orcamentoError) throw orcamentoError;
-      orcamentoId = orcamentoData?.id || null;
-      if (!orcamentoId) {
-        throw new Error("Nao foi possivel vincular um orcamento.");
-      }
       const payload = {
         company_id: companyId,
         responsavel_user_id: userId,
@@ -262,7 +280,7 @@ function ViagensListaIsland() {
         data_inicio: cadastroForm.data_inicio,
         data_fim: cadastroForm.data_fim || null,
         status: cadastroForm.status,
-        orcamento_id: orcamentoId
+        orcamento_id: null
       };
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
@@ -271,12 +289,6 @@ function ViagensListaIsland() {
       buscar();
     } catch (e) {
       console.error(e);
-      if (orcamentoId) {
-        const { error: cleanupError } = await supabase.from("orcamentos").delete().eq("id", orcamentoId);
-        if (cleanupError) {
-          console.warn("Nao foi possivel remover o orcamento temporario:", cleanupError);
-        }
-      }
       const errorMessage = e && typeof e === "object" && e !== null && "message" in e && typeof e.message === "string" ? e.message : null;
       setFormError(errorMessage || "Erro ao criar viagem.");
     } finally {
@@ -285,13 +297,16 @@ function ViagensListaIsland() {
   }
   async function excluirViagem(v) {
     if (!podeExcluir) return;
-    const confirmar = window.confirm("Tem certeza que deseja excluir esta viagem?");
+    const possuiMultiplos = (v.recibos || []).length > 1;
+    const mensagemConfirmacao = possuiMultiplos ? "Tem certeza que deseja excluir esta viagem e seus itens vinculados?" : "Tem certeza que deseja excluir esta viagem?";
+    const confirmar = window.confirm(mensagemConfirmacao);
     if (!confirmar) return;
     try {
       setDeletandoViagemId(v.id);
       setErro(null);
       setSucesso(null);
-      const { error } = await supabase.from("viagens").delete().eq("id", v.id);
+      const deleteQuery = supabase.from("viagens").delete();
+      const { error } = v.venda_id ? await deleteQuery.eq("venda_id", v.venda_id) : await deleteQuery.eq("id", v.id);
       if (error) throw error;
       setSucesso("Viagem excluída.");
       await buscar();
@@ -305,8 +320,8 @@ function ViagensListaIsland() {
   }
   function obterStatusExibicao(viagem) {
     const periodoStatus = obterStatusPorPeriodo(
-      viagem.recibo?.data_inicio || viagem.data_inicio,
-      viagem.recibo?.data_fim || viagem.data_fim
+      viagem.data_inicio,
+      viagem.data_fim
     );
     if (periodoStatus) {
       return STATUS_LABELS[periodoStatus] || periodoStatus;
@@ -316,8 +331,43 @@ function ViagensListaIsland() {
     }
     return "-";
   }
+  const viagensAgrupadas = reactExports.useMemo(() => {
+    const grupos = /* @__PURE__ */ new Map();
+    viagens.forEach((viagem) => {
+      const chave = viagem.venda_id || viagem.id;
+      const recibosAtual = viagem.recibo ? [viagem.recibo] : [];
+      const existente = grupos.get(chave);
+      if (!existente) {
+        const dataInicio = obterMinData([viagem.data_inicio, viagem.recibo?.data_inicio]);
+        const dataFim = obterMaxData([viagem.data_fim, viagem.recibo?.data_fim]);
+        grupos.set(chave, {
+          base: {
+            ...viagem,
+            data_inicio: dataInicio || viagem.data_inicio,
+            data_fim: dataFim || viagem.data_fim
+          },
+          recibos: [...recibosAtual]
+        });
+        return;
+      }
+      existente.recibos.push(...recibosAtual);
+      const datasInicio = [
+        existente.base.data_inicio,
+        viagem.data_inicio,
+        viagem.recibo?.data_inicio
+      ];
+      const datasFim = [
+        existente.base.data_fim,
+        viagem.data_fim,
+        viagem.recibo?.data_fim
+      ];
+      existente.base.data_inicio = obterMinData(datasInicio) || existente.base.data_inicio;
+      existente.base.data_fim = obterMaxData(datasFim) || existente.base.data_fim;
+    });
+    return Array.from(grupos.values()).map(({ base, recibos }) => ({ ...base, recibos }));
+  }, [viagens]);
   const proximasViagens = reactExports.useMemo(() => {
-    return [...viagens].sort((a, b) => {
+    return [...viagensAgrupadas].sort((a, b) => {
       const da = a.data_inicio || "";
       const db = b.data_inicio || "";
       if (da === db) return 0;
@@ -325,7 +375,7 @@ function ViagensListaIsland() {
       if (!db) return -1;
       return da < db ? -1 : 1;
     });
-  }, [viagens]);
+  }, [viagensAgrupadas]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
   const totalColunasTabela = 7;
   if (loadingPerm) {
@@ -559,12 +609,15 @@ function ViagensListaIsland() {
         !loading && proximasViagens.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: totalColunasTabela, children: "Nenhuma viagem encontrada." }) }),
         proximasViagens.map((v) => {
           const statusLabel = obterStatusExibicao(v);
-          const produtoLabel = v.recibo?.tipo_produtos?.nome || v.recibo?.tipo_produtos?.tipo || v.recibo?.produto_id || "-";
-          const valorLabel = formatarMoeda(v.recibo?.valor_total);
+          const recibos = v.recibos || [];
+          const produtoLabel = recibos.length > 1 ? `Múltiplos (${recibos.length})` : recibos[0]?.tipo_produtos?.nome || recibos[0]?.tipo_produtos?.tipo || recibos[0]?.produto_id || "-";
+          const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
+          const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
+          const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.clientes?.nome || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_inicio ? new Date(v.data_inicio).toLocaleDateString("pt-BR") : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_fim ? new Date(v.data_fim).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatarDataParaExibicao(v.data_inicio) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatarDataParaExibicao(v.data_fim) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: statusLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtoLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: valorLabel }),
@@ -587,6 +640,18 @@ function ViagensListaIsland() {
                       title: "Ver viagem",
                       style: { padding: "4px 6px" },
                       children: "👁️"
+                    }
+                  ),
+                  whatsappLink && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "a",
+                    {
+                      className: "btn-icon",
+                      href: whatsappLink,
+                      title: "Enviar WhatsApp",
+                      target: "_blank",
+                      rel: "noreferrer",
+                      style: { padding: "4px 6px" },
+                      children: "💬"
                     }
                   ),
                   podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(

@@ -341,29 +341,12 @@ export default function ViagensListaIsland() {
       return;
     }
 
-    let orcamentoId: string | null = null;
     try {
       setSavingViagem(true);
       setFormError(null);
 
       const origemLabel = cadastroForm.origem.trim();
       const destinoLabel = cadastroForm.destino.trim();
-      const { data: orcamentoData, error: orcamentoError } = await supabase
-        .from("orcamentos")
-        .insert({
-          cliente_id: cadastroForm.cliente_id,
-          status: "novo",
-          data_viagem: cadastroForm.data_inicio,
-          notas: `Viagem criada via Operacao: ${origemLabel} -> ${destinoLabel}`,
-        })
-        .select("id")
-        .single();
-
-      if (orcamentoError) throw orcamentoError;
-      orcamentoId = orcamentoData?.id || null;
-      if (!orcamentoId) {
-        throw new Error("Nao foi possivel vincular um orcamento.");
-      }
 
       const payload = {
         company_id: companyId,
@@ -374,7 +357,7 @@ export default function ViagensListaIsland() {
         data_inicio: cadastroForm.data_inicio,
         data_fim: cadastroForm.data_fim || null,
         status: cadastroForm.status,
-        orcamento_id: orcamentoId,
+        orcamento_id: null,
       };
       const { error } = await supabase.from("viagens").insert(payload);
       if (error) throw error;
@@ -384,12 +367,6 @@ export default function ViagensListaIsland() {
       buscar();
     } catch (e: unknown) {
       console.error(e);
-      if (orcamentoId) {
-        const { error: cleanupError } = await supabase.from("orcamentos").delete().eq("id", orcamentoId);
-        if (cleanupError) {
-          console.warn("Nao foi possivel remover o orcamento temporario:", cleanupError);
-        }
-      }
       const errorMessage =
         e && typeof e === "object" && e !== null && "message" in e && typeof (e as { message?: string }).message === "string"
           ? (e as { message?: string }).message

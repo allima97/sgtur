@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -19,11 +19,13 @@ const initialVenda = {
 };
 const initialRecibo = {
   produto_id: "",
+  produto_resolvido_id: "",
   numero_recibo: "",
   valor_total: "",
   valor_taxas: "0",
   data_inicio: "",
-  data_fim: ""
+  data_fim: "",
+  principal: false
 };
 function formatarValorDigitado(valor) {
   const apenasDigitos = valor.replace(/\D/g, "");
@@ -41,6 +43,20 @@ function moedaParaNumero(valor) {
   const limpo = valor.replace(/\./g, "").replace(",", ".");
   const num = Number(limpo);
   return num;
+}
+function dataParaInput(value) {
+  if (value == null) return "";
+  if (typeof value === "string") {
+    if (value.includes("T")) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().split("T")[0];
+      }
+      return value.split("T")[0];
+    }
+    return value;
+  }
+  return value.toISOString().split("T")[0];
 }
 function calcularStatusPeriodo(inicio, fim) {
   if (!inicio) return "planejada";
@@ -62,6 +78,7 @@ function VendasCadastroIsland() {
   const [tipos, setTipos] = reactExports.useState([]);
   const [formVenda, setFormVenda] = reactExports.useState(initialVenda);
   const [recibos, setRecibos] = reactExports.useState([]);
+  const [reciboEmEdicao, setReciboEmEdicao] = reactExports.useState(null);
   const [editId, setEditId] = reactExports.useState(null);
   const [cidadePrefill, setCidadePrefill] = reactExports.useState({ id: "", nome: "" });
   const [erro, setErro] = reactExports.useState(null);
@@ -139,28 +156,38 @@ function VendasCadastroIsland() {
       setFormVenda({
         cliente_id: vendaData.cliente_id,
         destino_id: cidadeId,
-        data_lancamento: vendaData.data_lancamento,
-        data_embarque: vendaData.data_embarque || ""
+        data_lancamento: dataParaInput(vendaData.data_lancamento),
+        data_embarque: dataParaInput(vendaData.data_embarque)
       });
       setBuscaDestino(cidadeNome || cidadeId || "");
       setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
-      const { data: recibosData, error: recErr } = await supabase.from("vendas_recibos").select("*").eq("venda_id", id);
+      const { data: recibosData, error: recErr } = await supabase.from("vendas_recibos").select("*, produto_resolvido_id").eq("venda_id", id);
       if (recErr) throw recErr;
       const produtosLista = produtosBase || produtos;
-      setRecibos(
-        (recibosData || []).map((r) => ({
-          id: r.id,
-          produto_id: produtosLista.find((p) => {
+      const produtoPrincipalIdDaVenda = vendaData.destino_id;
+      const recibosComPrincipal = (recibosData || []).map((r) => {
+        const produtoResolvidoId = r.produto_resolvido_id || "";
+        let produtoSelecionado = produtosLista.find((p) => p.id === produtoResolvidoId);
+        if (!produtoSelecionado) {
+          produtoSelecionado = produtosLista.find((p) => {
             const ehGlobal = !!p.todas_as_cidades;
             return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeId || p.cidade_id === cidadeId);
-          })?.id || "",
+          });
+        }
+        const produtoId = produtoSelecionado?.id || "";
+        return {
+          id: r.id,
+          produto_id: produtoId,
+          produto_resolvido_id: produtoId,
           numero_recibo: r.numero_recibo || "",
           valor_total: r.valor_total != null ? formatarNumeroComoMoeda(r.valor_total) : "",
           valor_taxas: r.valor_taxas != null ? formatarNumeroComoMoeda(r.valor_taxas) : "0,00",
-          data_inicio: r.data_inicio || "",
-          data_fim: r.data_fim || ""
-        }))
-      );
+          data_inicio: dataParaInput(r.data_inicio),
+          data_fim: dataParaInput(r.data_fim),
+          principal: produtoSelecionado?.id === produtoPrincipalIdDaVenda
+        };
+      });
+      setRecibos(garantirReciboPrincipal(recibosComPrincipal));
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar venda para edição.");
@@ -185,10 +212,11 @@ function VendasCadastroIsland() {
   reactExports.useEffect(() => {
     if (buscaDestino.trim().length < 2) {
       setResultadosCidade([]);
+      setMostrarSugestoesCidade(false);
       return;
     }
     const controller = new AbortController();
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setBuscandoCidade(true);
       setErroCidade(null);
       try {
@@ -201,12 +229,12 @@ function VendasCadastroIsland() {
           if (error) {
             console.error("Erro ao buscar cidades:", error);
             setErroCidade("Erro ao buscar cidades (RPC). Tentando fallback...");
-            const { data: dataFallback, error: errorFallback } = await supabase.from("cidades").select("id, nome").ilike("nome", `%${buscaDestino.trim()}%`).order("nome");
-            if (errorFallback) {
-              console.error("Erro no fallback de cidades:", errorFallback);
+            const { data: fallbackData, error: fallbackError } = await supabase.from("cidades").select("id, nome, subdivisao_nome, pais_nome").ilike("nome", `%${buscaDestino.trim()}%`).order("nome");
+            if (fallbackError) {
+              console.error("Erro no fallback de cidades:", fallbackError);
               setErroCidade("Erro ao buscar cidades.");
             } else {
-              setResultadosCidade(dataFallback || []);
+              setResultadosCidade(fallbackData || []);
               setErroCidade(null);
             }
           } else {
@@ -219,7 +247,7 @@ function VendasCadastroIsland() {
     }, 300);
     return () => {
       controller.abort();
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [buscaDestino]);
   const normalizarCpf = (v) => v.replace(/\D/g, "");
@@ -265,8 +293,29 @@ function VendasCadastroIsland() {
       return id;
     });
   }
+  function garantirReciboPrincipal(recibos2) {
+    if (recibos2.length === 0) return [];
+    const principalComProduto = recibos2.findIndex(
+      (r) => r.principal && r.produto_id
+    );
+    if (principalComProduto >= 0) {
+      return recibos2.map((r, idx) => ({ ...r, principal: idx === principalComProduto }));
+    }
+    const comProduto = recibos2.findIndex((r) => r.produto_id);
+    if (comProduto >= 0) {
+      return recibos2.map((r, idx) => ({ ...r, principal: idx === comProduto }));
+    }
+    const principalAtual = recibos2.findIndex((r) => r.principal);
+    if (principalAtual >= 0) {
+      return recibos2.map((r, idx) => ({ ...r, principal: idx === principalAtual }));
+    }
+    return recibos2.map((r, idx) => ({ ...r, principal: idx === 0 }));
+  }
   function addRecibo() {
-    setRecibos((prev) => [...prev, { ...initialRecibo }]);
+    setRecibos((prev) => {
+      const novo = [...prev, { ...initialRecibo }];
+      return garantirReciboPrincipal(novo);
+    });
   }
   function updateRecibo(index, campo, valor) {
     setRecibos((prev) => {
@@ -281,17 +330,29 @@ function VendasCadastroIsland() {
   }
   reactExports.useEffect(() => {
     setBuscaProduto("");
-    setRecibos(
-      (prev) => prev.map((r) => {
+    setRecibos((prev) => {
+      const atualizado = prev.map((r) => {
         const prod = produtos.find((p) => p.id === r.produto_id);
         const ehGlobal = !!prod?.todas_as_cidades;
         if (prod && (ehGlobal || prod.cidade_id === formVenda.destino_id)) return r;
-        return { ...r, produto_id: "" };
-      })
-    );
+        return { ...r, produto_id: "", principal: false };
+      });
+      return garantirReciboPrincipal(atualizado);
+    });
   }, [formVenda.destino_id, produtos]);
   function removerRecibo(index) {
-    setRecibos((prev) => prev.filter((_, i) => i !== index));
+    setRecibos((prev) => {
+      const novo = prev.filter((_, i) => i !== index);
+      return garantirReciboPrincipal(novo);
+    });
+  }
+  function marcarReciboPrincipal(index) {
+    setRecibos(
+      (prev) => prev.map((recibo, i) => ({
+        ...recibo,
+        principal: i === index
+      }))
+    );
   }
   function resetFormAndGoToConsulta() {
     setFormVenda({
@@ -357,10 +418,12 @@ function VendasCadastroIsland() {
         setSalvando(false);
         return;
       }
-      const produtoDestinoIdRaw = recibos[0]?.produto_id;
+      const principalIndex = recibos.findIndex((r) => r.principal);
+      const principalRecibo = principalIndex >= 0 ? recibos[principalIndex] : recibos[0];
+      const produtoDestinoIdRaw = principalRecibo?.produto_id;
       if (!produtoDestinoIdRaw) {
-        setErro("Selecione um produto para o recibo. O primeiro recibo define o destino da venda.");
-        showToast("Selecione um produto para o recibo principal.", "error");
+        setErro("Selecione um produto para o recibo principal da venda.");
+        showToast("Selecione o produto principal antes de salvar.", "error");
         setSalvando(false);
         return;
       }
@@ -463,7 +526,8 @@ function VendasCadastroIsland() {
         const idResolvido = await resolverProdutoId(r);
         produtoIdsResolvidos.push(idResolvido);
       }
-      const produtoDestinoId = produtoIdsResolvidos[0];
+      const indexPrincipalFinal = principalIndex >= 0 ? principalIndex : 0;
+      const produtoDestinoId = produtoIdsResolvidos[indexPrincipalFinal];
       let oldReciboIds = [];
       if (editId) {
         const { data: existingRecibos, error: existingRecibosErr } = await supabase.from("vendas_recibos").select("id").eq("venda_id", editId);
@@ -527,6 +591,7 @@ function VendasCadastroIsland() {
         const insertPayload = {
           venda_id: vendaId,
           produto_id: tipoId,
+          produto_resolvido_id: produtoIdResolvido,
           numero_recibo: recibo.numero_recibo.trim(),
           valor_total: valTotalNum,
           valor_taxas: valTaxasNum,
@@ -672,21 +737,32 @@ function VendasCadastroIsland() {
                 style: { marginBottom: 6 }
               }
             ),
-            buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: 12, color: "#6b7280" }, children: "Buscando..." }),
-            erroCidade && !buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: 12, color: "#dc2626" }, children: erroCidade }),
             mostrarSugestoesCidade && (buscandoCidade || buscaDestino.trim().length >= 2) && /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
-                className: "card-base absolute left-0 right-0 mt-1 max-h-44 overflow-y-auto p-1 border border-slate-200 bg-white z-10",
+                className: "card-base card-config",
+                style: {
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0"
+                },
                 children: [
-                  resultadosCidade.length === 0 && !buscandoCidade && buscaDestino.trim().length >= 2 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 6px", color: "#6b7280" }, children: "Nenhuma cidade encontrada." }),
-                  resultadosCidade.map((c) => {
+                  buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                  !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                  !buscandoCidade && !erroCidade && resultadosCidade.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                  !buscandoCidade && !erroCidade && resultadosCidade.map((c) => {
                     const label = c.subdivisao_nome ? `${c.nome} (${c.subdivisao_nome})` : c.nome;
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "button",
                       {
                         type: "button",
-                        className: `btn btn-light w-full justify-start mb-1 ${formVenda.destino_id === c.id ? "bg-sky-100 border-sky-400" : "bg-white border-slate-200"}`,
+                        className: "btn btn-ghost w-full text-left",
+                        style: { padding: "6px 12px" },
                         onMouseDown: (e) => {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
@@ -726,110 +802,141 @@ function VendasCadastroIsland() {
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-3 font-semibold text-lg", children: "Recibos da Venda" }),
-        recibos.map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
+        recibos.map((r, i) => {
+          const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
+          const nomeProdutoAtual = produtoSelecionado?.nome || "";
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col md:flex-row gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  list: `listaProdutos-${i}`,
+                  placeholder: existeProdutoGlobal ? "Escolha uma cidade ou selecione um produto global..." : "Selecione uma cidade primeiro e busque o produto...",
+                  value: reciboEmEdicao === i ? buscaProduto || nomeProdutoAtual : nomeProdutoAtual,
+                  onFocus: () => {
+                    setReciboEmEdicao(i);
+                    setBuscaProduto("");
+                  },
+                  onChange: (e) => setBuscaProduto(e.target.value),
+                  onBlur: () => {
+                    const texto = buscaProduto.trim();
+                    if (!texto) {
+                      updateRecibo(i, "produto_id", "");
+                    } else {
+                      const achado = produtosFiltrados.find(
+                        (p) => p.nome.toLowerCase() === texto.toLowerCase()
+                      );
+                      if (achado) {
+                        updateRecibo(i, "produto_id", achado.id);
+                      }
+                    }
+                    setReciboEmEdicao(null);
+                    setBuscaProduto("");
+                  },
+                  required: true,
+                  disabled: !formVenda.destino_id && !existeProdutoGlobal
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `listaProdutos-${i}`, children: produtosFiltrados.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.nome }, p.id)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mt-1 text-xs text-slate-500", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "recibo-principal",
+                      checked: r.principal,
+                      onChange: () => marcarReciboPrincipal(i),
+                      className: "form-radio h-4 w-4 text-sky-600"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-[11px]", children: "Produto principal" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Define o produto principal usado nos relatórios." })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número recibo *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  value: r.numero_recibo,
+                  onChange: (e) => updateRecibo(i, "numero_recibo", e.target.value),
+                  required: true
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  type: "date",
+                  value: r.data_inicio,
+                  onChange: (e) => updateRecibo(i, "data_inicio", e.target.value),
+                  required: true
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  type: "date",
+                  value: r.data_fim,
+                  onChange: (e) => updateRecibo(i, "data_fim", e.target.value),
+                  required: true
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor total *" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  type: "text",
+                  inputMode: "decimal",
+                  pattern: "[0-9,.]*",
+                  placeholder: "0,00",
+                  value: r.valor_total,
+                  onChange: (e) => updateReciboMonetario(i, "valor_total", e.target.value),
+                  required: true
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Taxas" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "form-input",
+                  type: "text",
+                  inputMode: "decimal",
+                  pattern: "[0-9,.]*",
+                  placeholder: "0,00",
+                  value: r.valor_taxas,
+                  onChange: (e) => updateReciboMonetario(i, "valor_taxas", e.target.value)
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group flex-none w-20 flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
               {
-                className: "form-input",
-                list: `listaProdutos-${i}`,
-                placeholder: existeProdutoGlobal ? "Escolha uma cidade ou selecione um produto global..." : "Selecione uma cidade primeiro e busque o produto...",
-                value: produtos.find((p) => p.id === r.produto_id)?.nome || buscaProduto,
-                onChange: (e) => setBuscaProduto(e.target.value),
-                onBlur: () => {
-                  const achado = produtosFiltrados.find(
-                    (p) => p.nome.toLowerCase() === buscaProduto.toLowerCase()
-                  );
-                  if (achado) {
-                    updateRecibo(i, "produto_id", achado.id);
-                  }
-                },
-                required: true,
-                disabled: !formVenda.destino_id && !existeProdutoGlobal
+                type: "button",
+                className: "btn-icon btn-danger mt-2",
+                onClick: () => removerRecibo(i),
+                children: "🗑️"
               }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `listaProdutos-${i}`, children: produtosFiltrados.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.nome }, p.id)) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número recibo *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                value: r.numero_recibo,
-                onChange: (e) => updateRecibo(i, "numero_recibo", e.target.value),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "date",
-                value: r.data_inicio,
-                onChange: (e) => updateRecibo(i, "data_inicio", e.target.value),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[160px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "date",
-                value: r.data_fim,
-                onChange: (e) => updateRecibo(i, "data_fim", e.target.value),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor total *" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "text",
-                inputMode: "decimal",
-                pattern: "[0-9,.]*",
-                placeholder: "0,00",
-                value: r.valor_total,
-                onChange: (e) => updateReciboMonetario(i, "valor_total", e.target.value),
-                required: true
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[120px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Taxas" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "text",
-                inputMode: "decimal",
-                pattern: "[0-9,.]*",
-                placeholder: "0,00",
-                value: r.valor_taxas,
-                onChange: (e) => updateReciboMonetario(i, "valor_taxas", e.target.value)
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group flex-none w-20 flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              className: "btn-icon btn-danger mt-2",
-              onClick: () => removerRecibo(i),
-              children: "🗑️"
-            }
-          ) })
-        ] }) }, i)),
+            ) })
+          ] }) }, i);
+        }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",

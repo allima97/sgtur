@@ -491,11 +491,7 @@ export default function ClientesIsland() {
         });
       }
 
-      const { data: orc } = await supabase
-        .from("orcamentos")
-        .select("id, data_orcamento, status, valor, numero_venda, produto_id, destinos:produtos!destino_id (nome, cidade_id)")
-        .eq("cliente_id", cliente.id)
-        .order("data_orcamento", { ascending: false });
+      const orc: any[] = [];
 
       const extraCidadeIds =
         orc

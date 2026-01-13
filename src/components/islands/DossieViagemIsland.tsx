@@ -86,7 +86,6 @@ type ViagemDetalhe = {
     destino_id?: string | null;
     vendas_recibos?: ReciboVenda[] | null;
   } | null;
-  orcamento?: { id: string; cliente_id: string | null; clientes?: { nome?: string | null } | null } | null;
   viagem_acompanhantes?: ViagemAcompanhante[];
   viagem_servicos?: ViagemServico[];
   viagem_documentos?: ViagemDocumento[];
@@ -192,10 +191,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const servicos = viagem?.viagem_servicos || [];
   const documentos = viagem?.viagem_documentos || [];
   const recibos = viagem?.venda?.vendas_recibos || [];
-  const clienteNome =
-    viagem?.venda?.clientes?.nome || viagem?.orcamento?.clientes?.nome || "";
-  const clienteBaseId =
-    viagem?.venda?.cliente_id || viagem?.orcamento?.cliente_id || null;
+  const clienteNome = viagem?.venda?.clientes?.nome || "";
+  const clienteBaseId = viagem?.venda?.cliente_id || null;
   const reciboPrincipal = React.useMemo(() => {
     const destinoId = viagem?.venda?.destino_id;
     if (!destinoId) return recibos[0] || null;
@@ -296,14 +293,6 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               )
             )
           ),
-          orcamento:orcamentos (
-            id,
-            cliente_id,
-            clientes:clientes (
-              id,
-              nome
-            )
-          ),
           viagem_acompanhantes (
             id,
             papel,
@@ -358,10 +347,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
         setViagensVenda([]);
       }
 
-      // Carrega acompanhantes do cliente base (venda ou orçamento)
+      // Carrega acompanhantes do cliente base (venda).
       const clienteBaseId =
         (detalhe?.venda?.cliente_id as string | null) ||
-        (detalhe?.orcamento?.cliente_id as string | null) ||
         null;
 
       if (clienteBaseId) {

@@ -1,16 +1,38 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../../chunks/usePermissao_B808B4Oq.mjs';
-import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_pW02Hlay.mjs';
+import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports, R as React } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../../chunks/usePermissao_p9GcBfMe.mjs';
+import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
+import { f as formatarDataParaExibicao } from '../../../chunks/formatDate_DIYZa49I.mjs';
 
 const STORAGE_BUCKET = "viagens";
 function sanitizeFileName(filename) {
   return filename.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+}
+function parseStorageRef(url) {
+  if (!url) return null;
+  if (url.startsWith("storage://")) {
+    const rest = url.slice("storage://".length);
+    const [bucket, ...pathParts] = rest.split("/");
+    if (!bucket || pathParts.length === 0) return null;
+    return { bucket, path: pathParts.join("/") };
+  }
+  const signedMatch = url.match(/\/storage\/v1\/object\/sign\/([^/]+)\/(.+?)(?:\?|$)/i);
+  if (signedMatch) {
+    return { bucket: signedMatch[1], path: decodeURIComponent(signedMatch[2]) };
+  }
+  const publicMatch = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/i);
+  if (publicMatch) {
+    return { bucket: publicMatch[1], path: decodeURIComponent(publicMatch[2]) };
+  }
+  if (!url.includes("://")) {
+    return { bucket: STORAGE_BUCKET, path: url };
+  }
+  return null;
 }
 function DossieViagemIsland({ viagemId }) {
   const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
@@ -49,8 +71,59 @@ function DossieViagemIsland({ viagemId }) {
   const [docFile, setDocFile] = reactExports.useState(null);
   const [savingDoc, setSavingDoc] = reactExports.useState(false);
   const [removendoDocId, setRemovendoDocId] = reactExports.useState(null);
+  const [abrindoDocId, setAbrindoDocId] = reactExports.useState(null);
+  const [viagensVenda, setViagensVenda] = reactExports.useState([]);
+  const [abaAtiva, setAbaAtiva] = reactExports.useState("dados");
+  const [mostrarCadastroAcomp, setMostrarCadastroAcomp] = reactExports.useState(false);
+  const [salvandoCadastroAcomp, setSalvandoCadastroAcomp] = reactExports.useState(false);
+  const [erroCadastroAcomp, setErroCadastroAcomp] = reactExports.useState(null);
+  const [cadastroAcompForm, setCadastroAcompForm] = reactExports.useState({
+    nome_completo: "",
+    cpf: "",
+    telefone: "",
+    grau_parentesco: "",
+    rg: "",
+    data_nascimento: "",
+    observacoes: "",
+    ativo: true
+  });
   const servicos = viagem?.viagem_servicos || [];
   const documentos = viagem?.viagem_documentos || [];
+  const recibos = viagem?.venda?.vendas_recibos || [];
+  const clienteNome = viagem?.venda?.clientes?.nome || "";
+  const clienteBaseId = viagem?.venda?.cliente_id || null;
+  const reciboPrincipal = React.useMemo(() => {
+    const destinoId = viagem?.venda?.destino_id;
+    if (!destinoId) return recibos[0] || null;
+    return recibos.find(
+      (r) => r.produto_resolvido_id === destinoId || r.produto_id === destinoId || r.tipo_produtos?.id === destinoId
+    ) || recibos[0] || null;
+  }, [recibos, viagem?.venda?.destino_id]);
+  const recibosOrdenados = React.useMemo(() => {
+    if (!reciboPrincipal) return recibos;
+    const restantes = recibos.filter((r) => r.id !== reciboPrincipal.id);
+    return [reciboPrincipal, ...restantes];
+  }, [recibos, reciboPrincipal]);
+  React.useMemo(() => {
+    if (!reciboPrincipal) return null;
+    return viagensVenda.find((v) => v.recibo_id === reciboPrincipal.id) || null;
+  }, [viagensVenda, reciboPrincipal]);
+  function resetCadastroAcompanhante(hideForm = false) {
+    setCadastroAcompForm({
+      nome_completo: "",
+      cpf: "",
+      telefone: "",
+      grau_parentesco: "",
+      rg: "",
+      data_nascimento: "",
+      observacoes: "",
+      ativo: true
+    });
+    setErroCadastroAcomp(null);
+    if (hideForm) {
+      setMostrarCadastroAcomp(false);
+    }
+  }
   reactExports.useEffect(() => {
     if (!viagemId) return;
     if (!loadingPerm && podeVer) {
@@ -81,17 +154,29 @@ function DossieViagemIsland({ viagemId }) {
           venda:vendas (
             id,
             cliente_id,
+            destino_id,
             clientes:clientes (
               id,
               nome
-            )
-          ),
-          orcamento:orcamentos (
-            id,
-            cliente_id,
-            clientes:clientes (
+            ),
+            vendas_recibos (
               id,
-              nome
+              numero_recibo,
+              valor_total,
+              valor_taxas,
+              data_inicio,
+              data_fim,
+              produto_id,
+              produto_resolvido_id,
+              tipo_produtos (
+                id,
+                nome,
+                tipo
+              ),
+              produto_resolvido:produtos!produto_resolvido_id (
+                id,
+                nome
+              )
             )
           ),
           viagem_acompanhantes (
@@ -134,9 +219,16 @@ function DossieViagemIsland({ viagemId }) {
       if (error) throw error;
       const detalhe = data || null;
       setViagem(detalhe);
-      const clienteBaseId = detalhe?.venda?.cliente_id || detalhe?.orcamento?.cliente_id || null;
-      if (clienteBaseId) {
-        const { data: acompDisp, error: acompErr } = await supabase.from("cliente_acompanhantes").select("id, nome_completo, cpf, telefone, grau_parentesco").eq("cliente_id", clienteBaseId).eq("ativo", true).order("nome_completo", { ascending: true });
+      if (detalhe?.venda_id) {
+        const { data: viagensData, error: viagensErr } = await supabase.from("viagens").select("id, recibo_id, origem, destino, status, data_inicio, data_fim, observacoes").eq("venda_id", detalhe.venda_id);
+        if (viagensErr) throw viagensErr;
+        setViagensVenda(viagensData || []);
+      } else {
+        setViagensVenda([]);
+      }
+      const clienteBaseId2 = detalhe?.venda?.cliente_id || null;
+      if (clienteBaseId2) {
+        const { data: acompDisp, error: acompErr } = await supabase.from("cliente_acompanhantes").select("id, nome_completo, cpf, telefone, grau_parentesco").eq("cliente_id", clienteBaseId2).eq("ativo", true).order("nome_completo", { ascending: true });
         if (!acompErr && acompDisp) {
           setAcompanhantesCliente(
             acompDisp.map((a) => ({
@@ -155,6 +247,7 @@ function DossieViagemIsland({ viagemId }) {
       console.error(e);
       setErro("Erro ao carregar dossiê da viagem.");
       setViagem(null);
+      setViagensVenda([]);
     } finally {
       setLoading(false);
     }
@@ -209,6 +302,49 @@ function DossieViagemIsland({ viagemId }) {
       setErro("Erro ao remover acompanhante.");
     } finally {
       setSavingAcomp(false);
+    }
+  }
+  async function salvarCadastroAcompanhante() {
+    if (!viagem || !podeCriar) return;
+    if (!clienteBaseId) {
+      setErroCadastroAcomp("Cliente não identificado para este dossiê.");
+      return;
+    }
+    if (!viagem.company_id) {
+      setErroCadastroAcomp("Viagem sem company_id para salvar acompanhante.");
+      return;
+    }
+    if (!cadastroAcompForm.nome_completo.trim()) {
+      setErroCadastroAcomp("Informe o nome completo do acompanhante.");
+      return;
+    }
+    try {
+      setSalvandoCadastroAcomp(true);
+      setErroCadastroAcomp(null);
+      const payload = {
+        cliente_id: clienteBaseId,
+        company_id: viagem.company_id,
+        nome_completo: cadastroAcompForm.nome_completo.trim(),
+        cpf: cadastroAcompForm.cpf?.trim() || null,
+        telefone: cadastroAcompForm.telefone?.trim() || null,
+        grau_parentesco: cadastroAcompForm.grau_parentesco?.trim() || null,
+        rg: cadastroAcompForm.rg?.trim() || null,
+        data_nascimento: cadastroAcompForm.data_nascimento || null,
+        observacoes: cadastroAcompForm.observacoes?.trim() || null,
+        ativo: cadastroAcompForm.ativo
+      };
+      const { data, error } = await supabase.from("cliente_acompanhantes").insert(payload).select("id").single();
+      if (error) throw error;
+      resetCadastroAcompanhante(true);
+      if (data?.id) {
+        setNovoAcomp((prev) => ({ ...prev, acompanhante_id: data.id }));
+      }
+      await carregar();
+    } catch (e) {
+      console.error(e);
+      setErroCadastroAcomp("Erro ao cadastrar acompanhante.");
+    } finally {
+      setSalvandoCadastroAcomp(false);
     }
   }
   function iniciarEdicaoServico(servico) {
@@ -310,12 +446,13 @@ function DossieViagemIsland({ viagemId }) {
       });
       if (uploadErr) throw uploadErr;
       const publicUrl = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(uploadData.path).data.publicUrl;
+      const storageRef = `storage://${STORAGE_BUCKET}/${uploadData.path}`;
       const payload = {
         viagem_id: viagem.id,
         company_id: viagem.company_id,
         titulo: docTitulo,
         tipo: docTipo || "outro",
-        url: publicUrl,
+        url: storageRef || publicUrl,
         mime_type: docFile.type || null,
         size_bytes: docFile.size || null
       };
@@ -348,6 +485,28 @@ function DossieViagemIsland({ viagemId }) {
       setRemovendoDocId(null);
     }
   }
+  async function abrirDocumento(doc) {
+    if (!doc.url) return;
+    const storageRef = parseStorageRef(doc.url);
+    if (!storageRef) {
+      window.open(doc.url, "_blank", "noreferrer");
+      return;
+    }
+    try {
+      setAbrindoDocId(doc.id);
+      setErro(null);
+      const { data, error } = await supabase.storage.from(storageRef.bucket).createSignedUrl(storageRef.path, 60 * 10);
+      if (error || !data?.signedUrl) {
+        throw error || new Error("URL assinada indisponível.");
+      }
+      window.open(data.signedUrl, "_blank", "noreferrer");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao abrir documento. Verifique o bucket de Storage.");
+    } finally {
+      setAbrindoDocId(null);
+    }
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: "/operacao/viagens", children: "Voltar" }),
@@ -355,42 +514,84 @@ function DossieViagemIsland({ viagemId }) {
     ] }) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginTop: 10 }, children: erro }),
     !erro && viagem && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 8 }, children: "Dados da viagem" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Origem" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.origem || "-" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Destino" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.destino || "-" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.status || "-" })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.data_inicio ? new Date(viagem.data_inicio).toLocaleDateString("pt-BR") : "-" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.data_fim ? new Date(viagem.data_fim).toLocaleDateString("pt-BR") : "-" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Responsável" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.responsavel?.nome_completo || viagem.responsavel_user_id || "-" })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: viagem.observacoes || "-" })
-        ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: `btn ${abaAtiva === "dados" ? "btn-primary" : "btn-outline"}`,
+            onClick: () => setAbaAtiva("dados"),
+            children: "Dados da viagem"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: `btn ${abaAtiva === "acompanhantes" ? "btn-primary" : "btn-outline"}`,
+            onClick: () => setAbaAtiva("acompanhantes"),
+            children: "Acompanhantes"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: `btn ${abaAtiva === "servicos" ? "btn-primary" : "btn-outline"}`,
+            onClick: () => setAbaAtiva("servicos"),
+            children: "Serviços da viagem"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: `btn ${abaAtiva === "documentos" ? "btn-primary" : "btn-outline"}`,
+            onClick: () => setAbaAtiva("documentos"),
+            children: "Documentos / vouchers"
+          }
+        )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
+      abaAtiva === "dados" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
+        clienteNome && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 16, fontWeight: 700, marginBottom: 12 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#1d4ed8" }, children: "Cliente:" }),
+          " ",
+          clienteNome
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 8 }, children: "Dados da viagem" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: recibosOrdenados.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "-" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[720px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Recibo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "De" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Até" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: recibosOrdenados.map((r) => {
+            const isPrincipal = reciboPrincipal?.id === r.id;
+            const tipoLabel = r.tipo_produtos?.nome || r.tipo_produtos?.tipo || "-";
+            const produtoNome = r.produto_resolvido?.nome || r.produto_id || "-";
+            const valorTotal = r.valor_total !== null && r.valor_total !== void 0 ? Number(r.valor_total).toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL"
+            }) : "-";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+                r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo",
+                isPrincipal ? " (Principal)" : ""
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: tipoLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtoNome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatarDataParaExibicao(r.data_inicio) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatarDataParaExibicao(r.data_fim) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: valorTotal })
+            ] }, r.id);
+          }) })
+        ] }) }) })
+      ] }),
+      abaAtiva === "acompanhantes" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 8 }, children: [
           "Acompanhantes (",
           viagem.viagem_acompanhantes?.length || 0,
@@ -466,6 +667,162 @@ function DossieViagemIsland({ viagemId }) {
             ]
           }
         ),
+        podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "card-base",
+            style: { marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: "Cadastrar acompanhante" }),
+              erroCadastroAcomp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginBottom: 8 }, children: erroCadastroAcomp }),
+              !mostrarCadastroAcomp && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "btn btn-primary",
+                  onClick: () => {
+                    resetCadastroAcompanhante();
+                    setMostrarCadastroAcomp(true);
+                  },
+                  children: "Cadastrar acompanhante"
+                }
+              ),
+              mostrarCadastroAcomp && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.nome_completo,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({
+                          ...prev,
+                          nome_completo: e.target.value
+                        }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.cpf,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.telefone,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.grau_parentesco,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({
+                          ...prev,
+                          grau_parentesco: e.target.value
+                        })),
+                        placeholder: "Ex: Esposa, Filho"
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.rg,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({ ...prev, rg: e.target.value }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        className: "form-input",
+                        value: cadastroAcompForm.data_nascimento,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({
+                          ...prev,
+                          data_nascimento: e.target.value
+                        }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: "form-input",
+                        value: cadastroAcompForm.observacoes,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({
+                          ...prev,
+                          observacoes: e.target.value
+                        }))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: cadastroAcompForm.ativo,
+                        onChange: (e) => setCadastroAcompForm((prev) => ({
+                          ...prev,
+                          ativo: e.target.checked
+                        }))
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      className: "btn btn-primary",
+                      type: "button",
+                      onClick: salvarCadastroAcompanhante,
+                      disabled: salvandoCadastroAcomp,
+                      children: salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      className: "btn btn-light",
+                      type: "button",
+                      onClick: () => resetCadastroAcompanhante(true),
+                      disabled: salvandoCadastroAcomp,
+                      children: "Cancelar"
+                    }
+                  )
+                ] })
+              ] })
+            ]
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[620px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
@@ -499,7 +856,7 @@ function DossieViagemIsland({ viagemId }) {
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
+      abaAtiva === "servicos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { border: "1px solid #e2e8f0" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { style: { marginBottom: 8 }, children: [
           "Serviços da viagem (",
           servicos.length,
@@ -673,7 +1030,9 @@ function DossieViagemIsland({ viagemId }) {
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.tipo || "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.fornecedor || "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.descricao || "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: (s.data_inicio ? new Date(s.data_inicio).toLocaleDateString("pt-BR") : "-") + " / " + (s.data_fim ? new Date(s.data_fim).toLocaleDateString("pt-BR") : "-") }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: `${formatarDataParaExibicao(s.data_inicio)} / ${formatarDataParaExibicao(
+                s.data_fim
+              )}` }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.valor !== null && s.valor !== void 0 ? Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: s.moeda || "BRL" }) : "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.status || "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.voucher_url ? /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: s.voucher_url, target: "_blank", rel: "noreferrer", children: "Abrir" }) : "-" }),
@@ -694,7 +1053,7 @@ function DossieViagemIsland({ viagemId }) {
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base border border-slate-200", children: [
+      abaAtiva === "documentos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base border border-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "mb-2", children: [
           "Documentos / vouchers (",
           documentos.length,
@@ -766,9 +1125,18 @@ function DossieViagemIsland({ viagemId }) {
             documentos.map((d) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.titulo || "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.tipo || "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.url ? /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-light", href: d.url, target: "_blank", rel: "noreferrer", children: "Abrir" }) : "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.url ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  className: "btn btn-light",
+                  type: "button",
+                  onClick: () => abrirDocumento(d),
+                  disabled: abrindoDocId === d.id,
+                  children: abrindoDocId === d.id ? "Abrindo..." : "Abrir"
+                }
+              ) : "-" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.size_bytes ? `${(Number(d.size_bytes) / 1024).toFixed(1)} KB` : "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: d.created_at ? new Date(d.created_at).toLocaleDateString("pt-BR") : "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatarDataParaExibicao(d.created_at) }),
               podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {

@@ -1,16 +1,58 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
+import { c as construirLinkWhatsApp } from '../../chunks/whatsapp_-onX4vYF.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+function formatarDataCorretamente(dataString) {
+  if (!dataString) return "-";
+  const partes = dataString.split("T")[0].split("-");
+  if (partes.length !== 3) return "-";
+  const [ano, mes, dia] = partes;
+  const date = new Date(parseInt(ano, 10), parseInt(mes, 10) - 1, parseInt(dia, 10));
+  return date.toLocaleDateString("pt-BR");
+}
+function formatCurrency(value) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
+function isSeguroRecibo(recibo) {
+  const tipo = recibo.tipo_produtos?.tipo?.toLowerCase() || "";
+  const nome = (recibo.tipo_produtos?.nome || recibo.produto_nome || "").toLowerCase();
+  return tipo.includes("seguro") || nome.includes("seguro");
+}
+function obterResumoReciboComplementar(recibo, venda) {
+  const numero = recibo?.numero_recibo ? `Recibo ${recibo.numero_recibo}` : "Recibo";
+  const cliente = venda?.cliente_nome || "Cliente";
+  const titulo = `${numero} - ${cliente}`.trim();
+  const produto = recibo?.produto_nome || "";
+  const destino = venda?.destino_cidade_nome || venda?.destino_nome || "";
+  const valor = typeof recibo?.valor_total === "number" ? formatCurrency(recibo.valor_total) : "";
+  const detalhes = [produto, destino, valor].filter(Boolean).join(" - ");
+  return { titulo, detalhes };
+}
+function criarChaveBuscaReciboComplementar(recibo, venda) {
+  const texto = [
+    recibo?.numero_recibo,
+    recibo?.id,
+    recibo?.produto_nome,
+    venda?.cliente_nome,
+    venda?.destino_nome,
+    venda?.destino_cidade_nome,
+    venda?.id
+  ].filter(Boolean).join(" ");
+  return normalizeText(texto);
 }
 function VendasConsultaIsland() {
   const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
@@ -22,6 +64,7 @@ function VendasConsultaIsland() {
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
   const [vendas, setVendas] = reactExports.useState([]);
   const [recibos, setRecibos] = reactExports.useState([]);
+  const [recibosComplementares, setRecibosComplementares] = reactExports.useState([]);
   const [busca, setBusca] = reactExports.useState("");
   const [erro, setErro] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(true);
@@ -30,6 +73,10 @@ function VendasConsultaIsland() {
   const [salvando, setSalvando] = reactExports.useState(false);
   const [cancelando, setCancelando] = reactExports.useState(false);
   const [excluindoRecibo, setExcluindoRecibo] = reactExports.useState(null);
+  const [buscaReciboComplementar, setBuscaReciboComplementar] = reactExports.useState("");
+  const [mostrarComplementares, setMostrarComplementares] = reactExports.useState(false);
+  const [vinculandoComplementar, setVinculandoComplementar] = reactExports.useState(false);
+  const [removendoComplementar, setRemovendoComplementar] = reactExports.useState(null);
   const [toasts, setToasts] = reactExports.useState([]);
   const [toastCounter, setToastCounter] = reactExports.useState(0);
   reactExports.useEffect(() => {
@@ -86,7 +133,7 @@ function VendasConsultaIsland() {
           destino_cidade_id,
           data_lancamento,
           data_embarque,
-          clientes(nome),
+          clientes(nome, whatsapp),
           destinos:produtos!destino_id (
             nome,
             cidade_id
@@ -125,18 +172,25 @@ function VendasConsultaIsland() {
           data_embarque: row.data_embarque,
           cliente_nome: row.clientes?.nome || "",
           destino_nome: row.destinos?.nome || "",
-          destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : ""
+          destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : "",
+          clientes: row.clientes
         };
       });
       setVendas(v);
       const vendaIds = v.map((i) => i.id);
       if (vendaIds.length === 0) {
         setRecibos([]);
+        setRecibosComplementares([]);
       } else {
-        const { data: recibosData } = await supabase.from("vendas_recibos").select("*").in("venda_id", vendaIds);
+        const { data: recibosData } = await supabase.from("vendas_recibos").select("*, tipo_produtos (id, nome, tipo)").in("venda_id", vendaIds);
         const produtoIds = Array.from(
           new Set(
             (recibosData || []).map((r) => r.produto_id).filter((id) => Boolean(id))
+          )
+        );
+        const produtoResolvidoIds = Array.from(
+          new Set(
+            (recibosData || []).map((r) => r.produto_resolvido_id).filter((id) => Boolean(id))
           )
         );
         const vendaCidadeMap = v.reduce((acc, vendaItem) => {
@@ -144,6 +198,7 @@ function VendasConsultaIsland() {
           return acc;
         }, {});
         let produtosLista = [];
+        let produtosPorIdMap = {};
         let tipoProdMap = {};
         if (produtoIds.length > 0) {
           const { data: produtosData, error: prodErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("tipo_produto", produtoIds);
@@ -158,19 +213,41 @@ function VendasConsultaIsland() {
             console.error(tipoErr);
           }
         }
+        if (produtoResolvidoIds.length > 0) {
+          const { data: produtosResolvidosData, error: prodResolvidoErr } = await supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").in("id", produtoResolvidoIds);
+          if (!prodResolvidoErr && produtosResolvidosData) {
+            produtosResolvidosData.forEach((p) => {
+              if (p?.id) {
+                produtosPorIdMap[p.id] = p;
+              }
+            });
+          } else if (prodResolvidoErr) {
+            console.error(prodResolvidoErr);
+          }
+        }
         const recibosEnriquecidos = (recibosData || []).map((r) => {
           const cidadeVenda = vendaCidadeMap[r.venda_id] || "";
+          const produtoResolvido = r.produto_resolvido_id && produtosPorIdMap[r.produto_resolvido_id];
           const candidato = produtosLista.find((p) => {
             const ehGlobal = !!p?.todas_as_cidades;
             return p.tipo_produto === r.produto_id && (ehGlobal || !cidadeVenda || p.cidade_id === cidadeVenda);
           });
           const tipoNome = tipoProdMap[r.produto_id];
+          const nomeProduto = produtoResolvido?.nome || candidato?.nome || tipoNome || "";
           return {
             ...r,
-            produto_nome: candidato?.nome || tipoNome || ""
+            produto_nome: nomeProduto,
+            produto_resolvido_id: r.produto_resolvido_id ?? null
           };
         }) || [];
         setRecibos(recibosEnriquecidos);
+        const { data: complementaresData, error: complementaresError } = await supabase.from("vendas_recibos_complementares").select("id, venda_id, recibo_id").in("venda_id", vendaIds);
+        if (complementaresError) {
+          console.error(complementaresError);
+          setRecibosComplementares([]);
+        } else {
+          setRecibosComplementares(complementaresData || []);
+        }
       }
       if (pendingOpenId) {
         const alvo = v.find((i) => i.id === pendingOpenId);
@@ -188,6 +265,12 @@ function VendasConsultaIsland() {
   reactExports.useEffect(() => {
     if (!loadPerm && podeVer && userCtx) carregar();
   }, [loadPerm, podeVer, userCtx]);
+  reactExports.useEffect(() => {
+    setBuscaReciboComplementar("");
+    setMostrarComplementares(false);
+    setRemovendoComplementar(null);
+    setVinculandoComplementar(false);
+  }, [modalVenda?.id]);
   const filtroLabel = reactExports.useMemo(() => {
     if (!userCtx) return "";
     if (userCtx.papel === "ADMIN") return "Todas as vendas";
@@ -201,9 +284,84 @@ function VendasConsultaIsland() {
       (v) => normalizeText(v.cliente_nome || "").includes(t) || normalizeText(v.destino_nome || "").includes(t) || normalizeText(v.id).includes(t)
     );
   }, [vendas, busca]);
+  const vendasPorId = reactExports.useMemo(() => {
+    return Object.fromEntries(vendas.map((v) => [v.id, v]));
+  }, [vendas]);
+  const recibosPorId = reactExports.useMemo(() => {
+    return Object.fromEntries(recibos.map((r) => [r.id, r]));
+  }, [recibos]);
+  const complementaresAtuais = reactExports.useMemo(() => {
+    if (!modalVenda) return [];
+    return complementaresDaVenda(modalVenda.id);
+  }, [modalVenda, recibosComplementares]);
+  const complementaresAtuaisIds = reactExports.useMemo(() => {
+    return new Set(complementaresAtuais.map((item) => item.recibo_id));
+  }, [complementaresAtuais]);
+  const sugestoesReciboComplementar = reactExports.useMemo(() => {
+    if (!modalVenda) return [];
+    const termo = normalizeText(buscaReciboComplementar.trim());
+    if (termo.length < 2) return [];
+    return recibos.filter((r) => r.venda_id !== modalVenda.id).filter((r) => !complementaresAtuaisIds.has(r.id)).map((r) => {
+      const vendaRef = vendasPorId[r.venda_id];
+      return {
+        recibo: r,
+        venda: vendaRef,
+        resumo: obterResumoReciboComplementar(r, vendaRef),
+        chaveBusca: criarChaveBuscaReciboComplementar(r, vendaRef)
+      };
+    }).filter((item) => item.chaveBusca.includes(termo)).slice(0, 6);
+  }, [
+    buscaReciboComplementar,
+    modalVenda,
+    recibos,
+    complementaresAtuaisIds,
+    vendasPorId
+  ]);
   function recibosDaVenda(id) {
     return recibos.filter((r) => r.venda_id === id);
   }
+  function complementaresDaVenda(id) {
+    return recibosComplementares.filter((r) => r.venda_id === id);
+  }
+  function obterReciboReferenciaDaVenda(venda) {
+    if (!venda) return null;
+    const lista = recibosDaVenda(venda.id);
+    if (lista.length === 0) return null;
+    if (venda.destino_id) {
+      const principal = lista.find((r) => r.produto_resolvido_id === venda.destino_id);
+      if (principal) return principal;
+    }
+    return lista[0];
+  }
+  const kpiResumo = reactExports.useMemo(() => {
+    const agora = /* @__PURE__ */ new Date();
+    const mesAtual = agora.getMonth();
+    const anoAtual = agora.getFullYear();
+    const vendasMesAtual = new Set(
+      vendas.filter((v) => {
+        if (!v.data_lancamento) return false;
+        const data = new Date(v.data_lancamento);
+        return data.getFullYear() === anoAtual && data.getMonth() === mesAtual;
+      }).map((v) => v.id)
+    );
+    let totalVendas = 0;
+    let totalTaxas = 0;
+    let totalSeguro = 0;
+    recibos.forEach((r) => {
+      if (!vendasMesAtual.has(r.venda_id)) return;
+      totalVendas += r.valor_total || 0;
+      totalTaxas += r.valor_taxas || 0;
+      if (isSeguroRecibo(r)) {
+        totalSeguro += r.valor_total || 0;
+      }
+    });
+    return {
+      totalVendas,
+      totalTaxas,
+      totalLiquido: totalVendas - totalTaxas,
+      totalSeguro
+    };
+  }, [recibos, vendas]);
   function showToast(message, type = "success") {
     setToastCounter((prev) => prev + 1);
     const id = toastCounter + 1;
@@ -254,6 +412,115 @@ function VendasConsultaIsland() {
       showToast("Erro ao excluir recibo.", "error");
     } finally {
       setExcluindoRecibo(null);
+    }
+  }
+  async function vincularReciboComplementar(reciboId, vendaId) {
+    if (!podeEditar) return;
+    const recibo = recibosPorId[reciboId];
+    if (!recibo) {
+      showToast("Recibo não encontrado.", "error");
+      return;
+    }
+    if (recibo.venda_id === vendaId) {
+      showToast("Este recibo já pertence a esta venda.", "error");
+      return;
+    }
+    const jaVinculado = recibosComplementares.some(
+      (item) => item.venda_id === vendaId && item.recibo_id === reciboId
+    );
+    if (jaVinculado) {
+      showToast("Recibo já vinculado como complementar.", "error");
+      return;
+    }
+    const vendaAtual = vendasPorId[vendaId];
+    if (!vendaAtual) {
+      showToast("Venda atual não encontrada.", "error");
+      return;
+    }
+    const vendaRecibo = vendasPorId[recibo.venda_id];
+    if (!vendaRecibo) {
+      showToast("Venda do recibo complementar não encontrada.", "error");
+      return;
+    }
+    const reciboReferenciaAtual = obterReciboReferenciaDaVenda(vendaAtual);
+    if (!reciboReferenciaAtual) {
+      showToast("Venda atual sem recibo para vínculo cruzado.", "error");
+      return;
+    }
+    const cruzadoJaVinculado = recibosComplementares.some(
+      (item) => item.venda_id === vendaRecibo.id && item.recibo_id === reciboReferenciaAtual.id
+    );
+    try {
+      setVinculandoComplementar(true);
+      const vinculoPrimario = { venda_id: vendaId, recibo_id: reciboId };
+      const vinculoCruzado = { venda_id: vendaRecibo.id, recibo_id: reciboReferenciaAtual.id };
+      const { error: primarioError } = await supabase.from("vendas_recibos_complementares").upsert(vinculoPrimario, { onConflict: "venda_id,recibo_id", ignoreDuplicates: true });
+      if (primarioError) throw primarioError;
+      if (!cruzadoJaVinculado) {
+        const { error: cruzadoError } = await supabase.from("vendas_recibos_complementares").upsert(vinculoCruzado, { onConflict: "venda_id,recibo_id", ignoreDuplicates: true });
+        if (cruzadoError) {
+          await supabase.from("vendas_recibos_complementares").delete().match(vinculoPrimario);
+          throw cruzadoError;
+        }
+      }
+      await registrarLog({
+        acao: "recibo_complementar_vinculado",
+        modulo: "Vendas",
+        detalhes: {
+          venda_id: vendaId,
+          recibo_id: reciboId,
+          venda_cruzada_id: vendaRecibo.id,
+          recibo_cruzado_id: reciboReferenciaAtual.id
+        }
+      });
+      await carregar();
+      setBuscaReciboComplementar("");
+      showToast("Recibo complementar vinculado.", "success");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao vincular recibo complementar.");
+      showToast("Erro ao vincular recibo complementar.", "error");
+    } finally {
+      setVinculandoComplementar(false);
+    }
+  }
+  async function removerReciboComplementar(link) {
+    if (!podeEditar) return;
+    if (!confirm("Remover recibo complementar?")) return;
+    try {
+      setRemovendoComplementar(link.id);
+      const recibo = recibosPorId[link.recibo_id];
+      const vendaAtual = vendasPorId[link.venda_id];
+      const vendaRecibo = recibo ? vendasPorId[recibo.venda_id] : void 0;
+      const idsParaRemover = /* @__PURE__ */ new Set([link.id]);
+      if (vendaAtual && vendaRecibo) {
+        const recibosVendaAtual = new Set(recibosDaVenda(vendaAtual.id).map((r) => r.id));
+        recibosComplementares.forEach((item) => {
+          if (item.venda_id === vendaRecibo.id && recibosVendaAtual.has(item.recibo_id)) {
+            idsParaRemover.add(item.id);
+          }
+        });
+      }
+      const idsLista = Array.from(idsParaRemover);
+      const { error } = await supabase.from("vendas_recibos_complementares").delete().in("id", idsLista);
+      if (error) throw error;
+      await registrarLog({
+        acao: "recibo_complementar_removido",
+        modulo: "Vendas",
+        detalhes: {
+          venda_id: link.venda_id,
+          recibo_id: link.recibo_id,
+          ids_removidos: idsLista
+        }
+      });
+      await carregar();
+      showToast("Recibo complementar removido.", "success");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao remover recibo complementar.");
+      showToast("Erro ao remover recibo complementar.", "error");
+    } finally {
+      setRemovendoComplementar(null);
     }
   }
   async function remarcarData(venda, novaData) {
@@ -345,6 +612,24 @@ function VendasConsultaIsland() {
         ]
       }
     ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-grid-kpi mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-card kpi-vendas", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", textAlign: "center" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total de Vendas" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(kpiResumo.totalVendas) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-card kpi-diferenciado", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", textAlign: "center" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Seguro Viagem" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(kpiResumo.totalSeguro) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-card kpi-meta", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", textAlign: "center" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Taxas" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(kpiResumo.totalTaxas) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-card kpi-ticket", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", textAlign: "center" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Líquido" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: formatCurrency(kpiResumo.totalLiquido) })
+      ] }) })
+    ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", style: { maxHeight: "65vh", overflowY: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green min-w-[820px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { style: { position: "sticky", top: 0, zIndex: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -363,11 +648,12 @@ function VendasConsultaIsland() {
           const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
           const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
           const produtosVenda = recibosDaVenda(v.id).map((r) => r.produto_nome || "").filter(Boolean);
+          const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.cliente_nome }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_cidade_nome || "-" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtosVenda.length === 0 ? "-" : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: produtosVenda.map((p, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: p }, `${v.id}-prod-${idx}`)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: v.data_embarque ? new Date(v.data_embarque).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: formatarDataCorretamente(v.data_embarque) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
               "R$",
               " ",
@@ -377,15 +663,41 @@ function VendasConsultaIsland() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })}` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", style: { textAlign: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "td",
               {
-                className: "btn-icon",
-                title: "Ver detalhes",
-                onClick: () => setModalVenda(v),
-                children: "👁️"
+                className: "th-actions",
+                style: {
+                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 4
+                },
+                children: [
+                  whatsappLink && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "a",
+                    {
+                      className: "btn-icon",
+                      href: whatsappLink,
+                      title: "Enviar WhatsApp",
+                      target: "_blank",
+                      rel: "noreferrer",
+                      children: "💬"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      className: "btn-icon",
+                      title: "Ver detalhes",
+                      onClick: () => setModalVenda(v),
+                      children: "👁️"
+                    }
+                  )
+                ]
               }
-            ) })
+            )
           ] }, v.id);
         })
       ] })
@@ -422,12 +734,12 @@ function VendasConsultaIsland() {
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Lançada em:" }),
                 " ",
-                new Date(modalVenda.data_lancamento).toLocaleDateString("pt-BR")
+                formatarDataCorretamente(modalVenda.data_lancamento)
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Embarque:" }),
                 " ",
-                modalVenda.data_embarque ? new Date(modalVenda.data_embarque).toLocaleDateString("pt-BR") : "-"
+                formatarDataCorretamente(modalVenda.data_embarque)
               ] })
             ]
           }
@@ -458,7 +770,7 @@ function VendasConsultaIsland() {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}`;
-                const formatarData = (value) => value ? new Date(value).toLocaleDateString("pt-BR") : "-";
+                const formatarData = (value) => formatarDataCorretamente(value);
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.numero_recibo || "-" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.produto_nome || "-" }),
@@ -482,7 +794,142 @@ function VendasConsultaIsland() {
               }) })
             ]
           }
-        ) })
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 16 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              style: {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { margin: 0 }, children: "Recibos complementares" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-outline",
+                    onClick: () => setMostrarComplementares((prev) => !prev),
+                    children: mostrarComplementares ? "Ocultar" : `Mostrar (${complementaresAtuais.length})`
+                  }
+                )
+              ]
+            }
+          ),
+          mostrarComplementares && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              style: {
+                marginTop: 8,
+                border: "1px dashed #cbd5e1",
+                borderRadius: 12,
+                padding: 12,
+                background: "#f8fafc",
+                display: "grid",
+                gap: 12
+              },
+              children: [
+                podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginBottom: 4 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1, minWidth: 220 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar recibo" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      placeholder: "Número, cliente ou destino...",
+                      value: buscaReciboComplementar,
+                      onChange: (e) => setBuscaReciboComplementar(e.target.value)
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#64748b" }, children: "Digite ao menos 2 caracteres para localizar recibos." })
+                ] }) }),
+                podeEditar && buscaReciboComplementar.trim().length >= 2 && sugestoesReciboComplementar.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#64748b" }, children: "Nenhum recibo encontrado com essa busca." }),
+                podeEditar && sugestoesReciboComplementar.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "grid", gap: 6 }, children: sugestoesReciboComplementar.map((item) => {
+                  const detalhes = item.resumo.detalhes;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => vincularReciboComplementar(item.recibo.id, modalVenda.id),
+                      disabled: vinculandoComplementar,
+                      style: {
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        textAlign: "left",
+                        border: "1px solid #e2e8f0",
+                        background: "#fff",
+                        borderRadius: 10,
+                        padding: "8px 10px",
+                        cursor: vinculandoComplementar ? "not-allowed" : "pointer",
+                        opacity: vinculandoComplementar ? 0.6 : 1
+                      },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gap: 2 }, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: 600 }, children: item.resumo.titulo }),
+                          detalhes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "0.8rem", color: "#64748b" }, children: detalhes })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "span",
+                          {
+                            style: { color: "#16a34a", fontWeight: 700, fontSize: "0.85rem" },
+                            children: vinculandoComplementar ? "Salvando..." : "Adicionar"
+                          }
+                        )
+                      ]
+                    },
+                    item.recibo.id
+                  );
+                }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gap: 6 }, children: [
+                  complementaresAtuais.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#64748b" }, children: "Nenhum recibo complementar vinculado." }),
+                  complementaresAtuais.map((link) => {
+                    const recibo = recibosPorId[link.recibo_id];
+                    const vendaRef = recibo ? vendasPorId[recibo.venda_id] : void 0;
+                    const resumo = recibo ? obterResumoReciboComplementar(recibo, vendaRef) : { titulo: "Recibo complementar", detalhes: `ID: ${link.recibo_id}` };
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          border: "1px solid #e2e8f0",
+                          background: "#fff",
+                          borderRadius: 10,
+                          padding: "8px 10px"
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gap: 2 }, children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: 600 }, children: resumo.titulo }),
+                            resumo.detalhes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "0.8rem", color: "#64748b" }, children: resumo.detalhes })
+                          ] }),
+                          podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              className: "btn-icon",
+                              title: "Remover recibo complementar",
+                              onClick: () => removerReciboComplementar(link),
+                              disabled: removendoComplementar === link.id,
+                              children: removendoComplementar === link.id ? "..." : "✕"
+                            }
+                          )
+                        ]
+                      },
+                      link.id
+                    );
+                  })
+                ] })
+              ]
+            }
+          )
+        ] })
       ] }),
       (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-footer", children: [
         podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [

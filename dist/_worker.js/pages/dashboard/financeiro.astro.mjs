@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, l as renderHead, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { s as supabaseServer } from '../../chunks/supabaseServer_m5uNaTML.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { e as createComponent, l as renderHead, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { s as supabaseServer } from '../../chunks/supabaseServer_Bnj8n5MI.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 
 const $$Financeiro = createComponent(async ($$result, $$props, $$slots) => {
   const { data: sales } = await supabaseServer.from("sale").select("total, paid_total, balance_due, financial_status");

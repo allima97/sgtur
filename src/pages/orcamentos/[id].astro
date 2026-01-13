@@ -1,8 +1,8 @@
 ---
-import QuoteCartIsland from "../../components/islands/QuoteCartIsland";
+import "../../styles/global.css";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import QuoteDetailIsland from "../../components/islands/QuoteDetailIsland";
 import { createServerClient } from "@supabase/ssr";
-import { supabaseServer } from "../../lib/supabaseServer";
 
 const { id } = Astro.params;
 const { cookies } = Astro;
@@ -29,7 +29,6 @@ const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// 🔐 sessão
 const {
   data: { user },
 } = await supabase.auth.getUser();
@@ -38,63 +37,27 @@ if (!user) {
   return Astro.redirect("/auth/login");
 }
 
-const userId = user.id;
-
-// 📄 quote
-const quoteQuery = supabaseServer
+const { data: quote, error: quoteErr } = await supabase
   .from("quote")
-  .select(
-    "id, client_id, seller_id, status, currency, valid_until, total, created_at, updated_at"
-  )
-  .eq("id", id);
-
-const { data: quote, error: quoteErr } = await quoteQuery.single();
-
-if (quoteErr) {
-  console.error("Erro ao buscar quote:", quoteErr);
-  return new Response("Erro ao carregar orçamento", { status: 500 });
-}
-
-if (!quote) {
-  return new Response("Quote não encontrado", { status: 404 });
-}
-
-// 🛒 itens
-const { data: items } = await supabaseServer
-  .from("quote_item")
-  .select("*")
-  .eq("quote_id", quote.id)
-  .order("created_at", { ascending: true });
-
-// 💸 descontos
-const { data: discounts } = await supabaseServer
-  .from("quote_discount")
-  .select("*")
-  .eq("quote_id", quote.id)
-  .order("created_at", { ascending: true });
-
-const { data: client } = await supabaseServer
-  .from("clientes")
-  .select("nome")
-  .eq("id", quote.client_id)
+  .select("id, status, currency, total, average_confidence, source_file_path, source_file_url")
+  .eq("id", id)
   .single();
-const clientName = client?.nome ?? null;
+
+if (quoteErr || !quote) {
+  return new Response("Quote nao encontrado", { status: 404 });
+}
+
+const { data: items } = await supabase
+  .from("quote_item")
+  .select(
+    "id, item_type, title, product_name, city_name, quantity, unit_price, total_amount, start_date, end_date, currency, confidence"
+  )
+  .eq("quote_id", quote.id)
+  .order("created_at", { ascending: true });
+
+const activePage = "orcamentos";
 ---
 
-<DashboardLayout title="Orçamentos" activePage="orcamentos">
-  <div class="page-content-wrap">
-    <div class="card-base">
-      <h1 class="page-title">Carrinho do Orçamento</h1>
-      <p class="text-muted">Quote ID: {quote.id}</p>
-    </div>
-
-    <QuoteCartIsland
-      client:only="react"
-      initialQuote={quote}
-      initialItems={items ?? []}
-      initialDiscounts={discounts ?? []}
-      userId={userId}
-      clientName={clientName}
-    />
-  </div>
+<DashboardLayout title="Orcamentos" {activePage}>
+  <QuoteDetailIsland client:load quote={quote} items={items ?? []} />
 </DashboardLayout>

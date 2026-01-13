@@ -1,11 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DyslCs8o.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
 function hojeISO() {
   return (/* @__PURE__ */ new Date()).toISOString().substring(0, 10);
@@ -121,7 +123,7 @@ function RelatorioAgrupadoDestinoIsland() {
         ticketMedio: 0
       };
       const valRecibos = (v.vendas_recibos || []).reduce(
-        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        (acc, r) => acc + Number(r.valor_total || 0),
         0
       );
       const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
@@ -293,49 +295,29 @@ function RelatorioAgrupadoDestinoIsland() {
       alert("Não há dados para exportar.");
       return;
     }
-    const win = window.open("", "_blank");
-    if (!win) {
-      alert("Não foi possível abrir a janela de exportação.");
-      return;
-    }
-    const rows = linhas.map(
-      (l) => `
-        <tr>
-          <td>${l.destino_nome}</td>
-          <td>${l.quantidade}</td>
-          <td>${l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-          <td>${l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-        </tr>`
-    ).join("");
-    win.document.write(`
-      <html>
-        <head>
-          <title>Vendas por Destino</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 16px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: left; }
-            th { background: #f1f5f9; }
-          </style>
-        </head>
-        <body>
-          <h3>Relatório de Vendas por Destino</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Destino</th>
-                <th>Qtde</th>
-                <th>Faturamento</th>
-                <th>Ticket médio</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <script>window.print();<\/script>
-        </body>
-      </html>
-    `);
-    win.document.close();
+    const headers = [
+      "Destino",
+      "Qtde",
+      "Faturamento",
+      "Ticket médio"
+    ];
+    const rows = linhas.map((l) => [
+      l.destino_nome,
+      l.quantidade,
+      l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    ]);
+    const subtitle = dataInicio && dataFim ? `Período: ${formatarDataParaExibicao(dataInicio)} até ${formatarDataParaExibicao(
+      dataFim
+    )}` : dataInicio ? `A partir de ${formatarDataParaExibicao(dataInicio)}` : dataFim ? `Até ${formatarDataParaExibicao(dataFim)}` : void 0;
+    exportTableToPDF({
+      title: "Vendas por Destino",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-vendas-por-destino",
+      orientation: "landscape"
+    });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-destino-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [

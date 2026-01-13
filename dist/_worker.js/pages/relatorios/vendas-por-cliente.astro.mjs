@@ -1,10 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
 function hojeISO() {
   return (/* @__PURE__ */ new Date()).toISOString().substring(0, 10);
@@ -43,6 +45,7 @@ function RelatorioAgrupadoClienteIsland() {
   const [erro, setErro] = reactExports.useState(null);
   const [userCtx, setUserCtx] = reactExports.useState(null);
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
+  const [exportFlags, setExportFlags] = reactExports.useState({ pdf: true, excel: true });
   const [ordenacao, setOrdenacao] = reactExports.useState("total");
   const [ordemDesc, setOrdemDesc] = reactExports.useState(true);
   reactExports.useEffect(() => {
@@ -85,6 +88,16 @@ function RelatorioAgrupadoClienteIsland() {
         } else if (papel === "ADMIN") {
           vendedorIds = [];
         }
+        const companyId = usuarioDb?.company_id || null;
+        if (companyId) {
+          const { data: params } = await supabase.from("parametros_comissao").select("exportacao_pdf, exportacao_excel").eq("company_id", companyId).maybeSingle();
+          if (params) {
+            setExportFlags({
+              pdf: params.exportacao_pdf ?? true,
+              excel: params.exportacao_excel ?? true
+            });
+          }
+        }
         setUserCtx({ usuarioId: userId, papel, vendedorIds });
       } catch (e) {
         console.error(e);
@@ -112,7 +125,7 @@ function RelatorioAgrupadoClienteIsland() {
         ticketMedio: 0
       };
       const valRecibos = (v.vendas_recibos || []).reduce(
-        (acc, r) => acc + Number(r.valor_total || 0) + Number(r.valor_taxas || 0),
+        (acc, r) => acc + Number(r.valor_total || 0),
         0
       );
       const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
@@ -255,6 +268,41 @@ function RelatorioAgrupadoClienteIsland() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+  function exportarPDF() {
+    if (!exportFlags.pdf) {
+      alert("Exportação PDF desabilitada nos parâmetros.");
+      return;
+    }
+    if (linhas.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    const subtitle = dataInicio && dataFim ? `Período: ${formatarDataParaExibicao(
+      dataInicio
+    )} até ${formatarDataParaExibicao(dataFim)}` : dataInicio ? `A partir de ${formatarDataParaExibicao(dataInicio)}` : dataFim ? `Até ${formatarDataParaExibicao(dataFim)}` : void 0;
+    const headers = [
+      "Cliente",
+      "CPF",
+      "Qtde",
+      "Faturamento",
+      "Ticket médio"
+    ];
+    const rows = linhas.map((l) => [
+      l.cliente_nome,
+      l.cliente_cpf,
+      l.quantidade,
+      l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    ]);
+    exportTableToPDF({
+      title: "Vendas por Cliente",
+      subtitle,
+      headers,
+      rows,
+      fileName: "relatorio-vendas-por-cliente",
+      orientation: "landscape"
+    });
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-cliente-page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
@@ -338,7 +386,18 @@ function RelatorioAgrupadoClienteIsland() {
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-light",
+            onClick: exportarPDF,
+            disabled: !exportFlags.pdf,
+            title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+            children: "Exportar PDF"
+          }
+        )
       ] })
     ] }),
     loadingUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Carregando contexto do usuário..." }),

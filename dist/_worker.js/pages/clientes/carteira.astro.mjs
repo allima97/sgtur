@@ -1,15 +1,24 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
-import { r as registrarLog } from '../../chunks/logs_D7YAwHh5.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
+import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
+import { c as construirLinkWhatsApp } from '../../chunks/whatsapp_-onX4vYF.mjs';
 
+function titleCaseAllWords(valor) {
+  const trimmed = (valor || "").trim();
+  if (!trimmed) return "";
+  return trimmed.split(/\s+/).map((palavra) => {
+    const lower = palavra.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join(" ");
+}
 const initialForm = {
   nome: "",
   nascimento: "",
@@ -26,7 +35,7 @@ const initialForm = {
   cep: "",
   rg: "",
   genero: "",
-  nacionalidade: "",
+  nacionalidade: "Brasileira",
   tags: "",
   tipo_cliente: "passageiro",
   company_id: "",
@@ -40,6 +49,7 @@ function ClientesIsland() {
   const podeCriar = permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
   const podeEditar = permissao === "edit" || permissao === "delete" || permissao === "admin";
   const podeExcluir = permissao === "delete" || permissao === "admin";
+  const exibeColunaAcoes = podeVer;
   const [clientes, setClientes] = reactExports.useState([]);
   const [busca, setBusca] = reactExports.useState("");
   const [erro, setErro] = reactExports.useState(null);
@@ -52,6 +62,7 @@ function ClientesIsland() {
   const [historicoCliente, setHistoricoCliente] = reactExports.useState(null);
   const [cepStatus, setCepStatus] = reactExports.useState(null);
   const [mostrarFormAcomp, setMostrarFormAcomp] = reactExports.useState(false);
+  const [abaFormCliente, setAbaFormCliente] = reactExports.useState("dados");
   const [msg, setMsg] = reactExports.useState(null);
   const [mostrarFormCliente, setMostrarFormCliente] = reactExports.useState(false);
   const [historicoVendas, setHistoricoVendas] = reactExports.useState([]);
@@ -101,6 +112,19 @@ function ClientesIsland() {
   const [acompEditId, setAcompEditId] = reactExports.useState(null);
   const [acompSalvando, setAcompSalvando] = reactExports.useState(false);
   const [acompExcluindo, setAcompExcluindo] = reactExports.useState(null);
+  const parentescoOptions = [
+    "Pai",
+    "Mãe",
+    "Esposa",
+    "Marido",
+    "Filho(a)",
+    "Sogro(a)",
+    "Noivo(a)",
+    "Amigo(a)",
+    "Nora",
+    "Genro",
+    "Outros"
+  ];
   async function carregar() {
     if (!podeVer || !companyId) return;
     try {
@@ -177,6 +201,8 @@ function ClientesIsland() {
     setMostrarFormCliente(false);
     setForm(initialForm);
     setEditId(null);
+    setAbaFormCliente("dados");
+    resetAcompForm(true);
     setMsg(null);
   }
   async function abrirHistorico(cliente) {
@@ -265,7 +291,7 @@ function ClientesIsland() {
           };
         });
       }
-      const { data: orc } = await supabase.from("orcamentos").select("id, data_orcamento, status, valor, numero_venda, produto_id, destinos:produtos!destino_id (nome, cidade_id)").eq("cliente_id", cliente.id).order("data_orcamento", { ascending: false });
+      const orc = [];
       const extraCidadeIds = orc?.map((o) => o.destinos?.cidade_id).filter((id) => Boolean(id)) || [];
       const novasCidades = extraCidadeIds.filter((id) => !(id in (cidadesMap2 || {})));
       if (novasCidades.length > 0) {
@@ -473,6 +499,8 @@ function ClientesIsland() {
       ativo: c.ativo,
       active: c.active
     });
+    setAbaFormCliente("dados");
+    resetAcompForm(true);
     carregarAcompanhantes(c.id);
     setMostrarFormCliente(true);
   }
@@ -595,19 +623,21 @@ function ClientesIsland() {
     setMostrarFormAcomp(true);
   }
   async function salvarAcompanhante() {
-    if (!historicoCliente) {
+    const clienteId = historicoCliente?.id || editId;
+    const companyIdSelecionado = historicoCliente?.company_id || form.company_id?.trim() || clientes.find((c) => c.id === editId)?.company_id || companyId || null;
+    if (!clienteId) {
       setAcompErro("Selecione um cliente antes de salvar acompanhante.");
       return;
     }
-    const companyId2 = historicoCliente.company_id || null;
-    if (!companyId2) {
+    if (!companyIdSelecionado) {
       setAcompErro("Cliente sem company_id definido para salvar acompanhante.");
       return;
     }
+    const nomeNormalizado = titleCaseAllWords(acompForm.nome_completo || "");
     const payload = {
-      cliente_id: historicoCliente.id,
-      company_id: companyId2,
-      nome_completo: acompForm.nome_completo.trim(),
+      cliente_id: clienteId,
+      company_id: companyIdSelecionado,
+      nome_completo: nomeNormalizado.trim(),
       cpf: acompForm.cpf?.trim() || null,
       telefone: acompForm.telefone?.trim() || null,
       grau_parentesco: acompForm.grau_parentesco?.trim() || null,
@@ -624,14 +654,14 @@ function ClientesIsland() {
       setAcompSalvando(true);
       setAcompErro(null);
       if (acompEditId) {
-        const { error } = await supabase.from("cliente_acompanhantes").update(payload).eq("id", acompEditId).eq("cliente_id", historicoCliente.id);
+        const { error } = await supabase.from("cliente_acompanhantes").update(payload).eq("id", acompEditId).eq("cliente_id", clienteId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("cliente_acompanhantes").insert(payload);
         if (error) throw error;
       }
       resetAcompForm(true);
-      await carregarAcompanhantes(historicoCliente.id);
+      await carregarAcompanhantes(clienteId);
     } catch (e) {
       console.error(e);
       setAcompErro("Erro ao salvar acompanhante.");
@@ -640,15 +670,16 @@ function ClientesIsland() {
     }
   }
   async function excluirAcompanhante(id) {
-    if (!podeExcluir || !historicoCliente) return;
+    const clienteId = historicoCliente?.id || editId;
+    if (!podeExcluir || !clienteId) return;
     if (!window.confirm("Remover acompanhante?")) return;
     try {
       setAcompExcluindo(id);
       setAcompErro(null);
-      const { error } = await supabase.from("cliente_acompanhantes").delete().eq("id", id).eq("cliente_id", historicoCliente.id);
+      const { error } = await supabase.from("cliente_acompanhantes").delete().eq("id", id).eq("cliente_id", clienteId);
       if (error) throw error;
       if (acompEditId === id) resetAcompForm(true);
-      await carregarAcompanhantes(historicoCliente.id);
+      await carregarAcompanhantes(clienteId);
     } catch (e) {
       console.error(e);
       setAcompErro("Erro ao remover acompanhante.");
@@ -663,291 +694,484 @@ function ClientesIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Acesso negado ao módulo de Clientes." }) });
   }
   const modoSomenteLeitura = !podeCriar && !podeEditar;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "clientes-page", children: [
-      !modoSomenteLeitura && mostrarFormCliente && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar cliente" : "Novo cliente" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "form-row",
-            style: {
-              marginTop: 12,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))",
-              gap: 12
-            },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo *" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.nome,
-                    onChange: (e) => handleChange("nome", e.target.value),
-                    onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
-                    required: true
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF *" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.cpf,
-                    onChange: (e) => handleChange("cpf", formatCpf(e.target.value)),
-                    required: true
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.rg,
-                    onChange: (e) => handleChange("rg", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nascimento" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "date",
-                    className: "form-input",
-                    value: form.nascimento,
-                    onChange: (e) => handleChange("nascimento", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Gênero" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    className: "form-select",
-                    value: form.genero,
-                    onChange: (e) => handleChange("genero", e.target.value),
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Masculino", children: "Masculino" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Feminino", children: "Feminino" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Outros", children: "Outros" })
-                    ]
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nacionalidade" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.nacionalidade,
-                    onChange: (e) => handleChange("nacionalidade", e.target.value)
-                  }
-                )
-              ] })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "form-row",
-            style: {
-              marginTop: 12,
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: 12
-            },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone *" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.telefone,
-                    onChange: (e) => handleChange("telefone", formatTelefone(e.target.value))
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Whatsapp" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.whatsapp,
-                    onChange: (e) => handleChange("whatsapp", formatTelefone(e.target.value))
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "E-mail" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.email,
-                    onChange: (e) => handleChange("email", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Classificação" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    className: "form-select",
-                    value: form.classificacao,
-                    onChange: (e) => handleChange("classificacao", e.target.value),
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "A", title: "Cliente frequente", children: "A" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "B", title: "Compra mas não é frequente", children: "B" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "C", title: "Já comprou, mas não é fiel", children: "C" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "D", title: "Busca preço e a maioria das vezes compra na Internet", children: "D" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "E", title: "Cliente de internet, nunca compra", children: "E" })
-                    ]
-                  }
-                )
-              ] })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "form-row",
-            style: {
-              marginTop: 12,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
-              gap: 12
-            },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CEP" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.cep,
-                    onChange: (e) => handleChange("cep", formatCep(e.target.value)),
-                    onBlur: (e) => {
-                      const val = formatCep(e.target.value);
-                      handleChange("cep", val);
-                      if (val.replace(/\D/g, "").length === 8) {
-                        buscarCepIfNeeded(val);
-                      } else {
-                        setCepStatus(null);
-                      }
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }, children: cepStatus || "Preencha para auto-preencher endereço." })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Endereço" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.endereco,
-                    onChange: (e) => handleChange("endereco", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.numero,
-                    onChange: (e) => handleChange("numero", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Complemento" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.complemento,
-                    onChange: (e) => handleChange("complemento", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.cidade,
-                    onChange: (e) => handleChange("cidade", e.target.value)
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Estado" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    className: "form-input",
-                    value: form.estado,
-                    onChange: (e) => handleChange("estado", e.target.value)
-                  }
-                )
-              ] })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Notas" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "textarea",
-            {
-              className: "form-textarea",
-              rows: 3,
-              value: form.notas,
-              onChange: (e) => handleChange("notas", e.target.value),
-              placeholder: "Informações adicionais"
-            }
-          )
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: [
+  const acompanhantesCard = /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Acompanhantes do cliente" }),
+    acompErro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginBottom: 8 }, children: acompErro }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Parentesco" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
+        (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+        acompLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando acompanhantes..." }) }),
+        !acompLoading && acompanhantes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum acompanhante cadastrado." }) }),
+        !acompLoading && acompanhantes.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.nome_completo }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.cpf || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.telefone || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.grau_parentesco || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.ativo ? "Sim" : "Não" }),
+          (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", style: { textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }, children: [
+            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", type: "button", onClick: () => iniciarEdicaoAcomp(a), title: "Editar", children: "✏️" }),
+            podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn-icon btn-danger",
+                type: "button",
+                onClick: () => excluirAcompanhante(a.id),
+                disabled: acompExcluindo === a.id,
+                title: "Excluir",
+                children: acompExcluindo === a.id ? "..." : "🗑️"
+              }
+            )
+          ] })
+        ] }, a.id))
+      ] })
+    ] }) }),
+    podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: acompEditId ? "Editar acompanhante" : "Adicionar acompanhante" }),
+      !mostrarFormAcomp && !acompEditId && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "btn btn-primary",
+          onClick: () => {
+            resetAcompForm();
+            setMostrarFormAcomp(true);
+          },
+          children: "Adicionar acompanhante"
+        }
+      ),
+      (mostrarFormAcomp || acompEditId) && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: acompForm.nome_completo,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value })),
+                onBlur: (e) => setAcompForm((prev) => ({
+                  ...prev,
+                  nome_completo: titleCaseAllWords(e.target.value || "")
+                }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: acompForm.cpf,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: acompForm.telefone,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: acompForm.grau_parentesco,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value })),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                  parentescoOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt, children: opt }, opt))
+                ]
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: acompForm.rg,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: acompForm.data_nascimento,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: acompForm.observacoes,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: acompForm.ativo,
+                onChange: (e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarAcompanhante, disabled: acompSalvando, children: acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              className: "btn btn-primary",
-              disabled: salvando,
-              type: "submit",
-              children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar"
+              className: "btn btn-light",
+              type: "button",
+              onClick: () => resetAcompForm(true),
+              disabled: acompSalvando,
+              children: "Cancelar"
+            }
+          )
+        ] })
+      ] })
+    ] })
+  ] });
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "clientes-page", children: [
+      !modoSomenteLeitura && mostrarFormCliente && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar cliente" : "Novo cliente" }),
+        editId && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: `btn ${abaFormCliente === "dados" ? "btn-primary" : "btn-outline"}`,
+              onClick: () => setAbaFormCliente("dados"),
+              children: "Dados do cliente"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "btn btn-light",
-              onClick: fecharFormularioCliente,
-              disabled: salvando,
-              children: "Cancelar"
+              className: `btn ${abaFormCliente === "acompanhantes" ? "btn-primary" : "btn-outline"}`,
+              onClick: () => setAbaFormCliente("acompanhantes"),
+              children: "Acompanhantes"
             }
           )
-        ] })
-      ] }) }),
+        ] }),
+        (!editId || abaFormCliente === "dados") && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "form-row",
+              style: {
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))",
+                gap: 12
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo *" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.nome,
+                      onChange: (e) => handleChange("nome", e.target.value),
+                      onBlur: (e) => handleChange("nome", titleCaseWithExceptions(e.target.value)),
+                      required: true
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF *" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.cpf,
+                      onChange: (e) => handleChange("cpf", formatCpf(e.target.value)),
+                      required: true
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.rg,
+                      onChange: (e) => handleChange("rg", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nascimento" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "date",
+                      className: "form-input",
+                      value: form.nascimento,
+                      onChange: (e) => handleChange("nascimento", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Gênero" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      className: "form-select",
+                      value: form.genero,
+                      onChange: (e) => handleChange("genero", e.target.value),
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Masculino", children: "Masculino" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Feminino", children: "Feminino" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Outros", children: "Outros" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nacionalidade" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.nacionalidade,
+                      onChange: (e) => handleChange("nacionalidade", e.target.value)
+                    }
+                  )
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "form-row",
+              style: {
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                gap: 12
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone *" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.telefone,
+                      onChange: (e) => handleChange("telefone", formatTelefone(e.target.value))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Whatsapp" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.whatsapp,
+                      onChange: (e) => handleChange("whatsapp", formatTelefone(e.target.value))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "E-mail" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.email,
+                      onChange: (e) => handleChange("email", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Classificação" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      className: "form-select",
+                      value: form.classificacao,
+                      onChange: (e) => handleChange("classificacao", e.target.value),
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "A", title: "Cliente frequente", children: "A" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "B", title: "Compra mas não é frequente", children: "B" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "C", title: "Já comprou, mas não é fiel", children: "C" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "D", title: "Busca preço e a maioria das vezes compra na Internet", children: "D" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "E", title: "Cliente de internet, nunca compra", children: "E" })
+                      ]
+                    }
+                  )
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "form-row",
+              style: {
+                marginTop: 12,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
+                gap: 12
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CEP" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.cep,
+                      onChange: (e) => handleChange("cep", formatCep(e.target.value)),
+                      onBlur: (e) => {
+                        const val = formatCep(e.target.value);
+                        handleChange("cep", val);
+                        if (val.replace(/\D/g, "").length === 8) {
+                          buscarCepIfNeeded(val);
+                        } else {
+                          setCepStatus(null);
+                        }
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: cepStatus?.includes("Não foi") ? "#b91c1c" : "#475569" }, children: cepStatus || "Preencha para auto-preencher endereço." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Endereço" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.endereco,
+                      onChange: (e) => handleChange("endereco", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Número" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.numero,
+                      onChange: (e) => handleChange("numero", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Complemento" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.complemento,
+                      onChange: (e) => handleChange("complemento", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.cidade,
+                      onChange: (e) => handleChange("cidade", e.target.value)
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Estado" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      className: "form-input",
+                      value: form.estado,
+                      onChange: (e) => handleChange("estado", e.target.value)
+                    }
+                  )
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", style: { marginTop: 12 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Notas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                className: "form-textarea",
+                rows: 3,
+                value: form.notas,
+                onChange: (e) => handleChange("notas", e.target.value),
+                placeholder: "Informações adicionais"
+              }
+            )
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                className: "btn btn-primary",
+                disabled: salvando,
+                type: "submit",
+                children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: fecharFormularioCliente,
+                disabled: salvando,
+                children: "Cancelar"
+              }
+            )
+          ] })
+        ] }),
+        editId && abaFormCliente === "acompanhantes" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 12 }, children: acompanhantesCard })
+      ] }),
       msg && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-green mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: msg }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
@@ -981,6 +1205,10 @@ function ClientesIsland() {
                 onClick: () => {
                   setForm(initialForm);
                   setEditId(null);
+                  setAcompanhantes([]);
+                  setAcompErro(null);
+                  resetAcompForm(true);
+                  setAbaFormCliente("dados");
                   setMsg(null);
                   setMostrarFormCliente(true);
                 },
@@ -992,57 +1220,90 @@ function ClientesIsland() {
         }
       ) }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[960px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "E-mail" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { style: { textAlign: "center" }, children: "Ativo" }),
-          (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando..." }) }),
-          !loading && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum cliente encontrado." }) }),
-          !loading && filtrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.nome }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.cpf }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.telefone }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.email || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: c.active ? "Sim" : "Não" }),
-            (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", style: { textAlign: "center" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  className: "btn-icon",
-                  onClick: () => abrirHistorico(c),
-                  title: "Histórico",
-                  children: "🗂️"
-                }
-              ),
-              podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  className: "btn-icon",
-                  onClick: () => iniciarEdicao(c),
-                  title: "Editar",
-                  children: "✏️"
-                }
-              ),
-              podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  className: "btn-icon btn-danger",
-                  onClick: () => excluir(c.id),
-                  disabled: excluindoId === c.id,
-                  title: "Excluir",
-                  children: excluindoId === c.id ? "..." : "🗑️"
-                }
-              )
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "table-container overflow-x-auto",
+          style: { maxHeight: "65vh", overflowY: "auto" },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue clientes-table min-w-[820px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "E-mail" }),
+              exibeColunaAcoes && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+              loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando..." }) }),
+              !loading && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum cliente encontrado." }) }),
+              !loading && filtrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.nome }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.cpf }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.telefone }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.email || "-" }),
+                exibeColunaAcoes && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "td",
+                  {
+                    className: "th-actions",
+                    style: {
+                      textAlign: "center",
+                      display: "flex",
+                      gap: 6,
+                      justifyContent: "center",
+                      alignItems: "center"
+                    },
+                    children: [
+                      (() => {
+                        const whatsappLink = construirLinkWhatsApp(c.whatsapp);
+                        if (!whatsappLink) return null;
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "a",
+                          {
+                            className: "btn-icon",
+                            href: whatsappLink,
+                            title: "Abrir WhatsApp",
+                            target: "_blank",
+                            rel: "noreferrer",
+                            children: "💬"
+                          }
+                        );
+                      })(),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          className: "btn-icon",
+                          onClick: () => abrirHistorico(c),
+                          title: "Histórico",
+                          children: "🗂️"
+                        }
+                      ),
+                      podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          className: "btn-icon",
+                          onClick: () => iniciarEdicao(c),
+                          title: "Editar",
+                          children: "✏️"
+                        }
+                      ),
+                      podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          className: "btn-icon btn-danger",
+                          onClick: () => excluir(c.id),
+                          disabled: excluindoId === c.id,
+                          title: "Excluir",
+                          children: excluindoId === c.id ? "..." : "🗑️"
+                        }
+                      )
+                    ]
+                  }
+                )
+              ] }, c.id))
             ] })
-          ] }, c.id))
-        ] })
-      ] }) })
+          ] })
+        }
+      )
     ] }),
     historicoCliente && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-backdrop", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-panel", style: { maxWidth: 1100, width: "95vw" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
@@ -1065,169 +1326,7 @@ function ClientesIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-body", children: [
         loadingHistorico && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Carregando histórico..." }),
         !loadingHistorico && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue mb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Acompanhantes do cliente" }),
-            acompErro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginBottom: 8 }, children: acompErro }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "CPF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Telefone" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Parentesco" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
-                (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", style: { textAlign: "center" }, children: "Ações" })
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-                acompLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando acompanhantes..." }) }),
-                !acompLoading && acompanhantes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum acompanhante cadastrado." }) }),
-                !acompLoading && acompanhantes.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.nome_completo }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.cpf || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.telefone || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.grau_parentesco || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: a.ativo ? "Sim" : "Não" }),
-                  (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", style: { textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }, children: [
-                    podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", type: "button", onClick: () => iniciarEdicaoAcomp(a), title: "Editar", children: "✏️" }),
-                    podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        className: "btn-icon btn-danger",
-                        type: "button",
-                        onClick: () => excluirAcompanhante(a.id),
-                        disabled: acompExcluindo === a.id,
-                        title: "Excluir",
-                        children: acompExcluindo === a.id ? "..." : "🗑️"
-                      }
-                    )
-                  ] })
-                ] }, a.id))
-              ] })
-            ] }) }),
-            podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: acompEditId ? "Editar acompanhante" : "Adicionar acompanhante" }),
-              !mostrarFormAcomp && !acompEditId && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn btn-primary",
-                  onClick: () => {
-                    resetAcompForm();
-                    setMostrarFormAcomp(true);
-                  },
-                  children: "Adicionar acompanhante"
-                }
-              ),
-              (mostrarFormAcomp || acompEditId) && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome completo" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.nome_completo,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, nome_completo: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "CPF" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.cpf,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Telefone" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.telefone,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.grau_parentesco,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, grau_parentesco: e.target.value })),
-                        placeholder: "Ex: Esposa, Filho"
-                      }
-                    )
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "RG" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.rg,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, rg: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data nascimento" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "date",
-                        className: "form-input",
-                        value: acompForm.data_nascimento,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, data_nascimento: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Observações" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        className: "form-input",
-                        value: acompForm.observacoes,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, observacoes: e.target.value }))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { alignSelf: "flex-end" }, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Ativo" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: acompForm.ativo,
-                        onChange: (e) => setAcompForm((prev) => ({ ...prev, ativo: e.target.checked }))
-                      }
-                    )
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 8 }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "button", onClick: salvarAcompanhante, disabled: acompSalvando, children: acompSalvando ? "Salvando..." : acompEditId ? "Salvar alterações" : "Salvar" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      className: "btn btn-light",
-                      type: "button",
-                      onClick: () => resetAcompForm(true),
-                      disabled: acompSalvando,
-                      children: "Cancelar"
-                    }
-                  )
-                ] })
-              ] })
-            ] })
-          ] }),
+          acompanhantesCard,
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Vendas" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[820px]", children: [

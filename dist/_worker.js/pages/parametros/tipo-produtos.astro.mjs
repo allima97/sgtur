@@ -1,13 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
-import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_Cob7n0Cm.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_m0KiXmHP.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_CRIMG_C1.mjs';
-import { j as jsxRuntimeExports, s as supabase } from '../../chunks/supabase_DZ5sCzw7.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-export { r as renderers } from '../../chunks/_@astro-renderers_DxUIN8pq.mjs';
-import { u as usePermissao } from '../../chunks/usePermissao_B808B4Oq.mjs';
+import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
+import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
 import { t as titleCaseWithExceptions } from '../../chunks/titleCase_DEDuDeMf.mjs';
-import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_B9z1wb0a.mjs';
+import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -349,90 +349,6 @@ function TipoProdutosIsland() {
             }
           )
         ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginBottom: 8 }, children: "Meta específica do produto (opcional)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Usar meta específica?" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: usaMetaProduto,
-                  onChange: (e) => setUsaMetaProduto(e.target.checked),
-                  disabled: permissao === "view"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Exibe KPI com comissão específica?" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: exibeKpiComissao,
-                  onChange: (e) => setExibeKpiComissao(e.target.checked),
-                  disabled: permissao === "view" || !suportaExibeKpi
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
-            ] }),
-            !suportaExibeKpi && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Adicione a coluna exibe_kpi_comissao em tipo_produtos para ativar este controle." })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Meta do produto (R$)" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "number",
-                step: "0.01",
-                min: "0",
-                value: metaProdutoValor,
-                onChange: (e) => setMetaProdutoValor(e.target.value),
-                disabled: !usaMetaProduto || permissao === "view",
-                placeholder: "Ex: 1000"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "% ao bater a meta do produto" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                type: "number",
-                step: "0.01",
-                min: "0",
-                value: comissaoProdutoMetaPct,
-                onChange: (e) => setComissaoProdutoMetaPct(e.target.value),
-                disabled: !usaMetaProduto || permissao === "view",
-                placeholder: "Ex: 10 (para 10%)"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Descontar comissão da meta geral?" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "checkbox", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: descontarMetaGeral,
-                  onChange: (e) => setDescontarMetaGeral(e.target.checked),
-                  disabled: permissao === "view"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim" })
-            ] })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#475569" }, children: 'Se ativado, o produto paga a comissão da meta própria (ex.: 10%); se "Descontar meta geral" estiver ligado, subtrai o que já foi pago pela meta geral para evitar duplicidade.' })
       ] }),
       form.regra_comissionamento === "geral" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 8 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Regra de Comissão *" }),
