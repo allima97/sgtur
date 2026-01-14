@@ -31,6 +31,15 @@ type QuoteItemRecord = {
   currency: string | null;
   confidence: number | null;
   order_index?: number | null;
+  raw?: Record<string, unknown> | null;
+  segments?: QuoteItemSegmentRecord[] | null;
+};
+
+type QuoteItemSegmentRecord = {
+  id?: string;
+  segment_type: string;
+  data: Record<string, unknown>;
+  order_index?: number | null;
 };
 
 function formatCurrency(value: number) {
@@ -45,6 +54,22 @@ function normalizeNumber(value: string) {
     : cleaned;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isCircuitItem(item: QuoteItemRecord) {
+  return (item.item_type || "").trim().toLowerCase() === "circuito";
+}
+
+type CircuitMeta = {
+  codigo?: string;
+  serie?: string;
+  itinerario?: string[];
+  tags?: string[];
+};
+
+function getCircuitMeta(item: QuoteItemRecord): CircuitMeta {
+  const raw = (item.raw || {}) as { circuito_meta?: CircuitMeta };
+  return raw.circuito_meta || {};
 }
 
 function validateItem(item: QuoteItemRecord) {
@@ -73,6 +98,8 @@ export default function QuoteDetailIsland(props: {
     (props.items || []).map((item, index) => ({
       ...item,
       taxes_amount: Number(item.taxes_amount || 0),
+      raw: item.raw || {},
+      segments: item.segments || [],
       order_index: typeof item.order_index === "number" ? item.order_index : index,
     }))
   );
@@ -115,6 +142,41 @@ export default function QuoteDetailIsland(props: {
     });
   }
 
+  function updateCircuitMeta(index: number, updates: Partial<CircuitMeta>) {
+    setItems((prev) => {
+      const next = [...prev];
+      const current = next[index];
+      if (!current) return prev;
+      const meta = { ...getCircuitMeta(current), ...updates };
+      const itinerario = meta.itinerario?.filter(Boolean) || [];
+      next[index] = {
+        ...current,
+        raw: { ...(current.raw || {}), circuito_meta: meta },
+        city_name: itinerario.length ? itinerario.join(" - ") : current.city_name,
+      };
+      return next;
+    });
+  }
+
+  function updateCircuitSegments(
+    index: number,
+    updater: (segments: QuoteItemSegmentRecord[]) => QuoteItemSegmentRecord[]
+  ) {
+    setItems((prev) => {
+      const next = [...prev];
+      const current = next[index];
+      if (!current) return prev;
+      const currentDays = (current.segments || []).filter((seg) => seg.segment_type === "circuit_day");
+      const otherSegments = (current.segments || []).filter((seg) => seg.segment_type !== "circuit_day");
+      const nextDays = updater(currentDays).map((seg, idx) => ({ ...seg, order_index: idx }));
+      next[index] = {
+        ...current,
+        segments: [...otherSegments, ...nextDays],
+      };
+      return next;
+    });
+  }
+
   function moveItem(index: number, direction: "up" | "down") {
     const target = direction === "up" ? index - 1 : index + 1;
     if (target < 0 || target >= items.length) return;
@@ -147,6 +209,7 @@ export default function QuoteDetailIsland(props: {
         start_date: item.start_date || null,
         end_date: item.end_date || item.start_date || null,
         currency: item.currency || props.quote.currency,
+        raw: item.raw || {},
         order_index: typeof item.order_index === "number" ? item.order_index : index,
       }));
 
@@ -155,6 +218,30 @@ export default function QuoteDetailIsland(props: {
         .upsert(payload, { onConflict: "id" });
 
       if (itemError) throw itemError;
+
+      const itemIds = items.map((item) => item.id);
+      if (itemIds.length) {
+        const { error: deleteSegErr } = await supabaseBrowser
+          .from("quote_item_segment")
+          .delete()
+          .in("quote_item_id", itemIds);
+        if (deleteSegErr) throw deleteSegErr;
+
+        const segmentPayloads = items.flatMap((item) =>
+          (item.segments || []).map((segment, idx) => ({
+            quote_item_id: item.id,
+            segment_type: segment.segment_type,
+            data: segment.data || {},
+            order_index: typeof segment.order_index === "number" ? segment.order_index : idx,
+          }))
+        );
+        if (segmentPayloads.length) {
+          const { error: segErr } = await supabaseBrowser
+            .from("quote_item_segment")
+            .insert(segmentPayloads);
+          if (segErr) throw segErr;
+        }
+      }
 
       const subtotal = items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
       const taxes = items.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
@@ -292,100 +379,330 @@ export default function QuoteDetailIsland(props: {
               </tr>
             </thead>
             <tbody>
-              {items.map((item, index) => (
-                <tr key={item.id}>
-                  <td className="order-cell">
-                    <div className="order-controls">
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        title="Mover para cima"
-                        onClick={() => moveItem(index, "up")}
-                        disabled={index === 0}
-                        style={{ padding: "2px 6px" }}
-                      >
-                        ⬆️
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        title="Mover para baixo"
-                        onClick={() => moveItem(index, "down")}
-                        disabled={index === items.length - 1}
-                        style={{ padding: "2px 6px" }}
-                      >
-                        ⬇️
-                      </button>
-                    </div>
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={item.item_type || ""}
-                      onChange={(e) => updateItem(index, { item_type: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={item.title || ""}
-                      onChange={(e) =>
-                        updateItem(index, { title: e.target.value, product_name: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={item.city_name || ""}
-                      onChange={(e) => updateItem(index, { city_name: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      type="date"
-                      value={item.start_date || ""}
-                      onChange={(e) => updateItem(index, { start_date: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      type="date"
-                      value={item.end_date || ""}
-                      onChange={(e) => updateItem(index, { end_date: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={formatCurrency(item.total_amount)}
-                      onChange={(e) =>
-                        updateItem(index, { total_amount: normalizeNumber(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={formatCurrency(Number(item.taxes_amount || 0))}
-                      onChange={(e) =>
-                        updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
+              {items.map((item, index) => {
+                const circuitMeta = getCircuitMeta(item);
+                const circuitDays = (item.segments || [])
+                  .filter((seg) => seg.segment_type === "circuit_day")
+                  .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+                return (
+                  <React.Fragment key={item.id}>
+                    <tr>
+                      <td className="order-cell">
+                        <div className="order-controls">
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Mover para cima"
+                            onClick={() => moveItem(index, "up")}
+                            disabled={index === 0}
+                            style={{ padding: "2px 6px" }}
+                          >
+                            ⬆️
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Mover para baixo"
+                            onClick={() => moveItem(index, "down")}
+                            disabled={index === items.length - 1}
+                            style={{ padding: "2px 6px" }}
+                          >
+                            ⬇️
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={item.item_type || ""}
+                          onChange={(e) => updateItem(index, { item_type: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={item.title || ""}
+                          onChange={(e) =>
+                            updateItem(index, { title: e.target.value, product_name: e.target.value })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={item.city_name || ""}
+                          onChange={(e) => updateItem(index, { city_name: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          type="date"
+                          value={item.start_date || ""}
+                          onChange={(e) => updateItem(index, { start_date: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          type="date"
+                          value={item.end_date || ""}
+                          onChange={(e) => updateItem(index, { end_date: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={formatCurrency(item.total_amount)}
+                          onChange={(e) =>
+                            updateItem(index, { total_amount: normalizeNumber(e.target.value) })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="form-input"
+                          value={formatCurrency(Number(item.taxes_amount || 0))}
+                          onChange={(e) =>
+                            updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })
+                          }
+                        />
+                      </td>
+                    </tr>
+
+                    {isCircuitItem(item) && (
+                      <tr>
+                        <td colSpan={9}>
+                          <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
+                            <div className="form-row">
+                              <div className="form-group">
+                                <label className="form-label">Codigo</label>
+                                <input
+                                  className="form-input"
+                                  value={circuitMeta.codigo || ""}
+                                  onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
+                                />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">Serie</label>
+                                <input
+                                  className="form-input"
+                                  value={circuitMeta.serie || ""}
+                                  onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
+                                />
+                              </div>
+                              <div className="form-group" style={{ flex: 1 }}>
+                                <label className="form-label">Tags (uma por linha)</label>
+                                <textarea
+                                  className="form-input"
+                                  rows={2}
+                                  value={(circuitMeta.tags || []).join("\n")}
+                                  onChange={(e) =>
+                                    updateCircuitMeta(index, {
+                                      tags: e.target.value
+                                        .split(/\r?\n/)
+                                        .map((val) => val.trim())
+                                        .filter(Boolean),
+                                    })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: 8 }}>
+                              <label className="form-label">Itinerario (uma cidade por linha)</label>
+                              <textarea
+                                className="form-input"
+                                rows={3}
+                                value={(circuitMeta.itinerario || []).join("\n")}
+                                onChange={(e) =>
+                                  updateCircuitMeta(index, {
+                                    itinerario: e.target.value
+                                      .split(/\r?\n/)
+                                      .map((val) => val.trim())
+                                      .filter(Boolean),
+                                  })
+                                }
+                              />
+                            </div>
+
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontWeight: 600, marginBottom: 8 }}>Dia a dia</div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                {circuitDays.map((seg, segIndex) => {
+                                  const data = (seg.data || {}) as {
+                                    dia?: number;
+                                    titulo?: string;
+                                    descricao?: string;
+                                  };
+                                  return (
+                                    <div
+                                      key={`circuit-${item.id}-${segIndex}`}
+                                      style={{
+                                        border: "1px solid #e2e8f0",
+                                        borderRadius: 8,
+                                        padding: 10,
+                                        background: "#f8fafc",
+                                      }}
+                                    >
+                                      <div className="form-row">
+                                        <div className="form-group">
+                                          <label className="form-label">Dia</label>
+                                          <input
+                                            className="form-input"
+                                            type="number"
+                                            min={1}
+                                            value={data.dia ?? segIndex + 1}
+                                            onChange={(e) =>
+                                              updateCircuitSegments(index, (segments) =>
+                                                segments.map((segmento, i) =>
+                                                  i === segIndex
+                                                    ? {
+                                                        ...segmento,
+                                                        data: {
+                                                          ...(segmento.data || {}),
+                                                          dia: Number(e.target.value) || segIndex + 1,
+                                                        },
+                                                      }
+                                                    : segmento
+                                                )
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div className="form-group" style={{ flex: 1 }}>
+                                          <label className="form-label">Cidade / Titulo</label>
+                                          <input
+                                            className="form-input"
+                                            value={data.titulo || ""}
+                                            onChange={(e) =>
+                                              updateCircuitSegments(index, (segments) =>
+                                                segments.map((segmento, i) =>
+                                                  i === segIndex
+                                                    ? {
+                                                        ...segmento,
+                                                        data: {
+                                                          ...(segmento.data || {}),
+                                                          titulo: e.target.value,
+                                                        },
+                                                      }
+                                                    : segmento
+                                                )
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div
+                                          className="form-group"
+                                          style={{ alignSelf: "flex-end", display: "flex", gap: 6 }}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="btn btn-light"
+                                            onClick={() =>
+                                              updateCircuitSegments(index, (segments) => {
+                                                if (segIndex === 0) return segments;
+                                                const next = [...segments];
+                                                const [removed] = next.splice(segIndex, 1);
+                                                next.splice(segIndex - 1, 0, removed);
+                                                return next;
+                                              })
+                                            }
+                                            disabled={segIndex === 0}
+                                          >
+                                            ⬆️
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn btn-light"
+                                            onClick={() =>
+                                              updateCircuitSegments(index, (segments) => {
+                                                if (segIndex >= segments.length - 1) return segments;
+                                                const next = [...segments];
+                                                const [removed] = next.splice(segIndex, 1);
+                                                next.splice(segIndex + 1, 0, removed);
+                                                return next;
+                                              })
+                                            }
+                                            disabled={segIndex >= circuitDays.length - 1}
+                                          >
+                                            ⬇️
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn btn-light"
+                                            onClick={() =>
+                                              updateCircuitSegments(index, (segments) =>
+                                                segments.filter((_, i) => i !== segIndex)
+                                              )
+                                            }
+                                          >
+                                            Remover
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="form-group">
+                                        <label className="form-label">Descricao</label>
+                                        <textarea
+                                          className="form-input"
+                                          rows={3}
+                                          value={data.descricao || ""}
+                                          onChange={(e) =>
+                                            updateCircuitSegments(index, (segments) =>
+                                              segments.map((segmento, i) =>
+                                                i === segIndex
+                                                  ? {
+                                                      ...segmento,
+                                                      data: {
+                                                        ...(segmento.data || {}),
+                                                        descricao: e.target.value,
+                                                      },
+                                                    }
+                                                  : segmento
+                                              )
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-light"
+                                style={{ marginTop: 8 }}
+                                onClick={() =>
+                                  updateCircuitSegments(index, (segments) => [
+                                    ...segments,
+                                    {
+                                      segment_type: "circuit_day",
+                                      order_index: segments.length,
+                                      data: { dia: segments.length + 1, titulo: "", descricao: "" },
+                                    },
+                                  ])
+                                }
+                              >
+                                Adicionar dia
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

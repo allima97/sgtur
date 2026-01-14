@@ -24,6 +24,12 @@ export type QuotePdfItem = {
   total_amount?: number | null;
   taxes_amount?: number | null;
   order_index?: number | null;
+  raw?: Record<string, unknown> | null;
+  segments?: Array<{
+    segment_type: string;
+    data: Record<string, unknown>;
+    order_index?: number | null;
+  }> | null;
 };
 
 export type QuotePdfData = {
@@ -66,6 +72,42 @@ function formatDateRange(start?: string | null, end?: string | null) {
   if (!endLabel || startLabel === endLabel) return startLabel || endLabel;
   if (!startLabel) return endLabel;
   return `${startLabel} - ${endLabel}`;
+}
+
+function normalizeType(value?: string | null) {
+  return (value || "").trim().toLowerCase();
+}
+
+type CircuitMeta = {
+  codigo?: string;
+  serie?: string;
+  itinerario?: string[];
+  tags?: string[];
+};
+
+type CircuitDay = {
+  dia: number;
+  titulo: string;
+  descricao: string;
+};
+
+function getCircuitMeta(item: QuotePdfItem): CircuitMeta {
+  const raw = (item.raw || {}) as { circuito_meta?: CircuitMeta };
+  return raw.circuito_meta || {};
+}
+
+function getCircuitDays(item: QuotePdfItem): CircuitDay[] {
+  const segments = (item.segments || [])
+    .filter((segment) => segment.segment_type === "circuit_day")
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  return segments.map((segment, index) => {
+    const data = (segment.data || {}) as { dia?: number; titulo?: string; descricao?: string };
+    return {
+      dia: Number(data.dia || index + 1),
+      titulo: data.titulo || "",
+      descricao: data.descricao || "",
+    };
+  });
 }
 
 function toLines(text?: string | null) {
@@ -187,6 +229,11 @@ export async function exportQuoteToPdf(params: {
   const bodyLineHeight = 16;
   const bodyGapAfterDate = 6;
   const bodyGapAfterTitle = 6;
+  const metaLineHeight = 12;
+  const tagsLineHeight = 18;
+  const timelineTitleHeight = 12;
+  const timelineDescHeight = 11;
+  const timelineGap = 6;
 
   const orderedItems = [...items].sort(
     (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
@@ -325,6 +372,57 @@ export async function exportQuoteToPdf(params: {
     );
   }
 
+  function isCircuitItem(item: QuotePdfItem) {
+    return normalizeType(item.item_type) === "circuito";
+  }
+
+  function buildCircuitLayout(item: QuotePdfItem, maxWidth: number) {
+    const meta = getCircuitMeta(item);
+    let metaLines: string[] = [];
+    if (meta.codigo || meta.serie) {
+      const parts: string[] = [];
+      if (meta.codigo) parts.push(`Codigo: ${meta.codigo}`);
+      if (meta.serie) parts.push(`Serie ${meta.serie}`);
+      const metaText = parts.join(" | ");
+      metaLines = metaText ? doc.splitTextToSize(metaText, maxWidth) : [];
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const itineraryText = meta.itinerario?.length ? meta.itinerario.join(" - ") : "";
+    const itineraryLines = itineraryText ? doc.splitTextToSize(itineraryText, maxWidth) : [];
+    const tags = meta.tags || [];
+
+    const timelineTextWidth = maxWidth - 18;
+    const days = getCircuitDays(item).map((day) => {
+      const title = `Dia ${day.dia}: ${day.titulo}`.trim();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      const titleLines = title ? doc.splitTextToSize(title, timelineTextWidth) : [];
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const descLines = day.descricao ? doc.splitTextToSize(day.descricao, timelineTextWidth) : [];
+      return { ...day, titleLines, descLines };
+    });
+
+    let height = 0;
+    if (metaLines.length) height += metaLines.length * metaLineHeight + 4;
+    if (itineraryLines.length) height += itineraryLines.length * metaLineHeight + 4;
+    if (tags.length) height += tagsLineHeight + 4;
+    if (days.length) {
+      height += timelineGap;
+      days.forEach((day, idx) => {
+        height += day.titleLines.length * timelineTitleHeight;
+        if (day.descLines.length) {
+          height += day.descLines.length * timelineDescHeight;
+        }
+        if (idx < days.length - 1) height += timelineGap;
+      });
+    }
+
+    return { metaLines, itineraryLines, tags, days, height };
+  }
+
   function getItemCardContent(item: QuotePdfItem, cardInnerWidth: number) {
     const dateLine = formatDateRange(item.start_date, item.end_date);
     const title = item.title || item.product_name || "Item";
@@ -332,7 +430,7 @@ export async function exportQuoteToPdf(params: {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     const titleLines = doc.splitTextToSize(title, cardInnerWidth);
-    const cityLine = item.city_name ? item.city_name : "";
+    const cityLine = isCircuitItem(item) ? "" : item.city_name ? item.city_name : "";
     return { dateLine, titleLines, cityLine };
   }
 
@@ -345,7 +443,12 @@ export async function exportQuoteToPdf(params: {
     const bottomPadding = 18;
     const extraGap = (content.dateLine ? bodyGapAfterDate : 0) + (content.cityLine ? bodyGapAfterTitle : 0);
     const bodyHeight = linesCount * bodyLineHeight + extraGap;
-    return Math.max(96, topSection + bodyHeight + bottomPadding);
+    let totalHeight = Math.max(96, topSection + bodyHeight + bottomPadding);
+    if (isCircuitItem(item)) {
+      const layout = buildCircuitLayout(item, cardInnerWidth);
+      totalHeight += layout.height;
+    }
+    return totalHeight;
   }
 
   function drawItemCard(item: QuotePdfItem, y: number) {
@@ -365,7 +468,9 @@ export async function exportQuoteToPdf(params: {
 
     if (options.showItemValues) {
       const qtyLabel = item.quantity
-        ? `Total (${item.quantity} item${item.quantity === 1 ? "" : "s"})`
+        ? isCircuitItem(item)
+          ? `Total (${item.quantity} Adulto${item.quantity === 1 ? "" : "s"})`
+          : `Total (${item.quantity} item${item.quantity === 1 ? "" : "s"})`
         : "Total";
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -408,6 +513,93 @@ export async function exportQuoteToPdf(params: {
       currentY += bodyGapAfterTitle;
       doc.text(content.cityLine, cardX + cardPadding, currentY);
       currentY += bodyLineHeight;
+    }
+
+    if (isCircuitItem(item)) {
+      const layout = buildCircuitLayout(item, cardW - cardPadding * 2);
+      const textX = cardX + cardPadding;
+      if (layout.metaLines.length) {
+        doc.setTextColor(...colors.muted);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        layout.metaLines.forEach((line) => {
+          doc.text(line, textX, currentY);
+          currentY += metaLineHeight;
+        });
+        currentY += 4;
+      }
+
+      if (layout.itineraryLines.length) {
+        doc.setTextColor(...colors.muted);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        layout.itineraryLines.forEach((line) => {
+          doc.text(line, textX, currentY);
+          currentY += metaLineHeight;
+        });
+        currentY += 4;
+      }
+
+      if (layout.tags.length) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        let tagX = textX;
+        let tagY = currentY + 2;
+        const maxWidth = cardW - cardPadding * 2;
+        layout.tags.forEach((tag) => {
+          const tagText = String(tag);
+          const tagWidth = doc.getTextWidth(tagText) + 12;
+          if (tagX + tagWidth > textX + maxWidth) {
+            tagX = textX;
+            tagY += tagsLineHeight;
+          }
+          doc.setDrawColor(...colors.divider);
+          doc.roundedRect(tagX, tagY - 12, tagWidth, 16, 6, 6);
+          doc.setTextColor(...colors.text);
+          doc.text(tagText, tagX + 6, tagY);
+          tagX += tagWidth + 6;
+        });
+        currentY = tagY + 16;
+      }
+
+      if (layout.days.length) {
+        const timelineX = cardX + cardPadding + 6;
+        const timelineTextX = timelineX + 12;
+        const lineTop = currentY + 2;
+        let dayCursorY = currentY + 6;
+
+        layout.days.forEach((day, dayIndex) => {
+          const dayTitle = day.titleLines.length ? day.titleLines : [`Dia ${day.dia}`];
+          doc.setDrawColor(...colors.divider);
+          doc.circle(timelineX, dayCursorY - 3, 3);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(...colors.text);
+          dayTitle.forEach((line) => {
+            doc.text(line, timelineTextX, dayCursorY);
+            dayCursorY += timelineTitleHeight;
+          });
+
+          if (day.descLines.length) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(...colors.muted);
+            day.descLines.forEach((line) => {
+              doc.text(line, timelineTextX, dayCursorY);
+              dayCursorY += timelineDescHeight;
+            });
+          }
+
+          if (dayIndex < layout.days.length - 1) {
+            dayCursorY += timelineGap;
+          }
+        });
+
+        const lineBottom = dayCursorY - 4;
+        doc.setDrawColor(...colors.divider);
+        doc.line(timelineX, lineTop, timelineX, Math.max(lineTop, lineBottom));
+        currentY = dayCursorY + 2;
+      }
     }
 
     return cardH;

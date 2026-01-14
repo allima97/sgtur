@@ -70,6 +70,7 @@ const TIPO_PRODUTO_WHITELIST = [
   "pacote",
   "ingresso",
   "passeio",
+  "circuito",
 ];
 
 const ITEM_KEYWORDS = [
@@ -83,6 +84,7 @@ const ITEM_KEYWORDS = [
   "pacote",
   "ingress",
   "passei",
+  "circuit",
 ];
 
 const TEXT_STOP_KEYWORDS = [
@@ -967,8 +969,15 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     const valorInfo = parseValor(blockText);
     if (valorInfo.valor <= 0) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
-    const cidade = parseCidade(blockText);
-    const produto = parseProduto(blockText);
+    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block.lines);
+    const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block) : null;
+    const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block) : [];
+    const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
+      ? circuitoMeta.itinerario.join(" - ")
+      : parseCidade(blockText);
+    const produto = circuitoDetectado
+      ? pickCircuitTitleFromLines(block) || parseProduto(blockText)
+      : parseProduto(blockText);
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
     items.push({
@@ -985,10 +994,11 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       end_date: periodo.end || periodo.start || "",
       currency: valorInfo.moeda || "BRL",
       confidence: 0.4,
-      segments: [],
+      segments: circuitoDias,
       raw: {
         page: pageNumber,
         block_text: blockText,
+        ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
       },
     });
   });
@@ -1012,8 +1022,142 @@ function detectSectionLabel(line: string) {
   if (normalized === "servicos") return "Serviços";
   if (normalized === "aereo") return "Aéreo";
   if (normalized === "hoteis" || normalized === "hotel" || normalized === "hospedagem") return "Hotel";
+  if (normalized === "circuito") return "Circuito";
   if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
   return "";
+}
+
+const CIRCUITO_STOP_KEYWORDS = [
+  "servicos inclusos",
+  "serviços inclusos",
+  "informacoes importantes",
+  "informações importantes",
+  "formas de pagamento",
+  "importante",
+];
+
+const CIRCUITO_DIA_REGEX = /^Dia\s+(\d+)\s*:\s*(.*)$/i;
+
+function hasCircuitDays(lines: string[]) {
+  return lines.some((line) => CIRCUITO_DIA_REGEX.test((line || "").trim()));
+}
+
+function parseCircuitMetaFromLines(lines: string[]) {
+  const meta: {
+    codigo?: string;
+    serie?: string;
+    itinerario?: string[];
+    tags?: string[];
+  } = {};
+  const itinerary: string[] = [];
+  const tags: string[] = [];
+  let passouDias = false;
+
+  for (const line of lines) {
+    const trimmed = (line || "").trim();
+    if (!trimmed) continue;
+    if (CIRCUITO_DIA_REGEX.test(trimmed)) {
+      passouDias = true;
+      break;
+    }
+    const normalized = normalizeOcrText(trimmed);
+    if (CIRCUITO_STOP_KEYWORDS.some((k) => normalized.includes(k))) break;
+    if (normalized.startsWith("codigo")) {
+      meta.codigo = trimmed.replace(/.*codigo\s*:/i, "").trim();
+      continue;
+    }
+    if (normalized.includes("serie")) {
+      meta.serie = trimmed
+        .replace(/.*serie/i, "")
+        .replace(/^[:\s|-]+/, "")
+        .trim();
+      continue;
+    }
+    if (normalized === "circuito") continue;
+    if (normalized === "detalhes") continue;
+    if (normalized.includes("total")) continue;
+    if (normalized.includes("adulto") || normalized.includes("adultos")) continue;
+    if (normalized.includes("diaria") || normalized.includes("diarias")) continue;
+    if (normalized === "|") continue;
+    if (/double|triple|single|conq-pass|conq|pass/i.test(normalized)) {
+      tags.push(trimmed);
+      continue;
+    }
+    if (!/[A-Za-zÀ-ÿ]/.test(trimmed)) continue;
+    itinerary.push(trimmed);
+  }
+
+  if (!passouDias && itinerary.length === 0 && tags.length === 0 && !meta.codigo && !meta.serie) {
+    return null;
+  }
+
+  const uniqueItinerary = Array.from(
+    new Set(itinerary.map((value) => value.trim()).filter(Boolean))
+  );
+  const uniqueTags = Array.from(new Set(tags.map((value) => value.trim()).filter(Boolean)));
+
+  if (uniqueItinerary.length) meta.itinerario = uniqueItinerary;
+  if (uniqueTags.length) meta.tags = uniqueTags;
+  if (!meta.codigo) delete meta.codigo;
+  if (!meta.serie) delete meta.serie;
+  if (!meta.codigo && !meta.serie && !meta.itinerario && !meta.tags) {
+    return null;
+  }
+
+  return meta;
+}
+
+function parseCircuitDaysFromLines(lines: string[]) {
+  const segments: QuoteItemDraft["segments"] = [];
+  let atual: { dia: number; titulo: string; descricao: string[] } | null = null;
+
+  function finalizarAtual() {
+    if (!atual) return;
+    const titulo = (atual.titulo || "").trim();
+    const descricao = atual.descricao.join(" ").replace(/\s+/g, " ").trim();
+    if (titulo || descricao) {
+      segments.push({
+        segment_type: "circuit_day",
+        order_index: segments.length,
+        data: {
+          dia: atual.dia,
+          titulo,
+          descricao,
+        },
+      });
+    }
+    atual = null;
+  }
+
+  for (const line of lines) {
+    const trimmed = (line || "").trim();
+    if (!trimmed) continue;
+    const normalized = normalizeOcrText(trimmed);
+    if (CIRCUITO_STOP_KEYWORDS.some((k) => normalized.includes(k))) {
+      finalizarAtual();
+      break;
+    }
+
+    const matchDia = trimmed.match(CIRCUITO_DIA_REGEX);
+    if (matchDia) {
+      finalizarAtual();
+      const diaNumero = Number(matchDia[1]);
+      if (!diaNumero || Number.isNaN(diaNumero)) continue;
+      const tituloInicial = (matchDia[2] || "").trim();
+      atual = { dia: diaNumero, titulo: tituloInicial, descricao: [] };
+      continue;
+    }
+
+    if (!atual) continue;
+    if (!atual.titulo) {
+      atual.titulo = trimmed;
+      continue;
+    }
+    atual.descricao.push(trimmed);
+  }
+
+  finalizarAtual();
+  return segments;
 }
 
 function splitTextBlocks(text: string): TextBlock[] {
@@ -1117,6 +1261,29 @@ function pickProductLineFromBlock(lines: string[], itemType: string) {
   return scored[0]?.line || "";
 }
 
+function pickCircuitTitleFromLines(lines: string[]) {
+  let encontrouPeriodo = false;
+  for (const line of lines) {
+    const trimmed = (line || "").trim();
+    if (!trimmed) continue;
+    const normalized = normalizeOcrText(trimmed);
+    if (CIRCUITO_DIA_REGEX.test(trimmed)) break;
+    if (!encontrouPeriodo && isLikelyDateLine(normalized) && normalized.includes("-")) {
+      encontrouPeriodo = true;
+      continue;
+    }
+    if (!encontrouPeriodo) continue;
+    if (normalized.includes("codigo") || normalized.includes("serie")) continue;
+    if (normalized === "detalhes") continue;
+    if (normalized.includes("total") || normalized.includes("adulto")) continue;
+    if (normalized.includes("diaria") || normalized.includes("diarias")) continue;
+    if (normalized === "|") continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(trimmed)) continue;
+    return trimmed;
+  }
+  return "";
+}
+
 function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[] {
   const blocks = splitTextBlocks(text);
   if (!blocks.length) return [];
@@ -1134,8 +1301,15 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     if (valorInfo.valor <= 0) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
     const quantidade = parseQuantidadePax(blockText);
-    const cidade = parseCidade(blockText);
-    const produto = pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText);
+    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block);
+    const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block.lines) : null;
+    const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block.lines) : [];
+    const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
+      ? circuitoMeta.itinerario.join(" - ")
+      : parseCidade(blockText);
+    const produto = circuitoDetectado
+      ? pickCircuitTitleFromLines(block.lines) || pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText)
+      : pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText);
     const totalAmount = valorInfo.valor;
     const quantity = quantidade || 1;
     const title = produto || tipo || "Item";
@@ -1154,11 +1328,12 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
       end_date: periodo.end || periodo.start || "",
       currency: valorInfo.moeda || "BRL",
       confidence: 0.6,
-      segments: [],
+      segments: circuitoDias,
       raw: {
         source: "text",
         type_hint: block.typeHint,
         block_text: blockText,
+        ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
       },
     });
   });
@@ -1231,6 +1406,7 @@ export async function extractCvcQuoteFromText(text: string, options: ExtractOpti
       start_date: item.start_date,
       end_date: item.end_date,
       confidence: item.confidence,
+      segments: item.segments,
       raw: item.raw,
     })),
   };
@@ -1351,6 +1527,7 @@ export async function extractCvcQuoteFromImage(file: File, options: ExtractOptio
       start_date: item.start_date,
       end_date: item.end_date,
       confidence: item.confidence,
+      segments: item.segments,
       raw: item.raw,
     })),
   };
@@ -1535,6 +1712,7 @@ export async function extractCvcQuoteFromPdf(file: File, options: ExtractOptions
       start_date: item.start_date,
       end_date: item.end_date,
       confidence: item.confidence,
+      segments: item.segments,
       raw: item.raw,
     })),
   };
