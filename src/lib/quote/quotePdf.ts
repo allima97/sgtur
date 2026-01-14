@@ -240,8 +240,8 @@ export async function exportQuoteToPdf(params: {
   );
   const subtotal = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
   const taxesTotal = orderedItems.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
-  const total = subtotal + taxesTotal;
-  const valorSemTaxas = Math.max(total - taxesTotal, 0);
+  const total = subtotal;
+  const valorSemTaxas = Math.max(subtotal - taxesTotal, 0);
   const itemsCount = orderedItems.length;
   const createdAt = quote.created_at ? new Date(quote.created_at) : new Date();
   const dateLabel = createdAt.toLocaleDateString("pt-BR");

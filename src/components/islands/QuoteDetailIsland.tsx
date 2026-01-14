@@ -110,7 +110,7 @@ export default function QuoteDetailIsland(props: {
     () => items.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0),
     [items]
   );
-  const totalAtual = useMemo(() => subtotalAtual + taxesAtual, [subtotalAtual, taxesAtual]);
+  const totalAtual = useMemo(() => subtotalAtual, [subtotalAtual]);
 
   const canConfirm = useMemo(() => {
     if (!items.length) return false;

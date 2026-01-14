@@ -59,7 +59,7 @@ export async function saveQuoteDraft(params: {
     (sum, item) => sum + sanitizeNumber(item.taxes_amount, 0),
     0
   );
-  const total = subtotal + taxesTotal;
+  const total = subtotal;
 
   try {
     const quotePayload = {
@@ -191,7 +191,7 @@ export async function saveQuoteDraft(params: {
     const nextStatus = shouldConfirm ? "CONFIRMED" : "IMPORTED";
     const newSubtotal = draft.items.reduce((sum, item) => sum + sanitizeNumber(item.total_amount, 0), 0);
     const newTaxes = draft.items.reduce((sum, item) => sum + sanitizeNumber(item.taxes_amount, 0), 0);
-    const newTotal = newSubtotal + newTaxes;
+    const newTotal = newSubtotal;
 
     const { error: statusError } = await supabaseBrowser
       .from("quote")

@@ -981,10 +981,11 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
     const summary = extractSummaryValues(block);
-    const baseValue = summary.base ?? totalAmount;
+    const baseValue = Math.max(summary.base ?? totalAmount, 0);
     const taxesValue = summary.taxes;
     const discountValue = summary.discount;
-    const adjustedBase = Math.max(baseValue - discountValue, 0);
+    const netBase = Math.max(baseValue - discountValue, 0);
+    const totalWithTaxes = netBase + taxesValue;
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -992,8 +993,8 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       product_name: produto || "",
       city_name: cidade || "",
       quantity: quantity || 1,
-      unit_price: quantity > 0 ? adjustedBase / quantity : adjustedBase,
-      total_amount: adjustedBase,
+      unit_price: quantity > 0 ? totalWithTaxes / quantity : totalWithTaxes,
+      total_amount: totalWithTaxes,
       taxes_amount: taxesValue,
       start_date: periodo.start || "",
       end_date: periodo.end || periodo.start || "",
@@ -1345,10 +1346,11 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     const title = produto || tipo || "Item";
 
     const summary = extractSummaryValues(block.lines);
-    const baseValue = summary.base ?? totalAmount;
+    const baseValue = Math.max(summary.base ?? totalAmount, 0);
     const taxesValue = summary.taxes;
     const discountValue = summary.discount;
-    const adjustedBase = Math.max(baseValue - discountValue, 0);
+    const netBase = Math.max(baseValue - discountValue, 0);
+    const totalWithTaxes = netBase + taxesValue;
 
     items.push({
       temp_id: buildTempId(),
@@ -1357,8 +1359,8 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
       product_name: produto || title,
       city_name: cidade || "",
       quantity,
-      unit_price: quantity > 0 ? adjustedBase / quantity : adjustedBase,
-      total_amount: adjustedBase,
+      unit_price: quantity > 0 ? totalWithTaxes / quantity : totalWithTaxes,
+      total_amount: totalWithTaxes,
       taxes_amount: taxesValue,
       start_date: periodo.start || "",
       end_date: periodo.end || periodo.start || "",
