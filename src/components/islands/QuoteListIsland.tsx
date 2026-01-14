@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 
 type QuoteItemRow = {
   id: string;
@@ -57,6 +58,9 @@ export default function QuoteListIsland() {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("all");
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
+  const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
+  const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -106,6 +110,19 @@ export default function QuoteListIsland() {
       return haystack.includes(termo);
     });
   }, [quotes, busca, statusFiltro]);
+
+  async function handleExportPdf(quoteId: string) {
+    setExportError(null);
+    setExportingQuoteId(quoteId);
+    try {
+      await exportQuotePdfById({ quoteId, showItemValues: true, showSummary: true });
+    } catch (err: any) {
+      console.error("Erro ao exportar PDF:", err);
+      setExportError(err?.message || "Nao foi possivel gerar o PDF.");
+    } finally {
+      setExportingQuoteId(null);
+    }
+  }
 
   async function excluirQuote(id: string) {
     const confirmar = window.confirm("Excluir este orcamento? Esta acao nao pode ser desfeita.");
@@ -177,6 +194,11 @@ export default function QuoteListIsland() {
       {erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
+        </div>
+      )}
+      {exportError && (
+        <div className="card-base card-config mb-3">
+          <strong>{exportError}</strong>
         </div>
       )}
 
@@ -258,6 +280,23 @@ export default function QuoteListIsland() {
                         gap: 4,
                       }}
                     >
+                      <button
+                        className="btn-icon"
+                        title="Visualizar orçamento"
+                        style={{ padding: "4px 6px" }}
+                        onClick={() => setVisualizandoQuote(quote)}
+                      >
+                        👁️
+                      </button>
+                      <button
+                        className="btn-icon"
+                        title="Visualizar PDF"
+                        style={{ padding: "4px 6px" }}
+                        onClick={() => handleExportPdf(quote.id)}
+                        disabled={exportingQuoteId === quote.id}
+                      >
+                        {exportingQuoteId === quote.id ? "⏳" : "📄"}
+                      </button>
                       <a
                         className="btn-icon"
                         href={`/orcamentos/${quote.id}`}
@@ -282,6 +321,55 @@ export default function QuoteListIsland() {
           </tbody>
         </table>
       </div>
+      {visualizandoQuote && (
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 640, width: "90vw" }}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">Visualizar orçamento</div>
+                <div style={{ fontSize: "0.9rem", color: "#475569" }}>
+                  Cliente: {visualizandoQuote.cliente?.nome || "—"} | Status:{" "}
+                  {visualizandoQuote.status_negociacao || "Enviado"}
+                </div>
+              </div>
+              <button className="btn-ghost" onClick={() => setVisualizandoQuote(null)}>
+                ✖
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+              <div>
+                <strong>Total:</strong>{" "}
+                {formatCurrency(Number(visualizandoQuote.total || 0))}
+              </div>
+              <div className="table-container overflow-x-auto">
+                <table className="table-default table-compact quote-items-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Qtd</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(visualizandoQuote.quote_item || []).map((item) => (
+                      <tr key={`${visualizandoQuote.id}-${item.id}`}>
+                        <td>{buildItemLabel(item)}</td>
+                        <td>{item.quantity || 1}</td>
+                        <td>{formatCurrency(Number(item.total_amount || 0))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setVisualizandoQuote(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

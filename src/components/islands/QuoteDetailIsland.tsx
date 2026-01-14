@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
-import { exportQuoteToPdf } from "../../lib/quote/quotePdf";
+import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 
 type QuoteRecord = {
   id: string;
@@ -80,14 +80,6 @@ function validateItem(item: QuoteItemRecord) {
       item.title &&
       item.total_amount > 0
   );
-}
-
-function extractStoragePath(value?: string | null) {
-  if (!value) return null;
-  const marker = "/quotes/";
-  const index = value.indexOf(marker);
-  if (index === -1) return null;
-  return value.slice(index + marker.length);
 }
 
 export default function QuoteDetailIsland(props: {
@@ -270,52 +262,35 @@ export default function QuoteDetailIsland(props: {
     }
   }
 
-  async function handleExport(showItemValues: boolean) {
-    setExporting(true);
-    setExportError(null);
-    try {
-      const { data: auth } = await supabaseBrowser.auth.getUser();
-      const userId = auth?.user?.id;
-      if (!userId) {
-        throw new Error("Usuario nao autenticado.");
+  const handleExport = useCallback(
+    async (showItemValues: boolean) => {
+      setExporting(true);
+      setExportError(null);
+      try {
+        await exportQuotePdfById({
+          quoteId: props.quote.id,
+          showItemValues,
+          showSummary: showItemValues && showSummary,
+        });
+      } catch (err: any) {
+        setExportError(err?.message || "Erro ao exportar PDF.");
+      } finally {
+        setExporting(false);
       }
+    },
+    [props.quote.id, showSummary]
+  );
 
-      const { data: settings, error: settingsErr } = await supabaseBrowser
-        .from("quote_print_settings")
-        .select("*")
-        .eq("owner_user_id", userId)
-        .maybeSingle();
-      if (settingsErr) throw settingsErr;
-      if (!settings) {
-        throw new Error("Configure os parametros do PDF em Parametros > Orcamentos.");
-      }
-
-      let logoUrl = settings.logo_url || null;
-      const logoPath = settings.logo_path || extractStoragePath(settings.logo_url);
-      if (logoPath) {
-        const signed = await supabaseBrowser.storage.from("quotes").createSignedUrl(logoPath, 3600);
-        if (signed.data?.signedUrl) {
-          logoUrl = signed.data.signedUrl;
-        }
-      }
-
-      await exportQuoteToPdf({
-        quote: {
-          id: props.quote.id,
-          created_at: props.quote.created_at || null,
-          total: totalAtual,
-          currency: props.quote.currency,
-        },
-        items,
-        settings: { ...settings, logo_url: logoUrl },
-        options: { showItemValues, showSummary: showItemValues && showSummary },
-      });
-    } catch (err: any) {
-      setExportError(err?.message || "Erro ao exportar PDF.");
-    } finally {
-      setExporting(false);
+  const autoExportRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("pdf") === "1") {
+      if (autoExportRef.current) return;
+      autoExportRef.current = true;
+      handleExport(true);
     }
-  }
+  }, [handleExport]);
 
   return (
     <div className="page-content-wrap">

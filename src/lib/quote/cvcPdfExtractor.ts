@@ -980,6 +980,11 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       : parseProduto(blockText);
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
+    const summary = extractSummaryValues(block);
+    const baseValue = summary.base ?? totalAmount;
+    const taxesValue = summary.taxes;
+    const discountValue = summary.discount;
+    const adjustedBase = Math.max(baseValue - discountValue, 0);
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -987,9 +992,9 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       product_name: produto || "",
       city_name: cidade || "",
       quantity: quantity || 1,
-      unit_price: quantity > 0 ? totalAmount / quantity : totalAmount,
-      total_amount: totalAmount,
-      taxes_amount: 0,
+      unit_price: quantity > 0 ? adjustedBase / quantity : adjustedBase,
+      total_amount: adjustedBase,
+      taxes_amount: taxesValue,
       start_date: periodo.start || "",
       end_date: periodo.end || periodo.start || "",
       currency: valorInfo.moeda || "BRL",
@@ -1038,8 +1043,10 @@ const CIRCUITO_STOP_KEYWORDS = [
 
 const CIRCUITO_DIA_REGEX = /^Dia\s+(\d+)\s*:\s*(.*)$/i;
 
-function hasCircuitDays(lines: string[]) {
-  return lines.some((line) => CIRCUITO_DIA_REGEX.test((line || "").trim()));
+function hasCircuitDays(lines: string[] | string | undefined) {
+  if (!lines) return false;
+  const list = Array.isArray(lines) ? lines : [lines];
+  return list.some((line) => CIRCUITO_DIA_REGEX.test((line || "").trim()));
 }
 
 function parseCircuitMetaFromLines(lines: string[]) {
@@ -1205,7 +1212,30 @@ function splitTextBlocks(text: string): TextBlock[] {
     blocks.push({ typeHint: currentType, lines: current });
   }
 
-  return blocks.filter((block) => block.lines.some((line) => /[A-Za-zÀ-ÿ]/.test(line)));
+  return blocks.filter(
+    (block) =>
+      Array.isArray(block.lines) && block.lines.some((line) => /[A-Za-zÀ-ÿ]/.test(line))
+  );
+}
+
+function extractSummaryValues(lines: string[]) {
+  let base: number | null = null;
+  let taxes: number | null = null;
+  let discount = 0;
+  for (const line of lines) {
+    const normalized = normalizeOcrText(line);
+    if (!base && /^valor\s*\(/i.test(normalized)) {
+      base = parseCurrencyValue(line);
+    }
+    if (normalized.includes("taxas") && normalized.includes("impostos")) {
+      taxes = parseCurrencyValue(line);
+    }
+    if (normalized.includes("desconto")) {
+      const value = parseCurrencyValue(line);
+      discount = value;
+    }
+  }
+  return { base, taxes: taxes ?? 0, discount };
 }
 
 function isLikelyAirportCode(line: string) {
@@ -1301,7 +1331,7 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     if (valorInfo.valor <= 0) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
     const quantidade = parseQuantidadePax(blockText);
-    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block);
+    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block.lines);
     const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block.lines) : null;
     const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block.lines) : [];
     const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
@@ -1314,6 +1344,12 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     const quantity = quantidade || 1;
     const title = produto || tipo || "Item";
 
+    const summary = extractSummaryValues(block.lines);
+    const baseValue = summary.base ?? totalAmount;
+    const taxesValue = summary.taxes;
+    const discountValue = summary.discount;
+    const adjustedBase = Math.max(baseValue - discountValue, 0);
+
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -1321,9 +1357,9 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
       product_name: produto || title,
       city_name: cidade || "",
       quantity,
-      unit_price: quantity > 0 ? totalAmount / quantity : totalAmount,
-      total_amount: totalAmount,
-      taxes_amount: 0,
+      unit_price: quantity > 0 ? adjustedBase / quantity : adjustedBase,
+      total_amount: adjustedBase,
+      taxes_amount: taxesValue,
       start_date: periodo.start || "",
       end_date: periodo.end || periodo.start || "",
       currency: valorInfo.moeda || "BRL",
