@@ -10,6 +10,7 @@ import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/t
 
 type ImportMode = "pdf" | "image" | "text" | "circuit" | "circuit_products";
 type ClienteOption = { id: string; nome: string; cpf?: string | null };
+type TipoProdutoOption = { id: string; label: string };
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -32,6 +33,8 @@ function formatCurrency(value: number) {
   if (!Number.isFinite(value)) return "0.00";
   return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+const IMPORT_TIPO_DATALIST_ID = "quote-import-tipos-list";
 
 function validateItem(item: QuoteItemDraft) {
   return Boolean(
@@ -144,11 +147,46 @@ export default function QuoteImportIsland() {
   const [clienteBusca, setClienteBusca] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [carregandoClientes, setCarregandoClientes] = useState(false);
+  const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     setDebug(params.has("debug"));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function carregarTipos() {
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("tipo_produtos")
+          .select("id, nome, tipo")
+          .order("nome", { ascending: true })
+          .limit(500);
+        if (!active) return;
+        if (error) {
+          console.warn("[QuoteImport] Falha ao carregar tipos", error);
+          return;
+        }
+        setTipoOptions(
+          (data || [])
+            .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
+            .map((tipo) => {
+              const label = tipo.nome?.trim() || tipo.tipo?.trim() || "";
+              return { id: tipo.id, label };
+            })
+            .filter((tipo) => tipo.label)
+        );
+      } catch (err) {
+        if (!active) return;
+        console.warn("[QuoteImport] Erro ao carregar tipos", err);
+      }
+    }
+    carregarTipos();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -362,6 +400,7 @@ export default function QuoteImportIsland() {
       setImportResult(result);
       const orderedItems = result.draft.items.map((item, index) => ({
         ...item,
+        cidade_id: item.cidade_id || null,
         order_index: index,
         taxes_amount: Number(item.taxes_amount || 0),
       }));
@@ -651,6 +690,7 @@ export default function QuoteImportIsland() {
                   <th>Tipo</th>
                   <th>Produto</th>
                   <th>Cidade</th>
+                  <th>Destino</th>
                   <th>Inicio</th>
                   <th>Fim</th>
                   <th>Qtd</th>
@@ -696,7 +736,9 @@ export default function QuoteImportIsland() {
                         <td>
                           <input
                             className="form-input"
+                            list={IMPORT_TIPO_DATALIST_ID}
                             value={item.item_type}
+                            placeholder="Selecione um tipo"
                             onChange={(e) => updateItem(index, { item_type: e.target.value })}
                           />
                         </td>
@@ -709,6 +751,7 @@ export default function QuoteImportIsland() {
                             }
                           />
                         </td>
+                        <td>-</td>
                         <td>
                           <input
                             className="form-input"
@@ -759,7 +802,7 @@ export default function QuoteImportIsland() {
 
                       {isCircuitItem(item) && (
                         <tr>
-                          <td colSpan={9}>
+                          <td colSpan={10}>
                             <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
                               <div className="form-row">
                                 <div className="form-group">
@@ -982,6 +1025,11 @@ export default function QuoteImportIsland() {
                 })}
               </tbody>
             </table>
+            <datalist id={IMPORT_TIPO_DATALIST_ID}>
+              {tipoOptions.map((tipo) => (
+                <option key={tipo.id} value={tipo.label} />
+              ))}
+            </datalist>
           </div>
 
           <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>

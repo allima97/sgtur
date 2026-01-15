@@ -52,7 +52,7 @@ if (quoteErr || !quote) {
 const { data: items } = await supabase
   .from("quote_item")
   .select(
-    "id, item_type, title, product_name, city_name, quantity, unit_price, total_amount, taxes_amount, start_date, end_date, currency, confidence, order_index, raw, quote_item_segment (id, segment_type, data, order_index)"
+    "id, item_type, title, product_name, city_name, cidade_id, cidade:cidades(id, nome), quantity, unit_price, total_amount, taxes_amount, start_date, end_date, currency, confidence, order_index, raw, quote_item_segment (id, segment_type, data, order_index)"
   )
   .eq("quote_id", quote.id)
   .order("order_index", { ascending: true })

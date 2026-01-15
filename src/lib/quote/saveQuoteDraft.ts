@@ -119,6 +119,7 @@ export async function saveQuoteDraft(params: {
         title: item.title,
         product_name: item.product_name,
         city_name: item.city_name,
+        cidade_id: item.cidade_id || null,
         quantity: Math.max(1, Math.round(sanitizeNumber(item.quantity, 1))),
         unit_price: sanitizeNumber(item.unit_price, 0),
         total_amount: sanitizeNumber(item.total_amount, 0),

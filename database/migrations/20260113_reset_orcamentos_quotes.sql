@@ -51,6 +51,7 @@ create table public.quote_item (
   title text,
   product_name text,
   city_name text,
+  cidade_id uuid references public.cidades(id) on delete set null,
   quantity integer not null default 1,
   unit_price numeric not null default 0,
   total_amount numeric not null default 0,

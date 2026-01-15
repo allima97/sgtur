@@ -8,6 +8,8 @@ type QuoteItemRecord = QuotePdfItem & {
     data: Record<string, unknown>;
     order_index?: number | null;
   }> | null;
+  cidade_id?: string | null;
+  cidade?: { id: string; nome?: string | null } | null;
 };
 
 type ExportArgs = {
@@ -50,7 +52,7 @@ async function fetchQuoteItems(quoteId: string) {
   const { data, error } = await supabaseBrowser
     .from("quote_item")
     .select(
-      "id, item_type, title, product_name, city_name, quantity, unit_price, total_amount, taxes_amount, start_date, end_date, currency, confidence, order_index, raw, quote_item_segment (id, segment_type, data, order_index)"
+    "id, item_type, title, product_name, city_name, cidade_id, cidade:cidades(id, nome), quantity, unit_price, total_amount, taxes_amount, start_date, end_date, currency, confidence, order_index, raw, quote_item_segment (id, segment_type, data, order_index)"
     )
     .eq("quote_id", quoteId)
     .order("order_index", { ascending: true })

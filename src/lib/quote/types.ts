@@ -14,6 +14,7 @@ export type QuoteItemDraft = {
   title: string;
   product_name: string;
   city_name: string;
+  cidade_id?: string | null;
   quantity: number;
   unit_price: number;
   total_amount: number;

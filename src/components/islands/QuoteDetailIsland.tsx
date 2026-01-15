@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 
 type QuoteRecord = {
@@ -22,6 +23,8 @@ type QuoteItemRecord = {
   title: string | null;
   product_name: string | null;
   city_name: string | null;
+  cidade_id?: string | null;
+  cidade?: { id: string; nome?: string | null } | null;
   quantity: number;
   unit_price: number;
   total_amount: number;
@@ -42,6 +45,16 @@ type QuoteItemSegmentRecord = {
   order_index?: number | null;
 };
 
+type QuoteDetailTipoProdutoOption = {
+  id: string;
+  label: string;
+};
+
+type ClienteOption = {
+  id: string;
+  nome: string;
+};
+
 function formatCurrency(value: number) {
   if (!Number.isFinite(value)) return "0.00";
   return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,6 +68,36 @@ function normalizeNumber(value: string) {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+
+function normalizeLookupText(value: string) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeCityName(value: string) {
+  return normalizeLookupText(value);
+}
+
+function getQuoteItemRowKey(item: QuoteItemRecord, index: number) {
+  return item.id || `quote-item-${index}`;
+}
+
+const EXCLUDED_PRODUTO_TIPOS = new Set(
+  [
+    "Seguro viagem",
+    "Passagem Aérea",
+    "Passagem Facial",
+    "Aéreo",
+    "Chip",
+    "Aluguel de Carro",
+  ].map((value) => normalizeLookupText(value))
+);
+
+const TIPO_DATALIST_ID = "quote-item-tipos-list";
+const QUOTE_CLIENTES_DATALIST_ID = "quote-clientes-list";
 
 function isCircuitItem(item: QuoteItemRecord) {
   return (item.item_type || "").trim().toLowerCase() === "circuito";
@@ -101,7 +144,8 @@ export default function QuoteDetailIsland(props: {
   const [success, setSuccess] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const subtotalAtual = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
     [items]
@@ -111,6 +155,137 @@ export default function QuoteDetailIsland(props: {
     [items]
   );
   const totalAtual = useMemo(() => subtotalAtual, [subtotalAtual]);
+  const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
+  const [cidadeSuggestions, setCidadeSuggestions] = useState<
+    Record<string, { id: string; nome: string }[]>
+  >({});
+  const [cidadeCache, setCidadeCache] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    props.items.forEach((item) => {
+      if (item.cidade_id && item.cidade?.nome) {
+        initial[item.cidade_id] = item.cidade.nome;
+      }
+    });
+    return initial;
+  });
+  const [cidadeNameMap, setCidadeNameMap] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    props.items.forEach((item) => {
+      if (item.cidade_id && item.cidade?.nome) {
+        initial[normalizeCityName(item.cidade.nome)] = item.cidade_id;
+      }
+    });
+    return initial;
+  });
+  const fetchTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      Object.values(fetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
+    };
+  }, []);
+  useEffect(() => {
+    setCidadeCache((prev) => {
+      const next = { ...prev };
+      props.items.forEach((item) => {
+        if (item.cidade_id && item.cidade?.nome) {
+          next[item.cidade_id] = item.cidade.nome;
+        }
+      });
+      return next;
+    });
+    setCidadeNameMap((prev) => {
+      const next = { ...prev };
+      props.items.forEach((item) => {
+        if (item.cidade_id && item.cidade?.nome) {
+          next[normalizeCityName(item.cidade.nome)] = item.cidade_id;
+        }
+      });
+      return next;
+    });
+  }, [props.items]);
+
+  const [clientes, setClientes] = useState<ClienteOption[]>([]);
+  const [clienteBusca, setClienteBusca] = useState(props.quote.cliente?.nome || "");
+  const [clienteId, setClienteId] = useState(props.quote.client_id || "");
+  useEffect(() => {
+    setClienteBusca(props.quote.cliente?.nome || "");
+    setClienteId(props.quote.client_id || "");
+  }, [props.quote.cliente?.nome, props.quote.client_id]);
+  useEffect(() => {
+    let active = true;
+    async function carregarClientes() {
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("clientes")
+          .select("id, nome")
+          .order("nome", { ascending: true })
+          .limit(500);
+        if (!active) return;
+        if (error) {
+          console.warn("[QuoteDetail] Falha ao carregar clientes", error);
+          return;
+        }
+        setClientes(
+          (data || [])
+            .filter((cliente) => cliente?.id && cliente.nome)
+            .map((cliente) => ({ id: cliente.id, nome: cliente.nome }))
+        );
+      } catch (err) {
+        if (!active) return;
+        console.warn("[QuoteDetail] Erro ao carregar clientes", err);
+      }
+    }
+    carregarClientes();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const [tipoOptions, setTipoOptions] = useState<QuoteDetailTipoProdutoOption[]>([]);
+  useEffect(() => {
+    let active = true;
+    async function carregarTipos() {
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("tipo_produtos")
+          .select("id, nome, tipo")
+          .order("nome", { ascending: true })
+          .limit(500);
+        if (!active) return;
+        if (error) {
+          console.warn("[QuoteDetail] Falha ao carregar tipos", error);
+          return;
+        }
+        setTipoOptions(
+          (data || [])
+            .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
+            .map((tipo) => {
+              const label = tipo.nome?.trim() || tipo.tipo?.trim() || "";
+              return { id: tipo.id, label };
+            })
+            .filter((tipo) => tipo.label)
+        );
+      } catch (err) {
+        if (!active) return;
+        console.warn("[QuoteDetail] Erro ao carregar tipos", err);
+      }
+    }
+    carregarTipos();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const tipoLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    tipoOptions.forEach((option) => {
+      const key = normalizeLookupText(option.label);
+      if (key) map.set(key, option.id);
+    });
+    return map;
+  }, [tipoOptions]);
 
   const canConfirm = useMemo(() => {
     if (!items.length) return false;
@@ -132,6 +307,161 @@ export default function QuoteDetailIsland(props: {
       next[index] = updated;
       return next;
     });
+  }
+
+  async function syncProductsCatalog(itemsToSync: QuoteItemRecord[]) {
+    if (!itemsToSync.length) return;
+    for (const item of itemsToSync) {
+      const nomeRaw = (item.title || item.product_name || "").trim();
+      if (!nomeRaw) continue;
+      const nome = titleCaseWithExceptions(nomeRaw);
+      if (!nome) continue;
+      const destinoRaw = (item.city_name || "").trim();
+      const destino = destinoRaw ? titleCaseWithExceptions(destinoRaw) : null;
+      const cidadeId = item.cidade_id || null;
+      const tipoKey = normalizeLookupText(item.item_type || "");
+      if (EXCLUDED_PRODUTO_TIPOS.has(tipoKey)) {
+        continue;
+      }
+      const tipoId = tipoLabelMap.get(tipoKey) || null;
+      const payload = {
+        nome,
+        destino,
+        cidade_id: cidadeId,
+        tipo_produto: tipoId,
+      };
+
+      try {
+        let query = supabaseBrowser.from("produtos").select("id");
+        query = query.eq("nome", payload.nome);
+        if (payload.destino) {
+          query = query.eq("destino", payload.destino);
+        } else {
+          query = query.is("destino", null);
+        }
+        if (payload.cidade_id) {
+          query = query.eq("cidade_id", payload.cidade_id);
+        } else {
+          query = query.is("cidade_id", null);
+        }
+        const { data: existing, error: selectErr } = await query.maybeSingle();
+        if (selectErr) {
+          console.warn("[QuoteDetail] Falha ao buscar produto", selectErr);
+          continue;
+        }
+        if (existing?.id) {
+          const { error: updateErr } = await supabaseBrowser
+            .from("produtos")
+            .update(payload)
+            .eq("id", existing.id);
+          if (updateErr) {
+            console.warn("[QuoteDetail] Falha ao atualizar produto", updateErr);
+          }
+        } else {
+          const { error: insertErr } = await supabaseBrowser.from("produtos").insert(payload);
+          if (insertErr) {
+            console.warn("[QuoteDetail] Falha ao inserir produto", insertErr);
+          }
+        }
+      } catch (err) {
+        console.warn("[QuoteDetail] Erro ao sincronizar produto", err);
+      }
+    }
+  }
+
+  async function loadCidadeSuggestions(rowKey: string, term: string) {
+    const search = term.trim();
+    const pattern = search ? `%${search}%` : "%";
+    try {
+      const { data, error } = await supabaseBrowser
+        .from("cidades")
+        .select("id, nome")
+        .ilike("nome", pattern)
+        .order("nome", { ascending: true })
+        .limit(25);
+      if (!isMountedRef.current) return;
+      if (error) {
+        console.warn("[QuoteDetail] Falha ao buscar cidades", error);
+        setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: [] }));
+        return;
+      }
+      const cidades = (data || []).filter((cidade) => cidade?.id && cidade.nome);
+      if (!isMountedRef.current) return;
+      setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: cidades }));
+      if (cidades.length) {
+        setCidadeCache((prev) => {
+          const next = { ...prev };
+          cidades.forEach((cidade) => {
+            if (cidade.id && cidade.nome) {
+              next[cidade.id] = cidade.nome;
+            }
+          });
+          return next;
+        });
+        setCidadeNameMap((prev) => {
+          const next = { ...prev };
+          cidades.forEach((cidade) => {
+            if (cidade.id && cidade.nome) {
+              const normalized = normalizeCityName(cidade.nome);
+              if (!next[normalized]) {
+                next[normalized] = cidade.id;
+              }
+            }
+          });
+          return next;
+        });
+      }
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      console.warn("[QuoteDetail] Erro ao buscar cidades", err);
+    }
+  }
+
+  function scheduleCidadeFetch(rowKey: string, term: string) {
+    const existing = fetchTimeouts.current[rowKey];
+    if (existing) {
+      clearTimeout(existing);
+    }
+    fetchTimeouts.current[rowKey] = setTimeout(() => loadCidadeSuggestions(rowKey, term), 250);
+  }
+
+  function handleClienteInputChange(value: string) {
+    setClienteBusca(value);
+    const normalized = normalizeLookupText(value);
+    const match = clientes.find((cliente) => normalizeLookupText(cliente.nome) === normalized);
+    setClienteId(match?.id || "");
+  }
+
+  function getCidadeInputValue(item: QuoteItemRecord, rowKey: string) {
+    if (!rowKey) return "";
+    if (Object.prototype.hasOwnProperty.call(cidadeInputValues, rowKey)) {
+      return cidadeInputValues[rowKey] || "";
+    }
+    if (item.cidade_id) {
+      return cidadeCache[item.cidade_id] || item.cidade?.nome || "";
+    }
+    return item.cidade?.nome || "";
+  }
+
+  function handleCidadeInputChange(index: number, value: string, rowKey: string) {
+    const current = items[index];
+    if (!current) return;
+    const normalized = normalizeCityName(value);
+    const matchedId = cidadeNameMap[normalized];
+    const matchedCidade =
+      cidadeSuggestions[rowKey]?.find((cidade) => normalizeCityName(cidade.nome) === normalized) ||
+      Object.entries(cidadeCache)
+        .map(([id, nome]) => ({ id, nome }))
+        .find((cidade) => normalizeCityName(cidade.nome) === normalized);
+    const displayValue = matchedCidade?.nome || value;
+    setCidadeInputValues((prev) => ({
+      ...prev,
+      [rowKey]: displayValue,
+    }));
+    updateItem(index, { cidade_id: matchedId ?? matchedCidade?.id ?? null });
+    if (value.trim().length >= 1) {
+      scheduleCidadeFetch(rowKey, value);
+    }
   }
 
   function updateCircuitMeta(index: number, updates: Partial<CircuitMeta>) {
@@ -194,6 +524,7 @@ export default function QuoteDetailIsland(props: {
         title: item.title,
         product_name: item.product_name,
         city_name: item.city_name,
+        cidade_id: item.cidade_id || null,
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_amount: item.total_amount,
@@ -235,6 +566,7 @@ export default function QuoteDetailIsland(props: {
         }
       }
 
+      await syncProductsCatalog(items);
       const subtotal = items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
       const taxes = items.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
       const total = subtotal + taxes;
@@ -247,6 +579,7 @@ export default function QuoteDetailIsland(props: {
           taxes,
           total,
           status: nextStatus,
+          client_id: clienteId || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", props.quote.id);
@@ -255,6 +588,7 @@ export default function QuoteDetailIsland(props: {
 
       setStatus(nextStatus);
       setSuccess("Atualizado com sucesso.");
+      setIsEditing(false);
     } catch (err: any) {
       setError(err?.message || "Erro ao salvar.");
     } finally {
@@ -297,16 +631,35 @@ export default function QuoteDetailIsland(props: {
       <div className="card-base" style={{ marginBottom: 16 }}>
         <h1 className="page-title">Quote</h1>
         <div style={{ fontSize: 14 }}>
-          Status: {props.quote.status_negociacao || "Enviado"} | Total: R$ {formatCurrency(totalAtual)} | Cliente:{" "}
-          {props.quote.cliente?.nome || "-"}
+          Status: {props.quote.status_negociacao || "Enviado"} | Total: R$ {formatCurrency(totalAtual)}
         </div>
-        {props.quote.source_file_url && (
-          <div style={{ marginTop: 8 }}>
-            <a href={props.quote.source_file_url} target="_blank" rel="noreferrer">
-              Baixar PDF original
-            </a>
-          </div>
-        )}
+        <div
+          style={{
+            marginTop: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <label className="form-label" style={{ marginBottom: 0 }}>
+            Cliente
+          </label>
+          <input
+            className="form-input"
+            list={QUOTE_CLIENTES_DATALIST_ID}
+            value={clienteBusca}
+            onChange={(e) => handleClienteInputChange(e.target.value)}
+            disabled={!isEditing}
+            placeholder="Selecione um cliente"
+            style={{ minWidth: 220 }}
+          />
+        </div>
+        <datalist id={QUOTE_CLIENTES_DATALIST_ID}>
+          {clientes.map((cliente) => (
+            <option key={cliente.id} value={cliente.nome} />
+          ))}
+        </datalist>
         <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             type="button"
@@ -346,6 +699,7 @@ export default function QuoteDetailIsland(props: {
                 <th>Tipo</th>
                 <th>Produto</th>
                 <th>Cidade</th>
+                <th>Destino</th>
                 <th>Inicio</th>
                 <th>Fim</th>
                 <th>Qtd</th>
@@ -359,9 +713,10 @@ export default function QuoteDetailIsland(props: {
                 const circuitDays = (item.segments || [])
                   .filter((seg) => seg.segment_type === "circuit_day")
                   .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                const rowKey = getQuoteItemRowKey(item, index);
 
                 return (
-                  <React.Fragment key={item.id}>
+                  <React.Fragment key={rowKey}>
                     <tr>
                       <td className="order-cell">
                         <div className="order-controls">
@@ -370,7 +725,7 @@ export default function QuoteDetailIsland(props: {
                             className="btn-icon"
                             title="Mover para cima"
                             onClick={() => moveItem(index, "up")}
-                            disabled={index === 0}
+                            disabled={index === 0 || !isEditing}
                             style={{ padding: "2px 6px" }}
                           >
                             ⬆️
@@ -380,7 +735,7 @@ export default function QuoteDetailIsland(props: {
                             className="btn-icon"
                             title="Mover para baixo"
                             onClick={() => moveItem(index, "down")}
-                            disabled={index === items.length - 1}
+                            disabled={index === items.length - 1 || !isEditing}
                             style={{ padding: "2px 6px" }}
                           >
                             ⬇️
@@ -390,8 +745,11 @@ export default function QuoteDetailIsland(props: {
                       <td>
                         <input
                           className="form-input"
+                          list={TIPO_DATALIST_ID}
                           value={item.item_type || ""}
                           onChange={(e) => updateItem(index, { item_type: e.target.value })}
+                          disabled={!isEditing}
+                          placeholder="Selecione um tipo"
                         />
                       </td>
                       <td>
@@ -401,98 +759,126 @@ export default function QuoteDetailIsland(props: {
                           onChange={(e) =>
                             updateItem(index, { title: e.target.value, product_name: e.target.value })
                           }
+                          disabled={!isEditing}
                         />
                       </td>
                       <td>
                         <input
                           className="form-input"
-                          value={item.city_name || ""}
-                          onChange={(e) => updateItem(index, { city_name: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="form-input"
-                          type="date"
-                          value={item.start_date || ""}
-                          onChange={(e) => updateItem(index, { start_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="form-input"
-                          type="date"
-                          value={item.end_date || ""}
-                          onChange={(e) => updateItem(index, { end_date: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="form-input"
-                          type="number"
-                          min={1}
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="form-input"
-                          value={formatCurrency(item.total_amount)}
-                          onChange={(e) =>
-                            updateItem(index, { total_amount: normalizeNumber(e.target.value) })
+                          list={`quote-item-cidades-${rowKey}`}
+                          value={getCidadeInputValue(item, rowKey)}
+                          onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
+                          onFocus={() =>
+                            scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))
                           }
+                          placeholder="Selecione uma cidade"
+                          disabled={!isEditing}
                         />
                       </td>
                       <td>
-                        <input
-                          className="form-input"
-                          value={formatCurrency(Number(item.taxes_amount || 0))}
-                          onChange={(e) =>
-                            updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })
-                          }
-                        />
+                          <input
+                            className="form-input"
+                            value={item.city_name || ""}
+                            onChange={(e) => updateItem(index, { city_name: e.target.value })}
+                            disabled={!isEditing}
+                          />
+                      </td>
+                      <td>
+                          <input
+                            className="form-input"
+                            type="date"
+                            value={item.start_date || ""}
+                            onChange={(e) => updateItem(index, { start_date: e.target.value })}
+                            disabled={!isEditing}
+                          />
+                      </td>
+                      <td>
+                          <input
+                            className="form-input"
+                            type="date"
+                            value={item.end_date || ""}
+                            onChange={(e) => updateItem(index, { end_date: e.target.value })}
+                            disabled={!isEditing}
+                          />
+                      </td>
+                      <td>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
+                            disabled={!isEditing}
+                          />
+                      </td>
+                      <td>
+                          <input
+                            className="form-input"
+                            value={formatCurrency(item.total_amount)}
+                            onChange={(e) =>
+                              updateItem(index, { total_amount: normalizeNumber(e.target.value) })
+                            }
+                            disabled={!isEditing}
+                          />
+                      </td>
+                      <td>
+                          <input
+                            className="form-input"
+                            value={formatCurrency(Number(item.taxes_amount || 0))}
+                            onChange={(e) =>
+                              updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })
+                            }
+                            disabled={!isEditing}
+                          />
                       </td>
                     </tr>
+                    <datalist id={`quote-item-cidades-${rowKey}`}>
+                      {(cidadeSuggestions[rowKey] || []).map((cidade) => (
+                        <option key={cidade.id} value={cidade.nome} />
+                      ))}
+                    </datalist>
 
                     {isCircuitItem(item) && (
                       <tr>
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
-                            <div className="form-row">
-                              <div className="form-group">
-                                <label className="form-label">Codigo</label>
-                                <input
-                                  className="form-input"
-                                  value={circuitMeta.codigo || ""}
-                                  onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
-                                />
-                              </div>
-                              <div className="form-group">
-                                <label className="form-label">Serie</label>
-                                <input
-                                  className="form-input"
-                                  value={circuitMeta.serie || ""}
-                                  onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
-                                />
-                              </div>
-                              <div className="form-group" style={{ flex: 1 }}>
-                                <label className="form-label">Tags (uma por linha)</label>
-                                <textarea
-                                  className="form-input"
-                                  rows={2}
-                                  value={(circuitMeta.tags || []).join("\n")}
-                                  onChange={(e) =>
-                                    updateCircuitMeta(index, {
-                                      tags: e.target.value
-                                        .split(/\r?\n/)
-                                        .map((val) => val.trim())
-                                        .filter(Boolean),
-                                    })
-                                  }
-                                />
-                              </div>
-                            </div>
+                                <div className="form-row">
+                                  <div className="form-group">
+                                    <label className="form-label">Codigo</label>
+                                    <input
+                                      className="form-input"
+                                      value={circuitMeta.codigo || ""}
+                                      onChange={(e) => updateCircuitMeta(index, { codigo: e.target.value })}
+                                      disabled={!isEditing}
+                                    />
+                                  </div>
+                                  <div className="form-group">
+                                    <label className="form-label">Serie</label>
+                                    <input
+                                      className="form-input"
+                                      value={circuitMeta.serie || ""}
+                                      onChange={(e) => updateCircuitMeta(index, { serie: e.target.value })}
+                                      disabled={!isEditing}
+                                    />
+                                  </div>
+                                  <div className="form-group" style={{ flex: 1 }}>
+                                    <label className="form-label">Tags (uma por linha)</label>
+                                    <textarea
+                                      className="form-input"
+                                      rows={2}
+                                      value={(circuitMeta.tags || []).join("\n")}
+                                      onChange={(e) =>
+                                        updateCircuitMeta(index, {
+                                          tags: e.target.value
+                                            .split(/\r?\n/)
+                                            .map((val) => val.trim())
+                                            .filter(Boolean),
+                                        })
+                                      }
+                                      disabled={!isEditing}
+                                    />
+                                  </div>
+                                </div>
 
                             <div className="form-group" style={{ marginTop: 8 }}>
                               <label className="form-label">Itinerario (uma cidade por linha)</label>
@@ -508,6 +894,7 @@ export default function QuoteDetailIsland(props: {
                                       .filter(Boolean),
                                   })
                                 }
+                                disabled={!isEditing}
                               />
                             </div>
 
@@ -553,6 +940,7 @@ export default function QuoteDetailIsland(props: {
                                                 )
                                               )
                                             }
+                                            disabled={!isEditing}
                                           />
                                         </div>
                                         <div className="form-group" style={{ flex: 1 }}>
@@ -575,6 +963,7 @@ export default function QuoteDetailIsland(props: {
                                                 )
                                               )
                                             }
+                                            disabled={!isEditing}
                                           />
                                         </div>
                                         <div
@@ -586,14 +975,14 @@ export default function QuoteDetailIsland(props: {
                                             className="btn btn-light"
                                             onClick={() =>
                                               updateCircuitSegments(index, (segments) => {
-                                                if (segIndex === 0) return segments;
+                                                if (!isEditing || segIndex === 0) return segments;
                                                 const next = [...segments];
                                                 const [removed] = next.splice(segIndex, 1);
                                                 next.splice(segIndex - 1, 0, removed);
                                                 return next;
                                               })
                                             }
-                                            disabled={segIndex === 0}
+                                            disabled={!isEditing || segIndex === 0}
                                           >
                                             ⬆️
                                           </button>
@@ -602,14 +991,14 @@ export default function QuoteDetailIsland(props: {
                                             className="btn btn-light"
                                             onClick={() =>
                                               updateCircuitSegments(index, (segments) => {
-                                                if (segIndex >= segments.length - 1) return segments;
+                                                if (!isEditing || segIndex >= segments.length - 1) return segments;
                                                 const next = [...segments];
                                                 const [removed] = next.splice(segIndex, 1);
                                                 next.splice(segIndex + 1, 0, removed);
                                                 return next;
                                               })
                                             }
-                                            disabled={segIndex >= circuitDays.length - 1}
+                                            disabled={!isEditing || segIndex >= circuitDays.length - 1}
                                           >
                                             ⬇️
                                           </button>
@@ -621,6 +1010,7 @@ export default function QuoteDetailIsland(props: {
                                                 segments.filter((_, i) => i !== segIndex)
                                               )
                                             }
+                                            disabled={!isEditing}
                                           >
                                             Remover
                                           </button>
@@ -647,6 +1037,7 @@ export default function QuoteDetailIsland(props: {
                                               )
                                             )
                                           }
+                                          disabled={!isEditing}
                                         />
                                       </div>
                                     </div>
@@ -667,6 +1058,7 @@ export default function QuoteDetailIsland(props: {
                                     },
                                   ])
                                 }
+                                disabled={!isEditing}
                               >
                                 Adicionar dia
                               </button>
@@ -678,18 +1070,42 @@ export default function QuoteDetailIsland(props: {
                   </React.Fragment>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
+        <datalist id={TIPO_DATALIST_ID}>
+          {tipoOptions.map((tipo) => (
+            <option key={tipo.id} value={tipo.label} />
+          ))}
+        </datalist>
+      </div>
 
         <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
-          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSave}
+            disabled={saving || !isEditing}
+          >
             {saving ? "Salvando..." : "Salvar ajustes"}
           </button>
-          <div style={{ fontSize: 13 }}>
-            {canConfirm ? "Valido para CONFIRMED." : "Alguns itens precisam de ajuste."}
-          </div>
+          {!isEditing && (
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => {
+                setIsEditing(true);
+                setSuccess(null);
+                setError(null);
+                setShowSummary(false);
+              }}
+            >
+              Editar orçamento
+            </button>
+          )}
         </div>
+        {!canConfirm && (
+          <div style={{ marginTop: 4, fontSize: 13 }}>Alguns itens precisam de ajuste.</div>
+        )}
 
         {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
         {success && <div style={{ marginTop: 12, color: "#16a34a" }}>{success}</div>}

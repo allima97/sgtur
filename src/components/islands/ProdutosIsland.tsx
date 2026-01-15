@@ -1253,6 +1253,7 @@ export default function ProdutosIsland() {
         <table className="table-default table-header-blue min-w-[1080px]">
           <thead>
             <tr>
+              <th>Tipo</th>
               <th>Produto</th>
               <th>Destino</th>
               <th>Cidade</th>
@@ -1265,19 +1266,20 @@ export default function ProdutosIsland() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7}>Carregando produtos...</td>
+                <td colSpan={8}>Carregando produtos...</td>
               </tr>
             )}
 
             {!loading && produtosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={7}>Nenhum produto encontrado.</td>
+                <td colSpan={8}>Nenhum produto encontrado.</td>
               </tr>
             )}
 
             {!loading &&
               produtosFiltrados.map((p) => (
                 <tr key={p.id}>
+                  <td>{p.tipo_nome || "-"}</td>
                   <td>{p.nome}</td>
                   <td>{p.destino || "-"}</td>
                   <td>{(p as any).cidade_nome || "-"}</td>
