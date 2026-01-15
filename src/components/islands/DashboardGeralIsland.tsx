@@ -58,13 +58,18 @@ type TipoProdutoKpi = {
 
 type Orcamento = {
   id: string;
-  data_orcamento: string;
-  data_viagem: string | null;
+  created_at: string;
   status: string | null;
-  valor: number | null;
-  notas: string | null;
-  clientes?: { id: string; nome: string | null } | null;
-  destinos?: { id: string; nome: string | null } | null;
+  status_negociacao?: string | null;
+  total: number | null;
+  cliente?: { id: string; nome?: string | null } | null;
+  quote_item?: {
+    id?: string;
+    title?: string | null;
+    product_name?: string | null;
+    item_type?: string | null;
+    city_name?: string | null;
+  }[] | null;
 };
 
 type MetaVendedor = {
@@ -147,6 +152,18 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function getOrcamentoDestino(orc?: Orcamento | null) {
+  const item = (orc?.quote_item || [])[0];
+  if (!item) return "-";
+  return (
+    item.city_name ||
+    item.product_name ||
+    item.title ||
+    item.item_type ||
+    "-"
+  );
 }
 
 function getMonthBounds() {
@@ -550,13 +567,25 @@ const DashboardGeralIsland: React.FC = () => {
           vendasQuery = vendasQuery.in("vendedor_id", userCtx.vendedorIds);
         }
 
-        const { data: vendasData, error: vendasErr } =
-          await vendasQuery;
+        const { data: vendasData, error: vendasErr } = await vendasQuery;
 
         if (vendasErr) throw vendasErr;
 
-        // ----- ORCAMENTOS (resetado) -----
-        const orcData: any[] = [];
+        // ----- ORCAMENTOS -----
+        let orcamentosQuery = supabase
+          .from("quote")
+          .select(
+            "id, created_at, status, status_negociacao, total, client_id, cliente:client_id (id, nome), quote_item (id, title, product_name, item_type, city_name)"
+          )
+          .gte("created_at", inicio)
+          .lte("created_at", fim)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        if (userCtx.vendedorIds.length > 0) {
+          orcamentosQuery = orcamentosQuery.in("created_by", userCtx.vendedorIds);
+        }
+        const { data: orcData, error: orcErr } = await orcamentosQuery;
+        if (orcErr) throw orcErr;
 
         // ----- METAS -----
         let metasQuery = supabase
@@ -922,7 +951,7 @@ const DashboardGeralIsland: React.FC = () => {
 
   const orcamentosRecentes = useMemo(() => {
     const sorted = [...orcamentos].sort((a, b) =>
-      a.data_orcamento < b.data_orcamento ? 1 : -1
+      a.created_at < b.created_at ? 1 : -1
     );
     return sorted.slice(0, 10);
   }, [orcamentos]);
@@ -1470,11 +1499,11 @@ const DashboardGeralIsland: React.FC = () => {
                   )}
                   {orcamentosRecentes.map((o) => (
                     <tr key={o.id}>
-                      <td>{formatarDataParaExibicao(o.data_orcamento)}</td>
-                      <td>{o.clientes?.nome || "-"}</td>
-                      <td>{o.destinos?.nome || "-"}</td>
-                      <td>{o.status || "-"}</td>
-                      <td>{formatCurrency(Number(o.valor || 0))}</td>
+                      <td>{formatarDataParaExibicao(o.created_at)}</td>
+                      <td>{o.cliente?.nome || "-"}</td>
+                      <td>{getOrcamentoDestino(o)}</td>
+                      <td>{o.status_negociacao || o.status || "-"}</td>
+                      <td>{formatCurrency(Number(o.total || 0))}</td>
                       <td>
                         <button className="btn btn-light" onClick={() => setOrcamentoSelecionado(o)}>
                           Ver
@@ -1913,36 +1942,26 @@ const DashboardGeralIsland: React.FC = () => {
 
             <p>
               <strong>Cliente:</strong>{" "}
-              {orcamentoSelecionado.clientes?.nome || "-"}
+              {orcamentoSelecionado.cliente?.nome || "-"}
             </p>
             <p>
               <strong>Destino:</strong>{" "}
-              {orcamentoSelecionado.destinos?.nome || "-"}
+              {getOrcamentoDestino(orcamentoSelecionado)}
             </p>
             <p>
-              <strong>Data orçamento:</strong>{" "}
-              {formatarDataParaExibicao(orcamentoSelecionado.data_orcamento)}
-            </p>
-            <p>
-              <strong>Data viagem:</strong>{" "}
-              {formatarDataParaExibicao(orcamentoSelecionado.data_viagem)}
+              <strong>Criado em:</strong>{" "}
+              {formatarDataParaExibicao(orcamentoSelecionado.created_at)}
             </p>
             <p>
               <strong>Status:</strong>{" "}
-              {orcamentoSelecionado.status || "-"}
+              {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
             </p>
             <p>
               <strong>Valor:</strong>{" "}
               {formatCurrency(
-                Number(orcamentoSelecionado.valor || 0)
+                Number(orcamentoSelecionado.total || 0)
               )}
             </p>
-            {orcamentoSelecionado.notas && (
-              <p style={{ marginTop: 8 }}>
-                <strong>Notas:</strong>{" "}
-                {orcamentoSelecionado.notas}
-              </p>
-            )}
           </div>
         </div>
       )}
