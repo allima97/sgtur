@@ -135,6 +135,7 @@ const BASE_KPIS: { id: KpiId; titulo: string }[] = [
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
   { id: "kpi_meta", titulo: "Meta somada" },
+  { id: "kpi_meta_diaria", titulo: "Meta diária" },
   { id: "kpi_atingimento", titulo: "Atingimento meta" },
   { id: "kpi_dias_restantes", titulo: "Dias restantes" },
 ];
@@ -787,6 +788,7 @@ const DashboardGeralIsland: React.FC = () => {
     conversao,
     metaSomada,
     atingimentoMeta,
+    metaDiaria,
     valorPorProduto,
     diasRestantes,
   } = useMemo(() => {
@@ -829,6 +831,9 @@ const DashboardGeralIsland: React.FC = () => {
     const hoje = new Date();
     const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
     const diasRestantes = Math.max(0, ultimoDia.getDate() - hoje.getDate());
+    const saldoMeta = metaSomada - totalVendas;
+    const metaDiaria =
+      diasRestantes > 0 ? saldoMeta / diasRestantes : saldoMeta;
 
     return {
       totalVendas,
@@ -838,6 +843,7 @@ const DashboardGeralIsland: React.FC = () => {
       conversao,
       metaSomada,
       atingimentoMeta,
+      metaDiaria,
       valorPorProduto,
       diasRestantes,
     };
@@ -1151,6 +1157,18 @@ const DashboardGeralIsland: React.FC = () => {
                       >
                         <div className="kpi-label">Meta somada</div>
                         <div className="kpi-value">{formatCurrency(metaSomada)}</div>
+                      </div>
+                    );
+                  }
+                  if (id === "kpi_meta_diaria") {
+                    return (
+                      <div
+                        className="kpi-card"
+                        key={id}
+                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                      >
+                        <div className="kpi-label">Meta diária</div>
+                        <div className="kpi-value">{formatCurrency(metaDiaria)}</div>
                       </div>
                     );
                   }
