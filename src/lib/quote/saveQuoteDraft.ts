@@ -2,6 +2,23 @@ import { supabaseBrowser } from "../supabase-browser";
 import { titleCaseWithExceptions } from "../titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft, QuoteStatus } from "./types";
 
+const EXCLUDED_PRODUTO_TIPOS = new Set(
+  [
+    "Seguro viagem",
+    "Passagem Aerea",
+    "Passagem Facial",
+    "Aereo",
+    "Chip",
+    "Aluguel de Carro",
+  ].map((value) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+  )
+);
+
 function validateForConfirm(items: QuoteItemDraft[]) {
   return items.every((item) => {
     return (
@@ -51,6 +68,92 @@ function normalizeItemText(item: QuoteItemDraft): QuoteItemDraft {
     product_name: item.product_name ? normalizeTitleText(item.product_name) : item.product_name,
     city_name: item.city_name ? normalizeTitleText(item.city_name) : item.city_name,
   };
+}
+
+async function loadTipoLabelMap() {
+  try {
+    const { data, error } = await supabaseBrowser
+      .from("tipo_produtos")
+      .select("id, nome, tipo")
+      .order("nome", { ascending: true })
+      .limit(500);
+    if (error) {
+      console.warn("[saveQuoteDraft] Falha ao carregar tipos", error);
+      return new Map<string, string>();
+    }
+    const map = new Map<string, string>();
+    (data || [])
+      .filter((tipo) => tipo && (tipo.nome || tipo.tipo))
+      .forEach((tipo) => {
+        const label = (tipo.nome || tipo.tipo || "").trim();
+        const key = normalizeLookupText(label);
+        if (key) map.set(key, tipo.id);
+      });
+    return map;
+  } catch (err) {
+    console.warn("[saveQuoteDraft] Erro ao carregar tipos", err);
+    return new Map<string, string>();
+  }
+}
+
+async function syncProductsCatalog(items: QuoteItemDraft[], tipoLabelMap: Map<string, string>) {
+  if (!items.length) return;
+  for (const item of items) {
+    const nomeRaw = (item.title || item.product_name || "").trim();
+    if (!nomeRaw) continue;
+    const nome = titleCaseWithExceptions(nomeRaw);
+    if (!nome) continue;
+    const destinoRaw = (item.city_name || "").trim();
+    const destino = destinoRaw ? titleCaseWithExceptions(destinoRaw) : null;
+    const cidadeId = item.cidade_id || null;
+    const tipoKey = normalizeLookupText(item.item_type || "");
+    if (EXCLUDED_PRODUTO_TIPOS.has(tipoKey)) {
+      continue;
+    }
+    const tipoId = tipoLabelMap.get(tipoKey) || null;
+    const payload = {
+      nome,
+      destino,
+      cidade_id: cidadeId,
+      tipo_produto: tipoId,
+    };
+
+    try {
+      let query = supabaseBrowser.from("produtos").select("id");
+      query = query.eq("nome", payload.nome);
+      if (payload.destino) {
+        query = query.eq("destino", payload.destino);
+      } else {
+        query = query.is("destino", null);
+      }
+      if (payload.cidade_id) {
+        query = query.eq("cidade_id", payload.cidade_id);
+      } else {
+        query = query.is("cidade_id", null);
+      }
+      const { data: existing, error: selectErr } = await query.maybeSingle();
+      if (selectErr) {
+        console.warn("[saveQuoteDraft] Falha ao buscar produto", selectErr);
+        continue;
+      }
+      if (existing?.id) {
+        const { error: updateErr } = await supabaseBrowser
+          .from("produtos")
+          .update(payload)
+          .eq("id", existing.id);
+        if (updateErr) {
+          console.warn("[saveQuoteDraft] Falha ao atualizar produto", updateErr);
+        }
+      } else {
+        const { error: insertErr } = await supabaseBrowser.from("produtos").insert(payload);
+        if (insertErr) {
+          console.warn("[saveQuoteDraft] Falha ao inserir produto", insertErr);
+        }
+      }
+    } catch (err) {
+      console.warn("[saveQuoteDraft] Erro ao sincronizar produto", err);
+    }
+  }
 }
 
 function getFileExtension(file: File) {
@@ -197,6 +300,9 @@ export async function saveQuoteDraft(params: {
       const { error } = await supabaseBrowser.from("quote_item_segment").insert(segmentPayloads);
       if (error) throw error;
     }
+
+    const tipoLabelMap = await loadTipoLabelMap();
+    await syncProductsCatalog(normalizedItems, tipoLabelMap);
 
     if (debug && importResult) {
       const logPayloads = importResult.logs.map((log) => ({

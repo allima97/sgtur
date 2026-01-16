@@ -652,6 +652,9 @@ export default function QuoteImportIsland() {
       });
       setSuccessId(result.quote_id);
       setStatus(`Salvo como ${result.status}.`);
+      if (typeof window !== "undefined") {
+        window.location.href = "/orcamentos/consulta";
+      }
     } catch (err: any) {
       setError(err?.message || "Erro ao salvar quote.");
     } finally {
