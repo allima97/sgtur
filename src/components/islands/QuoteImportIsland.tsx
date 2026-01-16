@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   extractCvcQuoteFromImage,
   extractCvcQuoteFromPdf,
@@ -6,14 +6,50 @@ import {
 } from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 
 type ImportMode = "pdf" | "image" | "text" | "circuit" | "circuit_products";
 type ClienteOption = { id: string; nome: string; cpf?: string | null };
 type TipoProdutoOption = { id: string; label: string };
+type CidadeOption = { id: string; nome: string };
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function normalizeCityName(value: string) {
+  return normalizeText(value || "").trim();
+}
+
+function isSeguroItem(item: QuoteItemDraft) {
+  const normalized = normalizeText(item.item_type || "");
+  return normalized.includes("seguro") && normalized.includes("viagem");
+}
+
+function normalizeTitleText(value: string) {
+  return titleCaseWithExceptions(value || "");
+}
+
+function normalizeImportedItemText(item: QuoteItemDraft) {
+  if (!item) return item;
+  if (isSeguroItem(item)) {
+    return {
+      ...item,
+      title: "SEGURO VIAGEM",
+      product_name: "SEGURO VIAGEM",
+      city_name: item.city_name ? normalizeTitleText(item.city_name) : item.city_name,
+    };
+  }
+  const title = item.title ? normalizeTitleText(item.title) : item.title;
+  const product = item.product_name ? normalizeTitleText(item.product_name) : item.product_name;
+  const city = item.city_name ? normalizeTitleText(item.city_name) : item.city_name;
+  return {
+    ...item,
+    title: title || item.title,
+    product_name: product || item.product_name,
+    city_name: city || item.city_name,
+  };
 }
 
 function normalizeCpf(value: string) {
@@ -148,6 +184,19 @@ export default function QuoteImportIsland() {
   const [clienteId, setClienteId] = useState<string>("");
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
+  const [cidadeSuggestions, setCidadeSuggestions] = useState<Record<string, CidadeOption[]>>({});
+  const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
+  const [cidadeCache, setCidadeCache] = useState<Record<string, string>>({});
+  const [cidadeNameMap, setCidadeNameMap] = useState<Record<string, string>>({});
+  const cidadeFetchTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      Object.values(cidadeFetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -236,6 +285,111 @@ export default function QuoteImportIsland() {
     }
   }, [importMode]);
 
+  async function loadCidadeSuggestions(rowKey: string, term: string) {
+    const search = term.trim();
+    const limit = 25;
+    let cidades: CidadeOption[] = [];
+    try {
+      const { data, error } = await supabaseBrowser.rpc("buscar_cidades", { q: search, limite: limit });
+      if (!error && Array.isArray(data)) {
+        cidades = (data as CidadeOption[]).filter((cidade) => cidade?.id && cidade.nome);
+      } else if (error) {
+        console.warn("[QuoteImport] RPC buscar_cidades falhou, tentando fallback.", error);
+      }
+    } catch (err) {
+      console.warn("[QuoteImport] Erro ao buscar cidades (RPC)", err);
+    }
+
+    if (!cidades.length) {
+      const pattern = search ? `%${search}%` : "%";
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("cidades")
+          .select("id, nome")
+          .ilike("nome", pattern)
+          .order("nome", { ascending: true })
+          .limit(limit);
+        if (!isMountedRef.current) return;
+        if (error) {
+          console.warn("[QuoteImport] Falha ao buscar cidades", error);
+          setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: [] }));
+          return;
+        }
+        cidades = (data || []).filter((cidade) => cidade?.id && cidade.nome);
+      } catch (err) {
+        if (!isMountedRef.current) return;
+        console.warn("[QuoteImport] Erro ao buscar cidades", err);
+        setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: [] }));
+        return;
+      }
+    }
+
+    if (!isMountedRef.current) return;
+    setCidadeSuggestions((prev) => ({ ...prev, [rowKey]: cidades }));
+    if (cidades.length) {
+      setCidadeCache((prev) => {
+        const next = { ...prev };
+        cidades.forEach((cidade) => {
+          if (cidade.id && cidade.nome) {
+            next[cidade.id] = cidade.nome;
+          }
+        });
+        return next;
+      });
+      setCidadeNameMap((prev) => {
+        const next = { ...prev };
+        cidades.forEach((cidade) => {
+          if (cidade.id && cidade.nome) {
+            const normalized = normalizeCityName(cidade.nome);
+            if (!next[normalized]) {
+              next[normalized] = cidade.id;
+            }
+          }
+        });
+        return next;
+      });
+    }
+  }
+
+  function scheduleCidadeFetch(rowKey: string, term: string) {
+    const existing = cidadeFetchTimeouts.current[rowKey];
+    if (existing) {
+      clearTimeout(existing);
+    }
+    cidadeFetchTimeouts.current[rowKey] = setTimeout(() => loadCidadeSuggestions(rowKey, term), 250);
+  }
+
+  function getCidadeInputValue(item: QuoteItemDraft, rowKey: string) {
+    if (Object.prototype.hasOwnProperty.call(cidadeInputValues, rowKey)) {
+      return cidadeInputValues[rowKey] || "";
+    }
+    if (item.cidade_id) {
+      return cidadeCache[item.cidade_id] || "";
+    }
+    const raw = item.raw as { city_label?: string } | undefined;
+    return raw?.city_label ? normalizeTitleText(raw.city_label) : "";
+  }
+
+  function handleCidadeInputChange(index: number, value: string, rowKey: string) {
+    if (!draft) return;
+    const normalized = normalizeCityName(value);
+    const matchedId = cidadeNameMap[normalized];
+    const matchedCidade =
+      cidadeSuggestions[rowKey]?.find((cidade) => normalizeCityName(cidade.nome) === normalized) ||
+      Object.entries(cidadeCache)
+        .map(([id, nome]) => ({ id, nome }))
+        .find((cidade) => normalizeCityName(cidade.nome) === normalized);
+    const displayValue = matchedCidade?.nome || value;
+    setCidadeInputValues((prev) => ({
+      ...prev,
+      [rowKey]: displayValue,
+    }));
+    updateItem(index, { cidade_id: matchedId ?? matchedCidade?.id ?? null });
+    if (value.trim().length >= 1) {
+      scheduleCidadeFetch(rowKey, value);
+    }
+  }
+
   const clientesFiltrados = useMemo(() => {
     if (!clienteBusca.trim()) return clientes;
     const termo = normalizeText(clienteBusca);
@@ -268,11 +422,13 @@ export default function QuoteImportIsland() {
 
   function updateDraftItems(items: QuoteItemDraft[]) {
     if (!draft) return;
-    const ordered = items.map((item, index) => ({
-      ...item,
-      order_index: index,
-      taxes_amount: Number(item.taxes_amount || 0),
-    }));
+    const ordered = items.map((item, index) =>
+      normalizeImportedItemText({
+        ...item,
+        order_index: index,
+        taxes_amount: Number(item.taxes_amount || 0),
+      })
+    );
     const subtotal = ordered.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
     const taxesTotal = ordered.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
     const total = subtotal + taxesTotal;
@@ -398,13 +554,19 @@ export default function QuoteImportIsland() {
         return;
       }
       setImportResult(result);
-      const orderedItems = result.draft.items.map((item, index) => ({
-        ...item,
-        cidade_id: item.cidade_id || null,
-        order_index: index,
-        taxes_amount: Number(item.taxes_amount || 0),
-      }));
+      const orderedItems = result.draft.items.map((item, index) =>
+        normalizeImportedItemText({
+          ...item,
+          cidade_id: item.cidade_id || null,
+          order_index: index,
+          taxes_amount: Number(item.taxes_amount || 0),
+        })
+      );
       setDraft({ ...result.draft, items: orderedItems });
+      setCidadeInputValues({});
+      setCidadeSuggestions({});
+      setCidadeCache({});
+      setCidadeNameMap({});
       setStatus("Extracao concluida.");
     } catch (err: any) {
       setError(err?.message || "Erro ao extrair itens.");
@@ -705,6 +867,7 @@ export default function QuoteImportIsland() {
                   const circuitDays = (item.segments || [])
                     .filter((seg) => seg.segment_type === "circuit_day")
                     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                  const rowKey = item.temp_id || `row-${index}`;
 
                   return (
                     <React.Fragment key={item.temp_id}>
@@ -751,7 +914,16 @@ export default function QuoteImportIsland() {
                             }
                           />
                         </td>
-                        <td>-</td>
+                        <td>
+                          <input
+                            className="form-input"
+                            list={`quote-import-cidades-${rowKey}`}
+                            value={getCidadeInputValue(item, rowKey)}
+                            placeholder="Buscar cidade..."
+                            onChange={(e) => handleCidadeInputChange(index, e.target.value, rowKey)}
+                            onFocus={() => scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))}
+                          />
+                        </td>
                         <td>
                           <input
                             className="form-input"
@@ -799,6 +971,11 @@ export default function QuoteImportIsland() {
                           />
                         </td>
                       </tr>
+                      <datalist id={`quote-import-cidades-${rowKey}`}>
+                        {(cidadeSuggestions[rowKey] || []).map((cidade) => (
+                          <option key={cidade.id} value={cidade.nome} />
+                        ))}
+                      </datalist>
 
                       {isCircuitItem(item) && (
                         <tr>

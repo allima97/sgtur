@@ -1,4 +1,5 @@
 import { supabaseBrowser } from "../supabase-browser";
+import { titleCaseWithExceptions } from "../titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft, QuoteStatus } from "./types";
 
 function validateForConfirm(items: QuoteItemDraft[]) {
@@ -16,6 +17,40 @@ function validateForConfirm(items: QuoteItemDraft[]) {
 function sanitizeNumber(value: unknown, fallback = 0) {
   const num = typeof value === "number" ? value : Number(value);
   return Number.isFinite(num) ? num : fallback;
+}
+
+function normalizeLookupText(value: string) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isSeguroItem(item: QuoteItemDraft) {
+  const normalized = normalizeLookupText(item.item_type || "");
+  return normalized.includes("seguro") && normalized.includes("viagem");
+}
+
+function normalizeTitleText(value: string) {
+  return titleCaseWithExceptions(value || "");
+}
+
+function normalizeItemText(item: QuoteItemDraft): QuoteItemDraft {
+  if (isSeguroItem(item)) {
+    return {
+      ...item,
+      title: "SEGURO VIAGEM",
+      product_name: "SEGURO VIAGEM",
+      city_name: item.city_name ? normalizeTitleText(item.city_name) : item.city_name,
+    };
+  }
+  return {
+    ...item,
+    title: item.title ? normalizeTitleText(item.title) : item.title,
+    product_name: item.product_name ? normalizeTitleText(item.product_name) : item.product_name,
+    city_name: item.city_name ? normalizeTitleText(item.city_name) : item.city_name,
+  };
 }
 
 function getFileExtension(file: File) {
@@ -51,11 +86,12 @@ export async function saveQuoteDraft(params: {
   }
 
   let quoteId: string | null = null;
-  const subtotal = draft.items.reduce(
+  const normalizedItems = draft.items.map((item) => normalizeItemText(item));
+  const subtotal = normalizedItems.reduce(
     (sum, item) => sum + sanitizeNumber(item.total_amount, 0),
     0
   );
-  const taxesTotal = draft.items.reduce(
+  const taxesTotal = normalizedItems.reduce(
     (sum, item) => sum + sanitizeNumber(item.taxes_amount, 0),
     0
   );
@@ -112,7 +148,7 @@ export async function saveQuoteDraft(params: {
     }
 
     const insertedItems: Array<{ id: string; item: QuoteItemDraft }> = [];
-    for (const [index, item] of draft.items.entries()) {
+    for (const [index, item] of normalizedItems.entries()) {
       const payload = {
         quote_id: quote.id,
         item_type: item.item_type,
@@ -188,10 +224,10 @@ export async function saveQuoteDraft(params: {
       }
     }
 
-    const shouldConfirm = validateForConfirm(draft.items);
+    const shouldConfirm = validateForConfirm(normalizedItems);
     const nextStatus = shouldConfirm ? "CONFIRMED" : "IMPORTED";
-    const newSubtotal = draft.items.reduce((sum, item) => sum + sanitizeNumber(item.total_amount, 0), 0);
-    const newTaxes = draft.items.reduce((sum, item) => sum + sanitizeNumber(item.taxes_amount, 0), 0);
+    const newSubtotal = normalizedItems.reduce((sum, item) => sum + sanitizeNumber(item.total_amount, 0), 0);
+    const newTaxes = normalizedItems.reduce((sum, item) => sum + sanitizeNumber(item.taxes_amount, 0), 0);
     const newTotal = newSubtotal;
 
     const { error: statusError } = await supabaseBrowser

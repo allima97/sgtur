@@ -440,7 +440,8 @@ export default function QuoteDetailIsland(props: {
     if (item.cidade_id) {
       return cidadeCache[item.cidade_id] || item.cidade?.nome || "";
     }
-    return item.cidade?.nome || "";
+    const raw = (item.raw || {}) as { city_label?: string };
+    return item.cidade?.nome || raw.city_label || "";
   }
 
   function handleCidadeInputChange(index: number, value: string, rowKey: string) {

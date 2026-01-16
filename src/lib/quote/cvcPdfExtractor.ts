@@ -65,6 +65,10 @@ const TIPO_PRODUTO_WHITELIST = [
   "hotéis",
   "hotel",
   "hospedagem",
+  "carro",
+  "carros",
+  "aluguel de carro",
+  "aluguel de carros",
   "traslado",
   "transfer",
   "pacote",
@@ -79,6 +83,9 @@ const ITEM_KEYWORDS = [
   "aereo",
   "hotel",
   "hosped",
+  "carro",
+  "carros",
+  "aluguel",
   "traslad",
   "transfer",
   "pacote",
@@ -155,6 +162,27 @@ function extractCurrencyFromLine(line: string) {
   return null;
 }
 
+function isCurrencyLine(line: string) {
+  const trimmed = (line || "").trim();
+  if (!trimmed) return false;
+  const normalized = normalizeOcrText(trimmed);
+  if (normalized.includes("r$")) return true;
+  if (/^\d{1,3}(?:\.[0-9]{3})*,\d{2}$/.test(trimmed)) return true;
+  return false;
+}
+
+function cleanProductLine(line: string) {
+  if (!line) return "";
+  const withoutCurrency = line
+    .replace(/De\s*R\$\s*[0-9.,-]+\s*por\s*/gi, "")
+    .replace(/R\$\s*[0-9.,-]+/gi, "");
+  const withoutMeta = withoutCurrency
+    .replace(/\bTotal\s*\([^)]*\)/gi, "")
+    .replace(/\bDetalhes\b/gi, "")
+    .replace(/\bPreferencial\b/gi, "");
+  return withoutMeta.replace(/\s{2,}/g, " ").replace(/^[\s-–—]+|[\s-–—]+$/g, "").trim();
+}
+
 function extractAllCurrencyValues(line: string) {
   const matches = line.match(/R\$\s*([0-9.,-]+)/gi) || [];
   const values = matches
@@ -220,6 +248,21 @@ function parseQuantidadePax(text: string) {
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
+function extractCurrencyTextFromLine(line: string) {
+  const match = line.match(/R\$\s*[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/i);
+  if (match?.[0]) return match[0].trim();
+  const fallback = line.match(/[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/);
+  if (fallback?.[0]) return fallback[0].trim();
+  return null;
+}
+
+function isTotalValueLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized.includes("total")) return false;
+  if (/\(\s*\d+/.test(line)) return true;
+  return normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro");
+}
+
 function parseValor(text: string) {
   const matches = text.match(/R\$\s*[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/gi) || [];
   const fallbackMatches = text.match(/[0-9]{1,3}(?:\.[0-9]{3})*,\d{2}/g) || [];
@@ -231,6 +274,27 @@ function parseValor(text: string) {
     valor_formatado: last.replace(/\s+/g, " ").trim(),
     moeda: /R\$/i.test(last) ? "BRL" : "BRL",
   };
+}
+
+function parseValorFromLines(lines: string[], tipo?: string) {
+  const tipoNormalized = normalizeOcrText(tipo || "");
+  if (!isSeguroLabel(tipoNormalized)) {
+    const totalIndex = lines.findIndex((line) => isTotalValueLine(line));
+    if (totalIndex >= 0) {
+      const end = Math.min(lines.length, totalIndex + 4);
+      for (let i = totalIndex; i < end; i += 1) {
+        const currencyText = extractCurrencyTextFromLine(lines[i]);
+        if (currencyText) {
+          return {
+            valor: parseCurrencyValue(currencyText),
+            valor_formatado: currencyText,
+            moeda: "BRL",
+          };
+        }
+      }
+    }
+  }
+  return parseValor(lines.join("\n"));
 }
 
 function parseCidade(text: string) {
@@ -246,33 +310,345 @@ function parseCidade(text: string) {
   return "";
 }
 
-function parseProduto(text: string) {
-  const lines = (text || "")
+function splitTextLines(text: string) {
+  return (text || "")
     .split(/\r?\n/)
-    .map((l) => l.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
-  const cleaned = lines.filter((line) => {
+}
+
+type RouteInfo = {
+  origin: string;
+  destination: string;
+  raw: string;
+};
+
+function isHotelLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  return (
+    normalized.includes("hotel") ||
+    normalized.includes("hoteis") ||
+    normalized.includes("hospedagem") ||
+    normalized.includes("pousada") ||
+    normalized.includes("resort")
+  );
+}
+
+function isServiceLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  return normalized.includes("servi") || normalized.includes("transfer") || normalized.includes("traslado");
+}
+
+function isCarLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  return (
+    normalized.includes("carro") ||
+    normalized.includes("carros") ||
+    normalized.includes("locacao") ||
+    normalized.includes("locação") ||
+    normalized.includes("aluguel de carro")
+  );
+}
+
+function isFlightLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  return (
+    normalized.includes("aereo") ||
+    normalized.includes("passagem") ||
+    normalized.includes("voo")
+  );
+}
+
+function findRouteFromLines(lines: string[]): RouteInfo | null {
+  for (const line of lines) {
+    const normalized = normalizeOcrText(line);
+    if (!line || line.length > 240) continue;
+    if (normalized.includes("detalhes") || normalized.includes("preferencial")) continue;
+    if (!isRouteLine(line)) continue;
+    const trimmed = normalizeRouteCandidate(line);
+    const match = trimmed.match(ROUTE_LINE_REGEX);
+    if (!match) continue;
+    const origin = match[1].trim();
+    const destination = match[2].trim();
+    if (!origin || !destination) continue;
+    return { origin, destination, raw: `${origin} - ${destination}` };
+  }
+  return null;
+}
+
+const ROUTE_LINE_REGEX = /^([A-Za-zÀ-ÿ\s]+)-\s*([A-Za-zÀ-ÿ\s]+)/;
+const ROUTE_BLACKLIST_KEYWORDS = [
+  "passeio",
+  "ingresso",
+  "transporte",
+  "transfer",
+  "traslado",
+  "hotel",
+  "quarto",
+  "suite",
+  "room",
+  "cafe",
+  "categoria",
+  "espetaculo",
+  "show",
+  "bicicleta",
+  "onibus",
+  "bus",
+  "tour",
+];
+
+function normalizeRouteCandidate(line: string) {
+  return cleanProductLine(line)
+    .replace(/[–—]/g, "-")
+    .replace(/-+\s*$/, "")
+    .trim();
+}
+
+function isRouteLine(line: string) {
+  const trimmed = normalizeRouteCandidate(line);
+  if (!trimmed) return false;
+  const normalized = normalizeOcrText(trimmed);
+  if (trimmed.length > 60) return false;
+  if (/\d/.test(trimmed)) return false;
+  if (ROUTE_BLACKLIST_KEYWORDS.some((keyword) => normalized.includes(keyword))) return false;
+  return ROUTE_LINE_REGEX.test(trimmed);
+}
+
+function isDateOnlyLine(line: string) {
+  const normalized = normalizeOcrText(line).replace(/\(.*?\)/g, "").trim();
+  if (!normalized) return false;
+  return /^\d{1,2}\s*de\s*[a-zçãõáéíóú]+(\s*-\s*\d{1,2}\s*de\s*[a-zçãõáéíóú]+)?$/.test(normalized);
+}
+
+function isSeguroLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  return normalized.includes("seguro") && normalized.includes("viagem");
+}
+
+function canonicalizeTipoLabel(value: string) {
+  const normalized = normalizeOcrText(value);
+  if (!normalized) return "";
+  if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
+  if (normalized.includes("aereo") || normalized.includes("voo") || normalized.includes("passagem")) {
+    return "Passagem Aérea";
+  }
+  if (normalized.includes("carro") || normalized.includes("carros") || normalized.includes("aluguel")) {
+    return "Aluguel de Carro";
+  }
+  if (
+    normalized.includes("hote") ||
+    normalized.includes("pousada") ||
+    normalized.includes("resort") ||
+    normalized.includes("hosped")
+  ) {
+    return "Hotel";
+  }
+  if (normalized.includes("servi")) return "Serviços";
+  if (normalized.includes("circuito")) return "Circuito";
+  return value ? titleCaseWithExceptions(value) : "";
+}
+
+function getDestinoCidadeFromRoute(route: RouteInfo | null, tipo: string) {
+  if (!route) return { destino: "", cidade: "" };
+  const tipoNormalized = normalizeOcrText(tipo);
+  if (isSeguroLabel(tipoNormalized)) {
+    return { destino: "", cidade: "" };
+  }
+  if (isCarLabel(tipoNormalized)) {
+    return { destino: "", cidade: "" };
+  }
+  if (isFlightLabel(tipoNormalized) || tipoNormalized.includes("passagem")) {
+    const origin = route.origin || route.destination;
+    return { destino: origin, cidade: origin };
+  }
+  if (isHotelLabel(tipoNormalized) || isServiceLabel(tipoNormalized)) {
+    return { destino: route.origin || route.destination, cidade: route.destination || route.origin };
+  }
+  return { destino: route.destination || route.origin, cidade: route.destination || route.origin };
+}
+
+function isAddressLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  if (/(avenida|av\.|rua|travessa|estrada|praca|praça|largo|alameda|rodovia)/i.test(normalized)) {
+    return true;
+  }
+  if (/\d{4}-\d{3}/.test(line)) return true;
+  if (/(portugal|lisboa|porto|oporto)/i.test(normalized) && /\d/.test(line)) return true;
+  return false;
+}
+
+function isHotelDetailLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  if (/(sem cafe|sem café|city design|double|single|suite|room|quarto)/i.test(normalized)) return true;
+  return false;
+}
+
+function extractHotelNameFromLines(lines: string[]) {
+  const candidates = lines.filter((line) => {
     const normalized = normalizeOcrText(line);
     if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
-    if (/^r\$/i.test(normalized)) return false;
-    if (normalized.includes("total")) return false;
-    if (normalized.includes("periodo")) return false;
-    if (normalized.includes("diarias")) return false;
-    if (normalized.includes("reembols")) return false;
-    if (normalized.includes("nao reembols")) return false;
-    if (normalized.includes("informacoes")) return false;
-    if (normalized.includes("adulto")) return false;
-    if (normalized.includes("pax")) return false;
-    if (normalized.includes("taxas")) return false;
+    if (isAddressLine(line)) return false;
+    if (isHotelDetailLine(line)) return false;
+    if (normalized.includes("preferencial") || normalized.includes("detalhes")) return false;
+    if (normalized.includes("total") || normalized.includes("adulto") || normalized.includes("diarias")) return false;
     return true;
   });
+
+  const hotelLine = candidates.find((line) => normalizeOcrText(line).includes("hotel"));
+  if (hotelLine) return hotelLine;
+
+  let afterDate = false;
+  for (const line of candidates) {
+    const normalized = normalizeOcrText(line);
+    if (/\d{1,2}\s*de\s*[a-zçãõáéíóú]+\s*-\s*\d{1,2}\s*de\s*[a-zçãõáéíóú]+/i.test(normalized)) {
+      afterDate = true;
+      continue;
+    }
+    if (afterDate) return line;
+  }
+
+  return candidates[0] || null;
+}
+
+function extractHotelProductName(lines: string[]) {
+  for (const line of lines) {
+    const normalized = normalizeOcrText(line);
+    if (!normalized.includes("hotel")) continue;
+    if (normalized === "hotel" || normalized === "hoteis") continue;
+    if (normalized.includes("avenida") || normalized.includes("rua") || normalized.includes("logradouro")) continue;
+    return line;
+  }
+  return null;
+}
+
+function extractSeguroProductName() {
+  return "SEGURO VIAGEM";
+}
+
+function extractServiceDescription(lines: string[]) {
+  const keywords = [
+    "transporte",
+    "transfer",
+    "traslado",
+    "servico",
+    "serviços",
+    "ingresso",
+    "passeio",
+    "tour",
+  ];
+  let startIndex = 0;
+  const routeIndex = lines.findIndex((line) => isRouteLine(line));
+  if (routeIndex >= 0) startIndex = routeIndex + 1;
+
+  const candidates: string[] = [];
+  for (let idx = startIndex; idx < lines.length; idx += 1) {
+    const line = lines[idx];
+    const cleaned = cleanProductLine(line);
+    const normalized = normalizeOcrText(cleaned);
+    if (!normalized) continue;
+    if (isCurrencyLine(line)) continue;
+    if (normalized.includes("total")) continue;
+    if (normalized.includes("detalhes")) continue;
+    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) continue;
+    if (/travel/.test(normalized)) continue;
+    if (/reembols/.test(normalized)) continue;
+    if (isRouteLine(line)) continue;
+    if (isAddressLine(line)) continue;
+    if (isDateOnlyLine(line)) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(cleaned)) continue;
+    if (/^\d+$/.test(normalized)) continue;
+    candidates.push(cleaned);
+    if (keywords.some((keyword) => normalized.includes(keyword))) {
+      return cleaned;
+    }
+  }
+
+  if (candidates.length) {
+    candidates.sort((a, b) => b.length - a.length);
+    return candidates[0];
+  }
+
+  return null;
+}
+
+function extractFlightRouteLine(lines: string[]) {
+  const route = findRouteFromLines(lines);
+  return route?.raw || null;
+}
+
+function extractProductByType(lines: string[], tipo: string) {
+  const tipoNormalized = normalizeOcrText(tipo);
+  if (isSeguroLabel(tipoNormalized)) return extractSeguroProductName();
+  if (isCarLabel(tipoNormalized)) return "Aluguel de Carro";
+  if (isHotelLabel(tipoNormalized)) {
+    return extractHotelNameFromLines(lines) || extractHotelProductName(lines) || null;
+  }
+  if (isServiceLabel(tipoNormalized)) {
+    return extractServiceDescription(lines);
+  }
+  if (isFlightLabel(tipoNormalized) || tipoNormalized.includes("passagem")) {
+    return extractFlightRouteLine(lines);
+  }
+  return null;
+}
+
+function parseProduto(text: string, tipo?: string) {
+  const rawLines = splitTextLines(text);
+  const cleaned = rawLines
+    .map((line) => cleanProductLine(line))
+    .filter((line) => {
+      const normalized = normalizeOcrText(line);
+      if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
+      if (normalized.includes("r$")) return false;
+      if (normalized.includes("total")) return false;
+      if (normalized.includes("periodo")) return false;
+      if (normalized.includes("diarias")) return false;
+      if (normalized.includes("reembols")) return false;
+      if (normalized.includes("nao reembols")) return false;
+      if (normalized.includes("informacoes")) return false;
+      if (normalized.includes("detalhes")) return false;
+      if (normalized.includes("preferencial")) return false;
+      if (normalized.includes("tarifa")) return false;
+      if (normalized.includes("adulto")) return false;
+      if (normalized.includes("pax")) return false;
+      if (normalized.includes("taxas")) return false;
+      if (normalized.includes("assist")) return false;
+      if (normalized.includes("travel")) return false;
+      if (normalized.includes("dmc")) return false;
+      if (normalized.includes("fornecedor")) return false;
+      if (isRouteLine(line)) return false;
+      if (isDateOnlyLine(line)) return false;
+      if (isAddressLine(line)) return false;
+      if (/^[0-9\s]+$/.test(line)) return false;
+      return true;
+    });
+  const tipoNormalized = normalizeOcrText(tipo || "");
+  if (isSeguroLabel(tipoNormalized)) {
+    return extractSeguroProductName();
+  }
+  if (isCarLabel(tipoNormalized)) {
+    return "Aluguel de Carro";
+  }
+  if (isServiceLabel(tipoNormalized)) {
+    const serviceText = extractServiceDescription(rawLines);
+    if (serviceText) return serviceText;
+  }
+  if (isHotelLabel(tipoNormalized)) {
+    const hotelName = extractHotelNameFromLines(rawLines) || extractHotelProductName(rawLines);
+    if (hotelName) return hotelName;
+  }
+  if (isFlightLabel(tipoNormalized)) {
+    const route = extractFlightRouteLine(rawLines);
+    if (route) return route;
+  }
+
   if (cleaned.length === 0) return "";
-  const withScore = cleaned.map((line) => {
-    const letters = line.replace(/[^A-Za-zÀ-ÿ]/g, "").length;
-    return { line, score: letters };
-  });
-  withScore.sort((a, b) => b.score - a.score);
-  return withScore[0]?.line || cleaned[0] || "";
+
+  const combined = cleaned.join(" ").replace(/\s+/g, " ").trim();
+  if (combined) return combined;
+  return cleaned[0] || "";
 }
 
 function parseTipoProduto(text: string) {
@@ -281,7 +657,7 @@ function parseTipoProduto(text: string) {
     .map((l) => l.trim())
     .filter(Boolean);
   const candidate = lines.find((line) => /[A-Za-zÀ-ÿ]/.test(line)) || "";
-  return candidate ? titleCaseWithExceptions(candidate) : "";
+  return candidate ? canonicalizeTipoLabel(candidate) : "";
 }
 
 function detectCardTypeLabel(lines: string[]) {
@@ -289,7 +665,8 @@ function detectCardTypeLabel(lines: string[]) {
     const normalized = normalizeOcrText(line);
     if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
     if (normalized.includes("servi")) return "Serviços";
-    if (normalized.includes("aereo")) return "Aéreo";
+    if (normalized.includes("carro")) return "Aluguel de Carro";
+    if (normalized.includes("aereo")) return "Passagem Aérea";
     if (normalized.includes("hote")) return "Hotel";
   }
   return "";
@@ -299,11 +676,14 @@ function inferTipoLabelFromText(text: string, fallbackLabel: string) {
   const normalized = normalizeOcrText(text);
   if (normalized.includes("ingresso")) return "Serviços";
   if (normalized.includes("seguro")) return "Seguro viagem";
-  if (normalized.includes("aereo") || normalized.includes("voo") || normalized.includes("passagem")) return "Aéreo";
+  if (normalized.includes("carro") || normalized.includes("locacao") || normalized.includes("aluguel")) {
+    return "Aluguel de Carro";
+  }
+  if (normalized.includes("aereo") || normalized.includes("voo") || normalized.includes("passagem")) return "Passagem Aérea";
   if (normalized.includes("hotel") || normalized.includes("pousada") || normalized.includes("resort") || normalized.includes("flat")) return "Hotel";
   if (normalized.includes("passeio")) return "Serviços";
   if (normalized.includes("transporte") || normalized.includes("transfer") || normalized.includes("traslado")) return "Serviços";
-  return fallbackLabel || "";
+  return fallbackLabel ? canonicalizeTipoLabel(fallbackLabel) : "";
 }
 
 function isTipoProdutoValido(text: string) {
@@ -792,22 +1172,23 @@ async function extractItemsFromCards(
     const middleOcr = await ocrCanvasRegion(worker, middleCanvas, "text");
     const productOcr = await ocrCanvasRegion(worker, productCanvas, "text");
 
-    let tipoProduto = parseTipoProduto(titleOcr.text);
+    let tipoProduto = canonicalizeTipoLabel(parseTipoProduto(titleOcr.text));
     let tipoValido = isTipoProdutoValido(tipoProduto) || isTipoProdutoValido(titleOcr.text);
     if (!tipoValido) {
-      tipoProduto = parseTipoProduto(middleOcr.text);
+      tipoProduto = canonicalizeTipoLabel(parseTipoProduto(middleOcr.text));
       tipoValido = isTipoProdutoValido(tipoProduto) || isTipoProdutoValido(middleOcr.text);
     }
 
     const combinedText = `${titleOcr.text}\n${middleOcr.text}\n${productOcr.text}\n${topRightOcr.text}`;
     const inferredTipo = inferTipoLabelFromText(combinedText, tipoProduto);
     if (!tipoValido && inferredTipo) {
-      tipoProduto = inferredTipo;
+      tipoProduto = canonicalizeTipoLabel(inferredTipo);
       tipoValido = true;
     }
 
     const qtePax = parseQuantidadePax(topRightOcr.text);
-    let valorInfo = parseValor(topRightOcr.text);
+    const valorLines = splitTextLines(`${topRightOcr.text}\n${middleOcr.text}\n${productOcr.text}\n${titleOcr.text}`);
+    let valorInfo = parseValorFromLines(valorLines, tipoProduto);
     if (valorInfo.valor <= 0) {
       const width = card.x2 - card.x1;
       const height = card.y2 - card.y1;
@@ -818,7 +1199,7 @@ async function extractItemsFromCards(
         y2: card.y1 + height * 0.6,
       });
       const fallbackOcr = await ocrCanvasRegion(worker, fallbackRegion, "numbers");
-      valorInfo = parseValor(fallbackOcr.text);
+      valorInfo = parseValorFromLines(splitTextLines(fallbackOcr.text), tipoProduto);
     }
     if (valorInfo.valor <= 0) {
       const fullCard = cropCanvas(canvas, {
@@ -828,15 +1209,36 @@ async function extractItemsFromCards(
         y2: card.y2,
       });
       const cardOcr = await ocrCanvasRegion(worker, fullCard, "numbers");
-      valorInfo = parseValor(cardOcr.text);
+      valorInfo = parseValorFromLines(splitTextLines(cardOcr.text), tipoProduto);
     }
 
+    const combinedLines = splitTextLines(combinedText);
+    const routeInfo = findRouteFromLines(combinedLines);
+    const destinoCidade = getDestinoCidadeFromRoute(routeInfo, tipoProduto);
     let periodoInfo = parsePeriodoIso(middleOcr.text, baseYear);
     if (!periodoInfo.start) {
       periodoInfo = parsePeriodoIso(productOcr.text, baseYear);
     }
-    const cidade = parseCidade(middleOcr.text) || parseCidade(productOcr.text);
-    const produto = parseProduto(productOcr.text) || parseProduto(middleOcr.text);
+    const cityFromRoute = destinoCidade.destino;
+    const allowCidadeFallback = !isSeguroLabel(tipoProduto) && !isCarLabel(tipoProduto);
+    const cidade = cityFromRoute || (allowCidadeFallback ? parseCidade(middleOcr.text) || parseCidade(productOcr.text) : "");
+    const productSources = [
+      combinedText,
+      `${titleOcr.text}\n${middleOcr.text}\n${productOcr.text}`,
+      `${middleOcr.text}\n${productOcr.text}`,
+      middleOcr.text,
+      productOcr.text,
+    ];
+    let produto = "";
+    for (const source of productSources) {
+      if (!source) continue;
+      const sourceLines = splitTextLines(source);
+      produto = extractProductByType(sourceLines, tipoProduto) || parseProduto(source, tipoProduto);
+      if (produto) break;
+    }
+    if (!produto && routeInfo?.raw) {
+      produto = routeInfo.raw;
+    }
 
     const missingFields =
       (tipoProduto ? 0 : 1) +
@@ -905,6 +1307,7 @@ async function extractItemsFromCards(
         page: pageNumber,
         card_bbox: [card.x1, card.y1, card.x2, card.y2],
         missing_fields: missingFields,
+        city_label: destinoCidade.cidade || "",
         regions: {
           title: titleOcr,
           top_right: topRightOcr,
@@ -965,27 +1368,35 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
   const items: QuoteItemDraft[] = [];
   blocks.forEach((block) => {
     const blockText = block.join("\n");
-    const tipo = inferTipoLabelFromText(blockText, "") || detectCardTypeLabel(block) || "Serviços";
-    const valorInfo = parseValor(blockText);
+    const tipoRaw = inferTipoLabelFromText(blockText, "") || detectCardTypeLabel(block) || "Serviços";
+    const tipo = canonicalizeTipoLabel(tipoRaw);
+    const valorInfo = parseValorFromLines(block, tipo);
     if (valorInfo.valor <= 0) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
-    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block.lines);
+    const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block);
     const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block) : null;
     const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block) : [];
+    const routeInfo = findRouteFromLines(block);
+    const destinoCidade = getDestinoCidadeFromRoute(routeInfo, tipo);
+    const allowCidadeFallback = !isSeguroLabel(tipo) && !isCarLabel(tipo);
     const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
       ? circuitoMeta.itinerario.join(" - ")
-      : parseCidade(blockText);
-    const produto = circuitoDetectado
-      ? pickCircuitTitleFromLines(block) || parseProduto(blockText)
-      : parseProduto(blockText);
+      : destinoCidade.destino || (allowCidadeFallback ? parseCidade(blockText) : "");
+    let produto = circuitoDetectado
+      ? pickCircuitTitleFromLines(block) || extractProductByType(block, tipo) || parseProduto(blockText, tipo)
+      : extractProductByType(block, tipo) || parseProduto(blockText, tipo);
+    if (!produto && routeInfo?.raw) {
+      produto = routeInfo.raw;
+    }
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
+    const isCar = isCarLabel(tipo);
     const summary = extractSummaryValues(block);
-    const baseValue = Math.max(summary.base ?? totalAmount, 0);
-    const taxesValue = summary.taxes;
-    const discountValue = summary.discount;
+    const baseValue = isCar ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
+    const taxesValue = isCar ? 0 : summary.taxes;
+    const discountValue = isCar ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
-    const totalWithTaxes = netBase + taxesValue;
+    const totalWithTaxes = isCar ? totalAmount : netBase + taxesValue;
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -1004,6 +1415,7 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
       raw: {
         page: pageNumber,
         block_text: blockText,
+        city_label: destinoCidade.cidade || "",
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
       },
     });
@@ -1027,6 +1439,7 @@ function detectSectionLabel(line: string) {
   if (!normalized) return "";
   if (normalized === "servicos") return "Serviços";
   if (normalized === "aereo") return "Aéreo";
+  if (normalized === "carros" || normalized === "carro") return "Aluguel de Carro";
   if (normalized === "hoteis" || normalized === "hotel" || normalized === "hospedagem") return "Hotel";
   if (normalized === "circuito") return "Circuito";
   if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
@@ -1252,24 +1665,30 @@ function isLikelyDateLine(normalized: string) {
 }
 
 function pickProductLineFromBlock(lines: string[], itemType: string) {
-  const candidates = lines.filter((line) => {
-    const normalized = normalizeOcrText(line);
-    if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
-    if (normalized === "selecionado" || normalized === "detalhes") return false;
-    if (normalized.includes("total")) return false;
-    if (normalized.includes("reembols")) return false;
-    if (normalized.includes("nao reembols")) return false;
-    if (normalized.includes("facil")) return false;
-    if (normalized.includes("classe")) return false;
-    if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) return false;
-    if (normalized.includes("dias") && normalized.includes("noites")) return false;
-    if (normalized.includes("total (")) return false;
-    if (isLikelyDateLine(normalized)) return false;
-    if (isLikelyTimeLine(line)) return false;
-    if (isLikelyAirportCode(line)) return false;
-    if (normalized.startsWith("gol") && (normalized.includes("ida") || normalized.includes("volta"))) return false;
-    return true;
-  });
+  const candidates = lines
+    .map((line) => cleanProductLine(line))
+    .filter((line) => {
+      const normalized = normalizeOcrText(line);
+      if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
+      if (normalized === "selecionado" || normalized === "detalhes") return false;
+      if (isCurrencyLine(line)) return false;
+      if (normalized.includes("total")) return false;
+      if (normalized.includes("reembols")) return false;
+      if (normalized.includes("nao reembols")) return false;
+      if (normalized.includes("travel") || normalized.includes("dmc")) return false;
+      if (normalized.includes("facil")) return false;
+      if (normalized.includes("classe")) return false;
+      if (normalized.includes("adulto") || normalized.includes("pax") || normalized.includes("passageiro")) return false;
+      if (normalized.includes("dias") && normalized.includes("noites")) return false;
+      if (normalized.includes("total (")) return false;
+      if (isDateOnlyLine(line)) return false;
+      if (isLikelyTimeLine(line)) return false;
+      if (isLikelyAirportCode(line)) return false;
+      if (normalized.startsWith("gol") && (normalized.includes("ida") || normalized.includes("volta"))) return false;
+      if (isRouteLine(line)) return false;
+      if (/^\d+$/.test(normalized)) return false;
+      return true;
+    });
 
   if (candidates.length === 0) return "";
 
@@ -1323,34 +1742,42 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
 
   blocks.forEach((block) => {
     const blockText = block.lines.join("\n");
-    const tipo =
+    const tipoRaw =
       block.typeHint ||
       inferTipoLabelFromText(blockText, "") ||
       detectCardTypeLabel(block.lines) ||
       "Serviços";
-    const valorInfo = parseValor(blockText);
+    const tipo = canonicalizeTipoLabel(tipoRaw);
+    const valorInfo = parseValorFromLines(block.lines, tipo);
     if (valorInfo.valor <= 0) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
     const quantidade = parseQuantidadePax(blockText);
     const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block.lines);
     const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block.lines) : null;
     const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block.lines) : [];
+    const routeInfo = findRouteFromLines(block.lines);
+    const destinoCidade = getDestinoCidadeFromRoute(routeInfo, tipo);
+    const allowCidadeFallback = !isSeguroLabel(tipo) && !isCarLabel(tipo);
     const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
       ? circuitoMeta.itinerario.join(" - ")
-      : parseCidade(blockText);
-    const produto = circuitoDetectado
-      ? pickCircuitTitleFromLines(block.lines) || pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText)
-      : pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText);
+      : destinoCidade.destino || (allowCidadeFallback ? parseCidade(blockText) : "");
+    let produto = circuitoDetectado
+      ? pickCircuitTitleFromLines(block.lines) || extractProductByType(block.lines, tipo) || pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText, tipo)
+      : extractProductByType(block.lines, tipo) || pickProductLineFromBlock(block.lines, tipo) || parseProduto(blockText, tipo);
+    if (!produto && routeInfo?.raw) {
+      produto = routeInfo.raw;
+    }
     const totalAmount = valorInfo.valor;
     const quantity = quantidade || 1;
     const title = produto || tipo || "Item";
 
+    const isCar = isCarLabel(tipo);
     const summary = extractSummaryValues(block.lines);
-    const baseValue = Math.max(summary.base ?? totalAmount, 0);
-    const taxesValue = summary.taxes;
-    const discountValue = summary.discount;
+    const baseValue = isCar ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
+    const taxesValue = isCar ? 0 : summary.taxes;
+    const discountValue = isCar ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
-    const totalWithTaxes = netBase + taxesValue;
+    const totalWithTaxes = isCar ? totalAmount : netBase + taxesValue;
 
     items.push({
       temp_id: buildTempId(),
@@ -1371,6 +1798,7 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
         source: "text",
         type_hint: block.typeHint,
         block_text: blockText,
+        city_label: destinoCidade.cidade || "",
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
       },
     });
