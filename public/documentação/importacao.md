@@ -305,6 +305,40 @@ os campos : Travel quality dmc, 51863530, Reembolsável ou qualquer outro campo,
 
 ===================================
 
+
+
+Carros
+Total (1 Adulto)
+R$ 4.799,11
+Detalhes
+17 de jan - 31 de jan (14 diárias)
+Economico
+Retirada: 3900 nw 25th st suite 400, Miami -
+
+Devolução: 3900 nw 25th st suite 400, Miami -
+
+Logo da companhia
+2 Malas
+Ar Condicionado4 PortasAutomaticoKm Livre
+Km livreProteção do veiculo CDW/LDW e Proteção a terceiros sem franquia (isento do pagamento de coparticipação em caso de danos ao veiculo)1 condutor adicionalTarifa jovem (under age fee) será cobrada para condutores menores de 25 anosMulta de 100% do valor da reserva em caso de noshowImpostos e taxas
+
+
+VAMOS IDETINFICAR QUANDO FOR CARRO
+
+Deverá identificar quando for ALUGUEL DE CARROS, veja o texto acima quando for CARROS , deverá trazer apenas os elementos :
+
+1-) Tipo = Aluguel de Carros , busca Aluguel de Carro no campo tipo de produto
+2-) Total = (1 adulto), refere-se a 1 pessoa 
+3-) R$ R$ 4.799,11 - refere-se ao valor do produto Alguel de Carro, campo total
+4-) 17 de jan, refere ao perído Início (17 de jan) e 31 de jan Fim (31 de jan)
+
+Veja que o Nome do produto está nesse exemplo como ECONOMICO, porém sendo Tipo Carro, vamos utilizar Produto = Aluguel de carro
+
+
+TODOS OS OUTROS CAMPOS DEVERÃO SER IGNORADOS, O CAMPO CIDADE e DESTINO , serão preenchido manualmente pelo usuário.
+
+=============================================
+
 Exemplo COMPLETO do texto ACIMA para importação :
 
 Filial: LOJA SHOPPING CENTER NORTE
