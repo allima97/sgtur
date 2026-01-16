@@ -183,6 +183,8 @@ export default function QuoteImportIsland() {
   const [clienteBusca, setClienteBusca] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [carregandoClientes, setCarregandoClientes] = useState(false);
+  const [clienteSuggestions, setClienteSuggestions] = useState<ClienteOption[]>([]);
+  const clienteFetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
   const [cidadeSuggestions, setCidadeSuggestions] = useState<Record<string, CidadeOption[]>>({});
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
@@ -195,6 +197,9 @@ export default function QuoteImportIsland() {
     return () => {
       isMountedRef.current = false;
       Object.values(cidadeFetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
+      if (clienteFetchTimeout.current) {
+        clearTimeout(clienteFetchTimeout.current);
+      }
     };
   }, []);
 
@@ -250,7 +255,9 @@ export default function QuoteImportIsland() {
           .limit(500);
         if (error) throw error;
         if (!active) return;
-        setClientes((data || []) as ClienteOption[]);
+        const lista = (data || []) as ClienteOption[];
+        setClientes(lista);
+        setClienteSuggestions(lista.slice(0, 200));
         setClientesErro(null);
       } catch (err) {
         console.error("Erro ao carregar clientes:", err);
@@ -265,6 +272,49 @@ export default function QuoteImportIsland() {
       active = false;
     };
   }, []);
+
+  function mergeClientes(base: ClienteOption[], extras: ClienteOption[]) {
+    const map = new Map<string, ClienteOption>();
+    base.forEach((c) => map.set(c.id, c));
+    extras.forEach((c) => map.set(c.id, c));
+    return Array.from(map.values());
+  }
+
+  async function loadClienteSuggestions(term: string) {
+    const search = term.trim();
+    if (!search) {
+      setClienteSuggestions(clientes.slice(0, 200));
+      return;
+    }
+    try {
+      const { data, error } = await supabaseBrowser
+        .from("clientes")
+        .select("id, nome, cpf")
+        .or(`nome.ilike.%${search}%,cpf.ilike.%${search}%`)
+        .order("nome", { ascending: true })
+        .limit(200);
+      if (!isMountedRef.current) return;
+      if (error) {
+        console.warn("[QuoteImport] Falha ao buscar clientes", error);
+        return;
+      }
+      const lista = (data || []) as ClienteOption[];
+      setClienteSuggestions(lista);
+      if (lista.length) {
+        setClientes((prev) => mergeClientes(prev, lista));
+      }
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      console.warn("[QuoteImport] Erro ao buscar clientes", err);
+    }
+  }
+
+  function scheduleClienteFetch(term: string) {
+    if (clienteFetchTimeout.current) {
+      clearTimeout(clienteFetchTimeout.current);
+    }
+    clienteFetchTimeout.current = setTimeout(() => loadClienteSuggestions(term), 250);
+  }
 
   useEffect(() => {
     setDraft(null);
@@ -391,15 +441,16 @@ export default function QuoteImportIsland() {
   }
 
   const clientesFiltrados = useMemo(() => {
+    if (clienteSuggestions.length) return clienteSuggestions;
     if (!clienteBusca.trim()) return clientes;
     const termo = normalizeText(clienteBusca);
     const cpfTermo = normalizeCpf(clienteBusca);
     return clientes.filter((c) => {
       if (normalizeText(c.nome).includes(termo)) return true;
-      if (cpfTermo && normalizeCpf(c.cpf || "") === cpfTermo) return true;
+      if (cpfTermo && normalizeCpf(c.cpf || "").includes(cpfTermo)) return true;
       return false;
     });
-  }, [clientes, clienteBusca]);
+  }, [clientes, clienteBusca, clienteSuggestions]);
 
   const clienteSelecionado = useMemo(
     () => clientes.find((c) => c.id === clienteId) || null,
@@ -447,10 +498,12 @@ export default function QuoteImportIsland() {
     setClienteBusca(value);
     const texto = normalizeText(value);
     const cpfTexto = normalizeCpf(value);
-    const achado = clientes.find((c) => {
+    const catalogo = clienteSuggestions.length ? clienteSuggestions : clientes;
+    const achado = catalogo.find((c) => {
       const cpf = normalizeCpf(c.cpf || "");
       return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
     });
+    scheduleClienteFetch(value);
     if (achado) {
       setClienteId(achado.id);
       return;
@@ -679,15 +732,18 @@ export default function QuoteImportIsland() {
               value={clienteSelecionado?.nome || clienteBusca}
               onChange={(e) => handleClienteChange(e.target.value)}
               onBlur={handleClienteBlur}
+              onFocus={(e) => scheduleClienteFetch(e.currentTarget.value)}
               required
             />
             <datalist id="listaClientes">
               {clientesFiltrados.slice(0, 200).map((c) => (
-                <option
-                  key={c.id}
-                  value={c.nome}
-                  label={c.cpf ? `CPF: ${c.cpf}` : undefined}
-                />
+                <React.Fragment key={c.id}>
+                  <option
+                    value={c.nome}
+                    label={c.cpf ? `CPF: ${c.cpf}` : undefined}
+                  />
+                  {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
+                </React.Fragment>
               ))}
             </datalist>
             {carregandoClientes && (
