@@ -122,6 +122,13 @@ function isEndAfterStart(start: string, end: string) {
   return endDate.getTime() > startDate.getTime();
 }
 
+function isEndOnOrAfterStart(start: string, end: string) {
+  const startDate = parseDateInput(start);
+  const endDate = parseDateInput(end);
+  if (!startDate || !endDate) return true;
+  return endDate.getTime() >= startDate.getTime();
+}
+
 function calcularStatusPeriodo(inicio?: string | null, fim?: string | null) {
   if (!inicio) return "planejada";
   const hoje = new Date();
@@ -665,9 +672,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       const novo = [...prev];
       const atualizado = { ...(novo[index] as any), [campo]: valor };
       if (campo === "data_inicio") {
-        const minFim = addDaysToInput(valor, 1);
-        if (atualizado.data_fim && minFim && atualizado.data_fim < minFim) {
-          atualizado.data_fim = minFim;
+        if (atualizado.data_fim && atualizado.data_fim < valor) {
+          atualizado.data_fim = valor;
         }
       }
       novo[index] = atualizado;
@@ -760,6 +766,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       return;
     }
 
+    const clienteId = formVenda.cliente_id.trim();
+    if (!clienteId) {
+      setErro("Selecione um cliente valido antes de salvar.");
+      showToast("Selecione um cliente valido antes de salvar.", "error");
+      return;
+    }
+
     if (formVenda.data_embarque && formVenda.data_final && !isEndAfterStart(formVenda.data_embarque, formVenda.data_final)) {
       setErro("A data final deve ser ao menos um dia após a data de embarque.");
       showToast("A data final deve ser ao menos um dia após a data de embarque.", "error");
@@ -767,8 +780,8 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     }
     for (let i = 0; i < recibos.length; i += 1) {
       const recibo = recibos[i];
-      if (recibo.data_inicio && recibo.data_fim && !isEndAfterStart(recibo.data_inicio, recibo.data_fim)) {
-        const msg = `Recibo ${i + 1}: a data fim deve ser ao menos um dia após a data início.`;
+      if (recibo.data_inicio && recibo.data_fim && !isEndOnOrAfterStart(recibo.data_inicio, recibo.data_fim)) {
+        const msg = `Recibo ${i + 1}: a data fim deve ser igual ou após a data início.`;
         setErro(msg);
         showToast(msg, "error");
         return;
@@ -990,7 +1003,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             company_id: companyId,
             venda_id: vendaId,
             recibo_id: params.reciboId,
-            cliente_id: formVenda.cliente_id,
+            cliente_id: clienteId,
             responsavel_user_id: userId,
             origem: origemLabel || null,
             destino: destinoLabel || null,
@@ -1006,7 +1019,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         if (!viagemId) return;
         const { error: passageiroError } = await supabase.from("viagem_passageiros").insert({
           viagem_id: viagemId,
-          cliente_id: formVenda.cliente_id,
+          cliente_id: clienteId,
           company_id: companyId,
           papel: "passageiro",
           created_by: userId,
@@ -1068,7 +1081,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         const { error: vendaErr } = await supabase
           .from("vendas")
           .update({
-            cliente_id: formVenda.cliente_id,
+            cliente_id: clienteId,
             destino_id: produtoDestinoId, // FK para produtos
             destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
@@ -1108,7 +1121,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           .from("vendas")
           .insert({
             vendedor_id: userId,
-            cliente_id: formVenda.cliente_id,
+            cliente_id: clienteId,
             destino_id: produtoDestinoId, // FK para produtos
             destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
@@ -1442,7 +1455,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       className="form-input"
                       type="date"
                       value={r.data_fim}
-                      min={r.data_inicio ? addDaysToInput(r.data_inicio, 1) : undefined}
+                      min={r.data_inicio || undefined}
                       onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
                       required
                     />
