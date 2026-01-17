@@ -977,6 +977,21 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
       let vendaId = editId;
 
+      async function marcarOrcamentoFechado() {
+        if (!orcamentoId) return;
+        const { error: fechamentoErr } = await supabase
+          .from("quote")
+          .update({
+            status_negociacao: "Fechado",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", orcamentoId);
+        if (fechamentoErr) {
+          console.error("Erro ao fechar orcamento:", fechamentoErr);
+          showToast("Venda salva, mas o orçamento não foi atualizado.", "error");
+        }
+      }
+
       async function criarViagemParaRecibo(params: {
         reciboId?: string | null;
         dataInicio?: string | null;
@@ -1113,6 +1128,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           detalhes: { id: editId, venda: formVenda, recibos },
         });
 
+        await marcarOrcamentoFechado();
         showToast("Venda atualizada com sucesso!", "success");
         setTimeout(() => resetFormAndGoToConsulta(), 200);
       } else {
@@ -1151,6 +1167,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           },
         });
 
+        await marcarOrcamentoFechado();
         showToast("Venda cadastrada com sucesso!", "success");
         setTimeout(() => resetFormAndGoToConsulta(), 200);
       }

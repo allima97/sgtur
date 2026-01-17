@@ -275,6 +275,7 @@ export default function QuoteListIsland() {
                   ? itensOrdenados.map((item) => buildItemLabel(item))
                   : [];
                 const statusAtual = quote.status_negociacao || "Enviado";
+                const isFechado = normalizeText(statusAtual) === "fechado";
                 const clienteLabel =
                   quote.client_name ||
                   quote.cliente?.nome ||
@@ -298,6 +299,7 @@ export default function QuoteListIsland() {
                         className="form-input"
                         value={statusAtual}
                         onChange={(e) => atualizarStatus(quote.id, e.target.value)}
+                        disabled={isFechado}
                       >
                         {STATUS_OPTIONS.map((status) => (
                           <option key={status} value={status}>
@@ -333,6 +335,7 @@ export default function QuoteListIsland() {
                         title="Converter em venda"
                         style={{ padding: "4px 6px" }}
                         onClick={() => converterParaVenda(quote.id)}
+                        disabled={isFechado}
                       >
                         🧾
                       </button>
@@ -353,14 +356,16 @@ export default function QuoteListIsland() {
                       >
                         {exportingQuoteId === quote.id ? "⏳" : "📄"}
                       </button>
-                      <a
-                        className="btn-icon"
-                        href={`/orcamentos/${quote.id}`}
-                        title="Editar orcamento"
-                        style={{ padding: "4px 6px" }}
-                      >
-                        ✏️
-                      </a>
+                      {!isFechado && (
+                        <a
+                          className="btn-icon"
+                          href={`/orcamentos/${quote.id}`}
+                          title="Editar orcamento"
+                          style={{ padding: "4px 6px" }}
+                        >
+                          ✏️
+                        </a>
+                      )}
                       <button
                         className="btn-icon btn-danger"
                         title="Excluir orcamento"

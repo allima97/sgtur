@@ -129,6 +129,7 @@ export default function QuoteDetailIsland(props: {
   quote: QuoteRecord;
   items: QuoteItemRecord[];
 }) {
+  const isFechado = normalizeLookupText(props.quote.status_negociacao || "") === "fechado";
   const [items, setItems] = useState<QuoteItemRecord[]>(
     (props.items || []).map((item, index) => ({
       ...item,
@@ -624,6 +625,11 @@ export default function QuoteDetailIsland(props: {
 
   const autoExportRef = useRef(false);
   useEffect(() => {
+    if (isFechado) {
+      setIsEditing(false);
+    }
+  }, [isFechado]);
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("pdf") === "1") {
@@ -1107,7 +1113,7 @@ export default function QuoteDetailIsland(props: {
           >
             {saving ? "Salvando..." : "Salvar ajustes"}
           </button>
-          {!isEditing && (
+          {!isEditing && !isFechado && (
             <button
               type="button"
               className="btn btn-light"
@@ -1120,6 +1126,11 @@ export default function QuoteDetailIsland(props: {
             >
               Editar orçamento
             </button>
+          )}
+          {isFechado && (
+            <span style={{ fontSize: 13, color: "#64748b" }}>
+              Orcamento fechado: edicao bloqueada.
+            </span>
           )}
         </div>
         {!canConfirm && (
