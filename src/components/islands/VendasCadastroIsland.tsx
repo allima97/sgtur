@@ -25,6 +25,7 @@ type FormVenda = {
   destino_id: string;
   data_lancamento: string;
   data_embarque: string;
+  data_final: string;
 };
 
 type FormRecibo = {
@@ -50,6 +51,7 @@ const initialVenda: FormVenda = {
   destino_id: "",
   data_lancamento: new Date().toISOString().substring(0, 10),
   data_embarque: "",
+  data_final: "",
 };
 
 const initialRecibo: FormRecibo = {
@@ -127,13 +129,16 @@ export default function VendasCadastroIsland() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [tipos, setTipos] = useState<{ id: string; nome: string | null }[]>([]);
+  const [tipos, setTipos] = useState<
+    { id: string; nome: string | null; tipo?: string | null }[]
+  >([]);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
   const [reciboEmEdicao, setReciboEmEdicao] = useState<number | null>(null);
 
   const [editId, setEditId] = useState<string | null>(null);
+  const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
   const [cidadePrefill, setCidadePrefill] = useState<CidadePrefill>({ id: "", nome: "" });
 
   const [erro, setErro] = useState<string | null>(null);
@@ -156,7 +161,11 @@ export default function VendasCadastroIsland() {
   // =======================================================
   // CARREGAR DADOS INICIAIS
   // =======================================================
-  async function carregarDados(vendaId?: string, cidadePrefillParam?: CidadePrefill) {
+  async function carregarDados(
+    vendaId?: string,
+    cidadePrefillParam?: CidadePrefill,
+    orcamentoIdParam?: string | null
+  ) {
     try {
       setLoading(true);
 
@@ -167,7 +176,7 @@ export default function VendasCadastroIsland() {
           .from("produtos")
           .select("id, nome, cidade_id, tipo_produto, todas_as_cidades")
           .order("nome"),
-        supabase.from("tipo_produtos").select("id, nome"),
+        supabase.from("tipo_produtos").select("id, nome, tipo"),
       ]);
 
       setClientes(c.data || []);
@@ -183,6 +192,14 @@ export default function VendasCadastroIsland() {
 
       if (vendaId) {
         await carregarVenda(vendaId, cidadesLista, produtosLista, cidadePrefillParam);
+      } else if (orcamentoIdParam) {
+        await carregarOrcamento(
+          orcamentoIdParam,
+          cidadesLista,
+          produtosLista,
+          c.data || [],
+          tiposLista as any
+        );
       }
     } catch (e) {
       console.error(e);
@@ -204,7 +221,7 @@ export default function VendasCadastroIsland() {
 
       const { data: vendaData, error: vendaErr } = await supabase
         .from("vendas")
-        .select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque")
+        .select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque, data_final")
         .eq("id", id)
         .maybeSingle();
 
@@ -244,6 +261,7 @@ export default function VendasCadastroIsland() {
         destino_id: cidadeId,
         data_lancamento: dataParaInput(vendaData.data_lancamento),
         data_embarque: dataParaInput(vendaData.data_embarque),
+        data_final: dataParaInput(vendaData.data_final),
       });
       setBuscaDestino(cidadeNome || cidadeId || "");
       setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
@@ -288,10 +306,160 @@ export default function VendasCadastroIsland() {
     }
   }
 
+  function formatarValorMoeda(valor?: number | null) {
+    if (typeof valor !== "number" || !Number.isFinite(valor)) return "";
+    return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function gerarNumeroRecibo(orcamentoId: string, index: number) {
+    const prefixo = (orcamentoId || "").replace(/-/g, "").slice(0, 6).toUpperCase();
+    const sequencia = String(index + 1).padStart(2, "0");
+    return `ORC-${prefixo}-${sequencia}`;
+  }
+
+  function resolverTipoId(tipoLabel: string, tiposBase: { id: string; nome: string | null; tipo?: string | null }[]) {
+    const normalized = normalizeText(tipoLabel || "");
+    if (!normalized) return "";
+    const match = tiposBase.find((t) => {
+      if (normalizeText(t.nome || "") === normalized) return true;
+      if (normalizeText(t.tipo || "") === normalized) return true;
+      return false;
+    });
+    return match?.id || "";
+  }
+
+  async function carregarOrcamento(
+    id: string,
+    cidadesBase?: Cidade[],
+    produtosBase?: Produto[],
+    clientesBase?: Cliente[],
+    tiposBase?: { id: string; nome: string | null; tipo?: string | null }[]
+  ) {
+    try {
+      const { data: orcamento, error } = await supabase
+        .from("quote")
+        .select(
+          "id, client_id, client_name, destino_cidade_id, data_embarque, data_final, quote_item (id, item_type, title, product_name, total_amount, taxes_amount, start_date, end_date, cidade_id, order_index)"
+        )
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!orcamento) {
+        setErro("Orcamento nao encontrado para conversao.");
+        showToast("Orcamento nao encontrado.", "error");
+        return;
+      }
+
+      const clientesLista = clientesBase || clientes;
+      const cidadesLista = cidadesBase || cidades;
+      const produtosLista = produtosBase || produtos;
+      const tiposLista = tiposBase || tipos;
+
+      let clienteId = orcamento.client_id || "";
+      if (!clienteId && orcamento.client_name) {
+        const match = clientesLista.find(
+          (c) => normalizeText(c.nome) === normalizeText(orcamento.client_name || "")
+        );
+        if (match) clienteId = match.id;
+        else setBuscaCliente(orcamento.client_name);
+      }
+      if (clienteId) {
+        setBuscaCliente("");
+      }
+
+      let destinoId = orcamento.destino_cidade_id || "";
+      if (!destinoId) {
+        const firstItemCity = (orcamento.quote_item || []).find((item: any) => item?.cidade_id)?.cidade_id;
+        destinoId = firstItemCity || "";
+      }
+      const destinoCidade = cidadesLista.find((c) => c.id === destinoId);
+      if (destinoCidade) {
+        setBuscaDestino(destinoCidade.nome);
+        setBuscaCidadeSelecionada(destinoCidade.nome);
+      }
+
+      setFormVenda((prev) => ({
+        ...prev,
+        cliente_id: clienteId,
+        destino_id: destinoId,
+        data_embarque: dataParaInput(orcamento.data_embarque),
+        data_final: dataParaInput(orcamento.data_final),
+      }));
+
+      const itensOrdenados = [...(orcamento.quote_item || [])].sort(
+        (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)
+      );
+      const produtosAtualizados = [...produtosLista];
+      const recibosGerados = itensOrdenados.map((item: any, index: number) => {
+        const nomeItem = (item.product_name || item.title || item.item_type || "").trim();
+        const nomeNormalizado = normalizeText(nomeItem);
+        const cidadeBaseId = item.cidade_id || destinoId || "";
+        const tipoId = resolverTipoId(item.item_type || "", tiposLista);
+
+        let produtoMatch =
+          produtosAtualizados.find(
+            (p) =>
+              normalizeText(p.nome) === nomeNormalizado &&
+              (!cidadeBaseId || p.cidade_id === cidadeBaseId || p.todas_as_cidades)
+          ) ||
+          (tipoId
+            ? produtosAtualizados.find(
+                (p) =>
+                  p.tipo_produto === tipoId &&
+                  (!cidadeBaseId || p.cidade_id === cidadeBaseId || p.todas_as_cidades)
+              )
+            : null);
+
+        let produtoId = produtoMatch?.id || "";
+        if (!produtoId && nomeItem) {
+          const virtualId = `virtual-${tipoId || "sem-tipo"}-${index + 1}`;
+          produtosAtualizados.push({
+            id: virtualId,
+            nome: nomeItem,
+            cidade_id: cidadeBaseId || null,
+            tipo_produto: tipoId || null,
+            todas_as_cidades: false,
+            isVirtual: true,
+          });
+          produtoId = virtualId;
+        }
+
+        const dataInicio = dataParaInput(item.start_date || orcamento.data_embarque);
+        const dataFim = dataParaInput(
+          item.end_date || orcamento.data_final || item.start_date || orcamento.data_embarque
+        );
+
+        return {
+          ...initialRecibo,
+          produto_id: produtoId,
+          numero_recibo: gerarNumeroRecibo(orcamento.id, index),
+          data_inicio: dataInicio,
+          data_fim: dataFim,
+          valor_total: formatarValorMoeda(Number(item.total_amount || 0)),
+          valor_taxas: formatarValorMoeda(Number(item.taxes_amount || 0)),
+          principal: index === 0,
+        };
+      });
+
+      if (recibosGerados.length) {
+        setRecibos(garantirReciboPrincipal(recibosGerados));
+      }
+      if (produtosAtualizados.length !== produtosLista.length) {
+        setProdutos(produtosAtualizados);
+      }
+    } catch (err) {
+      console.error(err);
+      setErro("Erro ao carregar orcamento para conversao.");
+      showToast("Erro ao carregar orcamento.", "error");
+    }
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const idParam = params.get("id");
     if (idParam) setEditId(idParam);
+    const orcamentoParam = params.get("orcamentoId");
+    if (orcamentoParam && !idParam) setOrcamentoId(orcamentoParam);
     const cidadeIdParam = params.get("cidadeId") || "";
     const cidadeNomeParam = params.get("cidadeNome") || "";
     if (cidadeIdParam || cidadeNomeParam) {
@@ -300,8 +468,8 @@ export default function VendasCadastroIsland() {
   }, []);
 
   useEffect(() => {
-    if (!loadPerm && ativo) carregarDados(editId || undefined, cidadePrefill);
-  }, [loadPerm, ativo, editId, cidadePrefill]);
+    if (!loadPerm && ativo) carregarDados(editId || undefined, cidadePrefill, orcamentoId);
+  }, [loadPerm, ativo, editId, cidadePrefill, orcamentoId]);
 
   // Busca cidade (autocomplete)
   useEffect(() => {
@@ -360,12 +528,12 @@ export default function VendasCadastroIsland() {
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
     const t = normalizeText(buscaCliente);
+    const cpfTermo = normalizarCpf(buscaCliente);
     return clientes.filter((c) => {
       const cpf = normalizarCpf(c.cpf || "");
-      return (
-        normalizeText(c.nome).includes(t) ||
-        cpf.includes(normalizarCpf(t))
-      );
+      if (normalizeText(c.nome).includes(t)) return true;
+      if (cpfTermo && cpf.includes(cpfTermo)) return true;
+      return false;
     });
   }, [clientes, buscaCliente]);
   const clienteSelecionado = useMemo(
@@ -852,6 +1020,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
+            data_final: formVenda.data_final || null,
           })
           .eq("id", editId);
         if (vendaErr) throw vendaErr;
@@ -891,6 +1060,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             destino_cidade_id: formVenda.destino_id || null,
             data_lancamento: formVenda.data_lancamento,
             data_embarque: formVenda.data_embarque || null,
+            data_final: formVenda.data_final || null,
           })
           .select()
           .single();
@@ -1088,6 +1258,20 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   setFormVenda({
                     ...formVenda,
                     data_embarque: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="form-group flex-1 min-w-[180px]">
+              <label className="form-label">Data final</label>
+              <input
+                className="form-input"
+                type="date"
+                value={formVenda.data_final}
+                onChange={(e) =>
+                  setFormVenda({
+                    ...formVenda,
+                    data_final: e.target.value,
                   })
                 }
               />

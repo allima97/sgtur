@@ -22,6 +22,7 @@ type QuoteRow = {
   client_name?: string | null;
   client_whatsapp?: string | null;
   client_email?: string | null;
+  last_interaction_at?: string | null;
   cliente?: { id: string; nome?: string | null; cpf?: string | null } | null;
   quote_item?: QuoteItemRow[] | null;
 };
@@ -35,6 +36,13 @@ function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("pt-BR");
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("pt-BR");
 }
 
 function formatCurrency(value: number) {
@@ -74,7 +82,7 @@ export default function QuoteListIsland() {
         const { data, error } = await supabase
           .from("quote")
           .select(
-            "id, status, status_negociacao, total, currency, created_at, client_id, client_name, client_whatsapp, client_email, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
+            "id, status, status_negociacao, total, currency, created_at, client_id, client_name, client_whatsapp, client_email, last_interaction_at, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
           )
           .order("created_at", { ascending: false })
           .order("order_index", { foreignTable: "quote_item", ascending: true })
@@ -161,6 +169,31 @@ export default function QuoteListIsland() {
       console.error("Erro ao atualizar status:", err);
       setErro("Nao foi possivel atualizar o status.");
     }
+  }
+
+  async function marcarUltimaInteracao(id: string) {
+    const now = new Date().toISOString();
+    setErro(null);
+    try {
+      const { error } = await supabase
+        .from("quote")
+        .update({ last_interaction_at: now })
+        .eq("id", id);
+      if (error) throw error;
+      setQuotes((prev) =>
+        prev.map((quote) =>
+          quote.id === id ? { ...quote, last_interaction_at: now } : quote
+        )
+      );
+    } catch (err) {
+      console.error("Erro ao registrar ultima interacao:", err);
+      setErro("Nao foi possivel registrar a ultima interacao.");
+    }
+  }
+
+  function converterParaVenda(id: string) {
+    if (typeof window === "undefined") return;
+    window.location.href = `/vendas/cadastro?orcamentoId=${id}`;
   }
 
   return (
@@ -285,6 +318,24 @@ export default function QuoteListIsland() {
                         gap: 4,
                       }}
                     >
+                      <button
+                        className="btn-icon"
+                        title={`Ultima interacao: ${formatDateTime(
+                          quote.last_interaction_at
+                        )}`}
+                        style={{ padding: "4px 6px" }}
+                        onClick={() => marcarUltimaInteracao(quote.id)}
+                      >
+                        🕒
+                      </button>
+                      <button
+                        className="btn-icon"
+                        title="Converter em venda"
+                        style={{ padding: "4px 6px" }}
+                        onClick={() => converterParaVenda(quote.id)}
+                      >
+                        🧾
+                      </button>
                       <button
                         className="btn-icon"
                         title="Visualizar orçamento"

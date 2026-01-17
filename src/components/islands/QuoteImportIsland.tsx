@@ -1,10 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { extractCvcQuoteFromText } from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 
+type ClienteOption = {
+  id: string;
+  nome: string;
+  cpf?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+};
 type TipoProdutoOption = { id: string; label: string };
 type CidadeOption = {
   id: string;
@@ -17,21 +24,8 @@ function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-function normalizePhone(value: string) {
+function normalizeCpf(value: string) {
   return (value || "").replace(/\D/g, "");
-}
-
-function formatWhatsapp(value: string) {
-  const digits = normalizePhone(value).slice(0, 11);
-  if (!digits) return "";
-  const ddd = digits.slice(0, 2);
-  const number = digits.slice(2);
-  if (digits.length <= 2) return `(${ddd}`;
-  if (number.length <= 4) return `(${ddd}) ${number}`;
-  if (number.length <= 8) {
-    return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
-  }
-  return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5, 9)}`;
 }
 
 function normalizeCityName(value: string) {
@@ -136,9 +130,18 @@ export default function QuoteImportIsland() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [debug, setDebug] = useState(false);
-  const [clientName, setClientName] = useState("");
-  const [clientWhatsapp, setClientWhatsapp] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
+  const [clientes, setClientes] = useState<ClienteOption[]>([]);
+  const [clienteBusca, setClienteBusca] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const [clientesErro, setClientesErro] = useState<string | null>(null);
+  const [carregandoClientes, setCarregandoClientes] = useState(false);
+  const [destinoInput, setDestinoInput] = useState("");
+  const [destinoId, setDestinoId] = useState("");
+  const [destinoSuggestions, setDestinoSuggestions] = useState<CidadeOption[]>([]);
+  const [destinoNameMap, setDestinoNameMap] = useState<Record<string, string>>({});
+  const destinoFetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dataEmbarque, setDataEmbarque] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
   const [cidadeSuggestions, setCidadeSuggestions] = useState<Record<string, CidadeOption[]>>({});
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
@@ -151,6 +154,9 @@ export default function QuoteImportIsland() {
     return () => {
       isMountedRef.current = false;
       Object.values(cidadeFetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
+      if (destinoFetchTimeout.current) {
+        clearTimeout(destinoFetchTimeout.current);
+      }
     };
   }, []);
 
@@ -189,6 +195,34 @@ export default function QuoteImportIsland() {
       }
     }
     carregarTipos();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function carregarClientes() {
+      setCarregandoClientes(true);
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("clientes")
+          .select("id, nome, cpf, whatsapp, email")
+          .order("nome", { ascending: true })
+          .limit(1000);
+        if (error) throw error;
+        if (!active) return;
+        setClientes((data || []) as ClienteOption[]);
+        setClientesErro(null);
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+        if (!active) return;
+        setClientesErro("Nao foi possivel carregar os clientes.");
+      } finally {
+        if (active) setCarregandoClientes(false);
+      }
+    }
+    carregarClientes();
     return () => {
       active = false;
     };
@@ -304,6 +338,146 @@ export default function QuoteImportIsland() {
     }
   }
 
+  async function loadDestinoSuggestions(term: string) {
+    const search = term.trim();
+    const limit = 15;
+    let cidades: CidadeOption[] = [];
+    try {
+      const { data, error } = await supabaseBrowser.rpc("buscar_cidades", {
+        q: search,
+        limite: limit,
+      });
+      if (!error && Array.isArray(data)) {
+        cidades = (data as CidadeOption[]).filter((cidade) => cidade?.id && cidade.nome);
+      } else if (error) {
+        console.warn("[QuoteImport] RPC buscar_cidades falhou (destino), tentando fallback.", error);
+      }
+    } catch (err) {
+      console.warn("[QuoteImport] Erro ao buscar cidades (destino RPC)", err);
+    }
+
+    if (!cidades.length) {
+      const pattern = search ? `%${search}%` : "%";
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("cidades")
+          .select("id, nome, subdivisao_nome, pais_nome")
+          .ilike("nome", pattern)
+          .order("nome", { ascending: true })
+          .limit(limit);
+        if (error) {
+          console.warn("[QuoteImport] Falha ao buscar cidades (destino)", error);
+        } else {
+          cidades = (data || []).filter((cidade) => cidade?.id && cidade.nome);
+        }
+      } catch (err) {
+        console.warn("[QuoteImport] Erro ao buscar cidades (destino)", err);
+      }
+    }
+
+    if (!isMountedRef.current) return;
+    setDestinoSuggestions(cidades);
+    if (cidades.length) {
+      setDestinoNameMap((prev) => {
+        const next = { ...prev };
+        cidades.forEach((cidade) => {
+          if (!cidade?.id || !cidade.nome) return;
+          const nomeKey = normalizeCityName(cidade.nome);
+          const labelKey = normalizeCityName(formatCidadeLabel(cidade));
+          if (nomeKey && !next[nomeKey]) next[nomeKey] = cidade.id;
+          if (labelKey && !next[labelKey]) next[labelKey] = cidade.id;
+        });
+        return next;
+      });
+    }
+  }
+
+  function scheduleDestinoFetch(term: string) {
+    if (destinoFetchTimeout.current) {
+      clearTimeout(destinoFetchTimeout.current);
+    }
+    destinoFetchTimeout.current = setTimeout(() => loadDestinoSuggestions(term), 250);
+  }
+
+  function handleDestinoChange(value: string) {
+    setDestinoInput(value);
+    const normalized = normalizeCityName(value);
+    const matched =
+      destinoSuggestions.find((cidade) => {
+        const label = formatCidadeLabel(cidade);
+        return (
+          normalizeCityName(label) === normalized ||
+          normalizeCityName(cidade.nome) === normalized
+        );
+      }) || null;
+    const matchedId = destinoNameMap[normalized] || matched?.id || "";
+    setDestinoId(matchedId);
+    if (value.trim().length >= 1) {
+      scheduleDestinoFetch(value);
+    }
+  }
+
+  function handleDestinoBlur() {
+    if (!destinoInput.trim()) {
+      setDestinoId("");
+      return;
+    }
+    const normalized = normalizeCityName(destinoInput);
+    const matched =
+      destinoSuggestions.find((cidade) => {
+        const label = formatCidadeLabel(cidade);
+        return (
+          normalizeCityName(label) === normalized ||
+          normalizeCityName(cidade.nome) === normalized
+        );
+      }) || null;
+    const matchedId = destinoNameMap[normalized] || matched?.id || "";
+    if (matchedId) {
+      setDestinoId(matchedId);
+    }
+  }
+
+  const clientesFiltrados = useMemo(() => {
+    if (!clienteBusca.trim()) return clientes;
+    const termo = normalizeText(clienteBusca);
+    const cpfTermo = normalizeCpf(clienteBusca);
+    return clientes.filter((c) => {
+      if (normalizeText(c.nome).includes(termo)) return true;
+      if (cpfTermo && normalizeCpf(c.cpf || "").includes(cpfTermo)) return true;
+      return false;
+    });
+  }, [clientes, clienteBusca]);
+
+  const clienteSelecionado = useMemo(
+    () => clientes.find((c) => c.id === clienteId) || null,
+    [clientes, clienteId]
+  );
+
+  function handleClienteInputChange(value: string) {
+    setClienteBusca(value);
+    const texto = normalizeText(value);
+    const cpfTexto = normalizeCpf(value);
+    const achado = clientes.find((c) => {
+      const cpf = normalizeCpf(c.cpf || "");
+      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
+    });
+    setClienteId(achado?.id || "");
+  }
+
+  function handleClienteBlur() {
+    if (!clienteBusca.trim()) return;
+    const texto = normalizeText(clienteBusca);
+    const cpfTexto = normalizeCpf(clienteBusca);
+    const achado = clientesFiltrados.find((c) => {
+      const cpf = normalizeCpf(c.cpf || "");
+      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
+    });
+    if (achado) {
+      setClienteId(achado.id);
+      setClienteBusca("");
+    }
+  }
+
   const canExtractInput = Boolean(textInput.trim());
 
   function updateDraftItems(items: QuoteItemDraft[]) {
@@ -380,16 +554,15 @@ export default function QuoteImportIsland() {
 
   async function handleSave() {
     if (!draft || !file) return;
-    const nome = clientName.trim();
-    const whatsappDigits = normalizePhone(clientWhatsapp);
-    if (!nome) {
-      setError("Informe o nome do cliente antes de salvar.");
+    if (!clienteId) {
+      setError("Selecione um cliente antes de salvar.");
       return;
     }
-    if (whatsappDigits.length < 10) {
-      setError("Informe um WhatsApp valido antes de salvar.");
+    if (!destinoId) {
+      setError("Selecione a cidade de destino antes de salvar.");
       return;
     }
+    const clienteSelecionado = clientes.find((c) => c.id === clienteId) || null;
     setSaving(true);
     setError(null);
     setSuccessId(null);
@@ -397,9 +570,13 @@ export default function QuoteImportIsland() {
       const result = await saveQuoteDraft({
         draft,
         file,
-        clientName: nome,
-        clientWhatsapp: clientWhatsapp.trim(),
-        clientEmail: clientEmail.trim() || null,
+        clientId: clienteId,
+        clientName: clienteSelecionado?.nome || clienteBusca.trim() || null,
+        clientWhatsapp: clienteSelecionado?.whatsapp || null,
+        clientEmail: clienteSelecionado?.email || null,
+        destinoCidadeId: destinoId,
+        dataEmbarque: dataEmbarque || null,
+        dataFinal: dataFinal || null,
         importResult: importResult || undefined,
         debug,
       });
@@ -480,34 +657,64 @@ export default function QuoteImportIsland() {
         </p>
         <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
-            <label className="form-label">Nome do cliente *</label>
+            <label className="form-label">Cliente *</label>
             <input
               className="form-input"
-              placeholder="Informe o nome do cliente"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              list="listaClientes"
+              placeholder="Buscar cliente..."
+              value={clienteSelecionado?.nome || clienteBusca}
+              onChange={(e) => handleClienteInputChange(e.target.value)}
+              onBlur={handleClienteBlur}
               required
             />
+            <datalist id="listaClientes">
+              {clientesFiltrados.map((c) => (
+                <React.Fragment key={c.id}>
+                  <option value={c.nome} label={c.cpf ? `CPF: ${c.cpf}` : undefined} />
+                  {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
+                </React.Fragment>
+              ))}
+            </datalist>
+            {carregandoClientes && (
+              <small style={{ color: "#64748b" }}>Carregando clientes...</small>
+            )}
+            {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
           </div>
-          <div className="form-group" style={{ flex: 1, minWidth: 180 }}>
-            <label className="form-label">WhatsApp *</label>
+          <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
+            <label className="form-label">Cidade de destino *</label>
             <input
               className="form-input"
-              inputMode="tel"
-              placeholder="(11) 91234-5678"
-              value={clientWhatsapp}
-              onChange={(e) => setClientWhatsapp(formatWhatsapp(e.target.value))}
+              list="listaDestinos"
+              placeholder="Buscar cidade..."
+              value={destinoInput}
+              onChange={(e) => handleDestinoChange(e.target.value)}
+              onBlur={handleDestinoBlur}
+              onFocus={() => scheduleDestinoFetch(destinoInput)}
               required
             />
+            <datalist id="listaDestinos">
+              {destinoSuggestions.map((cidade) => {
+                const label = formatCidadeLabel(cidade);
+                return <option key={cidade.id} value={label} />;
+              })}
+            </datalist>
           </div>
-          <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
-            <label className="form-label">E-mail</label>
+          <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
+            <label className="form-label">Data de embarque</label>
             <input
               className="form-input"
-              type="email"
-              placeholder="Informe o e-mail"
-              value={clientEmail}
-              onChange={(e) => setClientEmail(e.target.value)}
+              type="date"
+              value={dataEmbarque}
+              onChange={(e) => setDataEmbarque(e.target.value)}
+            />
+          </div>
+          <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
+            <label className="form-label">Data final</label>
+            <input
+              className="form-input"
+              type="date"
+              value={dataFinal}
+              onChange={(e) => setDataFinal(e.target.value)}
             />
           </div>
         </div>

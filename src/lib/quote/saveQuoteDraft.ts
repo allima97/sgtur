@@ -178,10 +178,25 @@ export async function saveQuoteDraft(params: {
   clientName?: string | null;
   clientWhatsapp?: string | null;
   clientEmail?: string | null;
+  destinoCidadeId?: string | null;
+  dataEmbarque?: string | null;
+  dataFinal?: string | null;
   importResult?: ImportResult;
   debug?: boolean;
 }) {
-  const { draft, file, clientId, clientName, clientWhatsapp, clientEmail, importResult, debug } = params;
+  const {
+    draft,
+    file,
+    clientId,
+    clientName,
+    clientWhatsapp,
+    clientEmail,
+    destinoCidadeId,
+    dataEmbarque,
+    dataFinal,
+    importResult,
+    debug,
+  } = params;
   const {
     data: { user },
     error: authError,
@@ -210,6 +225,9 @@ export async function saveQuoteDraft(params: {
       client_name: clientName || null,
       client_whatsapp: clientWhatsapp || null,
       client_email: clientEmail || null,
+      destino_cidade_id: destinoCidadeId || null,
+      data_embarque: dataEmbarque || null,
+      data_final: dataFinal || null,
       status: "IMPORTED" as QuoteStatus,
       currency: draft.currency || "BRL",
       subtotal,
