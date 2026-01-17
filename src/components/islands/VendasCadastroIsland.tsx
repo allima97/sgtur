@@ -606,7 +606,15 @@ export default function VendasCadastroIsland() {
   function handleCidadeDestino(valor: string) {
     setBuscaDestino(valor);
     const cidadeAtual = cidades.find((c) => c.id === formVenda.destino_id);
-    if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
+    const valorNormalizado = normalizeText(valor);
+    const cidadeAtualNome = normalizeText(cidadeAtual?.nome || "");
+    const cidadeSelecionada = normalizeText(buscaCidadeSelecionada);
+    const valorMantemCidade =
+      (!!cidadeAtualNome &&
+        (valorNormalizado === cidadeAtualNome ||
+          valorNormalizado.startsWith(cidadeAtualNome))) ||
+      (!!cidadeSelecionada && valorNormalizado === cidadeSelecionada);
+    if (!cidadeAtual || !valorMantemCidade) {
       setFormVenda((prev) => ({ ...prev, destino_id: "" }));
     }
     setMostrarSugestoesCidade(true);
@@ -674,6 +682,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
   useEffect(() => {
     // Ao trocar a cidade, limpa buscas e produtos que não pertencem a ela
+    if (!formVenda.destino_id) return;
     setBuscaProduto("");
     setRecibos((prev) => {
       const atualizado = prev.map((r) => {
@@ -1278,6 +1287,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
                           setBuscaDestino(label);
+                          setBuscaCidadeSelecionada(label);
                           setMostrarSugestoesCidade(false);
                           setResultadosCidade([]);
                         }}
