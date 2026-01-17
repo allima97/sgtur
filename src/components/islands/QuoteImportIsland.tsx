@@ -1,15 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  extractCvcQuoteFromImage,
-  extractCvcQuoteFromPdf,
-  extractCvcQuoteFromText,
-} from "../../lib/quote/cvcPdfExtractor";
+import { extractCvcQuoteFromText } from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 
-type ImportMode = "pdf" | "image" | "text" | "circuit" | "circuit_products";
 type ClienteOption = { id: string; nome: string; cpf?: string | null };
 type TipoProdutoOption = { id: string; label: string };
 type CidadeOption = { id: string; nome: string };
@@ -98,78 +93,9 @@ function getCircuitMeta(item: QuoteItemDraft): CircuitMeta {
   return raw.circuito_meta || {};
 }
 
-function dedupeQuoteItems(items: QuoteItemDraft[]) {
-  const seen = new Map<string, QuoteItemDraft>();
-  items.forEach((item) => {
-    const keyParts = [
-      normalizeText(item.item_type),
-      normalizeText(item.product_name || ""),
-      normalizeText(item.city_name || ""),
-      item.start_date || "",
-      Number(item.total_amount || 0).toFixed(2),
-    ];
-    const key = keyParts.join("|");
-    if (!seen.has(key)) {
-      seen.set(key, item);
-    }
-  });
-  return Array.from(seen.values());
-}
-
-function combineImportResults(
-  circuitResult: ImportResult,
-  productResult: ImportResult
-): ImportResult {
-  const combinedItems = dedupeQuoteItems([
-    ...circuitResult.draft.items,
-    ...productResult.draft.items,
-  ]);
-  const total = combinedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
-  const averageConfidence =
-    combinedItems.length === 0
-      ? 0
-      : combinedItems.reduce((sum, item) => sum + Number(item.confidence || 0), 0) /
-        combinedItems.length;
-  const extractedAt = new Date().toISOString();
-  const draft: QuoteDraft = {
-    source: "CVC_TEXT",
-    status: "IMPORTED",
-    currency: circuitResult.draft.currency || productResult.draft.currency || "BRL",
-    total,
-    average_confidence: averageConfidence,
-    items: combinedItems,
-    meta: {
-      file_name: "orcamento-circuito-produtos",
-      page_count: 2,
-      extracted_at: extractedAt,
-    },
-    raw_json: {
-      source: "CVC_TEXT",
-      combined_at: extractedAt,
-      circuit: circuitResult.draft.raw_json,
-      products: productResult.draft.raw_json,
-    },
-  };
-  const logs = [
-    ...circuitResult.logs,
-    ...productResult.logs,
-    {
-      level: "INFO" as const,
-      message: `Circuito + produtos importados (${combinedItems.length} itens).`,
-    },
-  ];
-  return {
-    draft,
-    logs,
-    debug_images: [...circuitResult.debug_images, ...productResult.debug_images],
-  };
-}
-
 export default function QuoteImportIsland() {
-  const [importMode, setImportMode] = useState<ImportMode>("pdf");
   const [file, setFile] = useState<File | null>(null);
   const [textInput, setTextInput] = useState("");
-  const [circuitText, setCircuitText] = useState("");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -316,25 +242,6 @@ export default function QuoteImportIsland() {
     clienteFetchTimeout.current = setTimeout(() => loadClienteSuggestions(term), 250);
   }
 
-  useEffect(() => {
-    setDraft(null);
-    setImportResult(null);
-    setStatus(null);
-    setError(null);
-    setSuccessId(null);
-    setExtracting(false);
-    setSaving(false);
-    if (!["text", "circuit_products"].includes(importMode)) {
-      setTextInput("");
-    }
-    if (!["circuit", "circuit_products"].includes(importMode)) {
-      setCircuitText("");
-    }
-    if (["text", "circuit", "circuit_products"].includes(importMode)) {
-      setFile(null);
-    }
-  }, [importMode]);
-
   async function loadCidadeSuggestions(rowKey: string, term: string) {
     const search = term.trim();
     const limit = 25;
@@ -457,19 +364,7 @@ export default function QuoteImportIsland() {
     [clientes, clienteId]
   );
 
-  const canConfirm = useMemo(() => {
-    if (!draft?.items?.length) return false;
-    return draft.items.every(validateItem);
-  }, [draft]);
-
-  const canExtractInput =
-    importMode === "text"
-      ? Boolean(textInput.trim())
-      : importMode === "circuit"
-      ? Boolean(circuitText.trim())
-      : importMode === "circuit_products"
-      ? Boolean(textInput.trim() && circuitText.trim())
-      : Boolean(file);
+  const canExtractInput = Boolean(textInput.trim());
 
   function updateDraftItems(items: QuoteItemDraft[]) {
     if (!draft) return;
@@ -529,78 +424,24 @@ export default function QuoteImportIsland() {
     setExtracting(true);
     setError(null);
     setSuccessId(null);
-    setStatus("Iniciando OCR...");
+    setStatus("Iniciando importacao...");
     try {
       let result: ImportResult | null = null;
-      if (importMode === "text") {
-        const rawText = textInput.trim();
-        if (!rawText) {
-          setError("Cole o texto do orçamento para importar.");
-          setExtracting(false);
-          return;
-        }
-        const textFile = new File([rawText], `orcamento-texto-${Date.now()}.txt`, {
-          type: "text/plain",
-        });
-        setFile(textFile);
-        setStatus("Processando texto...");
-        result = await extractCvcQuoteFromText(rawText, {
-          debug,
-          onProgress: (message) => setStatus(message),
-        });
-      } else if (importMode === "circuit") {
-        const rawText = circuitText.trim();
-        if (!rawText) {
-          setError("Cole o texto do circuito para importar.");
-          setExtracting(false);
-          return;
-        }
-        const textFile = new File([rawText], `orcamento-circuito-${Date.now()}.txt`, {
-          type: "text/plain",
-        });
-        setFile(textFile);
-        setStatus("Processando circuito...");
-        result = await extractCvcQuoteFromText(rawText, {
-          debug,
-          onProgress: (message) => setStatus(message),
-        });
-      } else if (importMode === "circuit_products") {
-        const circuitValue = circuitText.trim();
-        const productValue = textInput.trim();
-        if (!circuitValue || !productValue) {
-          setError("Cole o texto do circuito e dos produtos para importar.");
-          setExtracting(false);
-          return;
-        }
-        setStatus("Processando circuito...");
-        const circuitResult = await extractCvcQuoteFromText(circuitValue, {
-          debug,
-          onProgress: (message) => setStatus(`Circuito: ${message}`),
-        });
-        setStatus("Processando produtos...");
-        const productResult = await extractCvcQuoteFromText(productValue, {
-          debug,
-          onProgress: (message) => setStatus(`Produtos: ${message}`),
-        });
-        result = combineImportResults(circuitResult, productResult);
-        const combinedText = `${circuitValue}\n\n${productValue}`;
-        const combinedFile = new File(
-          [combinedText],
-          `orcamento-circuito-produtos-${Date.now()}.txt`,
-          { type: "text/plain" }
-        );
-        setFile(combinedFile);
-      } else {
-        if (!file) {
-          setError(importMode === "image" ? "Selecione uma imagem para importar." : "Selecione um PDF para importar.");
-          setExtracting(false);
-          return;
-        }
-        result =
-          importMode === "image"
-            ? await extractCvcQuoteFromImage(file, { debug, onProgress: (message) => setStatus(message) })
-            : await extractCvcQuoteFromPdf(file, { debug, onProgress: (message) => setStatus(message) });
+      const rawText = textInput.trim();
+      if (!rawText) {
+        setError("Cole o texto do orçamento para importar.");
+        setExtracting(false);
+        return;
       }
+      const textFile = new File([rawText], `orcamento-texto-${Date.now()}.txt`, {
+        type: "text/plain",
+      });
+      setFile(textFile);
+      setStatus("Processando texto...");
+      result = await extractCvcQuoteFromText(rawText, {
+        debug,
+        onProgress: (message) => setStatus(message),
+      });
 
       if (!result) {
         setError("Falha ao extrair itens.");
@@ -723,7 +564,7 @@ export default function QuoteImportIsland() {
       <div className="card-base" style={{ marginBottom: 16 }}>
         <h2 className="page-title">Importacao de orcamentos (CVC)</h2>
         <p className="page-subtitle">
-          Escolha PDF, imagem ou texto. Revise e confirme para salvar.
+          Cole o texto do orcamento. Revise e confirme para salvar.
         </p>
         <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
@@ -756,132 +597,16 @@ export default function QuoteImportIsland() {
           </div>
         </div>
         <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Tipo de importacao</label>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "pdf"}
-                  onChange={() => setImportMode("pdf")}
-                />
-                PDF
-              </label>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "image"}
-                  onChange={() => setImportMode("image")}
-                />
-                Imagem
-              </label>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "text"}
-                  onChange={() => setImportMode("text")}
-                />
-                Texto
-              </label>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "circuit"}
-                  onChange={() => setImportMode("circuit")}
-                />
-                Circuito
-              </label>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="importMode"
-                  checked={importMode === "circuit_products"}
-                  onChange={() => setImportMode("circuit_products")}
-                />
-                Circuito + Produtos
-              </label>
-            </div>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label className="form-label">Texto do orcamento</label>
+            <textarea
+              className="form-input"
+              rows={8}
+              placeholder="Cole aqui o texto do orcamento"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+            />
           </div>
-        </div>
-        <div className="form-row" style={{ marginTop: 12 }}>
-          {["text", "circuit", "circuit_products"].includes(importMode) ? (
-            <div
-              className="form-group"
-              style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}
-            >
-              {importMode === "circuit_products" ? (
-                <>
-                  <div>
-                    <label className="form-label">Texto do circuito</label>
-                    <textarea
-                      className="form-input"
-                      rows={6}
-                      placeholder="Cole aqui o texto do circuito (dia a dia + resumo)."
-                      value={circuitText}
-                      onChange={(e) => setCircuitText(e.target.value)}
-                    />
-                    <small style={{ color: "#475569" }}>
-                      Informe o trecho que descreve o circuito com dias, cidades e o valor total.
-                    </small>
-                  </div>
-                  <div>
-                    <label className="form-label">Texto dos produtos</label>
-                    <textarea
-                      className="form-input"
-                      rows={6}
-                      placeholder="Cole aqui o texto com os produtos adicionais (Seguro, Aéreo, Serviços, etc.)."
-                      value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
-                    />
-                    <small style={{ color: "#475569" }}>
-                      Utilize o parser de texto para trazer Seguro Viagem, Aéreo e outros itens.
-                    </small>
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <label className="form-label">
-                    Texto do {importMode === "circuit" ? "circuito" : "orçamento"}
-                  </label>
-                  <textarea
-                    className="form-input"
-                    rows={8}
-                    placeholder={
-                      importMode === "circuit"
-                        ? "Cole aqui o texto completo do circuito (com os dias detalhados)."
-                        : "Cole aqui o texto do orçamento"
-                    }
-                    value={importMode === "circuit" ? circuitText : textInput}
-                    onChange={(e) =>
-                      importMode === "circuit" ? setCircuitText(e.target.value) : setTextInput(e.target.value)
-                    }
-                  />
-                  {importMode === "circuit" && (
-                    <small style={{ color: "#475569" }}>
-                      O circuito será importado com o dia a dia e o valor total. Outros elementos (Aéreo,
-                      Seguro Viagem ou Serviços) aproveitam o parser de texto.
-                    </small>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="form-group">
-              <label className="form-label">
-                {importMode === "image" ? "Arquivo de imagem" : "Arquivo PDF"}
-              </label>
-              <input
-                type="file"
-                accept={importMode === "image" ? "image/*" : "application/pdf"}
-                className="form-input"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </div>
-          )}
           <div className="form-group" style={{ alignSelf: "flex-end" }}>
             <button
               type="button"
@@ -1277,11 +1002,6 @@ export default function QuoteImportIsland() {
             >
               {saving ? "Salvando..." : "Confirmar e salvar"}
             </button>
-            <div style={{ fontSize: 13 }}>
-              {canConfirm
-                ? "Valido para CONFIRMED."
-                : "Alguns itens precisam de ajuste; status ficara IMPORTED."}
-            </div>
           </div>
 
           {successId && (

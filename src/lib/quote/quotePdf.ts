@@ -42,6 +42,7 @@ export type QuotePdfData = {
 type ExportOptions = {
   showItemValues: boolean;
   showSummary: boolean;
+  discount?: number;
 };
 
 const DEFAULT_FOOTER = [
@@ -240,11 +241,14 @@ export async function exportQuoteToPdf(params: {
   );
   const subtotal = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
   const taxesTotal = orderedItems.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
-  const total = subtotal;
+  const discountValue = Number(options.discount || 0);
+  const discount = Number.isFinite(discountValue) ? Math.max(discountValue, 0) : 0;
+  const total = Math.max(subtotal - discount, 0);
   const valorSemTaxas = Math.max(subtotal - taxesTotal, 0);
   const itemsCount = orderedItems.length;
   const createdAt = quote.created_at ? new Date(quote.created_at) : new Date();
   const dateLabel = createdAt.toLocaleDateString("pt-BR");
+  const hasDiscount = discount > 0;
 
   let logoData: { dataUrl: string; format: string } | null = null;
   if (settings.logo_url) {
@@ -312,7 +316,7 @@ export async function exportQuoteToPdf(params: {
     doc.text(dateLabel, margin, lineY + 44);
 
     const boxW = 190;
-    const boxH = 70;
+    const boxH = hasDiscount ? 90 : 70;
     const boxX = pageWidth - margin - boxW;
     const boxY = lineY + 6;
     doc.setDrawColor(150);
@@ -331,10 +335,15 @@ export async function exportQuoteToPdf(params: {
     });
     doc.text("Taxas e impostos", labelX, boxY + 34);
     doc.text(`R$ ${formatCurrency(taxesTotal)}`, valueX, boxY + 34, { align: "right" });
+    if (hasDiscount) {
+      doc.text("Desconto", labelX, boxY + 50);
+      doc.text(`R$ ${formatCurrency(-discount)}`, valueX, boxY + 50, { align: "right" });
+    }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text("Total de", labelX, boxY + 56);
-    doc.text(`R$ ${formatCurrency(total)}`, valueX, boxY + 56, { align: "right" });
+    const totalLineY = hasDiscount ? boxY + 72 : boxY + 56;
+    doc.text("Total de", labelX, totalLineY);
+    doc.text(`R$ ${formatCurrency(total)}`, valueX, totalLineY, { align: "right" });
   }
 
   function drawFooter() {
@@ -616,6 +625,9 @@ export async function exportQuoteToPdf(params: {
     }, {});
     const rows = Object.entries(totalsByType);
     rows.push(["Taxas e impostos", taxesTotal]);
+    if (hasDiscount) {
+      rows.push(["Desconto", -discount]);
+    }
     rows.push(["Total", total]);
 
     const boxX = margin;

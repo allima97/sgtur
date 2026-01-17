@@ -16,6 +16,7 @@ type ExportArgs = {
   quoteId: string;
   showItemValues?: boolean;
   showSummary?: boolean;
+  discount?: number;
 };
 
 function formatQuotePdfItems(items: QuoteItemRecord[]): QuotePdfItem[] {
@@ -62,7 +63,7 @@ async function fetchQuoteItems(quoteId: string) {
 }
 
 export async function exportQuotePdfById(args: ExportArgs) {
-  const { quoteId, showItemValues = true, showSummary } = args;
+  const { quoteId, showItemValues = true, showSummary, discount } = args;
   const { data: auth } = await supabaseBrowser.auth.getUser();
   const userId = auth?.user?.id;
   if (!userId) {
@@ -107,6 +108,7 @@ export async function exportQuotePdfById(args: ExportArgs) {
     options: {
       showItemValues,
       showSummary: showSummary ?? showItemValues,
+      discount,
     },
   });
 }

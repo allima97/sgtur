@@ -145,6 +145,7 @@ export default function QuoteDetailIsland(props: {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [exportDiscount, setExportDiscount] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const subtotalAtual = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
@@ -155,6 +156,7 @@ export default function QuoteDetailIsland(props: {
     [items]
   );
   const totalAtual = useMemo(() => subtotalAtual, [subtotalAtual]);
+  const descontoAtual = useMemo(() => normalizeNumber(exportDiscount), [exportDiscount]);
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
   const [cidadeSuggestions, setCidadeSuggestions] = useState<
     Record<string, { id: string; nome: string }[]>
@@ -606,6 +608,7 @@ export default function QuoteDetailIsland(props: {
           quoteId: props.quote.id,
           showItemValues,
           showSummary: showItemValues && showSummary,
+          discount: descontoAtual,
         });
       } catch (err: any) {
         setExportError(err?.message || "Erro ao exportar PDF.");
@@ -613,7 +616,7 @@ export default function QuoteDetailIsland(props: {
         setExporting(false);
       }
     },
-    [props.quote.id, showSummary]
+    [props.quote.id, showSummary, descontoAtual]
   );
 
   const autoExportRef = useRef(false);
@@ -686,6 +689,18 @@ export default function QuoteDetailIsland(props: {
             />
             Mostrar resumo de servicos
           </label>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label className="form-label" style={{ marginBottom: 0 }}>
+              Desconto
+            </label>
+            <input
+              className="form-input"
+              value={exportDiscount}
+              onChange={(e) => setExportDiscount(e.target.value)}
+              placeholder="0,00"
+              style={{ width: 120 }}
+            />
+          </div>
         </div>
         {exportError && <div style={{ marginTop: 8, color: "#b91c1c" }}>{exportError}</div>}
       </div>
