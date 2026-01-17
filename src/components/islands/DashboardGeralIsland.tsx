@@ -108,6 +108,15 @@ type Viagem = {
   } | null;
 };
 
+type FollowUpVenda = {
+  id: string;
+  data_embarque: string | null;
+  data_final: string | null;
+  vendedor_id: string | null;
+  clientes?: { id: string; nome: string | null } | null;
+  destino_cidade?: { id: string; nome: string | null } | null;
+};
+
 type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
 
 type WidgetId =
@@ -117,7 +126,8 @@ type WidgetId =
   | "timeline"
   | "orcamentos"
   | "viagens"
-  | "aniversariantes";
+  | "aniversariantes"
+  | "follow_up";
 
 type KpiId = string;
 
@@ -131,6 +141,7 @@ const ALL_WIDGETS: { id: WidgetId; titulo: string }[] = [
   { id: "orcamentos", titulo: "Orçamentos recentes" },
   { id: "viagens", titulo: "Próximas viagens" },
   { id: "aniversariantes", titulo: "Aniversariantes" },
+  { id: "follow_up", titulo: "Follow-Up" },
 ];
 
 const BASE_KPIS: { id: KpiId; titulo: string }[] = [
@@ -228,6 +239,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [metas, setMetas] = useState<MetaVendedor[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [viagens, setViagens] = useState<Viagem[]>([]);
+  const [followUps, setFollowUps] = useState<FollowUpVenda[]>([]);
   const [kpiProdutos, setKpiProdutos] = useState<{ id: KpiId; titulo: string; produtoId: string }[]>([]);
   const [loadingDados, setLoadingDados] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -571,6 +583,48 @@ const DashboardGeralIsland: React.FC = () => {
 
         if (vendasErr) throw vendasErr;
 
+        // ----- FOLLOW-UP (retornos) -----
+        const hoje = new Date();
+        const ontem = new Date(hoje);
+        ontem.setDate(hoje.getDate() - 1);
+        const ontemIso = ontem.toISOString().slice(0, 10);
+        const fimFollowUp = fim && fim < ontemIso ? fim : ontemIso;
+        let followUpData: FollowUpVenda[] = [];
+
+        if (fimFollowUp >= inicio) {
+          try {
+            let followUpQuery = supabase
+              .from("vendas")
+              .select(
+                `
+                id,
+                data_embarque,
+                data_final,
+                vendedor_id,
+                clientes:clientes (id, nome),
+                destino_cidade:cidades!destino_cidade_id (id, nome)
+              `
+              )
+              .not("data_final", "is", null)
+              .gte("data_final", inicio)
+              .lte("data_final", fimFollowUp)
+              .eq("cancelada", false)
+              .order("data_final", { ascending: false })
+              .limit(20);
+
+            if (userCtx.vendedorIds.length > 0) {
+              followUpQuery = followUpQuery.in("vendedor_id", userCtx.vendedorIds);
+            }
+
+            const { data: followUpResp, error: followUpErr } = await followUpQuery;
+            if (followUpErr) throw followUpErr;
+            followUpData = (followUpResp || []) as FollowUpVenda[];
+          } catch (followErr) {
+            console.warn("Não foi possível carregar follow-up no dashboard:", followErr);
+            followUpData = [];
+          }
+        }
+
         // ----- ORCAMENTOS -----
         let orcamentosQuery = supabase
           .from("quote")
@@ -672,6 +726,7 @@ const DashboardGeralIsland: React.FC = () => {
         setOrcamentos((orcData || []) as Orcamento[]);
         setMetas((metasData || []) as MetaVendedor[]);
         setClientes((clientesData || []) as Cliente[]);
+        setFollowUps(followUpData);
 
         // ----- WIDGETS (preferências) -----
         try {
@@ -1061,6 +1116,16 @@ const DashboardGeralIsland: React.FC = () => {
 
     return resultado;
   }, [viagens]);
+
+  const followUpsRecentes = useMemo(() => {
+    const ordenado = [...followUps].sort((a, b) => {
+      const da = a.data_final || "";
+      const db = b.data_final || "";
+      if (da === db) return 0;
+      return da < db ? 1 : -1;
+    });
+    return ordenado.slice(0, 10);
+  }, [followUps]);
 
   const renderPieLegendList = (data: { name: string; value: number }[]) => {
     if (!data.length) return null;
@@ -1611,6 +1676,45 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
+      case "follow_up":
+        return (
+          <div className="card-base card-purple mb-3">
+            <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
+            <div className="table-container overflow-x-auto">
+              <table className="table-default min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Destino</th>
+                    <th>Embarque</th>
+                    <th>Retorno</th>
+                    <th>Ver</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {followUpsRecentes.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>Nenhum retorno no período.</td>
+                    </tr>
+                  )}
+                  {followUpsRecentes.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.clientes?.nome || "-"}</td>
+                      <td>{item.destino_cidade?.nome || "-"}</td>
+                      <td>{formatarDataParaExibicao(item.data_embarque || "")}</td>
+                      <td>{formatarDataParaExibicao(item.data_final || "")}</td>
+                      <td>
+                        <a className="btn btn-light" href={`/vendas/cadastro?id=${item.id}`}>
+                          Abrir
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -1746,7 +1850,7 @@ const DashboardGeralIsland: React.FC = () => {
         }}
       >
         {widgetOrder
-          .filter((id) => ["orcamentos", "viagens", "aniversariantes"].includes(id) && widgetAtivo(id as WidgetId))
+          .filter((id) => ["orcamentos", "viagens", "aniversariantes", "follow_up"].includes(id) && widgetAtivo(id as WidgetId))
           .map((id) => (
             <div key={id}>{renderWidget(id as WidgetId)}</div>
           ))}

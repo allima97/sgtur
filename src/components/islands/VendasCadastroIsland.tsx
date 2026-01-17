@@ -100,6 +100,28 @@ function dataParaInput(value?: string | Date | null) {
   return value.toISOString().split("T")[0];
 }
 
+function parseDateInput(value?: string | null) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map((part) => Number(part));
+  if (!year || !month || !day) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function addDaysToInput(value: string, days: number) {
+  const date = parseDateInput(value);
+  if (!date) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split("T")[0];
+}
+
+function isEndAfterStart(start: string, end: string) {
+  const startDate = parseDateInput(start);
+  const endDate = parseDateInput(end);
+  if (!startDate || !endDate) return true;
+  return endDate.getTime() > startDate.getTime();
+}
+
 function calcularStatusPeriodo(inicio?: string | null, fim?: string | null) {
   if (!inicio) return "planejada";
   const hoje = new Date();
@@ -633,7 +655,14 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   function updateRecibo(index: number, campo: string, valor: string) {
     setRecibos((prev) => {
       const novo = [...prev];
-      (novo[index] as any)[campo] = valor;
+      const atualizado = { ...(novo[index] as any), [campo]: valor };
+      if (campo === "data_inicio") {
+        const minFim = addDaysToInput(valor, 1);
+        if (atualizado.data_fim && minFim && atualizado.data_fim < minFim) {
+          atualizado.data_fim = minFim;
+        }
+      }
+      novo[index] = atualizado;
       return novo;
     });
   }
@@ -720,6 +749,21 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       setErro("Uma venda precisa ter ao menos 1 recibo.");
       showToast("Inclua ao menos um recibo na venda.", "error");
       return;
+    }
+
+    if (formVenda.data_embarque && formVenda.data_final && !isEndAfterStart(formVenda.data_embarque, formVenda.data_final)) {
+      setErro("A data final deve ser ao menos um dia após a data de embarque.");
+      showToast("A data final deve ser ao menos um dia após a data de embarque.", "error");
+      return;
+    }
+    for (let i = 0; i < recibos.length; i += 1) {
+      const recibo = recibos[i];
+      if (recibo.data_inicio && recibo.data_fim && !isEndAfterStart(recibo.data_inicio, recibo.data_fim)) {
+        const msg = `Recibo ${i + 1}: a data fim deve ser ao menos um dia após a data início.`;
+        setErro(msg);
+        showToast(msg, "error");
+        return;
+      }
     }
 
     try {
@@ -1255,9 +1299,18 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 type="date"
                 value={formVenda.data_embarque}
                 onChange={(e) =>
-                  setFormVenda({
-                    ...formVenda,
-                    data_embarque: e.target.value,
+                  setFormVenda((prev) => {
+                    const proximaData = e.target.value;
+                    const minDataFinal = proximaData ? addDaysToInput(proximaData, 1) : "";
+                    const dataFinalAtualizada =
+                      prev.data_final && minDataFinal && prev.data_final < minDataFinal
+                        ? minDataFinal
+                        : prev.data_final;
+                    return {
+                      ...prev,
+                      data_embarque: proximaData,
+                      data_final: dataFinalAtualizada,
+                    };
                   })
                 }
               />
@@ -1268,6 +1321,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 className="form-input"
                 type="date"
                 value={formVenda.data_final}
+                min={formVenda.data_embarque ? addDaysToInput(formVenda.data_embarque, 1) : undefined}
                 onChange={(e) =>
                   setFormVenda({
                     ...formVenda,
@@ -1378,6 +1432,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       className="form-input"
                       type="date"
                       value={r.data_fim}
+                      min={r.data_inicio ? addDaysToInput(r.data_inicio, 1) : undefined}
                       onChange={(e) => updateRecibo(i, "data_fim", e.target.value)}
                       required
                     />
