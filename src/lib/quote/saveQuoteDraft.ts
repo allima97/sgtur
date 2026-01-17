@@ -175,10 +175,13 @@ export async function saveQuoteDraft(params: {
   draft: QuoteDraft;
   file: File;
   clientId?: string;
+  clientName?: string | null;
+  clientWhatsapp?: string | null;
+  clientEmail?: string | null;
   importResult?: ImportResult;
   debug?: boolean;
 }) {
-  const { draft, file, clientId, importResult, debug } = params;
+  const { draft, file, clientId, clientName, clientWhatsapp, clientEmail, importResult, debug } = params;
   const {
     data: { user },
     error: authError,
@@ -204,6 +207,9 @@ export async function saveQuoteDraft(params: {
     const quotePayload = {
       created_by: user.id,
       client_id: clientId || null,
+      client_name: clientName || null,
+      client_whatsapp: clientWhatsapp || null,
+      client_email: clientEmail || null,
       status: "IMPORTED" as QuoteStatus,
       currency: draft.currency || "BRL",
       subtotal,

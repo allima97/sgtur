@@ -592,6 +592,9 @@ export default function QuoteDetailIsland(props: {
       setStatus(nextStatus);
       setSuccess("Atualizado com sucesso.");
       setIsEditing(false);
+      if (typeof window !== "undefined") {
+        window.location.href = "/orcamentos/consulta";
+      }
     } catch (err: any) {
       setError(err?.message || "Erro ao salvar.");
     } finally {

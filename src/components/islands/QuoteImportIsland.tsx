@@ -1,20 +1,56 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { extractCvcQuoteFromText } from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 
-type ClienteOption = { id: string; nome: string; cpf?: string | null };
 type TipoProdutoOption = { id: string; label: string };
-type CidadeOption = { id: string; nome: string };
+type CidadeOption = {
+  id: string;
+  nome: string;
+  subdivisao_nome?: string | null;
+  pais_nome?: string | null;
+};
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function normalizePhone(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function formatWhatsapp(value: string) {
+  const digits = normalizePhone(value).slice(0, 11);
+  if (!digits) return "";
+  const ddd = digits.slice(0, 2);
+  const number = digits.slice(2);
+  if (digits.length <= 2) return `(${ddd}`;
+  if (number.length <= 4) return `(${ddd}) ${number}`;
+  if (number.length <= 8) {
+    return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
+  }
+  return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5, 9)}`;
+}
+
 function normalizeCityName(value: string) {
   return normalizeText(value || "").trim();
+}
+
+function formatCidadeLabel(cidade: CidadeOption) {
+  const nome = (cidade.nome || "").trim();
+  const subdivisao = (cidade.subdivisao_nome || "").trim();
+  const pais = (cidade.pais_nome || "").trim();
+  let detalhe = "";
+  if (subdivisao && normalizeCityName(subdivisao) !== normalizeCityName(nome)) {
+    detalhe = subdivisao;
+  } else if (pais) {
+    detalhe = pais;
+  } else if (subdivisao) {
+    detalhe = subdivisao;
+  }
+  return detalhe ? `${nome} (${detalhe})` : nome;
 }
 
 function isSeguroItem(item: QuoteItemDraft) {
@@ -45,10 +81,6 @@ function normalizeImportedItemText(item: QuoteItemDraft) {
     product_name: product || item.product_name,
     city_name: city || item.city_name,
   };
-}
-
-function normalizeCpf(value: string) {
-  return (value || "").replace(/\D/g, "");
 }
 
 function normalizeNumber(value: string) {
@@ -104,13 +136,9 @@ export default function QuoteImportIsland() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [debug, setDebug] = useState(false);
-  const [clientes, setClientes] = useState<ClienteOption[]>([]);
-  const [clientesErro, setClientesErro] = useState<string | null>(null);
-  const [clienteBusca, setClienteBusca] = useState("");
-  const [clienteId, setClienteId] = useState<string>("");
-  const [carregandoClientes, setCarregandoClientes] = useState(false);
-  const [clienteSuggestions, setClienteSuggestions] = useState<ClienteOption[]>([]);
-  const clienteFetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [clientName, setClientName] = useState("");
+  const [clientWhatsapp, setClientWhatsapp] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
   const [cidadeSuggestions, setCidadeSuggestions] = useState<Record<string, CidadeOption[]>>({});
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
@@ -123,9 +151,6 @@ export default function QuoteImportIsland() {
     return () => {
       isMountedRef.current = false;
       Object.values(cidadeFetchTimeouts.current).forEach((timeout) => clearTimeout(timeout));
-      if (clienteFetchTimeout.current) {
-        clearTimeout(clienteFetchTimeout.current);
-      }
     };
   }, []);
 
@@ -169,79 +194,6 @@ export default function QuoteImportIsland() {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    async function carregarClientes() {
-      setCarregandoClientes(true);
-      try {
-        const { data, error } = await supabaseBrowser
-          .from("clientes")
-          .select("id, nome, cpf")
-          .order("nome", { ascending: true })
-          .limit(500);
-        if (error) throw error;
-        if (!active) return;
-        const lista = (data || []) as ClienteOption[];
-        setClientes(lista);
-        setClienteSuggestions(lista.slice(0, 200));
-        setClientesErro(null);
-      } catch (err) {
-        console.error("Erro ao carregar clientes:", err);
-        if (!active) return;
-        setClientesErro("Nao foi possivel carregar os clientes.");
-      } finally {
-        if (active) setCarregandoClientes(false);
-      }
-    }
-    carregarClientes();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  function mergeClientes(base: ClienteOption[], extras: ClienteOption[]) {
-    const map = new Map<string, ClienteOption>();
-    base.forEach((c) => map.set(c.id, c));
-    extras.forEach((c) => map.set(c.id, c));
-    return Array.from(map.values());
-  }
-
-  async function loadClienteSuggestions(term: string) {
-    const search = term.trim();
-    if (!search) {
-      setClienteSuggestions(clientes.slice(0, 200));
-      return;
-    }
-    try {
-      const { data, error } = await supabaseBrowser
-        .from("clientes")
-        .select("id, nome, cpf")
-        .or(`nome.ilike.%${search}%,cpf.ilike.%${search}%`)
-        .order("nome", { ascending: true })
-        .limit(200);
-      if (!isMountedRef.current) return;
-      if (error) {
-        console.warn("[QuoteImport] Falha ao buscar clientes", error);
-        return;
-      }
-      const lista = (data || []) as ClienteOption[];
-      setClienteSuggestions(lista);
-      if (lista.length) {
-        setClientes((prev) => mergeClientes(prev, lista));
-      }
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      console.warn("[QuoteImport] Erro ao buscar clientes", err);
-    }
-  }
-
-  function scheduleClienteFetch(term: string) {
-    if (clienteFetchTimeout.current) {
-      clearTimeout(clienteFetchTimeout.current);
-    }
-    clienteFetchTimeout.current = setTimeout(() => loadClienteSuggestions(term), 250);
-  }
-
   async function loadCidadeSuggestions(rowKey: string, term: string) {
     const search = term.trim();
     const limit = 25;
@@ -262,7 +214,7 @@ export default function QuoteImportIsland() {
       try {
         const { data, error } = await supabaseBrowser
           .from("cidades")
-          .select("id, nome")
+          .select("id, nome, subdivisao_nome, pais_nome")
           .ilike("nome", pattern)
           .order("nome", { ascending: true })
           .limit(limit);
@@ -288,7 +240,7 @@ export default function QuoteImportIsland() {
         const next = { ...prev };
         cidades.forEach((cidade) => {
           if (cidade.id && cidade.nome) {
-            next[cidade.id] = cidade.nome;
+            next[cidade.id] = formatCidadeLabel(cidade);
           }
         });
         return next;
@@ -297,10 +249,10 @@ export default function QuoteImportIsland() {
         const next = { ...prev };
         cidades.forEach((cidade) => {
           if (cidade.id && cidade.nome) {
-            const normalized = normalizeCityName(cidade.nome);
-            if (!next[normalized]) {
-              next[normalized] = cidade.id;
-            }
+            const nomeKey = normalizeCityName(cidade.nome);
+            const labelKey = normalizeCityName(formatCidadeLabel(cidade));
+            if (nomeKey && !next[nomeKey]) next[nomeKey] = cidade.id;
+            if (labelKey && !next[labelKey]) next[labelKey] = cidade.id;
           }
         });
         return next;
@@ -331,12 +283,17 @@ export default function QuoteImportIsland() {
     if (!draft) return;
     const normalized = normalizeCityName(value);
     const matchedId = cidadeNameMap[normalized];
-    const matchedCidade =
-      cidadeSuggestions[rowKey]?.find((cidade) => normalizeCityName(cidade.nome) === normalized) ||
-      Object.entries(cidadeCache)
-        .map(([id, nome]) => ({ id, nome }))
-        .find((cidade) => normalizeCityName(cidade.nome) === normalized);
-    const displayValue = matchedCidade?.nome || value;
+    const matchedCidade = cidadeSuggestions[rowKey]?.find((cidade) => {
+      const label = formatCidadeLabel(cidade);
+      return (
+        normalizeCityName(label) === normalized ||
+        normalizeCityName(cidade.nome) === normalized
+      );
+    });
+    const displayValue =
+      (matchedCidade ? formatCidadeLabel(matchedCidade) : "") ||
+      (matchedId ? cidadeCache[matchedId] : "") ||
+      value;
     setCidadeInputValues((prev) => ({
       ...prev,
       [rowKey]: displayValue,
@@ -346,23 +303,6 @@ export default function QuoteImportIsland() {
       scheduleCidadeFetch(rowKey, value);
     }
   }
-
-  const clientesFiltrados = useMemo(() => {
-    if (clienteSuggestions.length) return clienteSuggestions;
-    if (!clienteBusca.trim()) return clientes;
-    const termo = normalizeText(clienteBusca);
-    const cpfTermo = normalizeCpf(clienteBusca);
-    return clientes.filter((c) => {
-      if (normalizeText(c.nome).includes(termo)) return true;
-      if (cpfTermo && normalizeCpf(c.cpf || "").includes(cpfTermo)) return true;
-      return false;
-    });
-  }, [clientes, clienteBusca, clienteSuggestions]);
-
-  const clienteSelecionado = useMemo(
-    () => clientes.find((c) => c.id === clienteId) || null,
-    [clientes, clienteId]
-  );
 
   const canExtractInput = Boolean(textInput.trim());
 
@@ -387,37 +327,6 @@ export default function QuoteImportIsland() {
       total,
       average_confidence: avgConf,
     });
-  }
-
-  function handleClienteChange(value: string) {
-    setClienteBusca(value);
-    const texto = normalizeText(value);
-    const cpfTexto = normalizeCpf(value);
-    const catalogo = clienteSuggestions.length ? clienteSuggestions : clientes;
-    const achado = catalogo.find((c) => {
-      const cpf = normalizeCpf(c.cpf || "");
-      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
-    });
-    scheduleClienteFetch(value);
-    if (achado) {
-      setClienteId(achado.id);
-      return;
-    }
-    if (clienteId) setClienteId("");
-  }
-
-  function handleClienteBlur() {
-    if (!clienteBusca.trim()) return;
-    const texto = normalizeText(clienteBusca);
-    const cpfTexto = normalizeCpf(clienteBusca);
-    const achado = clientesFiltrados.find((c) => {
-      const cpf = normalizeCpf(c.cpf || "");
-      return normalizeText(c.nome) === texto || (cpfTexto && cpf === cpfTexto);
-    });
-    if (achado) {
-      setClienteId(achado.id);
-      setClienteBusca("");
-    }
   }
 
   async function handleExtract() {
@@ -471,13 +380,14 @@ export default function QuoteImportIsland() {
 
   async function handleSave() {
     if (!draft || !file) return;
-    const resolvedClientId =
-      clienteId ||
-      clientes.find((c) => normalizeText(c.nome) === normalizeText(clienteBusca))?.id ||
-      clientes.find((c) => normalizeCpf(c.cpf || "") === normalizeCpf(clienteBusca))?.id ||
-      "";
-    if (!resolvedClientId) {
-      setError("Selecione um cliente antes de salvar.");
+    const nome = clientName.trim();
+    const whatsappDigits = normalizePhone(clientWhatsapp);
+    if (!nome) {
+      setError("Informe o nome do cliente antes de salvar.");
+      return;
+    }
+    if (whatsappDigits.length < 10) {
+      setError("Informe um WhatsApp valido antes de salvar.");
       return;
     }
     setSaving(true);
@@ -487,7 +397,9 @@ export default function QuoteImportIsland() {
       const result = await saveQuoteDraft({
         draft,
         file,
-        clientId: resolvedClientId,
+        clientName: nome,
+        clientWhatsapp: clientWhatsapp.trim(),
+        clientEmail: clientEmail.trim() || null,
         importResult: importResult || undefined,
         debug,
       });
@@ -567,33 +479,36 @@ export default function QuoteImportIsland() {
           Cole o texto do orcamento. Revise e confirme para salvar.
         </p>
         <div className="form-row" style={{ marginTop: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Cliente *</label>
+          <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
+            <label className="form-label">Nome do cliente *</label>
             <input
               className="form-input"
-              list="listaClientes"
-              placeholder="Buscar cliente..."
-              value={clienteSelecionado?.nome || clienteBusca}
-              onChange={(e) => handleClienteChange(e.target.value)}
-              onBlur={handleClienteBlur}
-              onFocus={(e) => scheduleClienteFetch(e.currentTarget.value)}
+              placeholder="Informe o nome do cliente"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
               required
             />
-            <datalist id="listaClientes">
-              {clientesFiltrados.slice(0, 200).map((c) => (
-                <React.Fragment key={c.id}>
-                  <option
-                    value={c.nome}
-                    label={c.cpf ? `CPF: ${c.cpf}` : undefined}
-                  />
-                  {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
-                </React.Fragment>
-              ))}
-            </datalist>
-            {carregandoClientes && (
-              <small style={{ color: "#64748b" }}>Carregando clientes...</small>
-            )}
-            {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
+          </div>
+          <div className="form-group" style={{ flex: 1, minWidth: 180 }}>
+            <label className="form-label">WhatsApp *</label>
+            <input
+              className="form-input"
+              inputMode="tel"
+              placeholder="(11) 91234-5678"
+              value={clientWhatsapp}
+              onChange={(e) => setClientWhatsapp(formatWhatsapp(e.target.value))}
+              required
+            />
+          </div>
+          <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
+            <label className="form-label">E-mail</label>
+            <input
+              className="form-input"
+              type="email"
+              placeholder="Informe o e-mail"
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
+            />
           </div>
         </div>
         <div className="form-row" style={{ marginTop: 12 }}>
@@ -756,9 +671,10 @@ export default function QuoteImportIsland() {
                         </td>
                       </tr>
                       <datalist id={`quote-import-cidades-${rowKey}`}>
-                        {(cidadeSuggestions[rowKey] || []).map((cidade) => (
-                          <option key={cidade.id} value={cidade.nome} />
-                        ))}
+                        {(cidadeSuggestions[rowKey] || []).map((cidade) => {
+                          const label = formatCidadeLabel(cidade);
+                          return <option key={cidade.id} value={label} />;
+                        })}
                       </datalist>
 
                       {isCircuitItem(item) && (

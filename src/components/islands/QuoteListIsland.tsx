@@ -19,6 +19,9 @@ type QuoteRow = {
   currency: string | null;
   created_at: string;
   client_id?: string | null;
+  client_name?: string | null;
+  client_whatsapp?: string | null;
+  client_email?: string | null;
   cliente?: { id: string; nome?: string | null; cpf?: string | null } | null;
   quote_item?: QuoteItemRow[] | null;
 };
@@ -71,7 +74,7 @@ export default function QuoteListIsland() {
         const { data, error } = await supabase
           .from("quote")
           .select(
-            "id, status, status_negociacao, total, currency, created_at, client_id, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
+            "id, status, status_negociacao, total, currency, created_at, client_id, client_name, client_whatsapp, client_email, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
           )
           .order("created_at", { ascending: false })
           .order("order_index", { foreignTable: "quote_item", ascending: true })
@@ -99,7 +102,7 @@ export default function QuoteListIsland() {
       const statusAtual = quote.status_negociacao || "Enviado";
       if (statusFiltro !== "all" && statusAtual !== statusFiltro) return false;
       if (!termo) return true;
-      const clienteNome = quote.cliente?.nome || "";
+      const clienteNome = quote.client_name || quote.cliente?.nome || "";
       const clienteCpf = quote.cliente?.cpf || "";
       const itens = (quote.quote_item || [])
         .map((item) => [item.item_type, item.title].filter(Boolean).join(" "))
@@ -240,7 +243,9 @@ export default function QuoteListIsland() {
                   : [];
                 const statusAtual = quote.status_negociacao || "Enviado";
                 const clienteLabel =
-                  quote.cliente?.nome || (quote.client_id ? "Cliente" : "-");
+                  quote.client_name ||
+                  quote.cliente?.nome ||
+                  (quote.client_id ? "Cliente" : "-");
                 return (
                   <tr key={quote.id}>
                     <td>{clienteLabel}</td>
@@ -328,7 +333,11 @@ export default function QuoteListIsland() {
               <div>
                 <div className="modal-title">Visualizar orçamento</div>
                 <div style={{ fontSize: "0.9rem", color: "#475569" }}>
-                  Cliente: {visualizandoQuote.cliente?.nome || "—"} | Status:{" "}
+                  Cliente:{" "}
+                  {visualizandoQuote.client_name ||
+                    visualizandoQuote.cliente?.nome ||
+                    "—"}{" "}
+                  | Status:{" "}
                   {visualizandoQuote.status_negociacao || "Enviado"}
                 </div>
               </div>

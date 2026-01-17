@@ -368,6 +368,10 @@ export default function VendasCadastroIsland() {
       );
     });
   }, [clientes, buscaCliente]);
+  const clienteSelecionado = useMemo(
+    () => clientes.find((c) => c.id === formVenda.cliente_id) || null,
+    [clientes, formVenda.cliente_id]
+  );
 
   const cidadesFiltradas = useMemo(() => {
     if (!buscaDestino.trim()) return cidades;
@@ -391,6 +395,23 @@ export default function VendasCadastroIsland() {
   );
 
   const cidadeObrigatoria = useMemo(() => recibos.length > 0, [recibos.length]);
+
+  function handleClienteInputChange(value: string) {
+    setBuscaCliente(value);
+    const normalized = normalizeText(value);
+    const cpfValue = normalizarCpf(value);
+    const match = clientes.find((c) => {
+      const cpf = normalizarCpf(c.cpf || "");
+      return (
+        normalizeText(c.nome) === normalized ||
+        (cpfValue && cpf === cpfValue)
+      );
+    });
+    setFormVenda((prev) => ({
+      ...prev,
+      cliente_id: match ? match.id : "",
+    }));
+  }
 
   function handleCidadeDestino(valor: string) {
     setBuscaDestino(valor);
@@ -958,17 +979,16 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 list="listaClientes"
                 placeholder="Buscar cliente..."
                 value={
-                  clientes.find((c) => c.id === formVenda.cliente_id)?.nome ||
-                  buscaCliente
+                  buscaCliente || clienteSelecionado?.nome || ""
                 }
-                onChange={(e) => setBuscaCliente(e.target.value)}
+                onChange={(e) => handleClienteInputChange(e.target.value)}
                 onBlur={() => {
-                  const texto = buscaCliente.toLowerCase();
+                  const texto = normalizeText(buscaCliente);
                   const cpfTexto = normalizarCpf(buscaCliente);
                   const achado = clientesFiltrados.find((c) => {
                     const cpf = normalizarCpf(c.cpf || "");
                     return (
-                      c.nome.toLowerCase() === texto ||
+                      normalizeText(c.nome) === texto ||
                       (cpfTexto && cpf === cpfTexto)
                     );
                   });
@@ -977,17 +997,17 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                       ...formVenda,
                       cliente_id: achado.id,
                     });
+                    setBuscaCliente("");
                   }
                 }}
                 required
               />
               <datalist id="listaClientes">
                 {clientesFiltrados.map((c) => (
-                  <option
-                    key={c.id}
-                    value={c.nome}
-                    label={c.cpf ? `CPF: ${c.cpf}` : undefined}
-                  />
+                  <React.Fragment key={c.id}>
+                    <option value={c.nome} label={c.cpf ? `CPF: ${c.cpf}` : undefined} />
+                    {c.cpf ? <option value={c.cpf} label={c.nome} /> : null}
+                  </React.Fragment>
                 ))}
               </datalist>
             </div>
