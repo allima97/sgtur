@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { construirLinkWhatsApp } from "../whatsapp";
 
 export type QuotePdfSettings = {
   logo_url?: string | null;
@@ -235,8 +236,15 @@ export async function exportQuoteToPdf(params: {
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
   const headerLogoSize = 70;
-  const headerHeightFirst = 200;
-  const headerHeightOther = headerLogoSize + 32;
+  const headerRightWidth = 220;
+  const headerRightLineHeight = 14;
+  const headerRightPaddingTop = 12;
+  const qrSize = 60;
+  const qrGap = 8;
+  const qrLabelText = "Aponte para o QR Code abaixo e chame o consultor:";
+  const qrLabelFontSize = 8;
+  const qrLabelLineHeight = 10;
+  const qrLabelGap = 6;
   const footerBaseHeight = 230;
   const footerTopPadding = 18;
   const footerTitleGap = 14;
@@ -275,6 +283,7 @@ export async function exportQuoteToPdf(params: {
   const validityLabel = dateLabel;
   const clientName = (quote.client_name || "").trim() || "Cliente";
   const hasDiscount = discount > 0;
+  const whatsappLink = construirLinkWhatsApp(settings.whatsapp);
 
   let logoData: { dataUrl: string; format: string; width: number; height: number } | null = null;
   if (settings.logo_url) {
@@ -296,12 +305,71 @@ export async function exportQuoteToPdf(params: {
     }
   }
 
+  let qrData: { dataUrl: string; format: string; width: number; height: number } | null = null;
+  if (whatsappLink) {
+    try {
+      const qrUrl = `https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(whatsappLink)}`;
+      qrData = await fetchImageData(qrUrl);
+    } catch {
+      qrData = null;
+    }
+  }
+
   const colors = {
     border: [171, 167, 214],
     divider: [210, 214, 227],
     muted: [100, 116, 139],
     text: [15, 23, 42],
   } as const;
+
+  const rightLines = [
+    settings.consultor_nome ? `Consultor: ${settings.consultor_nome}` : null,
+    settings.telefone ? `Telefone: ${settings.telefone}` : null,
+    settings.whatsapp ? `WhatsApp: ${settings.whatsapp}` : null,
+    settings.email ? `E-mail: ${settings.email}` : null,
+  ].filter(Boolean) as string[];
+
+  const headerLayout = (() => {
+    const qrEnabled = Boolean(whatsappLink);
+    const rightTextWidth = qrEnabled
+      ? headerRightWidth - qrSize - qrGap
+      : headerRightWidth;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const rightWrapped = rightLines.map((line) => doc.splitTextToSize(line, rightTextWidth));
+    const rightLineCount = rightWrapped.reduce((sum, lines) => sum + lines.length, 0);
+    const rightTextHeight = rightLineCount * headerRightLineHeight;
+    const rightTextBlockHeight = headerRightPaddingTop + rightTextHeight;
+
+    let qrLabelLines: string[] = [];
+    let qrLabelHeight = 0;
+    if (qrEnabled) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(qrLabelFontSize);
+      qrLabelLines = doc.splitTextToSize(qrLabelText, headerRightWidth);
+      qrLabelHeight = qrLabelLines.length * qrLabelLineHeight;
+    }
+
+    const rightBlockHeight = qrEnabled
+      ? qrLabelHeight + qrLabelGap + Math.max(rightTextBlockHeight, qrSize)
+      : rightTextBlockHeight;
+    const headerContentHeight = Math.max(headerLogoSize, rightBlockHeight);
+    const summaryBoxHeight = hasDiscount ? 90 : 70;
+    const headerHeightFirst = Math.max(200, headerContentHeight + summaryBoxHeight + 38);
+    const headerHeightOther = headerContentHeight + 32;
+
+    return {
+      qrEnabled,
+      rightTextWidth,
+      rightWrapped,
+      qrLabelLines,
+      qrLabelHeight,
+      headerContentHeight,
+      headerHeightFirst,
+      headerHeightOther,
+    };
+  })();
 
   const footerLayout = (() => {
     const footerLines = settings.rodape_texto ? toLines(settings.rodape_texto) : DEFAULT_FOOTER;
@@ -340,7 +408,6 @@ export async function exportQuoteToPdf(params: {
     const cardLines = [
       `Orcamento para ${clientName}`,
       `Validade somente para: ${validityLabel}`,
-      "Pagina 1 de 1",
     ];
     const wrappedCardLines = cardLines.flatMap((line) =>
       doc.splitTextToSize(line, cardTextWidth)
@@ -363,7 +430,8 @@ export async function exportQuoteToPdf(params: {
   })();
 
   const footerHeight = footerLayout.footerHeight;
-  const contentBottom = pageHeight - footerHeight;
+  const contentBottomRegular = pageHeight - margin;
+  const contentBottomLast = pageHeight - footerHeight;
 
   function drawHeader(showSummary: boolean) {
     const topY = margin;
@@ -391,19 +459,36 @@ export async function exportQuoteToPdf(params: {
       doc.text(line, textX, topY + 12 + idx * 14);
     });
 
-    const rightX = pageWidth - margin - 220;
-    const rightLines = [
-      settings.consultor_nome ? `Consultor: ${settings.consultor_nome}` : null,
-      settings.telefone ? `Telefone: ${settings.telefone}` : null,
-      settings.whatsapp ? `WhatsApp: ${settings.whatsapp}` : null,
-      settings.email ? `E-mail: ${settings.email}` : null,
-    ].filter(Boolean) as string[];
+    const rightX = pageWidth - margin - headerRightWidth;
+    const rightContentTop = topY + (headerLayout.qrEnabled ? headerLayout.qrLabelHeight + qrLabelGap : 0);
+    const rightTextStartY = rightContentTop + headerRightPaddingTop;
 
-    rightLines.forEach((line, idx) => {
-      doc.text(line, rightX, topY + 12 + idx * 14);
+    if (headerLayout.qrEnabled && headerLayout.qrLabelLines.length) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(qrLabelFontSize);
+      const labelStartY = topY + qrLabelLineHeight;
+      headerLayout.qrLabelLines.forEach((line, idx) => {
+        doc.text(line, rightX, labelStartY + idx * qrLabelLineHeight);
+      });
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    let rightCursorY = rightTextStartY;
+    headerLayout.rightWrapped.forEach((wrapped) => {
+      wrapped.forEach((line) => {
+        doc.text(line, rightX, rightCursorY);
+        rightCursorY += headerRightLineHeight;
+      });
     });
 
-    const lineY = topY + logoSize + 16;
+    if (headerLayout.qrEnabled && qrData) {
+      const qrX = pageWidth - margin - qrSize;
+      const qrY = rightContentTop;
+      doc.addImage(qrData.dataUrl, qrData.format, qrX, qrY, qrSize, qrSize);
+    }
+
+    const lineY = topY + headerLayout.headerContentHeight + 16;
     doc.setDrawColor(180);
     doc.line(margin, lineY, pageWidth - margin, lineY);
 
@@ -447,7 +532,7 @@ export async function exportQuoteToPdf(params: {
     }
   }
 
-  function drawFooter(pageNumber: number, totalPages: number) {
+  function drawFooter() {
     const footerY = pageHeight - footerHeight + footerTopPadding;
     doc.setDrawColor(200);
     doc.line(margin, footerY - footerTopPadding, pageWidth - margin, footerY - footerTopPadding);
@@ -500,7 +585,6 @@ export async function exportQuoteToPdf(params: {
     const cardLines = [
       `Orcamento para ${clientName}`,
       `Validade somente para: ${validityLabel}`,
-      `Pagina ${pageNumber} de ${totalPages}`,
     ];
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -525,6 +609,18 @@ export async function exportQuoteToPdf(params: {
       doc.text(line, pageWidth / 2, textY, { align: "center" });
       textY += footerCardLineHeight;
     });
+  }
+
+  function drawPageNumber(pageNumber: number, totalPages: number) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...colors.muted);
+    doc.text(
+      `Pagina ${pageNumber} de ${totalPages}`,
+      pageWidth / 2,
+      pageHeight - margin / 2,
+      { align: "center" }
+    );
   }
 
   function isCircuitItem(item: QuotePdfItem) {
@@ -804,36 +900,68 @@ export async function exportQuoteToPdf(params: {
 
   function initPage(isFirstPage: boolean) {
     drawHeader(isFirstPage);
-    const headerHeight = isFirstPage ? headerHeightFirst : headerHeightOther;
+    const headerHeight = isFirstPage ? headerLayout.headerHeightFirst : headerLayout.headerHeightOther;
     return margin + headerHeight;
+  }
+
+  function measureSummaryBoxHeight() {
+    const totalsByType = orderedItems.reduce<Record<string, number>>((acc, item) => {
+      const key = item.item_type || "Outros";
+      acc[key] = (acc[key] || 0) + Number(item.total_amount || 0);
+      return acc;
+    }, {});
+    const rows = Object.entries(totalsByType);
+    rows.push(["Taxas e impostos", taxesTotal]);
+    if (hasDiscount) {
+      rows.push(["Desconto", -discount]);
+    }
+    rows.push(["Total", total]);
+
+    const lineHeight = 12;
+    const headerHeight = 20;
+    const bodyHeight = rows.length * lineHeight + 8;
+    return headerHeight + bodyHeight + 12;
+  }
+
+  const blocks: Array<
+    { kind: "item"; height: number; item: QuotePdfItem } | { kind: "summary"; height: number }
+  > = orderedItems.map((item) => ({
+    kind: "item",
+    item,
+    height: measureItemCardHeight(item),
+  }));
+
+  if (options.showSummary) {
+    blocks.push({ kind: "summary", height: measureSummaryBoxHeight() });
   }
 
   let cursorY = initPage(true);
 
-  orderedItems.forEach((item) => {
-    const cardHeight = measureItemCardHeight(item);
-    if (cursorY + cardHeight > contentBottom) {
+  blocks.forEach((block, index) => {
+    const isLastBlock = index === blocks.length - 1;
+    const bottomLimit = isLastBlock ? contentBottomLast : contentBottomRegular;
+    const gap = isLastBlock ? 0 : cardGap;
+
+    if (cursorY + block.height > bottomLimit) {
       doc.addPage();
       cursorY = initPage(false);
     }
-    drawItemCard(item, cursorY);
-    cursorY += cardHeight + cardGap;
+
+    if (block.kind === "item") {
+      drawItemCard(block.item, cursorY);
+    } else {
+      drawSummaryBox(cursorY);
+    }
+    cursorY += block.height + gap;
   });
 
-  if (options.showSummary) {
-    const summaryHeight = 84;
-    if (cursorY + summaryHeight > contentBottom) {
-      doc.addPage();
-      cursorY = initPage(false);
-    }
-    const actualHeight = drawSummaryBox(cursorY);
-    cursorY += actualHeight + cardGap;
-  }
-
   const totalPages = doc.getNumberOfPages();
-  if (totalPages > 0) {
-    doc.setPage(totalPages);
-    drawFooter(totalPages, totalPages);
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page);
+    if (page === totalPages) {
+      drawFooter();
+    }
+    drawPageNumber(page, totalPages);
   }
 
   const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
