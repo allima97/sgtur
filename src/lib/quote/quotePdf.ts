@@ -10,6 +10,7 @@ export type QuotePdfSettings = {
   endereco_linha3?: string | null;
   telefone?: string | null;
   whatsapp?: string | null;
+  whatsapp_codigo_pais?: string | null;
   email?: string | null;
   rodape_texto?: string | null;
   imagem_complementar_url?: string | null;
@@ -67,6 +68,17 @@ function formatDate(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("pt-BR");
+}
+
+function formatDateLong(value?: string | Date | null) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function formatDateRange(start?: string | null, end?: string | null) {
@@ -279,11 +291,11 @@ export async function exportQuoteToPdf(params: {
   const valorSemTaxas = Math.max(subtotal - taxesTotal, 0);
   const itemsCount = orderedItems.length;
   const createdAt = quote.created_at ? new Date(quote.created_at) : new Date();
-  const dateLabel = createdAt.toLocaleDateString("pt-BR");
-  const validityLabel = dateLabel;
+  const dateLabel = formatDateLong(createdAt);
+  const validityLabel = formatDateLong(createdAt);
   const clientName = (quote.client_name || "").trim() || "Cliente";
   const hasDiscount = discount > 0;
-  const whatsappLink = construirLinkWhatsApp(settings.whatsapp);
+  const whatsappLink = construirLinkWhatsApp(settings.whatsapp, settings.whatsapp_codigo_pais);
 
   let logoData: { dataUrl: string; format: string; width: number; height: number } | null = null;
   if (settings.logo_url) {
@@ -320,6 +332,7 @@ export async function exportQuoteToPdf(params: {
     divider: [210, 214, 227],
     muted: [100, 116, 139],
     text: [15, 23, 42],
+    title: [26, 44, 200],
   } as const;
 
   const rightLines = [
@@ -495,9 +508,11 @@ export async function exportQuoteToPdf(params: {
     if (showSummary) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
+      doc.setTextColor(...colors.title);
       doc.text("Orcamento da sua viagem", margin, lineY + 26);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
+      doc.setTextColor(...colors.text);
       doc.text(dateLabel, margin, lineY + 44);
 
       const boxW = 190;

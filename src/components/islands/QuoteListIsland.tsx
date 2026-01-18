@@ -346,8 +346,8 @@ export default function QuoteListIsland() {
                     <td>{formatCurrency(Number(quote.total || 0))}</td>
                     <td>{formatDate(quote.created_at)}</td>
                     <td>{quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}</td>
-                    <td className="th-actions">
-                      <div className="action-buttons">
+                    <td className="th-actions th-actions-quote">
+                      <div className="action-buttons action-buttons-quote">
                         <button
                           className="btn-icon"
                           title={
@@ -367,7 +367,7 @@ export default function QuoteListIsland() {
                           onClick={() => converterParaVenda(quote.id)}
                           disabled={isFechado}
                         >
-                          🧾
+                          <span style={{ color: "#16a34a", fontWeight: 700 }}>$</span>
                         </button>
                         <button
                           className="btn-icon"
@@ -384,7 +384,27 @@ export default function QuoteListIsland() {
                           onClick={() => handleExportPdf(quote.id)}
                           disabled={exportingQuoteId === quote.id}
                         >
-                          {exportingQuoteId === quote.id ? "⏳" : "📄"}
+                          {exportingQuoteId === quote.id ? (
+                            "⏳"
+                          ) : (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 24,
+                                height: 24,
+                                borderRadius: 4,
+                                background: "#dc2626",
+                                color: "#fff",
+                                fontSize: 10,
+                                fontWeight: 700,
+                                fontFamily: "Arial, sans-serif",
+                              }}
+                            >
+                              PDF
+                            </span>
+                          )}
                         </button>
                         {!isFechado && (
                           <a

@@ -19,6 +19,7 @@ type QuotePrintSettings = {
   endereco_linha3?: string;
   telefone?: string;
   whatsapp?: string;
+  whatsapp_codigo_pais?: string;
   email?: string;
   rodape_texto?: string;
 };
@@ -41,6 +42,7 @@ const EMPTY_SETTINGS: QuotePrintSettings = {
   endereco_linha3: "",
   telefone: "",
   whatsapp: "",
+  whatsapp_codigo_pais: "",
   email: "",
   rodape_texto: DEFAULT_FOOTER,
 };
@@ -136,6 +138,7 @@ export default function QuotePrintSettingsIsland() {
             endereco_linha3: data.endereco_linha3 || "",
             telefone: data.telefone || "",
             whatsapp: data.whatsapp || "",
+            whatsapp_codigo_pais: data.whatsapp_codigo_pais || "",
             email: data.email || userRow?.email || "",
             rodape_texto: data.rodape_texto || DEFAULT_FOOTER,
           });
@@ -258,6 +261,7 @@ export default function QuotePrintSettingsIsland() {
         endereco_linha3: settings.endereco_linha3 || "",
         telefone: settings.telefone || "",
         whatsapp: settings.whatsapp || "",
+        whatsapp_codigo_pais: (settings.whatsapp_codigo_pais || "").replace(/\D/g, "") || null,
         email: settings.email || "",
         rodape_texto: settings.rodape_texto || "",
       };
@@ -395,6 +399,16 @@ export default function QuotePrintSettingsIsland() {
       </div>
 
       <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Codigo do pais</label>
+          <input
+            className="form-input"
+            value={settings.whatsapp_codigo_pais || ""}
+            onChange={(e) => setSettings((p) => ({ ...p, whatsapp_codigo_pais: e.target.value }))}
+            placeholder="Ex: 55"
+            disabled={bloqueado}
+          />
+        </div>
         <div className="form-group">
           <label className="form-label">Telefone (fixo)</label>
           <input
