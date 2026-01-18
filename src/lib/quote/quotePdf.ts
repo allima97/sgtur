@@ -328,8 +328,8 @@ export async function exportQuoteToPdf(params: {
   }
 
   const colors = {
-    border: [171, 167, 214],
-    itemBorder: [171, 167, 214],
+    border: [156, 163, 175],
+    itemBorder: [156, 163, 175],
     divider: [210, 214, 227],
     muted: [100, 116, 139],
     text: [15, 23, 42],
