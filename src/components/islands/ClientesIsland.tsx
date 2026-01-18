@@ -5,6 +5,7 @@ import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
+import { parentescoOptions } from "../../lib/parentescoOptions";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -224,20 +225,6 @@ export default function ClientesIsland() {
   const [acompEditId, setAcompEditId] = useState<string | null>(null);
   const [acompSalvando, setAcompSalvando] = useState(false);
   const [acompExcluindo, setAcompExcluindo] = useState<string | null>(null);
-  const parentescoOptions = [
-    "Pai",
-    "Mãe",
-    "Esposa",
-    "Marido",
-    "Filho(a)",
-    "Sogro(a)",
-    "Noivo(a)",
-    "Amigo(a)",
-    "Nora",
-    "Genro",
-    "Outros",
-  ];
-
   // =====================================
   // CARREGAR CLIENTES
   // =====================================

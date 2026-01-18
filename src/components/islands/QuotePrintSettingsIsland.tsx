@@ -10,6 +10,8 @@ type QuotePrintSettings = {
   company_id?: string | null;
   logo_url?: string | null;
   logo_path?: string | null;
+  imagem_complementar_url?: string | null;
+  imagem_complementar_path?: string | null;
   consultor_nome?: string;
   filial_nome?: string;
   endereco_linha1?: string;
@@ -30,6 +32,8 @@ const DEFAULT_FOOTER =
   "As regras de cancelamento de cada produto podem ser consultadas por meio do link do QR Code.";
 
 const EMPTY_SETTINGS: QuotePrintSettings = {
+  imagem_complementar_url: null,
+  imagem_complementar_path: null,
   consultor_nome: "",
   filial_nome: "",
   endereco_linha1: "",
@@ -71,6 +75,8 @@ export default function QuotePrintSettingsIsland() {
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [complementImageFile, setComplementImageFile] = useState<File | null>(null);
+  const [complementImagePreview, setComplementImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -104,10 +110,16 @@ export default function QuotePrintSettingsIsland() {
 
         if (data) {
           const logoPath = data.logo_path || extractStoragePath(data.logo_url);
-          const previewUrl = logoPath
+          const logoPreviewUrl = logoPath
             ? (await supabase.storage.from(LOGO_BUCKET).createSignedUrl(logoPath, 3600)).data
                 ?.signedUrl || data.logo_url
             : data.logo_url;
+          const complementPath =
+            data.imagem_complementar_path || extractStoragePath(data.imagem_complementar_url);
+          const complementPreviewUrl = complementPath
+            ? (await supabase.storage.from(LOGO_BUCKET).createSignedUrl(complementPath, 3600)).data
+                ?.signedUrl || data.imagem_complementar_url
+            : data.imagem_complementar_url;
           if (!active) return;
           setSettings({
             id: data.id,
@@ -115,6 +127,8 @@ export default function QuotePrintSettingsIsland() {
             company_id: data.company_id,
             logo_url: data.logo_url,
             logo_path: logoPath,
+            imagem_complementar_url: data.imagem_complementar_url,
+            imagem_complementar_path: complementPath,
             consultor_nome: data.consultor_nome || userRow?.nome_completo || "",
             filial_nome: data.filial_nome || "",
             endereco_linha1: data.endereco_linha1 || "",
@@ -125,7 +139,8 @@ export default function QuotePrintSettingsIsland() {
             email: data.email || userRow?.email || "",
             rodape_texto: data.rodape_texto || DEFAULT_FOOTER,
           });
-          setLogoPreview(previewUrl || null);
+          setLogoPreview(logoPreviewUrl || null);
+          setComplementImagePreview(complementPreviewUrl || null);
         } else {
           setSettings({
             ...EMPTY_SETTINGS,
@@ -156,6 +171,13 @@ export default function QuotePrintSettingsIsland() {
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
 
+  useEffect(() => {
+    if (!complementImageFile) return;
+    const url = URL.createObjectURL(complementImageFile);
+    setComplementImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [complementImageFile]);
+
   async function uploadLogo(userId: string) {
     if (!logoFile) {
       return {
@@ -170,6 +192,30 @@ export default function QuotePrintSettingsIsland() {
       .upload(path, logoFile, {
         upsert: true,
         contentType: logoFile.type || "image/png",
+        cacheControl: "3600",
+      });
+    if (uploadErr) throw uploadErr;
+    const publicUrl = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+    return { url: publicUrl || null, path };
+  }
+
+  async function uploadComplementImage(userId: string) {
+    if (!complementImageFile) {
+      return {
+        url: settings.imagem_complementar_url || null,
+        path:
+          settings.imagem_complementar_path ||
+          extractStoragePath(settings.imagem_complementar_url) ||
+          null,
+      };
+    }
+    const ext = getFileExtension(complementImageFile);
+    const path = `branding/${userId}/imagem-complementar.${ext}`;
+    const { error: uploadErr } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(path, complementImageFile, {
+        upsert: true,
+        contentType: complementImageFile.type || "image/png",
         cacheControl: "3600",
       });
     if (uploadErr) throw uploadErr;
@@ -196,12 +242,15 @@ export default function QuotePrintSettingsIsland() {
       if (userErr) throw userErr;
 
       const logoInfo = await uploadLogo(userId);
+      const complementInfo = await uploadComplementImage(userId);
 
       const payload = {
         owner_user_id: userId,
         company_id: userRow?.company_id || null,
         logo_url: logoInfo.url,
         logo_path: logoInfo.path,
+        imagem_complementar_url: complementInfo.url,
+        imagem_complementar_path: complementInfo.path,
         consultor_nome: settings.consultor_nome || "",
         filial_nome: settings.filial_nome || "",
         endereco_linha1: settings.endereco_linha1 || "",
@@ -227,10 +276,21 @@ export default function QuotePrintSettingsIsland() {
         setLogoPreview(logoInfo.url || null);
       }
 
+      if (complementInfo.path) {
+        const signed = await supabase.storage
+          .from(LOGO_BUCKET)
+          .createSignedUrl(complementInfo.path, 3600);
+        setComplementImagePreview(signed.data?.signedUrl || complementInfo.url || null);
+      } else {
+        setComplementImagePreview(complementInfo.url || null);
+      }
+
       setSettings((prev) => ({
         ...prev,
         logo_url: logoInfo.url,
         logo_path: logoInfo.path,
+        imagem_complementar_url: complementInfo.url,
+        imagem_complementar_path: complementInfo.path,
       }));
 
       await registrarLog({
@@ -242,6 +302,7 @@ export default function QuotePrintSettingsIsland() {
 
       setSucesso("Parametros salvos com sucesso.");
       setLogoFile(null);
+      setComplementImageFile(null);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar parametros do orcamento.");
@@ -375,6 +436,24 @@ export default function QuotePrintSettingsIsland() {
         <small style={{ color: "#64748b" }}>
           Use quebras de linha para cada item.
         </small>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Imagem complementar (apos informacoes importantes)</label>
+        <input
+          className="form-input"
+          type="file"
+          accept="image/*"
+          onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
+          disabled={bloqueado}
+        />
+        {complementImagePreview && (
+          <img
+            src={complementImagePreview}
+            alt="Imagem complementar do orcamento"
+            style={{ marginTop: 8, maxHeight: 140, objectFit: "contain" }}
+          />
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 12, marginTop: 12 }}>

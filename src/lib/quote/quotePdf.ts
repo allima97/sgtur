@@ -11,6 +11,7 @@ export type QuotePdfSettings = {
   whatsapp?: string | null;
   email?: string | null;
   rodape_texto?: string | null;
+  imagem_complementar_url?: string | null;
 };
 
 export type QuotePdfItem = {
@@ -172,7 +173,7 @@ function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Falha ao carregar logo."));
+    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
     img.src = src;
   });
 }
@@ -194,20 +195,32 @@ async function svgToPngDataUrl(svgDataUrl: string) {
 
 async function fetchImageData(url: string) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Falha ao carregar logo.");
+  if (!res.ok) throw new Error("Falha ao carregar imagem.");
   const blob = await res.blob();
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Falha ao ler logo."));
+    reader.onerror = () => reject(new Error("Falha ao ler imagem."));
     reader.readAsDataURL(blob);
   });
   const type = blob.type || "";
   if (type.includes("svg")) {
     const pngDataUrl = await svgToPngDataUrl(dataUrl);
-    return { dataUrl: pngDataUrl, format: "PNG" };
+    const image = await loadImage(pngDataUrl);
+    return {
+      dataUrl: pngDataUrl,
+      format: "PNG",
+      width: image.naturalWidth || image.width || 0,
+      height: image.naturalHeight || image.height || 0,
+    };
   }
-  return { dataUrl, format: resolveImageFormat(type) };
+  const image = await loadImage(dataUrl);
+  return {
+    dataUrl,
+    format: resolveImageFormat(type),
+    width: image.naturalWidth || image.width || 0,
+    height: image.naturalHeight || image.height || 0,
+  };
 }
 
 export async function exportQuoteToPdf(params: {
@@ -224,8 +237,17 @@ export async function exportQuoteToPdf(params: {
   const headerLogoSize = 70;
   const headerHeightFirst = 200;
   const headerHeightOther = headerLogoSize + 32;
-  const footerHeight = 230;
-  const contentBottom = pageHeight - footerHeight;
+  const footerBaseHeight = 230;
+  const footerTopPadding = 18;
+  const footerTitleGap = 14;
+  const footerLineHeight = 12;
+  const footerListGap = 8;
+  const footerImageGap = 16;
+  const footerCardPadding = 12;
+  const footerCardLineHeight = 14;
+  const maxFooterImageHeight = 170;
+  const footerBulletRadius = 2;
+  const footerBulletGap = 6;
   const cardGap = 18;
   const cardPadding = 14;
   const cardRadius = 10;
@@ -254,12 +276,23 @@ export async function exportQuoteToPdf(params: {
   const clientName = (quote.client_name || "").trim() || "Cliente";
   const hasDiscount = discount > 0;
 
-  let logoData: { dataUrl: string; format: string } | null = null;
+  let logoData: { dataUrl: string; format: string; width: number; height: number } | null = null;
   if (settings.logo_url) {
     try {
       logoData = await fetchImageData(settings.logo_url);
     } catch {
       logoData = null;
+    }
+  }
+
+  let complementImageData:
+    | { dataUrl: string; format: string; width: number; height: number }
+    | null = null;
+  if (settings.imagem_complementar_url) {
+    try {
+      complementImageData = await fetchImageData(settings.imagem_complementar_url);
+    } catch {
+      complementImageData = null;
     }
   }
 
@@ -269,6 +302,68 @@ export async function exportQuoteToPdf(params: {
     muted: [100, 116, 139],
     text: [15, 23, 42],
   } as const;
+
+  const footerLayout = (() => {
+    const footerLines = settings.rodape_texto ? toLines(settings.rodape_texto) : DEFAULT_FOOTER;
+    const footerTextX = margin + footerBulletRadius * 2 + footerBulletGap;
+    const footerTextWidth = pageWidth - margin - footerTextX;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const footerWrapped = footerLines.map((line) => doc.splitTextToSize(line, footerTextWidth));
+    const footerLineCount = footerWrapped.reduce((sum, lines) => sum + lines.length, 0);
+    const listHeight = footerTitleGap + footerLineCount * footerLineHeight;
+
+    let complementLayout: { width: number; height: number } | null = null;
+    if (
+      complementImageData &&
+      complementImageData.width > 0 &&
+      complementImageData.height > 0
+    ) {
+      const maxWidth = pageWidth - margin * 2;
+      const scale = Math.min(
+        maxWidth / complementImageData.width,
+        maxFooterImageHeight / complementImageData.height,
+        1
+      );
+      complementLayout = {
+        width: complementImageData.width * scale,
+        height: complementImageData.height * scale,
+      };
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    const cardMaxWidth = pageWidth - margin * 2;
+    const cardWidth = Math.min(360, cardMaxWidth);
+    const cardTextWidth = cardWidth - footerCardPadding * 2;
+    const cardLines = [
+      `Orcamento para ${clientName}`,
+      `Validade somente para: ${validityLabel}`,
+      "Pagina 1 de 1",
+    ];
+    const wrappedCardLines = cardLines.flatMap((line) =>
+      doc.splitTextToSize(line, cardTextWidth)
+    );
+    const cardHeight = wrappedCardLines.length * footerCardLineHeight + footerCardPadding * 2;
+    const sectionHeight = complementLayout ? complementLayout.height + footerImageGap : 30;
+    const requiredFooterHeight =
+      margin + cardHeight + footerTopPadding + listHeight + footerListGap + sectionHeight;
+
+    return {
+      footerHeight: Math.max(footerBaseHeight, Math.ceil(requiredFooterHeight)),
+      footerLines,
+      footerTextX,
+      footerTextWidth,
+      cardWidth,
+      cardTextWidth,
+      cardHeight,
+      complementLayout,
+    };
+  })();
+
+  const footerHeight = footerLayout.footerHeight;
+  const contentBottom = pageHeight - footerHeight;
 
   function drawHeader(showSummary: boolean) {
     const topY = margin;
@@ -353,9 +448,9 @@ export async function exportQuoteToPdf(params: {
   }
 
   function drawFooter(pageNumber: number, totalPages: number) {
-    const footerY = pageHeight - footerHeight + 18;
+    const footerY = pageHeight - footerHeight + footerTopPadding;
     doc.setDrawColor(200);
-    doc.line(margin, footerY - 18, pageWidth - margin, footerY - 18);
+    doc.line(margin, footerY - footerTopPadding, pageWidth - margin, footerY - footerTopPadding);
 
     doc.setTextColor(...colors.text);
     doc.setFont("helvetica", "bold");
@@ -363,36 +458,44 @@ export async function exportQuoteToPdf(params: {
     doc.text("Informacoes importantes", margin, footerY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    const footerLines = settings.rodape_texto
-      ? toLines(settings.rodape_texto)
-      : DEFAULT_FOOTER;
-    let currentY = footerY + 14;
-    const maxWidth = pageWidth - margin * 2 - 10;
+    let currentY = footerY + footerTitleGap;
+    const footerLines = footerLayout.footerLines;
+    const textX = footerLayout.footerTextX;
+    const textWidth = footerLayout.footerTextWidth;
+    const bulletX = margin + footerBulletRadius;
+    doc.setFillColor(...colors.text);
     footerLines.forEach((line) => {
-      const wrapped = doc.splitTextToSize(line, maxWidth);
+      const wrapped = doc.splitTextToSize(line, textWidth);
       wrapped.forEach((chunk, idx) => {
-        const prefix = idx === 0 ? "- " : "  ";
-        doc.text(`${prefix}${chunk}`, margin, currentY);
-        currentY += 12;
+        if (idx === 0) {
+          doc.circle(bulletX, currentY - 3, footerBulletRadius, "F");
+        }
+        doc.text(chunk, textX, currentY);
+        currentY += footerLineHeight;
       });
     });
 
-    currentY += 8;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("Formas de pagamento", margin, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(
-      "Cartao de credito, Pix, pontos ou boleto conforme disponibilidade.",
-      margin,
-      currentY + 14
-    );
+    currentY += footerListGap;
+    if (complementImageData && footerLayout.complementLayout) {
+      const { width, height } = footerLayout.complementLayout;
+      const imageX = margin + (pageWidth - margin * 2 - width) / 2;
+      doc.addImage(complementImageData.dataUrl, complementImageData.format, imageX, currentY, width, height);
+      currentY += height + footerImageGap;
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Formas de pagamento", margin, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(
+        "Cartao de credito, Pix, pontos ou boleto conforme disponibilidade.",
+        margin,
+        currentY + 14
+      );
+      currentY += 30;
+    }
 
-    const cardPadding = 12;
-    const lineHeight = 14;
-    const cardMaxWidth = pageWidth - margin * 2;
-    const cardWidth = Math.min(360, cardMaxWidth);
+    const cardWidth = footerLayout.cardWidth;
     const cardX = (pageWidth - cardWidth) / 2;
     const cardLines = [
       `Orcamento para ${clientName}`,
@@ -402,22 +505,25 @@ export async function exportQuoteToPdf(params: {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...colors.text);
-    const cardTextWidth = cardWidth - cardPadding * 2;
+    const cardTextWidth = footerLayout.cardTextWidth;
     const wrappedLines = cardLines.flatMap((line) =>
       doc.splitTextToSize(line, cardTextWidth)
     );
-    const cardHeight = wrappedLines.length * lineHeight + cardPadding * 2;
-    const minCardY = currentY + 30;
+    const cardHeight = Math.max(
+      footerLayout.cardHeight,
+      wrappedLines.length * footerCardLineHeight + footerCardPadding * 2
+    );
+    const minCardY = currentY;
     const defaultCardY = pageHeight - margin - cardHeight;
     const cardY = Math.min(defaultCardY, Math.max(minCardY, margin));
 
     doc.setDrawColor(...colors.border);
     doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 10, 10);
 
-    let textY = cardY + cardPadding + lineHeight - 2;
+    let textY = cardY + footerCardPadding + footerCardLineHeight - 2;
     wrappedLines.forEach((line) => {
       doc.text(line, pageWidth / 2, textY, { align: "center" });
-      textY += lineHeight;
+      textY += footerCardLineHeight;
     });
   }
 

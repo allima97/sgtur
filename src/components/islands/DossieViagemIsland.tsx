@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { parentescoOptions } from "../../lib/parentescoOptions";
 
 type ViagemAcompanhante = {
   id: string;
@@ -915,8 +916,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         </div>
                         <div className="form-group">
                           <label className="form-label">Parentesco</label>
-                          <input
-                            className="form-input"
+                          <select
+                            className="form-select"
                             value={cadastroAcompForm.grau_parentesco}
                             onChange={(e) =>
                               setCadastroAcompForm((prev) => ({
@@ -924,8 +925,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                                 grau_parentesco: e.target.value,
                               }))
                             }
-                            placeholder="Ex: Esposa, Filho"
-                          />
+                          >
+                            <option value="">Selecione</option>
+                            {parentescoOptions.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                       <div className="form-row">
@@ -1302,6 +1309,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         <option value="bilhete">Bilhete</option>
                         <option value="roteiro">Roteiro</option>
                         <option value="seguro">Seguro</option>
+                        <option value="passaporte">Passaporte</option>
+                        <option value="cpf">CPF</option>
+                        <option value="rg">RG</option>
+                        <option value="cnh">CNH</option>
                         <option value="outro">Outro</option>
                       </select>
                     </div>

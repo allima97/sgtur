@@ -35,18 +35,18 @@ function extractStoragePath(value?: string | null) {
   return value.slice(index + marker.length);
 }
 
-async function resolveLogoUrl(settings: QuotePdfSettings & { logo_path?: string | null }) {
-  let logoUrl = settings.logo_url || null;
-  const logoPath = settings.logo_path || extractStoragePath(settings.logo_url);
-  if (logoPath) {
+async function resolveStorageUrl(url?: string | null, path?: string | null) {
+  let resolvedUrl = url || null;
+  const storagePath = path || extractStoragePath(url);
+  if (storagePath) {
     const signed = await supabaseBrowser.storage
       .from("quotes")
-      .createSignedUrl(logoPath, 3600);
+      .createSignedUrl(storagePath, 3600);
     if (signed.data?.signedUrl) {
-      logoUrl = signed.data.signedUrl;
+      resolvedUrl = signed.data.signedUrl;
     }
   }
-  return logoUrl;
+  return resolvedUrl;
 }
 
 async function fetchQuoteItems(quoteId: string) {
@@ -91,7 +91,11 @@ export async function exportQuotePdfById(args: ExportArgs) {
     throw new Error("Configure os parametros do PDF em Parametros > Orcamentos.");
   }
 
-  const logoUrl = await resolveLogoUrl(settings);
+  const logoUrl = await resolveStorageUrl(settings.logo_url, settings.logo_path);
+  const complementImageUrl = await resolveStorageUrl(
+    settings.imagem_complementar_url,
+    settings.imagem_complementar_path
+  );
 
   await exportQuoteToPdf({
     quote: {
@@ -105,6 +109,7 @@ export async function exportQuotePdfById(args: ExportArgs) {
     settings: {
       ...settings,
       logo_url: logoUrl,
+      imagem_complementar_url: complementImageUrl,
     },
     options: {
       showItemValues,
