@@ -72,7 +72,7 @@ export async function exportQuotePdfById(args: ExportArgs) {
 
   const { data: quote, error: quoteError } = await supabaseBrowser
     .from("quote")
-    .select("id, created_at, currency, total, status")
+    .select("id, created_at, currency, total, status, client_name, cliente:client_id (nome)")
     .eq("id", quoteId)
     .maybeSingle();
   if (quoteError || !quote) {
@@ -99,6 +99,7 @@ export async function exportQuotePdfById(args: ExportArgs) {
       created_at: quote.created_at || null,
       total: quote.total || 0,
       currency: quote.currency || "BRL",
+      client_name: quote.client_name || quote.cliente?.nome || null,
     },
     items: formatQuotePdfItems(items),
     settings: {

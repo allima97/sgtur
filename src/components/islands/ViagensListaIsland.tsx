@@ -554,7 +554,16 @@ export default function ViagensListaIsland() {
                     type="date"
                     className="form-input"
                     value={cadastroForm.data_inicio}
-                    onChange={(e) => setCadastroForm((prev) => ({ ...prev, data_inicio: e.target.value }))}
+                    onChange={(e) =>
+                      setCadastroForm((prev) => {
+                        const nextInicio = e.target.value;
+                        const nextFim =
+                          prev.data_fim && nextInicio && prev.data_fim < nextInicio
+                            ? nextInicio
+                            : prev.data_fim;
+                        return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                      })
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -563,7 +572,17 @@ export default function ViagensListaIsland() {
                     type="date"
                     className="form-input"
                     value={cadastroForm.data_fim}
-                    onChange={(e) => setCadastroForm((prev) => ({ ...prev, data_fim: e.target.value }))}
+                    min={cadastroForm.data_inicio || undefined}
+                    onChange={(e) =>
+                      setCadastroForm((prev) => {
+                        const nextFim = e.target.value;
+                        const boundedFim =
+                          prev.data_inicio && nextFim && nextFim < prev.data_inicio
+                            ? prev.data_inicio
+                            : nextFim;
+                        return { ...prev, data_fim: boundedFim };
+                      })
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -627,7 +646,13 @@ export default function ViagensListaIsland() {
                 type="date"
                 className="form-input"
                 value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setInicio(nextInicio);
+                  if (fim && nextInicio && fim < nextInicio) {
+                    setFim(nextInicio);
+                  }
+                }}
               />
             </div>
             <div className="form-group" style={compactDateFieldStyle}>
@@ -636,7 +661,12 @@ export default function ViagensListaIsland() {
                 type="date"
                 className="form-input"
                 value={fim}
-                onChange={(e) => setFim(e.target.value)}
+                min={inicio || undefined}
+                onChange={(e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                  setFim(boundedFim);
+                }}
               />
             </div>
             <div

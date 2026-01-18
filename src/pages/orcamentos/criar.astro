@@ -1,0 +1,43 @@
+---
+import "../../styles/global.css";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import QuoteManualIsland from "../../components/islands/QuoteManualIsland";
+import { createServerClient } from "@supabase/ssr";
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const { cookies } = Astro;
+
+const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+  cookies: {
+    get: (name) => cookies.get(name)?.value ?? "",
+    set: (name, value, options) =>
+      cookies.set(name, value, {
+        ...options,
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: "Lax",
+        path: "/",
+      }),
+    remove: (name, options) =>
+      cookies.delete(name, {
+        ...options,
+        path: "/",
+      }),
+  },
+});
+
+const {
+  data: { user },
+} = await supabaseAuth.auth.getUser();
+
+if (!user) {
+  return Astro.redirect("/auth/login");
+}
+
+const activePage = "orcamentos";
+---
+
+<DashboardLayout title="Orcamentos" {activePage}>
+  <QuoteManualIsland client:load />
+</DashboardLayout>

@@ -603,6 +603,12 @@ export default function QuoteDetailIsland(props: {
     }
   }
 
+  function handleCancelEdit() {
+    if (typeof window !== "undefined") {
+      window.location.href = "/orcamentos/consulta";
+    }
+  }
+
   const handleExport = useCallback(
     async (showItemValues: boolean) => {
       setExporting(true);
@@ -813,7 +819,14 @@ export default function QuoteDetailIsland(props: {
                             className="form-input"
                             type="date"
                             value={item.start_date || ""}
-                            onChange={(e) => updateItem(index, { start_date: e.target.value })}
+                            onChange={(e) => {
+                              const nextStart = e.target.value;
+                              const updates: Partial<QuoteItemRecord> = { start_date: nextStart };
+                              if (item.end_date && nextStart && item.end_date < nextStart) {
+                                updates.end_date = nextStart;
+                              }
+                              updateItem(index, updates);
+                            }}
                             disabled={!isEditing}
                           />
                       </td>
@@ -822,7 +835,15 @@ export default function QuoteDetailIsland(props: {
                             className="form-input"
                             type="date"
                             value={item.end_date || ""}
-                            onChange={(e) => updateItem(index, { end_date: e.target.value })}
+                            min={item.start_date || undefined}
+                            onChange={(e) => {
+                              const nextEnd = e.target.value;
+                              const boundedEnd =
+                                item.start_date && nextEnd && nextEnd < item.start_date
+                                  ? item.start_date
+                                  : nextEnd;
+                              updateItem(index, { end_date: boundedEnd });
+                            }}
                             disabled={!isEditing}
                           />
                       </td>
@@ -1113,6 +1134,16 @@ export default function QuoteDetailIsland(props: {
           >
             {saving ? "Salvando..." : "Salvar ajustes"}
           </button>
+          {isEditing && (
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={handleCancelEdit}
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+          )}
           {!isEditing && !isFechado && (
             <button
               type="button"

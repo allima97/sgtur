@@ -12,7 +12,10 @@ const activePage = "orcamentos";
     subtitle="Listagem de orcamentos importados e confirmados."
     color="purple"
   >
-    <a class="btn btn-primary" href="/orcamentos/importar">Importar orcamento</a>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <a class="btn btn-primary" href="/orcamentos/importar">Importar orcamento</a>
+      <a class="btn btn-light" href="/orcamentos/criar">Criar orcamento</a>
+    </div>
   </HeaderPage>
 
   <QuoteListIsland client:load />

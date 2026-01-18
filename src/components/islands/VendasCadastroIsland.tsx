@@ -108,20 +108,6 @@ function parseDateInput(value?: string | null) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function addDaysToInput(value: string, days: number) {
-  const date = parseDateInput(value);
-  if (!date) return "";
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().split("T")[0];
-}
-
-function isEndAfterStart(start: string, end: string) {
-  const startDate = parseDateInput(start);
-  const endDate = parseDateInput(end);
-  if (!startDate || !endDate) return true;
-  return endDate.getTime() > startDate.getTime();
-}
-
 function isEndOnOrAfterStart(start: string, end: string) {
   const startDate = parseDateInput(start);
   const endDate = parseDateInput(end);
@@ -676,6 +662,11 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           atualizado.data_fim = valor;
         }
       }
+      if (campo === "data_fim") {
+        if (atualizado.data_inicio && atualizado.data_fim < atualizado.data_inicio) {
+          atualizado.data_fim = atualizado.data_inicio;
+        }
+      }
       novo[index] = atualizado;
       return novo;
     });
@@ -773,9 +764,9 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       return;
     }
 
-    if (formVenda.data_embarque && formVenda.data_final && !isEndAfterStart(formVenda.data_embarque, formVenda.data_final)) {
-      setErro("A data final deve ser ao menos um dia após a data de embarque.");
-      showToast("A data final deve ser ao menos um dia após a data de embarque.", "error");
+    if (formVenda.data_embarque && formVenda.data_final && !isEndOnOrAfterStart(formVenda.data_embarque, formVenda.data_final)) {
+      setErro("A data final deve ser igual ou após a data de embarque.");
+      showToast("A data final deve ser igual ou após a data de embarque.", "error");
       return;
     }
     for (let i = 0; i < recibos.length; i += 1) {
@@ -1341,7 +1332,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 onChange={(e) =>
                   setFormVenda((prev) => {
                     const proximaData = e.target.value;
-                    const minDataFinal = proximaData ? addDaysToInput(proximaData, 1) : "";
+                    const minDataFinal = proximaData || "";
                     const dataFinalAtualizada =
                       prev.data_final && minDataFinal && prev.data_final < minDataFinal
                         ? minDataFinal
@@ -1361,11 +1352,14 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                 className="form-input"
                 type="date"
                 value={formVenda.data_final}
-                min={formVenda.data_embarque ? addDaysToInput(formVenda.data_embarque, 1) : undefined}
+                min={formVenda.data_embarque || undefined}
                 onChange={(e) =>
                   setFormVenda({
                     ...formVenda,
-                    data_final: e.target.value,
+                    data_final:
+                      formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque
+                        ? formVenda.data_embarque
+                        : e.target.value,
                   })
                 }
               />

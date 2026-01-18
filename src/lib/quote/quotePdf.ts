@@ -37,6 +37,7 @@ export type QuotePdfData = {
   created_at?: string | null;
   total?: number | null;
   currency?: string | null;
+  client_name?: string | null;
 };
 
 type ExportOptions = {
@@ -220,9 +221,10 @@ export async function exportQuoteToPdf(params: {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
-  const headerHeight = 200;
-  const footerHeight = 190;
-  const contentTop = margin + headerHeight;
+  const headerLogoSize = 70;
+  const headerHeightFirst = 200;
+  const headerHeightOther = headerLogoSize + 32;
+  const footerHeight = 230;
   const contentBottom = pageHeight - footerHeight;
   const cardGap = 18;
   const cardPadding = 14;
@@ -248,6 +250,8 @@ export async function exportQuoteToPdf(params: {
   const itemsCount = orderedItems.length;
   const createdAt = quote.created_at ? new Date(quote.created_at) : new Date();
   const dateLabel = createdAt.toLocaleDateString("pt-BR");
+  const validityLabel = dateLabel;
+  const clientName = (quote.client_name || "").trim() || "Cliente";
   const hasDiscount = discount > 0;
 
   let logoData: { dataUrl: string; format: string } | null = null;
@@ -266,9 +270,9 @@ export async function exportQuoteToPdf(params: {
     text: [15, 23, 42],
   } as const;
 
-  function drawHeader() {
+  function drawHeader(showSummary: boolean) {
     const topY = margin;
-    const logoSize = 70;
+    const logoSize = headerLogoSize;
     const leftX = margin;
     let textX = leftX;
 
@@ -308,45 +312,47 @@ export async function exportQuoteToPdf(params: {
     doc.setDrawColor(180);
     doc.line(margin, lineY, pageWidth - margin, lineY);
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("Orcamento da sua viagem", margin, lineY + 26);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(dateLabel, margin, lineY + 44);
+    if (showSummary) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Orcamento da sua viagem", margin, lineY + 26);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(dateLabel, margin, lineY + 44);
 
-    const boxW = 190;
-    const boxH = hasDiscount ? 90 : 70;
-    const boxX = pageWidth - margin - boxW;
-    const boxY = lineY + 6;
-    doc.setDrawColor(150);
-    doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const labelX = boxX + 12;
-    const valueX = boxX + boxW - 12;
-    doc.text(
-      `Valor (${itemsCount} produto${itemsCount === 1 ? "" : "s"})`,
-      labelX,
-      boxY + 18
-    );
-    doc.text(`R$ ${formatCurrency(valorSemTaxas)}`, valueX, boxY + 18, {
-      align: "right",
-    });
-    doc.text("Taxas e impostos", labelX, boxY + 34);
-    doc.text(`R$ ${formatCurrency(taxesTotal)}`, valueX, boxY + 34, { align: "right" });
-    if (hasDiscount) {
-      doc.text("Desconto", labelX, boxY + 50);
-      doc.text(`R$ ${formatCurrency(-discount)}`, valueX, boxY + 50, { align: "right" });
+      const boxW = 190;
+      const boxH = hasDiscount ? 90 : 70;
+      const boxX = pageWidth - margin - boxW;
+      const boxY = lineY + 6;
+      doc.setDrawColor(150);
+      doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const labelX = boxX + 12;
+      const valueX = boxX + boxW - 12;
+      doc.text(
+        `Valor (${itemsCount} produto${itemsCount === 1 ? "" : "s"})`,
+        labelX,
+        boxY + 18
+      );
+      doc.text(`R$ ${formatCurrency(valorSemTaxas)}`, valueX, boxY + 18, {
+        align: "right",
+      });
+      doc.text("Taxas e impostos", labelX, boxY + 34);
+      doc.text(`R$ ${formatCurrency(taxesTotal)}`, valueX, boxY + 34, { align: "right" });
+      if (hasDiscount) {
+        doc.text("Desconto", labelX, boxY + 50);
+        doc.text(`R$ ${formatCurrency(-discount)}`, valueX, boxY + 50, { align: "right" });
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      const totalLineY = hasDiscount ? boxY + 72 : boxY + 56;
+      doc.text("Total de", labelX, totalLineY);
+      doc.text(`R$ ${formatCurrency(total)}`, valueX, totalLineY, { align: "right" });
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    const totalLineY = hasDiscount ? boxY + 72 : boxY + 56;
-    doc.text("Total de", labelX, totalLineY);
-    doc.text(`R$ ${formatCurrency(total)}`, valueX, totalLineY, { align: "right" });
   }
 
-  function drawFooter() {
+  function drawFooter(pageNumber: number, totalPages: number) {
     const footerY = pageHeight - footerHeight + 18;
     doc.setDrawColor(200);
     doc.line(margin, footerY - 18, pageWidth - margin, footerY - 18);
@@ -382,6 +388,37 @@ export async function exportQuoteToPdf(params: {
       margin,
       currentY + 14
     );
+
+    const cardPadding = 12;
+    const lineHeight = 14;
+    const cardMaxWidth = pageWidth - margin * 2;
+    const cardWidth = Math.min(360, cardMaxWidth);
+    const cardX = (pageWidth - cardWidth) / 2;
+    const cardLines = [
+      `Orcamento para ${clientName}`,
+      `Validade somente para: ${validityLabel}`,
+      `Pagina ${pageNumber} de ${totalPages}`,
+    ];
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...colors.text);
+    const cardTextWidth = cardWidth - cardPadding * 2;
+    const wrappedLines = cardLines.flatMap((line) =>
+      doc.splitTextToSize(line, cardTextWidth)
+    );
+    const cardHeight = wrappedLines.length * lineHeight + cardPadding * 2;
+    const minCardY = currentY + 30;
+    const defaultCardY = pageHeight - margin - cardHeight;
+    const cardY = Math.min(defaultCardY, Math.max(minCardY, margin));
+
+    doc.setDrawColor(...colors.border);
+    doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 10, 10);
+
+    let textY = cardY + cardPadding + lineHeight - 2;
+    wrappedLines.forEach((line) => {
+      doc.text(line, pageWidth / 2, textY, { align: "center" });
+      textY += lineHeight;
+    });
   }
 
   function isCircuitItem(item: QuotePdfItem) {
@@ -659,19 +696,19 @@ export async function exportQuoteToPdf(params: {
     return boxH;
   }
 
-  function initPage() {
-    drawHeader();
-    drawFooter();
-    return contentTop;
+  function initPage(isFirstPage: boolean) {
+    drawHeader(isFirstPage);
+    const headerHeight = isFirstPage ? headerHeightFirst : headerHeightOther;
+    return margin + headerHeight;
   }
 
-  let cursorY = initPage();
+  let cursorY = initPage(true);
 
   orderedItems.forEach((item) => {
     const cardHeight = measureItemCardHeight(item);
     if (cursorY + cardHeight > contentBottom) {
       doc.addPage();
-      cursorY = initPage();
+      cursorY = initPage(false);
     }
     drawItemCard(item, cursorY);
     cursorY += cardHeight + cardGap;
@@ -681,10 +718,16 @@ export async function exportQuoteToPdf(params: {
     const summaryHeight = 84;
     if (cursorY + summaryHeight > contentBottom) {
       doc.addPage();
-      cursorY = initPage();
+      cursorY = initPage(false);
     }
     const actualHeight = drawSummaryBox(cursorY);
     cursorY += actualHeight + cardGap;
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page);
+    drawFooter(page, totalPages);
   }
 
   const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);

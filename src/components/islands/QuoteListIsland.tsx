@@ -23,6 +23,7 @@ type QuoteRow = {
   client_whatsapp?: string | null;
   client_email?: string | null;
   last_interaction_at?: string | null;
+  last_interaction_notes?: string | null;
   cliente?: { id: string; nome?: string | null; cpf?: string | null } | null;
   quote_item?: QuoteItemRow[] | null;
 };
@@ -43,6 +44,20 @@ function formatDateTime(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString("pt-BR");
+}
+
+function formatDateInput(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function toInteractionTimestamp(value: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
 function formatCurrency(value: number) {
@@ -72,6 +87,11 @@ export default function QuoteListIsland() {
   const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
   const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [interacaoQuote, setInteracaoQuote] = useState<QuoteRow | null>(null);
+  const [interactionDate, setInteractionDate] = useState("");
+  const [interactionNotes, setInteractionNotes] = useState("");
+  const [interactionSaving, setInteractionSaving] = useState(false);
+  const [interactionError, setInteractionError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -82,7 +102,7 @@ export default function QuoteListIsland() {
         const { data, error } = await supabase
           .from("quote")
           .select(
-            "id, status, status_negociacao, total, currency, created_at, client_id, client_name, client_whatsapp, client_email, last_interaction_at, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
+            "id, status, status_negociacao, total, currency, created_at, client_id, client_name, client_whatsapp, client_email, last_interaction_at, last_interaction_notes, cliente:client_id (id, nome, cpf), quote_item (id, title, product_name, item_type, total_amount, order_index)"
           )
           .order("created_at", { ascending: false })
           .order("order_index", { foreignTable: "quote_item", ascending: true })
@@ -171,29 +191,43 @@ export default function QuoteListIsland() {
     }
   }
 
-  async function marcarUltimaInteracao(id: string) {
-    const now = new Date().toISOString();
-    setErro(null);
-    try {
-      const { error } = await supabase
-        .from("quote")
-        .update({ last_interaction_at: now })
-        .eq("id", id);
-      if (error) throw error;
-      setQuotes((prev) =>
-        prev.map((quote) =>
-          quote.id === id ? { ...quote, last_interaction_at: now } : quote
-        )
-      );
-    } catch (err) {
-      console.error("Erro ao registrar ultima interacao:", err);
-      setErro("Nao foi possivel registrar a ultima interacao.");
-    }
+  function abrirInteracaoModal(quote: QuoteRow) {
+    setInteracaoQuote(quote);
+    setInteractionDate(formatDateInput(quote.last_interaction_at));
+    setInteractionNotes(quote.last_interaction_notes || "");
+    setInteractionError(null);
   }
 
   function converterParaVenda(id: string) {
     if (typeof window === "undefined") return;
     window.location.href = `/vendas/cadastro?orcamentoId=${id}`;
+  }
+
+  async function salvarInteracao() {
+    if (!interacaoQuote) return;
+    setInteractionSaving(true);
+    setInteractionError(null);
+    try {
+      const payload = {
+        last_interaction_at: interactionDate ? toInteractionTimestamp(interactionDate) : null,
+        last_interaction_notes: interactionNotes.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("quote").update(payload).eq("id", interacaoQuote.id);
+      if (error) throw error;
+      setQuotes((prev) =>
+        prev.map((quote) =>
+          quote.id === interacaoQuote.id ? { ...quote, ...payload } : quote
+        )
+      );
+      setInteracaoQuote((prev) => (prev ? { ...prev, ...payload } : prev));
+      setInteracaoQuote(null);
+    } catch (err) {
+      console.error("Erro ao salvar ultima interacao:", err);
+      setInteractionError("Nao foi possivel salvar a ultima interacao.");
+    } finally {
+      setInteractionSaving(false);
+    }
   }
 
   return (
@@ -239,7 +273,7 @@ export default function QuoteListIsland() {
       )}
 
       <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-purple min-w-[980px]">
+        <table className="table-default table-header-purple min-w-[1100px]">
           <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
             <tr>
               <th>Cliente</th>
@@ -247,21 +281,22 @@ export default function QuoteListIsland() {
               <th>Status</th>
               <th>Total</th>
               <th>Criado</th>
+              <th>Última interação</th>
               <th className="th-actions" style={{ textAlign: "center" }}>
-                Acoes
+                Ações
               </th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6}>Carregando...</td>
+                <td colSpan={7}>Carregando...</td>
               </tr>
             )}
 
             {!loading && quotesFiltrados.length === 0 && (
               <tr>
-                <td colSpan={6}>Nenhum orcamento encontrado.</td>
+                <td colSpan={7}>Nenhum orcamento encontrado.</td>
               </tr>
             )}
 
@@ -310,71 +345,67 @@ export default function QuoteListIsland() {
                     </td>
                     <td>{formatCurrency(Number(quote.total || 0))}</td>
                     <td>{formatDate(quote.created_at)}</td>
-                    <td
-                      className="th-actions"
-                      style={{
-                        textAlign: "center",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <button
-                        className="btn-icon"
-                        title={`Ultima interacao: ${formatDateTime(
-                          quote.last_interaction_at
-                        )}`}
-                        style={{ padding: "4px 6px" }}
-                        onClick={() => marcarUltimaInteracao(quote.id)}
-                      >
-                        🕒
-                      </button>
-                      <button
-                        className="btn-icon"
-                        title="Converter em venda"
-                        style={{ padding: "4px 6px" }}
-                        onClick={() => converterParaVenda(quote.id)}
-                        disabled={isFechado}
-                      >
-                        🧾
-                      </button>
-                      <button
-                        className="btn-icon"
-                        title="Visualizar orçamento"
-                        style={{ padding: "4px 6px" }}
-                        onClick={() => setVisualizandoQuote(quote)}
-                      >
-                        👁️
-                      </button>
-                      <button
-                        className="btn-icon"
-                        title="Visualizar PDF"
-                        style={{ padding: "4px 6px" }}
-                        onClick={() => handleExportPdf(quote.id)}
-                        disabled={exportingQuoteId === quote.id}
-                      >
-                        {exportingQuoteId === quote.id ? "⏳" : "📄"}
-                      </button>
-                      {!isFechado && (
-                        <a
+                    <td>{quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}</td>
+                    <td className="th-actions">
+                      <div className="action-buttons">
+                        <button
                           className="btn-icon"
-                          href={`/orcamentos/${quote.id}`}
-                          title="Editar orcamento"
+                          title={
+                            quote.last_interaction_at
+                              ? `Ultima interacao: ${formatDateTime(quote.last_interaction_at)}`
+                              : "Registrar ultima interacao"
+                          }
+                          style={{ padding: "4px 6px" }}
+                          onClick={() => abrirInteracaoModal(quote)}
+                        >
+                          🕒
+                        </button>
+                        <button
+                          className="btn-icon"
+                          title="Converter em venda"
+                          style={{ padding: "4px 6px" }}
+                          onClick={() => converterParaVenda(quote.id)}
+                          disabled={isFechado}
+                        >
+                          🧾
+                        </button>
+                        <button
+                          className="btn-icon"
+                          title="Visualizar orçamento"
+                          style={{ padding: "4px 6px" }}
+                          onClick={() => setVisualizandoQuote(quote)}
+                        >
+                          👁️
+                        </button>
+                        <button
+                          className="btn-icon"
+                          title="Visualizar PDF"
+                          style={{ padding: "4px 6px" }}
+                          onClick={() => handleExportPdf(quote.id)}
+                          disabled={exportingQuoteId === quote.id}
+                        >
+                          {exportingQuoteId === quote.id ? "⏳" : "📄"}
+                        </button>
+                        {!isFechado && (
+                          <a
+                            className="btn-icon"
+                            href={`/orcamentos/${quote.id}`}
+                            title="Editar orcamento"
+                            style={{ padding: "4px 6px" }}
+                          >
+                            ✏️
+                          </a>
+                        )}
+                        <button
+                          className="btn-icon btn-danger"
+                          title="Excluir orcamento"
+                          onClick={() => excluirQuote(quote.id)}
+                          disabled={deletandoId === quote.id}
                           style={{ padding: "4px 6px" }}
                         >
-                          ✏️
-                        </a>
-                      )}
-                      <button
-                        className="btn-icon btn-danger"
-                        title="Excluir orcamento"
-                        onClick={() => excluirQuote(quote.id)}
-                        disabled={deletandoId === quote.id}
-                        style={{ padding: "4px 6px" }}
-                      >
-                        {deletandoId === quote.id ? "..." : "🗑️"}
-                      </button>
+                          {deletandoId === quote.id ? "..." : "🗑️"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -382,6 +413,91 @@ export default function QuoteListIsland() {
           </tbody>
         </table>
       </div>
+      {interacaoQuote && (
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 720, width: "92vw" }}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">Última interação</div>
+                <div style={{ fontSize: "0.9rem", color: "#475569" }}>
+                  Cliente:{" "}
+                  {interacaoQuote.client_name ||
+                    interacaoQuote.cliente?.nome ||
+                    "—"}{" "}
+                  | Status:{" "}
+                  {interacaoQuote.status_negociacao || "Enviado"}
+                </div>
+              </div>
+              <button className="btn-ghost" onClick={() => setInteracaoQuote(null)}>
+                ✖
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+              <div>
+                <strong>Total:</strong>{" "}
+                {formatCurrency(Number(interacaoQuote.total || 0))}
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Data do último contato</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={interactionDate}
+                    onChange={(e) => setInteractionDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Notas</label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  value={interactionNotes}
+                  onChange={(e) => setInteractionNotes(e.target.value)}
+                  placeholder="Descreva o último contato..."
+                />
+              </div>
+              <div>
+                <strong>Itens:</strong>
+                {interacaoQuote.quote_item && interacaoQuote.quote_item.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 6 }}>
+                    {[...(interacaoQuote.quote_item || [])]
+                      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+                      .map((item) => (
+                        <span key={`${interacaoQuote.id}-${item.id}`}>{buildItemLabel(item)}</span>
+                      ))}
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 6 }}>-</div>
+                )}
+              </div>
+              {interactionError && (
+                <div style={{ color: "#b91c1c" }}>{interactionError}</div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-light"
+                type="button"
+                onClick={() => setInteracaoQuote(null)}
+                disabled={interactionSaving}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={salvarInteracao}
+                disabled={interactionSaving}
+              >
+                {interactionSaving ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {visualizandoQuote && (
         <div className="modal-backdrop">
           <div className="modal-panel" style={{ maxWidth: 640, width: "90vw" }}>

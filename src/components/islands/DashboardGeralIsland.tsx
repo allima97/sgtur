@@ -1801,8 +1801,12 @@ const DashboardGeralIsland: React.FC = () => {
               className="form-input"
               value={inicio}
               onChange={(e) => {
+                const nextInicio = e.target.value;
                 setPresetPeriodo("personalizado");
-                setInicio(e.target.value);
+                setInicio(nextInicio);
+                if (fim && nextInicio && fim < nextInicio) {
+                  setFim(nextInicio);
+                }
               }}
             />
           </div>
@@ -1812,9 +1816,12 @@ const DashboardGeralIsland: React.FC = () => {
               type="date"
               className="form-input"
               value={fim}
+              min={inicio || undefined}
               onChange={(e) => {
                 setPresetPeriodo("personalizado");
-                setFim(e.target.value);
+                const nextFim = e.target.value;
+                const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                setFim(boundedFim);
               }}
             />
           </div>

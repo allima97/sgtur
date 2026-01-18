@@ -1125,7 +1125,16 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         type="date"
                         className="form-input"
                         value={servicoForm.data_inicio}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, data_inicio: e.target.value }))}
+                        onChange={(e) =>
+                          setServicoForm((prev) => {
+                            const nextInicio = e.target.value;
+                            const nextFim =
+                              prev.data_fim && nextInicio && prev.data_fim < nextInicio
+                                ? nextInicio
+                                : prev.data_fim;
+                            return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                          })
+                        }
                       />
                     </div>
                     <div className="form-group">
@@ -1134,7 +1143,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         type="date"
                         className="form-input"
                         value={servicoForm.data_fim}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, data_fim: e.target.value }))}
+                        min={servicoForm.data_inicio || undefined}
+                        onChange={(e) =>
+                          setServicoForm((prev) => {
+                            const nextFim = e.target.value;
+                            const boundedFim =
+                              prev.data_inicio && nextFim && nextFim < prev.data_inicio
+                                ? prev.data_inicio
+                                : nextFim;
+                            return { ...prev, data_fim: boundedFim };
+                          })
+                        }
                       />
                     </div>
                     <div className="form-group">

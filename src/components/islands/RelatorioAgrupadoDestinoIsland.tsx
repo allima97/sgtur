@@ -448,7 +448,13 @@ export default function RelatorioAgrupadoDestinoIsland() {
               type="date"
               className="form-input"
               value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
+              onChange={(e) => {
+                const nextInicio = e.target.value;
+                setDataInicio(nextInicio);
+                if (dataFim && nextInicio && dataFim < nextInicio) {
+                  setDataFim(nextInicio);
+                }
+              }}
             />
           </div>
           <div className="form-group">
@@ -457,7 +463,12 @@ export default function RelatorioAgrupadoDestinoIsland() {
               type="date"
               className="form-input"
               value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
+              min={dataInicio || undefined}
+              onChange={(e) => {
+                const nextFim = e.target.value;
+                const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                setDataFim(boundedFim);
+              }}
             />
           </div>
           <div className="form-group">
