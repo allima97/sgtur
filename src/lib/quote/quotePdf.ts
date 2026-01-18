@@ -831,9 +831,9 @@ export async function exportQuoteToPdf(params: {
   }
 
   const totalPages = doc.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page += 1) {
-    doc.setPage(page);
-    drawFooter(page, totalPages);
+  if (totalPages > 0) {
+    doc.setPage(totalPages);
+    drawFooter(totalPages, totalPages);
   }
 
   const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
