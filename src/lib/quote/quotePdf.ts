@@ -329,6 +329,7 @@ export async function exportQuoteToPdf(params: {
 
   const colors = {
     border: [171, 167, 214],
+    itemBorder: [171, 167, 214],
     divider: [210, 214, 227],
     muted: [100, 116, 139],
     text: [15, 23, 42],
@@ -519,7 +520,8 @@ export async function exportQuoteToPdf(params: {
       const boxH = hasDiscount ? 90 : 70;
       const boxX = pageWidth - margin - boxW;
       const boxY = lineY + 6;
-      doc.setDrawColor(150);
+      doc.setDrawColor(...colors.border);
+      doc.setLineWidth(0.8);
       doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -616,11 +618,13 @@ export async function exportQuoteToPdf(params: {
     const defaultCardY = pageHeight - margin - cardHeight;
     const cardY = Math.min(defaultCardY, Math.max(minCardY, margin));
 
-    doc.setDrawColor(...colors.border);
+    doc.setDrawColor(...colors.itemBorder);
     doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 10, 10);
 
     let textY = cardY + footerCardPadding + footerCardLineHeight - 2;
     wrappedLines.forEach((line) => {
+      const isValidity = line.toLowerCase().includes("validade somente para:");
+      doc.setTextColor(...(isValidity ? [220, 38, 38] : colors.text));
       doc.text(line, pageWidth / 2, textY, { align: "center" });
       textY += footerCardLineHeight;
     });
