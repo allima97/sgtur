@@ -150,6 +150,29 @@ function isSeguroProduto(produto?: Produto | null) {
   return nome.includes("seguro");
 }
 
+function formatPct(value: number) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + "%";
+}
+
+function formatPctList(values: number[]) {
+  const filtered = values.filter((v) => Number.isFinite(v));
+  if (!filtered.length) return "";
+  return filtered.map((v) => formatPct(v)).join(", ");
+}
+
+function buildKpiLabel(base: string, values: number[]) {
+  const list = formatPctList(values);
+  return list ? `${base} (${list})` : base;
+}
+
+function buildKpiLabelFromList(base: string, values: string[]) {
+  const list = values.filter(Boolean).join(", ");
+  return list ? `${base} (${list})` : base;
+}
+
 export default function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
@@ -450,6 +473,9 @@ export default function ComissionamentoIsland() {
     let totalTaxas = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
+    const pctComissaoGeralSet = new Set<number>();
+    const pctPassagemFacialSet = new Set<number>();
+    const pctSeguroFormulaSet = new Set<string>();
     const comissaoDifDetalhe: Record<string, number> = {};
     const produtosDiferenciados: string[] = [];
     let comissaoFixaProdutos = 0;
@@ -527,6 +553,13 @@ export default function ComissionamentoIsland() {
         const val = baseCom * (pctCom / 100);
         comissaoFixaProdutos += val;
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
+        if (jogaParaGeral && pctCom > 0) {
+          if (isPassagemFacial) {
+            pctPassagemFacialSet.add(pctCom);
+          } else {
+            pctComissaoGeralSet.add(pctCom);
+          }
+        }
         if (jogaParaGeral) {
           if (isPassagemFacial) {
             comissaoPassagemFacial += val;
@@ -559,6 +592,13 @@ export default function ComissionamentoIsland() {
         const nomeProd = (prod.nome || "").toLowerCase();
         const normalizedNome = nomeProd.replace(/\s+/g, " ").trim();
         const isPassagemFacial = normalizedNome.includes("passagem facial");
+        if (pctCom > 0) {
+          if (isPassagemFacial) {
+            pctPassagemFacialSet.add(pctCom);
+          } else {
+            pctComissaoGeralSet.add(pctCom);
+          }
+        }
         if (isPassagemFacial) {
           comissaoPassagemFacial += valGeral;
         } else {
@@ -576,6 +616,12 @@ export default function ComissionamentoIsland() {
             comissaoMetaProdDetalhe[prodId] = (comissaoMetaProdDetalhe[prodId] || 0) + diff;
             if (isSeguro) {
               comissaoSeguroViagem += diff;
+              const metaPct = Number(prod.comissao_produto_meta_pct || 0);
+              const basePct = prod.descontar_meta_geral === false ? 0 : Number(pctCom || 0);
+              const diffPct = Math.max(metaPct - basePct, 0);
+              if (metaPct > 0) {
+                pctSeguroFormulaSet.add(formatPct(diffPct));
+              }
             }
           }
         }
@@ -602,6 +648,9 @@ export default function ComissionamentoIsland() {
       comissaoMetaProd: metaProdEnabled ? comissaoMetaProd : 0,
       comissaoPassagemFacial,
       comissaoSeguroViagem,
+      pctComissaoGeral: Array.from(pctComissaoGeralSet),
+      pctPassagemFacial: Array.from(pctPassagemFacialSet),
+      pctSeguroFormula: Array.from(pctSeguroFormulaSet),
       totalComissaoKpi,
       totalComissaoKpiSeguro,
       totalComissao,
@@ -614,6 +663,16 @@ export default function ComissionamentoIsland() {
 
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
+
+  const labelComissao = resumo
+    ? buildKpiLabel("Comissão", resumo.pctComissaoGeral || [])
+    : "Comissão";
+  const labelPassagemFacial = resumo
+    ? buildKpiLabel("Passagem Facial", resumo.pctPassagemFacial || [])
+    : "Passagem Facial";
+  const labelSeguro = resumo
+    ? buildKpiLabelFromList("Seguro Viagem", resumo.pctSeguroFormula || [])
+    : "Seguro Viagem";
 
   const cardColStyle = {};
 
@@ -662,7 +721,7 @@ export default function ComissionamentoIsland() {
                 </div>
               </div>
               <div className="kpi-card flex flex-col items-center text-center" style={{ color: '#ca8a04' }}>
-                <div className="kpi-label">Total Bruto</div>
+                <div className="kpi-label">{`Total Bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)`}</div>
                 <div className="kpi-value">
                   {resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
@@ -728,13 +787,13 @@ export default function ComissionamentoIsland() {
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
             >
               <div className="kpi-card flex flex-col items-center text-center">
-                <div className="kpi-label">Comissão</div>
+                <div className="kpi-label">{labelComissao}</div>
                 <div className="kpi-value">
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
               <div className="kpi-card flex flex-col items-center text-center">
-                <div className="kpi-label">Passagem Facial</div>
+                <div className="kpi-label">{labelPassagemFacial}</div>
                 <div className="kpi-value">
                   {resumo.comissaoPassagemFacial.toLocaleString("pt-BR", {
                     style: "currency",
@@ -752,7 +811,7 @@ export default function ComissionamentoIsland() {
                 </div>
               </div>
               <div className="kpi-card flex flex-col items-center text-center">
-                <div className="kpi-label">Seguro Viagem</div>
+                <div className="kpi-label">{labelSeguro}</div>
                 <div className="kpi-value">
                   {resumo.comissaoSeguroViagem.toLocaleString("pt-BR", {
                     style: "currency",
