@@ -744,7 +744,7 @@ export default function ComissionamentoIsland() {
               </div>
               {resumo.totalValorMetaDiferenciada > 0 && (
                 <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">Metas Diferenciadas</div>
+                  <div className="kpi-label">Vendas Diferenciadas</div>
                   <div className="kpi-value">
                     {resumo.totalValorMetaDiferenciada.toLocaleString("pt-BR", {
                       style: "currency",
@@ -755,7 +755,7 @@ export default function ComissionamentoIsland() {
               )}
               {resumo.totalValorMetaEscalonavel > 0 && (
                 <div className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">Meta Escalonável</div>
+                  <div className="kpi-label">Vendas Escalonável</div>
                   <div className="kpi-value">
                     {resumo.totalValorMetaEscalonavel.toLocaleString("pt-BR", {
                       style: "currency",
