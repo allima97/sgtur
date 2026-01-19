@@ -145,6 +145,11 @@ function formatPeriodoLabel(value: string) {
   return `${dia}-${mesLabel}-${ano}`;
 }
 
+function isSeguroProduto(produto?: Produto | null) {
+  const nome = (produto?.nome || "").toLowerCase();
+  return nome.includes("seguro");
+}
+
 export default function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
@@ -447,9 +452,14 @@ export default function ComissionamentoIsland() {
     let comissaoDif = 0;
     const comissaoDifDetalhe: Record<string, number> = {};
     const produtosDiferenciados: string[] = [];
+    let comissaoFixaProdutos = 0;
     let comissaoMetaProd = 0;
     const comissaoMetaProdDetalhe: Record<string, number> = {};
     let comissaoPassagemFacial = 0;
+    let comissaoSeguroViagem = 0;
+    let totalValorMetaDiferenciada = 0;
+    let totalValorMetaEscalonavel = 0;
+    let totalValorMetaGeral = 0;
     const usaFocoFaturamentoLiquido = parametros.foco_faturamento === "liquido";
 
     Object.values(produtos).forEach((p) => {
@@ -492,12 +502,15 @@ export default function ComissionamentoIsland() {
       const prod = produtos[prodId];
       if (!prod) return;
 
+      const valorLiquidoProduto = liquidoPorProduto[prodId] || 0;
       const baseCom = usaFocoFaturamentoLiquido
         ? liquidoPorProduto[prodId] || 0
         : brutoPorProduto[prodId] || 0;
       const nomeProdNormalizado = (prod.nome || "").toLowerCase().replace(/\s+/g, " ").trim();
       const isPassagemFacial = nomeProdNormalizado.includes("passagem facial");
+      const isSeguro = isSeguroProduto(prod);
       if (prod.regra_comissionamento === "diferenciado") {
+        totalValorMetaDiferenciada += valorLiquidoProduto;
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
         const metaProd = metasProdutoMap[prodId] || 0;
@@ -512,6 +525,7 @@ export default function ComissionamentoIsland() {
             : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0
           : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
+        comissaoFixaProdutos += val;
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
         if (jogaParaGeral) {
           if (isPassagemFacial) {
@@ -526,6 +540,11 @@ export default function ComissionamentoIsland() {
       } else {
         const ruleId = regraProdutoMap[prodId]?.rule_id;
         const reg = ruleId ? regras[ruleId] : undefined;
+        if (reg?.tipo === "ESCALONAVEL") {
+          totalValorMetaEscalonavel += valorLiquidoProduto;
+        } else {
+          totalValorMetaGeral += valorLiquidoProduto;
+        }
         let pctCom = 0;
         if (reg) {
           if (reg.tipo === "ESCALONAVEL") {
@@ -555,24 +574,37 @@ export default function ComissionamentoIsland() {
             const diff = prod.descontar_meta_geral === false ? valMetaProd : Math.max(valMetaProd - valGeral, 0);
             comissaoMetaProd += diff;
             comissaoMetaProdDetalhe[prodId] = (comissaoMetaProdDetalhe[prodId] || 0) + diff;
+            if (isSeguro) {
+              comissaoSeguroViagem += diff;
+            }
           }
         }
       }
     });
+
+    const totalComissao = metaProdEnabled
+      ? comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial
+      : comissaoGeral + comissaoDif + comissaoPassagemFacial;
+    const totalComissaoKpi = comissaoGeral + comissaoFixaProdutos;
+    const totalComissaoKpiSeguro = totalComissaoKpi + comissaoSeguroViagem;
 
     return {
       baseMeta,
       totalBruto,
       totalTaxas,
       totalLiquido,
+      totalValorMetaDiferenciada,
+      totalValorMetaEscalonavel,
+      totalValorMetaGeral,
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
       comissaoMetaProd: metaProdEnabled ? comissaoMetaProd : 0,
       comissaoPassagemFacial,
-      totalComissao: metaProdEnabled
-        ? comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial
-        : comissaoGeral + comissaoDif + comissaoPassagemFacial,
+      comissaoSeguroViagem,
+      totalComissaoKpi,
+      totalComissaoKpiSeguro,
+      totalComissao,
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: metaProdEnabled ? comissaoMetaProdDetalhe : {},
       produtosDiferenciados,
@@ -584,13 +616,6 @@ export default function ComissionamentoIsland() {
   if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
 
   const cardColStyle = {};
-
-  const metaProdEntries =
-    metaProdEnabled && resumo
-      ? Object.entries(resumo.comissaoMetaProdDetalhe || {})
-      : [];
-  const difProdutos = resumo?.produtosDiferenciados || [];
-  const mostraProdutoKpi = metaProdEntries.length > 0 || difProdutos.length > 0;
 
   return (
     <div className="card-base bg-transparent shadow-none p-0">
@@ -658,6 +683,39 @@ export default function ComissionamentoIsland() {
                 <div className="kpi-label">Vendas</div>
                 <div className="kpi-value">{resumo.totalVendas}</div>
               </div>
+              {resumo.totalValorMetaDiferenciada > 0 && (
+                <div className="kpi-card flex flex-col items-center text-center">
+                  <div className="kpi-label">Metas Diferenciadas</div>
+                  <div className="kpi-value">
+                    {resumo.totalValorMetaDiferenciada.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </div>
+                </div>
+              )}
+              {resumo.totalValorMetaEscalonavel > 0 && (
+                <div className="kpi-card flex flex-col items-center text-center">
+                  <div className="kpi-label">Meta Escalonável</div>
+                  <div className="kpi-value">
+                    {resumo.totalValorMetaEscalonavel.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </div>
+                </div>
+              )}
+              {resumo.totalValorMetaGeral > 0 && (
+                <div className="kpi-card flex flex-col items-center text-center">
+                  <div className="kpi-label">Produtos com meta geral</div>
+                  <div className="kpi-value">
+                    {resumo.totalValorMetaGeral.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -665,11 +723,6 @@ export default function ComissionamentoIsland() {
             <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
               Seus Valores a Receber
             </div>
-            {mostraProdutoKpi && (
-              <div style={{ textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }}>
-                Produtos com comissão diferenciada
-              </div>
-            )}
             <div
               className="kpi-grid"
               style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
@@ -680,34 +733,40 @@ export default function ComissionamentoIsland() {
                   {resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </div>
               </div>
-              {metaProdEnabled &&
-                metaProdEntries.map(([pid, val]) => (
-                  <div key={`meta-${pid}`} className="kpi-card flex flex-col items-center text-center">
-                    <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
-                    <div className="kpi-value">
-                      {val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </div>
-                    {val === 0 && <small style={{ color: "#dc2626" }}>Meta não atingida</small>}
-                  </div>
-                ))}
-              {difProdutos.map((pid) => (
-                <div key={pid} className="kpi-card flex flex-col items-center text-center">
-                  <div className="kpi-label">{produtos[pid]?.nome || "(produto)"}</div>
-                  <div className="kpi-value">
-                    {(resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </div>
-                  {(resumo.comissaoDifDetalhe?.[pid] || 0) === 0 && (
-                    <small style={{ color: "#dc2626" }}>Sem comissão</small>
-                  )}
+              <div className="kpi-card flex flex-col items-center text-center">
+                <div className="kpi-label">Passagem Facial</div>
+                <div className="kpi-value">
+                  {resumo.comissaoPassagemFacial.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
                 </div>
-              ))}
-              <div className="kpi-card kpi-highlight flex flex-col items-center text-center">
+              </div>
+              <div className="kpi-card flex flex-col items-center text-center">
                 <div className="kpi-label">Comissão total</div>
                 <div className="kpi-value">
-                  {resumo.totalComissao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {resumo.totalComissaoKpi.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </div>
+              </div>
+              <div className="kpi-card flex flex-col items-center text-center">
+                <div className="kpi-label">Seguro Viagem</div>
+                <div className="kpi-value">
+                  {resumo.comissaoSeguroViagem.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </div>
+              </div>
+              <div className="kpi-card kpi-highlight flex flex-col items-center text-center">
+                <div className="kpi-label">Comissão + Seguro</div>
+                <div className="kpi-value">
+                  {resumo.totalComissaoKpiSeguro.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
                 </div>
               </div>
             </div>

@@ -65,6 +65,10 @@ function formatarMoeda(valor?: number | null) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function obterMinData(datas: Array<string | null | undefined>) {
   let minTs: number | null = null;
   let minStr: string | null = null;
@@ -116,6 +120,7 @@ export default function ViagensListaIsland() {
   const [statusFiltro, setStatusFiltro] = useState<string>("");
   const [inicio, setInicio] = useState<string>("");
   const [fim, setFim] = useState<string>("");
+  const [busca, setBusca] = useState<string>("");
   const [viagens, setViagens] = useState<Viagem[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -471,6 +476,26 @@ export default function ViagensListaIsland() {
       return da < db ? -1 : 1;
     });
   }, [viagensAgrupadas]);
+  const viagensFiltradas = useMemo(() => {
+    const termo = normalizeText(busca.trim());
+    if (!termo) return proximasViagens;
+    return proximasViagens.filter((viagem) => {
+      const clienteNome = viagem.clientes?.nome || "";
+      const produtos = (viagem.recibos || [])
+        .map((recibo) =>
+          [
+            recibo.tipo_produtos?.nome,
+            recibo.tipo_produtos?.tipo,
+            recibo.produto_id,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        )
+        .join(" ");
+      const haystack = normalizeText([clienteNome, produtos].filter(Boolean).join(" "));
+      return haystack.includes(termo);
+    });
+  }, [proximasViagens, busca]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
   const totalColunasTabela = 7;
 
@@ -626,6 +651,15 @@ export default function ViagensListaIsland() {
           )}
 
           <div className="form-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
+              <label className="form-label">Buscar</label>
+              <input
+                className="form-input"
+                placeholder="Cliente ou produto..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
             <div className="form-group" style={{ flex: "1 1 180px" }}>
               <label className="form-label">Status</label>
               <select
@@ -725,12 +759,12 @@ export default function ViagensListaIsland() {
                   <td colSpan={totalColunasTabela}>Carregando viagens...</td>
                 </tr>
               )}
-              {!loading && proximasViagens.length === 0 && (
+              {!loading && viagensFiltradas.length === 0 && (
                 <tr>
                   <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
                 </tr>
               )}
-              {proximasViagens.map((v) => {
+              {viagensFiltradas.map((v) => {
                 const statusLabel = obterStatusExibicao(v);
                 const recibos = v.recibos || [];
                 const produtoLabel =
