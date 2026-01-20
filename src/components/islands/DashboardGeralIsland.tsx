@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -248,6 +248,7 @@ const DashboardGeralIsland: React.FC = () => {
   const [widgetVisible, setWidgetVisible] = useState<Record<WidgetId, boolean>>(() =>
     ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: true }), {} as Record<WidgetId, boolean>)
   );
+  const viagensScrollRef = useRef<HTMLDivElement | null>(null);
   const widgetIds = useMemo(() => ALL_WIDGETS.map((w) => w.id), []);
   const [showCustomize, setShowCustomize] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
@@ -1129,6 +1130,16 @@ const DashboardGeralIsland: React.FC = () => {
     return ordenado.slice(0, 10);
   }, [followUps]);
 
+  useEffect(() => {
+    if (proximasViagensAgrupadas.length <= 3) return;
+    const id = window.requestAnimationFrame(() => {
+      const el = viagensScrollRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [proximasViagensAgrupadas.length]);
+
   const renderPieLegendList = (data: { name: string; value: number }[]) => {
     if (!data.length) return null;
     return (
@@ -1592,6 +1603,7 @@ const DashboardGeralIsland: React.FC = () => {
                   maxHeight: shouldScrollViagens ? tableScrollMaxHeight : undefined,
                   overflowY: shouldScrollViagens ? "auto" : "visible",
                 }}
+                ref={viagensScrollRef}
               >
                 <table className="table-default min-w-[760px]">
                   <thead>
