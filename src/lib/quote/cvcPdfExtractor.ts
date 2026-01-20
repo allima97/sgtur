@@ -75,6 +75,7 @@ const TIPO_PRODUTO_WHITELIST = [
   "ingresso",
   "passeio",
   "circuito",
+  "a+h",
 ];
 
 const ITEM_KEYWORDS = [
@@ -92,6 +93,7 @@ const ITEM_KEYWORDS = [
   "ingress",
   "passei",
   "circuit",
+  "a+h",
 ];
 
 const TEXT_STOP_KEYWORDS = [
@@ -323,6 +325,37 @@ type RouteInfo = {
   raw: string;
 };
 
+type FlightLeg = {
+  departure_time?: string;
+  departure_code?: string;
+  departure_city?: string;
+  arrival_time?: string;
+  arrival_code?: string;
+  arrival_city?: string;
+  duration?: string;
+  flight_number?: string;
+  flight_type?: string;
+};
+
+type FlightDirection = {
+  label: string;
+  route?: string;
+  date?: string;
+  legs: FlightLeg[];
+  notices?: string[];
+};
+
+type FlightDetails = {
+  route?: string;
+  airline?: string;
+  cabin?: string;
+  fare_tags: string[];
+  directions: FlightDirection[];
+  baggage: string[];
+  notices: string[];
+  hotel_lines?: string[];
+};
+
 function isHotelLabel(text: string) {
   const normalized = normalizeOcrText(text);
   return (
@@ -350,9 +383,18 @@ function isCarLabel(text: string) {
   );
 }
 
+function isAirHotelLabel(text: string) {
+  const normalized = normalizeOcrText(text);
+  if (!normalized) return false;
+  if (/a\s*\+\s*h/.test(normalized)) return true;
+  if (normalized.includes("aereo") && normalized.includes("hotel")) return true;
+  return false;
+}
+
 function isFlightLabel(text: string) {
   const normalized = normalizeOcrText(text);
   return (
+    isAirHotelLabel(normalized) ||
     normalized.includes("aereo") ||
     normalized.includes("passagem") ||
     normalized.includes("voo")
@@ -429,6 +471,7 @@ function canonicalizeTipoLabel(value: string) {
   const normalized = normalizeOcrText(value);
   if (!normalized) return "";
   if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
+  if (isAirHotelLabel(normalized)) return "A+H";
   if (normalized.includes("aereo") || normalized.includes("voo") || normalized.includes("passagem")) {
     return "Passagem Aérea";
   }
@@ -578,6 +621,361 @@ function extractFlightRouteLine(lines: string[]) {
   return route?.raw || null;
 }
 
+function extractRouteFromLine(line: string) {
+  const cleaned = (line || "")
+    .replace(/^(Ida|Volta)\s+/i, "")
+    .replace(/\bVoo\b.*$/i, "")
+    .trim();
+  const trimmed = normalizeRouteCandidate(cleaned);
+  const match = trimmed.match(ROUTE_LINE_REGEX);
+  if (!match) return "";
+  const origin = (match[1] || "").trim();
+  const destination = (match[2] || "").trim();
+  if (!origin || !destination) return "";
+  return `${origin} - ${destination}`;
+}
+
+function isFlightDateLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  if (normalized.includes("feira")) return true;
+  return /\d{1,2}\s*de\s*[a-zçãõáéíóú]+/.test(normalized);
+}
+
+function extractDurationFromLine(line: string) {
+  const match = line.match(/(\d{1,2}\s*h\s*\d{1,2}\s*min)/i) || line.match(/(\d{1,2}h\s*\d{1,2}min)/i);
+  if (!match?.[1]) return "";
+  return match[1].replace(/\s+/g, " ").trim();
+}
+
+function extractTimeCodeFromLine(line: string) {
+  const timeMatch = line.match(/\b(\d{2}:\d{2})\b/);
+  const codeMatch = line.match(/\b([A-Z]{3})\b/);
+  if (!timeMatch || !codeMatch) return null;
+  return { time: timeMatch[1], code: codeMatch[1] };
+}
+
+function extractFlightNumberFromLine(line: string) {
+  const match = line.match(/\b([A-Z]{1,3}\s?\d{3,5})\b/);
+  if (!match?.[1]) return "";
+  return match[1].replace(/\s+/g, " ").trim();
+}
+
+function isBaggageLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  return normalized.includes("bagagem") || normalized.includes("bolsa") || normalized.includes("mochila");
+}
+
+function isNoticeLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  return normalized.startsWith("atencao") || normalized.includes("parada");
+}
+
+function isFareTagLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  return (
+    normalized.includes("tarifa") ||
+    normalized.includes("reembols") ||
+    normalized.includes("nao reembols") ||
+    normalized.includes("facil") ||
+    normalized.includes("preferencial")
+  );
+}
+
+function isCabinLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  return normalized.includes("classe");
+}
+
+function isFlightTypeLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (normalized.includes("voo direto")) return "Voo direto";
+  if (normalized.includes("voo com paradas")) return "Voo com paradas";
+  return "";
+}
+
+function isPotentialAirlineLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  if (normalized.includes("detalhes") || normalized.includes("total")) return false;
+  if (normalized.startsWith("ida") || normalized.startsWith("volta")) return false;
+  if (normalized.includes("classe") || normalized.includes("tarifa") || normalized.includes("reembols")) return false;
+  if (normalized.includes("voo")) return false;
+  if (isRouteLine(line) || isDateOnlyLine(line)) return false;
+  if (isBaggageLine(line) || isNoticeLine(line)) return false;
+  if (extractTimeCodeFromLine(line)) return false;
+  if (/\d/.test(line)) return false;
+  if (!/[A-Za-zÀ-ÿ]/.test(line)) return false;
+  return true;
+}
+
+function isCityLine(line: string) {
+  const normalized = normalizeOcrText(line);
+  if (!normalized) return false;
+  if (normalized.includes("voo") || normalized.includes("classe") || normalized.includes("bagagem")) return false;
+  if (normalized.includes("tarifa") || normalized.includes("reembols")) return false;
+  if (normalized.includes("total") || normalized.includes("detalhes")) return false;
+  if (normalized.includes("inclui")) return false;
+  if (normalized.includes("atencao") || normalized.includes("atenção") || normalized.includes("parada")) return false;
+  if (/\d/.test(line)) return false;
+  return /[A-Za-zÀ-ÿ]/.test(line);
+}
+
+function parseFlightDetailsFromLines(lines: string[], itemType?: string): FlightDetails | null {
+  const baseLines = (lines || []).map((line) => (line || "").trim()).filter(Boolean);
+  if (!baseLines.length) return null;
+  const joined = baseLines.join(" ");
+  if (!isFlightLabel(itemType || joined)) return null;
+
+  const isAirHotel = isAirHotelLabel(itemType || joined);
+  let hotelLines: string[] = [];
+  let parseLines = baseLines;
+
+  if (isAirHotel) {
+    const hotelName =
+      extractHotelNameFromLines(baseLines) || extractHotelProductName(baseLines) || "";
+    if (hotelName) {
+      const hotelIndex = baseLines.findIndex(
+        (line) => normalizeOcrText(line) === normalizeOcrText(hotelName)
+      );
+      if (hotelIndex > 0) {
+        hotelLines = baseLines.slice(hotelIndex);
+        parseLines = baseLines.slice(0, hotelIndex);
+      }
+    }
+  }
+
+  const details: FlightDetails = {
+    fare_tags: [],
+    directions: [],
+    baggage: [],
+    notices: [],
+  };
+  const route = findRouteFromLines(parseLines);
+  if (route?.raw) details.route = route.raw;
+
+  let currentDirection: FlightDirection | null = null;
+  let currentLeg: FlightLeg | null = null;
+  let pendingCity: "departure" | "arrival" | null = null;
+  let pendingTime: string | null = null;
+  let pendingFlightType: string | null = null;
+  let pendingFlightNumber: string | null = null;
+  let pendingDuration: string | null = null;
+  let attentionNext = false;
+  let baggageSection = false;
+
+  function applyPendingMeta(leg: FlightLeg) {
+    if (pendingFlightType && !leg.flight_type) {
+      leg.flight_type = pendingFlightType;
+      pendingFlightType = null;
+    }
+    if (pendingFlightNumber && !leg.flight_number) {
+      leg.flight_number = pendingFlightNumber;
+      pendingFlightNumber = null;
+    }
+    if (pendingDuration && !leg.duration) {
+      leg.duration = pendingDuration;
+      pendingDuration = null;
+    }
+  }
+
+  function applyTimeCode(time: string, code: string) {
+    if (!currentDirection) {
+      currentDirection = { label: "Trecho", legs: [] };
+      details.directions.push(currentDirection);
+    }
+    if (!currentLeg || currentLeg.arrival_time) {
+      currentLeg = {};
+      currentDirection.legs.push(currentLeg);
+    }
+    if (!currentLeg.departure_time) {
+      currentLeg.departure_time = time;
+      currentLeg.departure_code = code;
+      pendingCity = "departure";
+    } else if (!currentLeg.arrival_time) {
+      currentLeg.arrival_time = time;
+      currentLeg.arrival_code = code;
+      pendingCity = "arrival";
+    }
+    applyPendingMeta(currentLeg);
+  }
+
+  for (const line of parseLines) {
+    const normalized = normalizeOcrText(line);
+    if (!normalized) continue;
+    if (normalized === "detalhes") continue;
+    if (normalized.includes("total")) continue;
+
+    if (normalized === "atencao") {
+      attentionNext = true;
+      continue;
+    }
+
+    const directionMatch = line.match(/^(Ida|Volta)\b/i);
+    if (directionMatch) {
+      const label = directionMatch[1];
+      currentDirection = { label, route: extractRouteFromLine(line) || undefined, legs: [] };
+      details.directions.push(currentDirection);
+      currentLeg = null;
+      pendingCity = null;
+      pendingTime = null;
+      continue;
+    }
+
+    if (currentDirection && !currentDirection.route && isRouteLine(line)) {
+      currentDirection.route = extractRouteFromLine(line) || undefined;
+      if (!details.route && currentDirection.route) details.route = currentDirection.route;
+      continue;
+    }
+
+    if (isFlightDateLine(line)) {
+      if (currentDirection) {
+        currentDirection.date = line;
+      }
+      continue;
+    }
+
+    if (isFareTagLine(line)) {
+      details.fare_tags.push(line);
+      continue;
+    }
+
+    if (isCabinLine(line)) {
+      const match = line.match(/^(.*?)(classe.*)$/i);
+      if (match) {
+        const airlineCandidate = (match[1] || "").trim();
+        const cabinCandidate = (match[2] || "").trim();
+        if (!details.airline && airlineCandidate && !isRouteLine(airlineCandidate)) {
+          details.airline = airlineCandidate;
+        }
+        details.cabin = cabinCandidate || line;
+      } else {
+        details.cabin = line;
+      }
+      continue;
+    }
+
+    if (!details.airline && isPotentialAirlineLine(line)) {
+      details.airline = line;
+      continue;
+    }
+
+    if (attentionNext) {
+      details.notices.push(line);
+      attentionNext = false;
+      continue;
+    }
+
+    if (isNoticeLine(line)) {
+      if (currentDirection) {
+        if (!currentDirection.notices) currentDirection.notices = [];
+        currentDirection.notices.push(line);
+      } else {
+        details.notices.push(line);
+      }
+      continue;
+    }
+
+    if (normalized.includes("inclui") && (normalized.includes("bolsa") || normalized.includes("bagagem"))) {
+      baggageSection = true;
+      continue;
+    }
+
+    if (isBaggageLine(line)) {
+      if (baggageSection || normalized.includes("bagagem") || normalized.includes("bolsa")) {
+        details.baggage.push(line);
+        continue;
+      }
+    }
+
+    const timeCode = extractTimeCodeFromLine(line);
+    if (timeCode) {
+      pendingTime = null;
+      applyTimeCode(timeCode.time, timeCode.code);
+      continue;
+    }
+
+    if (isLikelyTimeLine(line)) {
+      pendingTime = line.trim();
+      continue;
+    }
+
+    if (pendingTime && isLikelyAirportCode(line)) {
+      applyTimeCode(pendingTime, line.trim());
+      pendingTime = null;
+      continue;
+    }
+
+    if (pendingCity && isCityLine(line) && currentLeg) {
+      if (pendingCity === "departure" && !currentLeg.departure_city) {
+        currentLeg.departure_city = line;
+      } else if (pendingCity === "arrival" && !currentLeg.arrival_city) {
+        currentLeg.arrival_city = line;
+      }
+      pendingCity = null;
+      continue;
+    }
+
+    const duration = extractDurationFromLine(line);
+    if (duration && currentLeg) {
+      currentLeg.duration = duration;
+      continue;
+    }
+
+    const flightType = isFlightTypeLine(line);
+    if (flightType) {
+      if (currentLeg && !currentLeg.flight_type) {
+        currentLeg.flight_type = flightType;
+      } else {
+        pendingFlightType = flightType;
+      }
+      continue;
+    }
+
+    const flightNumber = extractFlightNumberFromLine(line);
+    if (flightNumber) {
+      if (currentLeg && !currentLeg.flight_number) {
+        currentLeg.flight_number = flightNumber;
+      } else {
+        pendingFlightNumber = flightNumber;
+      }
+      continue;
+    }
+
+    if (duration) {
+      pendingDuration = duration;
+      continue;
+    }
+  }
+
+  details.fare_tags = Array.from(new Set(details.fare_tags.map((tag) => tag.trim()).filter(Boolean)));
+  details.baggage = Array.from(new Set(details.baggage.map((tag) => tag.trim()).filter(Boolean)));
+  details.notices = Array.from(new Set(details.notices.map((tag) => tag.trim()).filter(Boolean)));
+
+  details.directions = details.directions.filter((dir) => {
+    const hasLegs = dir.legs && dir.legs.length > 0;
+    const hasMeta = Boolean(dir.route || dir.date || (dir.notices || []).length);
+    return hasLegs || hasMeta;
+  });
+
+  if (hotelLines.length) {
+    details.hotel_lines = hotelLines;
+  }
+
+  const hasDetails =
+    Boolean(details.route) ||
+    Boolean(details.airline) ||
+    Boolean(details.cabin) ||
+    details.fare_tags.length > 0 ||
+    details.directions.length > 0 ||
+    details.baggage.length > 0 ||
+    details.notices.length > 0 ||
+    Boolean(details.hotel_lines?.length);
+  return hasDetails ? details : null;
+}
+
 function extractProductByType(lines: string[], tipo: string) {
   const tipoNormalized = normalizeOcrText(tipo);
   if (isSeguroLabel(tipoNormalized)) return extractSeguroProductName();
@@ -666,6 +1064,7 @@ function detectCardTypeLabel(lines: string[]) {
     if (normalized.includes("seguro") && normalized.includes("viagem")) return "Seguro viagem";
     if (normalized.includes("servi")) return "Serviços";
     if (normalized.includes("carro")) return "Aluguel de Carro";
+    if (isAirHotelLabel(normalized)) return "A+H";
     if (normalized.includes("aereo")) return "Passagem Aérea";
     if (normalized.includes("hote")) return "Hotel";
   }
@@ -679,6 +1078,7 @@ function inferTipoLabelFromText(text: string, fallbackLabel: string) {
   if (normalized.includes("carro") || normalized.includes("locacao") || normalized.includes("aluguel")) {
     return "Aluguel de Carro";
   }
+  if (isAirHotelLabel(normalized)) return "A+H";
   if (normalized.includes("aereo") || normalized.includes("voo") || normalized.includes("passagem")) return "Passagem Aérea";
   if (normalized.includes("hotel") || normalized.includes("pousada") || normalized.includes("resort") || normalized.includes("flat")) return "Hotel";
   if (normalized.includes("passeio")) return "Serviços";
@@ -1288,6 +1688,20 @@ async function extractItemsFromCards(
       });
     }
 
+    let flightDetails: FlightDetails | null = null;
+    if (isFlightLabel(tipoProduto)) {
+      const fullCard = cropCanvas(canvas, {
+        x1: card.x1,
+        y1: card.y1,
+        x2: card.x2,
+        y2: card.y2,
+      });
+      const flightOcr = await ocrCanvasRegion(worker, fullCard, "text");
+      flightDetails =
+        parseFlightDetailsFromLines(splitTextLines(flightOcr.text), tipoProduto) ||
+        parseFlightDetailsFromLines(combinedLines, tipoProduto);
+    }
+
     result.push({
       temp_id: buildTempId(),
       item_type: tipoProduto || "Serviços",
@@ -1314,6 +1728,7 @@ async function extractItemsFromCards(
           middle: middleOcr,
           product: productOcr,
         },
+        ...(flightDetails ? { flight_details: flightDetails } : {}),
       },
     });
   }
@@ -1371,13 +1786,15 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     const tipoRaw = inferTipoLabelFromText(blockText, "") || detectCardTypeLabel(block) || "Serviços";
     const tipo = canonicalizeTipoLabel(tipoRaw);
     const valorInfo = parseValorFromLines(block, tipo);
-    if (valorInfo.valor <= 0) return;
+    const allowZeroValor = isFlightLabel(tipo);
+    if (valorInfo.valor <= 0 && !allowZeroValor) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
     const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block);
     const circuitoMeta = circuitoDetectado ? parseCircuitMetaFromLines(block) : null;
     const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block) : [];
     const routeInfo = findRouteFromLines(block);
     const destinoCidade = getDestinoCidadeFromRoute(routeInfo, tipo);
+    const flightDetails = parseFlightDetailsFromLines(block, tipo);
     const allowCidadeFallback = !isSeguroLabel(tipo) && !isCarLabel(tipo);
     const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
       ? circuitoMeta.itinerario.join(" - ")
@@ -1391,12 +1808,14 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
     const quantity = parseQuantidadePax(blockText);
     const totalAmount = valorInfo.valor;
     const isCar = isCarLabel(tipo);
+    const isFlight = isFlightLabel(tipo);
+    const ignoreTaxes = isCar || isFlight;
     const summary = extractSummaryValues(block);
-    const baseValue = isCar ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
-    const taxesValue = isCar ? 0 : summary.taxes;
-    const discountValue = isCar ? 0 : summary.discount;
+    const baseValue = ignoreTaxes ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
+    const taxesValue = ignoreTaxes ? 0 : summary.taxes;
+    const discountValue = ignoreTaxes ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
-    const totalWithTaxes = isCar ? totalAmount : netBase + taxesValue;
+    const totalWithTaxes = ignoreTaxes ? totalAmount : netBase + taxesValue;
     items.push({
       temp_id: buildTempId(),
       item_type: tipo,
@@ -1417,6 +1836,7 @@ function parseItemsFromFullText(text: string, baseYear: number, pageNumber: numb
         block_text: blockText,
         city_label: destinoCidade.cidade || "",
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
+        ...(flightDetails ? { flight_details: flightDetails } : {}),
       },
     });
   });
@@ -1439,6 +1859,7 @@ function detectSectionLabel(line: string) {
   if (!normalized) return "";
   if (normalized === "servicos") return "Serviços";
   if (normalized === "aereo") return "Aéreo";
+  if (isAirHotelLabel(normalized)) return "A+H";
   if (normalized === "carros" || normalized === "carro") return "Aluguel de Carro";
   if (normalized === "hoteis" || normalized === "hotel" || normalized === "hospedagem") return "Hotel";
   if (normalized === "circuito") return "Circuito";
@@ -1749,7 +2170,8 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
       "Serviços";
     const tipo = canonicalizeTipoLabel(tipoRaw);
     const valorInfo = parseValorFromLines(block.lines, tipo);
-    if (valorInfo.valor <= 0) return;
+    const allowZeroValor = isFlightLabel(tipo);
+    if (valorInfo.valor <= 0 && !allowZeroValor) return;
     const periodo = parsePeriodoIso(blockText, baseYear);
     const quantidade = parseQuantidadePax(blockText);
     const circuitoDetectado = normalizeOcrText(tipo) === "circuito" || hasCircuitDays(block.lines);
@@ -1757,6 +2179,7 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     const circuitoDias = circuitoDetectado ? parseCircuitDaysFromLines(block.lines) : [];
     const routeInfo = findRouteFromLines(block.lines);
     const destinoCidade = getDestinoCidadeFromRoute(routeInfo, tipo);
+    const flightDetails = parseFlightDetailsFromLines(block.lines, tipo);
     const allowCidadeFallback = !isSeguroLabel(tipo) && !isCarLabel(tipo);
     const cidade = circuitoDetectado && circuitoMeta?.itinerario?.length
       ? circuitoMeta.itinerario.join(" - ")
@@ -1772,12 +2195,14 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
     const title = produto || tipo || "Item";
 
     const isCar = isCarLabel(tipo);
+    const isFlight = isFlightLabel(tipo);
+    const ignoreTaxes = isCar || isFlight;
     const summary = extractSummaryValues(block.lines);
-    const baseValue = isCar ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
-    const taxesValue = isCar ? 0 : summary.taxes;
-    const discountValue = isCar ? 0 : summary.discount;
+    const baseValue = ignoreTaxes ? totalAmount : Math.max(summary.base ?? totalAmount, 0);
+    const taxesValue = ignoreTaxes ? 0 : summary.taxes;
+    const discountValue = ignoreTaxes ? 0 : summary.discount;
     const netBase = Math.max(baseValue - discountValue, 0);
-    const totalWithTaxes = isCar ? totalAmount : netBase + taxesValue;
+    const totalWithTaxes = ignoreTaxes ? totalAmount : netBase + taxesValue;
 
     items.push({
       temp_id: buildTempId(),
@@ -1800,6 +2225,7 @@ function parseItemsFromCvcText(text: string, baseYear: number): QuoteItemDraft[]
         block_text: blockText,
         city_label: destinoCidade.cidade || "",
         ...(circuitoMeta ? { circuito_meta: circuitoMeta } : {}),
+        ...(flightDetails ? { flight_details: flightDetails } : {}),
       },
     });
   });

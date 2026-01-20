@@ -4,6 +4,7 @@ import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
+import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 
 type ClienteOption = {
   id: string;
@@ -107,6 +108,29 @@ function isCircuitItem(item: QuoteItemDraft) {
   return normalizeText(item.item_type) === "circuito";
 }
 
+function isFlightItem(item: QuoteItemDraft) {
+  const normalized = normalizeText(item.item_type || "");
+  return (
+    normalized.includes("aereo") ||
+    normalized.includes("passagem") ||
+    normalized.includes("voo") ||
+    normalized.includes("a+h")
+  );
+}
+
+function getFlightDetails(item: QuoteItemDraft): FlightDetails | null {
+  const raw = (item.raw || {}) as { flight_details?: FlightDetails };
+  return raw.flight_details || null;
+}
+
+type ImportMode = "produtos" | "circuitos" | "circuitos_produtos";
+
+const IMPORT_MODE_OPTIONS: { value: ImportMode; label: string }[] = [
+  { value: "produtos", label: "Produtos" },
+  { value: "circuitos", label: "CIRCUITOS" },
+  { value: "circuitos_produtos", label: "CIRCUITOS + Produtos" },
+];
+
 type CircuitMeta = {
   codigo?: string;
   serie?: string;
@@ -117,6 +141,16 @@ type CircuitMeta = {
 function getCircuitMeta(item: QuoteItemDraft): CircuitMeta {
   const raw = (item.raw || {}) as { circuito_meta?: CircuitMeta };
   return raw.circuito_meta || {};
+}
+
+function filtrarItensImportacao(items: QuoteItemDraft[], modo: ImportMode) {
+  if (modo === "circuitos") {
+    return items.filter((item) => isCircuitItem(item));
+  }
+  if (modo === "produtos") {
+    return items.filter((item) => !isCircuitItem(item));
+  }
+  return items;
 }
 
 export default function QuoteImportIsland() {
@@ -130,6 +164,7 @@ export default function QuoteImportIsland() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [debug, setDebug] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>("produtos");
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [clienteBusca, setClienteBusca] = useState("");
   const [clienteId, setClienteId] = useState("");
@@ -140,6 +175,7 @@ export default function QuoteImportIsland() {
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
   const [cidadeCache, setCidadeCache] = useState<Record<string, string>>({});
   const [cidadeNameMap, setCidadeNameMap] = useState<Record<string, string>>({});
+  const [flightModal, setFlightModal] = useState<{ details: FlightDetails; title?: string } | null>(null);
   const cidadeFetchTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const isMountedRef = useRef(true);
 
@@ -422,7 +458,8 @@ export default function QuoteImportIsland() {
         return;
       }
       setImportResult(result);
-      const orderedItems = result.draft.items.map((item, index) =>
+      const filteredItems = filtrarItensImportacao(result.draft.items, importMode);
+      const orderedItems = filteredItems.map((item, index) =>
         normalizeImportedItemText({
           ...item,
           cidade_id: item.cidade_id || null,
@@ -430,7 +467,18 @@ export default function QuoteImportIsland() {
           taxes_amount: Number(item.taxes_amount || 0),
         })
       );
-      setDraft({ ...result.draft, items: orderedItems });
+      const subtotal = orderedItems.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+      const taxesTotal = orderedItems.reduce((sum, item) => sum + Number(item.taxes_amount || 0), 0);
+      const total = subtotal + taxesTotal;
+      const avgConf = orderedItems.length
+        ? orderedItems.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / orderedItems.length
+        : 0;
+      setDraft({
+        ...result.draft,
+        items: orderedItems,
+        total,
+        average_confidence: avgConf,
+      });
       setCidadeInputValues({});
       setCidadeSuggestions({});
       setCidadeCache({});
@@ -564,6 +612,20 @@ export default function QuoteImportIsland() {
             )}
             {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
           </div>
+          <div className="form-group" style={{ flex: 1, minWidth: 220 }}>
+            <label className="form-label">Tipo de importacao</label>
+            <select
+              className="form-select"
+              value={importMode}
+              onChange={(e) => setImportMode(e.target.value as ImportMode)}
+            >
+              {IMPORT_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
@@ -611,6 +673,7 @@ export default function QuoteImportIsland() {
                   <th>Qtd</th>
                   <th>Total</th>
                   <th>Taxas</th>
+                  <th>Detalhes</th>
                 </tr>
               </thead>
               <tbody>
@@ -621,6 +684,7 @@ export default function QuoteImportIsland() {
                     .filter((seg) => seg.segment_type === "circuit_day")
                     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
                   const rowKey = item.temp_id || `row-${index}`;
+                  const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
 
                   return (
                     <React.Fragment key={item.temp_id}>
@@ -738,6 +802,24 @@ export default function QuoteImportIsland() {
                             onChange={(e) => updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })}
                           />
                         </td>
+                        <td>
+                          {flightDetails ? (
+                            <button
+                              type="button"
+                              className="btn btn-light"
+                              onClick={() =>
+                                setFlightModal({
+                                  details: flightDetails,
+                                  title: item.title || item.product_name || item.item_type,
+                                })
+                              }
+                            >
+                              Ver detalhes
+                            </button>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                       </tr>
                       <datalist id={`quote-import-cidades-${rowKey}`}>
                         {(cidadeSuggestions[rowKey] || []).map((cidade) => {
@@ -748,7 +830,7 @@ export default function QuoteImportIsland() {
 
                       {isCircuitItem(item) && (
                         <tr>
-                          <td colSpan={10}>
+                          <td colSpan={11}>
                             <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
                               <div className="form-row">
                                 <div className="form-group">
@@ -995,6 +1077,14 @@ export default function QuoteImportIsland() {
             </div>
           )}
         </div>
+      )}
+
+      {flightModal && (
+        <FlightDetailsModal
+          details={flightModal.details}
+          title={flightModal.title || "Detalhes do voo"}
+          onClose={() => setFlightModal(null)}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import CalculatorModal from "../ui/CalculatorModal";
 import {
   ResponsiveContainer,
   BarChart,
@@ -249,6 +250,7 @@ const DashboardGeralIsland: React.FC = () => {
   );
   const widgetIds = useMemo(() => ALL_WIDGETS.map((w) => w.id), []);
   const [showCustomize, setShowCustomize] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
   const [kpiOrder, setKpiOrder] = useState<KpiId[]>(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = useState<Record<KpiId, boolean>>(() =>
     BASE_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {} as Record<KpiId, boolean>)
@@ -1152,21 +1154,6 @@ const DashboardGeralIsland: React.FC = () => {
     );
   };
 
-  // ----------------- RENDER -----------------
-
-  // Evita ficar preso no estado de carregamento caso o hook demore,
-  // liberando a renderização assim que já houver contexto básico.
-
-  if ((loadingUserCtx && !userCtx) || permissaoData.loading) {
-    return <LoadingUsuarioContext />;
-  }
-
-  if (!permissaoData.ativo) {
-    return (
-      <div>Você não possui acesso ao módulo de Dashboard.</div>
-    );
-  }
-
   const renderWidget = (id: WidgetId) => {
     switch (id) {
       case "kpis":
@@ -1720,6 +1707,21 @@ const DashboardGeralIsland: React.FC = () => {
     }
   };
 
+  // ----------------- RENDER -----------------
+
+  // Evita ficar preso no estado de carregamento caso o hook demore,
+  // liberando a renderização assim que já houver contexto básico.
+
+  if ((loadingUserCtx && !userCtx) || permissaoData.loading) {
+    return <LoadingUsuarioContext />;
+  }
+
+  if (!permissaoData.ativo) {
+    return (
+      <div>Você não possui acesso ao módulo de Dashboard.</div>
+    );
+  }
+
 
   return (
     <div className="dashboard-geral-page">
@@ -1790,6 +1792,14 @@ const DashboardGeralIsland: React.FC = () => {
             onClick={() => setShowCustomize(true)}
           >
             Personalizar dashboard
+          </button>
+          <button
+            type="button"
+            className="btn btn-light"
+            style={{ marginLeft: "auto" }}
+            onClick={() => setShowCalculator(true)}
+          >
+            Calculadora
           </button>
         </div>
 
@@ -2008,6 +2018,11 @@ const DashboardGeralIsland: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CalculatorModal
+        open={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
 
       {/* MODAL ORÇAMENTO */}
       {orcamentoSelecionado && (

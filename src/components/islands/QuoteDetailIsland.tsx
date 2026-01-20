@@ -2,6 +2,8 @@ import React, { useMemo, useRef, useState, useCallback, useEffect } from "react"
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
+import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
+import CalculatorModal from "../ui/CalculatorModal";
 
 type QuoteRecord = {
   id: string;
@@ -103,6 +105,21 @@ function isCircuitItem(item: QuoteItemRecord) {
   return (item.item_type || "").trim().toLowerCase() === "circuito";
 }
 
+function isFlightItem(item: QuoteItemRecord) {
+  const normalized = normalizeLookupText(item.item_type || "");
+  return (
+    normalized.includes("aereo") ||
+    normalized.includes("passagem") ||
+    normalized.includes("voo") ||
+    normalized.includes("a+h")
+  );
+}
+
+function getFlightDetails(item: QuoteItemRecord): FlightDetails | null {
+  const raw = (item.raw || {}) as { flight_details?: FlightDetails };
+  return raw.flight_details || null;
+}
+
 type CircuitMeta = {
   codigo?: string;
   serie?: string;
@@ -148,6 +165,8 @@ export default function QuoteDetailIsland(props: {
   const [showSummary, setShowSummary] = useState(false);
   const [exportDiscount, setExportDiscount] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [flightModal, setFlightModal] = useState<{ details: FlightDetails; title?: string } | null>(null);
+  const [showCalculator, setShowCalculator] = useState(false);
   const subtotalAtual = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
     [items]
@@ -716,6 +735,14 @@ export default function QuoteDetailIsland(props: {
               style={{ width: 120 }}
             />
           </div>
+          <button
+            type="button"
+            className="btn btn-light"
+            style={{ marginLeft: "auto" }}
+            onClick={() => setShowCalculator(true)}
+          >
+            Calculadora
+          </button>
         </div>
         {exportError && <div style={{ marginTop: 8, color: "#b91c1c" }}>{exportError}</div>}
       </div>
@@ -736,6 +763,7 @@ export default function QuoteDetailIsland(props: {
                 <th>Qtd</th>
                 <th>Total</th>
                 <th>Taxas</th>
+                <th>Detalhes</th>
               </tr>
             </thead>
             <tbody>
@@ -745,6 +773,7 @@ export default function QuoteDetailIsland(props: {
                   .filter((seg) => seg.segment_type === "circuit_day")
                   .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
                 const rowKey = getQuoteItemRowKey(item, index);
+                const flightDetails = isFlightItem(item) ? getFlightDetails(item) : null;
 
                 return (
                   <React.Fragment key={rowKey}>
@@ -877,6 +906,24 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
+                      <td>
+                        {flightDetails ? (
+                          <button
+                            type="button"
+                            className="btn btn-light"
+                            onClick={() =>
+                              setFlightModal({
+                                details: flightDetails,
+                                title: item.title || item.product_name || item.item_type,
+                              })
+                            }
+                          >
+                            Ver detalhes
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                     </tr>
                     <datalist id={`quote-item-cidades-${rowKey}`}>
                       {(cidadeSuggestions[rowKey] || []).map((cidade) => (
@@ -886,7 +933,7 @@ export default function QuoteDetailIsland(props: {
 
                     {isCircuitItem(item) && (
                       <tr>
-                        <td colSpan={10}>
+                        <td colSpan={11}>
                           <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
                                 <div className="form-row">
                                   <div className="form-group">
@@ -1171,6 +1218,18 @@ export default function QuoteDetailIsland(props: {
         {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
         {success && <div style={{ marginTop: 12, color: "#16a34a" }}>{success}</div>}
       </div>
+
+      {flightModal && (
+        <FlightDetailsModal
+          details={flightModal.details}
+          title={flightModal.title || "Detalhes do voo"}
+          onClose={() => setFlightModal(null)}
+        />
+      )}
+      <CalculatorModal
+        open={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import CalculatorModal from "../ui/CalculatorModal";
 
 function normalizeText(value: string) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -162,6 +163,7 @@ export default function VendasCadastroIsland() {
   const [loadingVenda, setLoadingVenda] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastCounter, setToastCounter] = useState(0);
+  const [showCalculator, setShowCalculator] = useState(false);
 
   // AUTOCOMPLETE (cliente, cidade de destino, produto)
   const [buscaCliente, setBuscaCliente] = useState("");
@@ -1367,7 +1369,17 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           </div>
 
           {/* RECIBOS */}
-          <h4 className="mt-3 font-semibold text-lg">Recibos da Venda</h4>
+          <div className="mt-3 flex items-center gap-2">
+            <h4 className="font-semibold text-lg">Recibos da Venda</h4>
+            <button
+              type="button"
+              className="btn btn-light"
+              style={{ marginLeft: "auto" }}
+              onClick={() => setShowCalculator(true)}
+            >
+              Calculadora
+            </button>
+          </div>
 
           {recibos.map((r, i) => {
             const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
@@ -1569,6 +1581,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           ))}
         </div>
       )}
+      <CalculatorModal
+        open={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
     </div>
   );
 }

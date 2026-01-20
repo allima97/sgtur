@@ -107,6 +107,37 @@ type CircuitDay = {
   descricao: string;
 };
 
+type FlightLeg = {
+  departure_time?: string;
+  departure_code?: string;
+  departure_city?: string;
+  arrival_time?: string;
+  arrival_code?: string;
+  arrival_city?: string;
+  duration?: string;
+  flight_number?: string;
+  flight_type?: string;
+};
+
+type FlightDirection = {
+  label: string;
+  route?: string;
+  date?: string;
+  legs: FlightLeg[];
+  notices?: string[];
+};
+
+type FlightDetails = {
+  route?: string;
+  airline?: string;
+  cabin?: string;
+  fare_tags?: string[];
+  directions?: FlightDirection[];
+  baggage?: string[];
+  notices?: string[];
+  hotel_lines?: string[];
+};
+
 function getCircuitMeta(item: QuotePdfItem): CircuitMeta {
   const raw = (item.raw || {}) as { circuito_meta?: CircuitMeta };
   return raw.circuito_meta || {};
@@ -124,6 +155,32 @@ function getCircuitDays(item: QuotePdfItem): CircuitDay[] {
       descricao: data.descricao || "",
     };
   });
+}
+
+function isFlightItem(item: QuotePdfItem) {
+  const normalized = normalizeType(item.item_type);
+  return (
+    normalized.includes("aereo") ||
+    normalized.includes("passagem") ||
+    normalized.includes("voo") ||
+    normalized.includes("a+h")
+  );
+}
+
+function getFlightDetails(item: QuotePdfItem): FlightDetails | null {
+  const raw = (item.raw || {}) as { flight_details?: FlightDetails };
+  return raw.flight_details || null;
+}
+
+function buildFlightLegLine(leg: FlightLeg, kind: "depart" | "arrive") {
+  const time = kind === "depart" ? leg.departure_time : leg.arrival_time;
+  const code = kind === "depart" ? leg.departure_code : leg.arrival_code;
+  const city = kind === "depart" ? leg.departure_city : leg.arrival_city;
+  return [time, code, city].filter(Boolean).join(" ");
+}
+
+function buildFlightLegMeta(leg: FlightLeg) {
+  return [leg.flight_type, leg.flight_number, leg.duration].filter(Boolean).join(" | ");
 }
 
 function toLines(text?: string | null) {
@@ -260,6 +317,7 @@ export async function exportQuoteToPdf(params: {
   const footerBaseHeight = 230;
   const footerTopPadding = 18;
   const footerTitleGap = 14;
+  const footerTitleHeight = 12;
   const footerLineHeight = 12;
   const footerListGap = 8;
   const footerImageGap = 16;
@@ -279,6 +337,10 @@ export async function exportQuoteToPdf(params: {
   const timelineTitleHeight = 12;
   const timelineDescHeight = 11;
   const timelineGap = 6;
+  const flightLineHeight = 12;
+  const flightBlockGap = 6;
+  const flightSectionGap = 8;
+  const flightLayoutPadding = 24;
 
   const orderedItems = [...items].sort(
     (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
@@ -394,7 +456,7 @@ export async function exportQuoteToPdf(params: {
     doc.setFontSize(9);
     const footerWrapped = footerLines.map((line) => doc.splitTextToSize(line, footerTextWidth));
     const footerLineCount = footerWrapped.reduce((sum, lines) => sum + lines.length, 0);
-    const listHeight = footerTitleGap + footerLineCount * footerLineHeight;
+    const listHeight = footerTitleHeight + footerTitleGap + footerLineCount * footerLineHeight;
 
     let complementLayout: { width: number; height: number } | null = null;
     if (
@@ -693,6 +755,89 @@ export async function exportQuoteToPdf(params: {
     return { metaLines, itineraryLines, tags, days, height };
   }
 
+  type FlightLayoutLine = { text: string; style: "normal" | "bold" | "muted" };
+  type FlightLayoutBlock = { lines: FlightLayoutLine[]; gapAfter: number };
+  type FlightLayout = { blocks: FlightLayoutBlock[]; height: number };
+
+  function buildFlightLayout(item: QuotePdfItem, maxWidth: number): FlightLayout | null {
+    const details = getFlightDetails(item);
+    if (!details) return null;
+
+    const blocks: FlightLayoutBlock[] = [];
+    let height = flightSectionGap;
+
+    const addBlock = (lines: FlightLayoutLine[], gapAfter = flightBlockGap) => {
+      if (!lines.length) return;
+      blocks.push({ lines, gapAfter });
+      height += lines.length * flightLineHeight + gapAfter;
+    };
+
+    const splitWrapped = (text: string, style: FlightLayoutLine["style"]) => {
+      doc.setFont("helvetica", style === "bold" ? "bold" : "normal");
+      doc.setFontSize(9);
+      return doc.splitTextToSize(text, maxWidth);
+    };
+
+    const addWrapped = (text: string, style: FlightLayoutLine["style"], gapAfter = flightBlockGap) => {
+      if (!text) return;
+      const wrapped = splitWrapped(text, style);
+      addBlock(
+        wrapped.map((line) => ({ text: line, style })),
+        gapAfter
+      );
+    };
+
+    const infoLine = [details.airline, details.cabin].filter(Boolean).join(" | ");
+    addWrapped(infoLine, "normal");
+
+    const fareTags = (details.fare_tags || []).filter(Boolean);
+    if (fareTags.length) {
+      addWrapped(`Tarifas: ${fareTags.join(", ")}`, "muted");
+    }
+
+    const generalNotices = (details.notices || []).filter(Boolean);
+    generalNotices.forEach((note) => addWrapped(`Aviso: ${note}`, "muted", 4));
+
+    const directions = (details.directions || []).filter(
+      (dir) => dir && ((dir.legs || []).length || dir.route || dir.date)
+    );
+
+    directions.forEach((dir, idx) => {
+      const title = [dir.label, dir.route].filter(Boolean).join(" - ");
+      addWrapped(title, "bold", 4);
+      if (dir.date) {
+        addWrapped(dir.date, "muted", 4);
+      }
+      (dir.legs || []).forEach((leg) => {
+        const departLine = buildFlightLegLine(leg, "depart");
+        const arriveLine = buildFlightLegLine(leg, "arrive");
+        if (departLine) addWrapped(`Saida: ${departLine}`, "normal", 2);
+        if (arriveLine) addWrapped(`Chegada: ${arriveLine}`, "normal", 2);
+        const meta = buildFlightLegMeta(leg);
+        if (meta) addWrapped(meta, "muted", flightBlockGap);
+      });
+      (dir.notices || []).forEach((note) => addWrapped(`Aviso: ${note}`, "muted", 4));
+      if (idx < directions.length - 1 && blocks.length) {
+        blocks[blocks.length - 1].gapAfter += flightSectionGap;
+        height += flightSectionGap;
+      }
+    });
+
+    const baggage = (details.baggage || []).filter(Boolean);
+    if (baggage.length) {
+      addWrapped("Bagagens:", "bold", 2);
+      baggage.forEach((line) => addWrapped(`- ${line}`, "muted", 2));
+    }
+
+    const hotelLines = (details.hotel_lines || []).filter(Boolean);
+    if (hotelLines.length) {
+      addWrapped("Hotel:", "bold", 2);
+      hotelLines.forEach((line) => addWrapped(line, "normal", 2));
+    }
+
+    return blocks.length ? { blocks, height } : null;
+  }
+
   function getItemCardContent(item: QuotePdfItem, cardInnerWidth: number) {
     const dateLine = formatDateRange(item.start_date, item.end_date);
     const title = item.title || item.product_name || "Item";
@@ -717,6 +862,10 @@ export async function exportQuoteToPdf(params: {
     if (isCircuitItem(item)) {
       const layout = buildCircuitLayout(item, cardInnerWidth);
       totalHeight += layout.height;
+    }
+    if (isFlightItem(item)) {
+      const layout = buildFlightLayout(item, cardInnerWidth);
+      if (layout) totalHeight += layout.height + flightLayoutPadding;
     }
     return totalHeight;
   }
@@ -872,6 +1021,32 @@ export async function exportQuoteToPdf(params: {
       }
     }
 
+    if (isFlightItem(item)) {
+      const layout = buildFlightLayout(item, cardW - cardPadding * 2);
+      if (layout) {
+        const textX = cardX + cardPadding;
+        currentY += flightSectionGap;
+        layout.blocks.forEach((block) => {
+          block.lines.forEach((line) => {
+            if (line.style === "bold") {
+              doc.setFont("helvetica", "bold");
+              doc.setTextColor(...colors.text);
+            } else if (line.style === "muted") {
+              doc.setFont("helvetica", "normal");
+              doc.setTextColor(...colors.muted);
+            } else {
+              doc.setFont("helvetica", "normal");
+              doc.setTextColor(...colors.text);
+            }
+            doc.setFontSize(9);
+            doc.text(line.text, textX, currentY);
+            currentY += flightLineHeight;
+          });
+          currentY += block.gapAfter;
+        });
+      }
+    }
+
     return cardH;
   }
 
@@ -955,15 +1130,30 @@ export async function exportQuoteToPdf(params: {
   }
 
   let cursorY = initPage(true);
+  let deferFooter = false;
 
   blocks.forEach((block, index) => {
     const isLastBlock = index === blocks.length - 1;
-    const bottomLimit = isLastBlock ? contentBottomLast : contentBottomRegular;
     const gap = isLastBlock ? 0 : cardGap;
 
-    if (cursorY + block.height > bottomLimit) {
+    const resolveBottomLimit = () => {
+      let bottomLimit = isLastBlock ? contentBottomLast : contentBottomRegular;
+      if (
+        isLastBlock &&
+        cursorY + block.height > contentBottomLast &&
+        cursorY + block.height <= contentBottomRegular
+      ) {
+        deferFooter = true;
+        bottomLimit = contentBottomRegular;
+      }
+      return bottomLimit;
+    };
+
+    let bottomLimit = resolveBottomLimit();
+    while (cursorY + block.height > bottomLimit) {
       doc.addPage();
       cursorY = initPage(false);
+      bottomLimit = resolveBottomLimit();
     }
 
     if (block.kind === "item") {
@@ -973,6 +1163,10 @@ export async function exportQuoteToPdf(params: {
     }
     cursorY += block.height + gap;
   });
+
+  if (deferFooter) {
+    doc.addPage();
+  }
 
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {

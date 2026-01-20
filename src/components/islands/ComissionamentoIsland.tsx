@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import CalculatorModal from "../ui/CalculatorModal";
 
 type Parametros = {
   usar_taxas_na_meta: boolean;
@@ -190,6 +191,7 @@ export default function ComissionamentoIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [preset, setPreset] = useState<string>("mes_atual");
   const [periodo, setPeriodo] = useState(() => calcPeriodo("mes_atual"));
+  const [showCalculator, setShowCalculator] = useState(false);
 
   useEffect(() => {
     if (loadingPerm || !ativo) return;
@@ -698,6 +700,21 @@ export default function ComissionamentoIsland() {
               <label className="form-label">Fim</label>
               <input className="form-input" value={formatPeriodoLabel(periodo.fim)} readOnly />
             </div>
+            <div
+              className="form-group"
+              style={{ justifyContent: "flex-end", alignItems: "flex-end" }}
+            >
+              <label className="form-label" style={{ visibility: "hidden" }}>
+                Calculadora
+              </label>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => setShowCalculator(true)}
+              >
+                Calculadora
+              </button>
+            </div>
         </div>
       </div>
 
@@ -832,6 +849,10 @@ export default function ComissionamentoIsland() {
           </div>
         </>
       )}
+      <CalculatorModal
+        open={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
     </div>
   );
 }
