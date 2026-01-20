@@ -6,34 +6,25 @@ type CalculatorModalProps = {
 };
 
 const calculatorKeys = [
-  { label: "MC", action: "memory_clear", gridColumn: "1", gridRow: "1", variant: "memory" },
-  { label: "M+", action: "memory_add", gridColumn: "2", gridRow: "1", variant: "memory" },
-  { label: "M-", action: "memory_sub", gridColumn: "3", gridRow: "1", variant: "memory" },
-  { label: "MR", action: "memory_recall", gridColumn: "4", gridRow: "1", variant: "memory" },
-  { label: "GT", action: "grand_total", gridColumn: "1", gridRow: "2", variant: "function" },
-  { label: "RATE", action: "set_rate", gridColumn: "2", gridRow: "2", variant: "function" },
-  { label: "TAX-", action: "tax_sub", gridColumn: "3", gridRow: "2", variant: "function" },
-  { label: "TAX+", action: "tax_add", gridColumn: "4", gridRow: "2", variant: "function" },
-  { label: "AC", action: "clear", gridColumn: "1", gridRow: "3", variant: "danger" },
-  { label: "%", action: "append", value: "%", gridColumn: "2", gridRow: "3", variant: "function" },
-  { label: "+/-", action: "toggle_sign", gridColumn: "3", gridRow: "3", variant: "function" },
-  { label: "/", action: "append", value: "/", gridColumn: "4", gridRow: "3", variant: "operator" },
-  { label: "7", action: "append", value: "7", gridColumn: "1", gridRow: "4", variant: "number" },
-  { label: "8", action: "append", value: "8", gridColumn: "2", gridRow: "4", variant: "number" },
-  { label: "9", action: "append", value: "9", gridColumn: "3", gridRow: "4", variant: "number" },
-  { label: "x", action: "append", value: "x", gridColumn: "4", gridRow: "4", variant: "operator" },
-  { label: "4", action: "append", value: "4", gridColumn: "1", gridRow: "5", variant: "number" },
-  { label: "5", action: "append", value: "5", gridColumn: "2", gridRow: "5", variant: "number" },
-  { label: "6", action: "append", value: "6", gridColumn: "3", gridRow: "5", variant: "number" },
-  { label: "-", action: "append", value: "-", gridColumn: "4", gridRow: "5", variant: "operator" },
-  { label: "1", action: "append", value: "1", gridColumn: "1", gridRow: "6", variant: "number" },
-  { label: "2", action: "append", value: "2", gridColumn: "2", gridRow: "6", variant: "number" },
-  { label: "3", action: "append", value: "3", gridColumn: "3", gridRow: "6", variant: "number" },
-  { label: "+", action: "append", value: "+", gridColumn: "4", gridRow: "6", variant: "operator" },
-  { label: "0", action: "append", value: "0", gridColumn: "1", gridRow: "7", variant: "number" },
-  { label: ",", action: "append", value: ".", gridColumn: "2", gridRow: "7", variant: "number" },
-  { label: "DEL", action: "backspace", gridColumn: "3", gridRow: "7", variant: "function" },
-  { label: "=", action: "evaluate", gridColumn: "4", gridRow: "7", variant: "operator" },
+  { label: "AC", action: "clear", gridColumn: "1", gridRow: "1", variant: "danger" },
+  { label: "+/-", action: "toggle_sign", gridColumn: "2", gridRow: "1", variant: "function" },
+  { label: "%", action: "append", value: "%", gridColumn: "3", gridRow: "1", variant: "function" },
+  { label: "/", action: "append", value: "/", gridColumn: "4", gridRow: "1", variant: "operator" },
+  { label: "7", action: "append", value: "7", gridColumn: "1", gridRow: "2", variant: "number" },
+  { label: "8", action: "append", value: "8", gridColumn: "2", gridRow: "2", variant: "number" },
+  { label: "9", action: "append", value: "9", gridColumn: "3", gridRow: "2", variant: "number" },
+  { label: "x", action: "append", value: "x", gridColumn: "4", gridRow: "2", variant: "operator" },
+  { label: "4", action: "append", value: "4", gridColumn: "1", gridRow: "3", variant: "number" },
+  { label: "5", action: "append", value: "5", gridColumn: "2", gridRow: "3", variant: "number" },
+  { label: "6", action: "append", value: "6", gridColumn: "3", gridRow: "3", variant: "number" },
+  { label: "-", action: "append", value: "-", gridColumn: "4", gridRow: "3", variant: "operator" },
+  { label: "1", action: "append", value: "1", gridColumn: "1", gridRow: "4", variant: "number" },
+  { label: "2", action: "append", value: "2", gridColumn: "2", gridRow: "4", variant: "number" },
+  { label: "3", action: "append", value: "3", gridColumn: "3", gridRow: "4", variant: "number" },
+  { label: "+", action: "append", value: "+", gridColumn: "4", gridRow: "4", variant: "operator" },
+  { label: "0", action: "append", value: "0", gridColumn: "1 / span 2", gridRow: "5", variant: "number" },
+  { label: ",", action: "append", value: ".", gridColumn: "3", gridRow: "5", variant: "number" },
+  { label: "=", action: "evaluate", gridColumn: "4", gridRow: "5", variant: "operator" },
 ] as const;
 
 const sanitizeCalcInput = (value: string) =>
@@ -51,9 +42,6 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   const [calcError, setCalcError] = useState<string | null>(null);
   const [calcPosition, setCalcPosition] = useState<{ x: number; y: number } | null>(null);
   const [calcDragging, setCalcDragging] = useState(false);
-  const [memoryValue, setMemoryValue] = useState<number | null>(null);
-  const [grandTotal, setGrandTotal] = useState(0);
-  const [taxRate, setTaxRate] = useState(0);
   const calcPanelRef = useRef<HTMLDivElement | null>(null);
   const calcInputRef = useRef<HTMLInputElement | null>(null);
   const calcDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -103,41 +91,6 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
       }
       return trimmed.slice(0, start) + "-" + trimmed.slice(start);
     });
-  };
-
-  const getCurrentValue = () => {
-    const expr = sanitizeCalcInput(calcValue).trim().replace(/x/gi, "*");
-    if (!expr) return 0;
-    const result = evaluateExpression(expr);
-    return result ?? 0;
-  };
-
-  const handleMemoryAdd = () => {
-    const value = getCurrentValue();
-    setMemoryValue((prev) => (prev ?? 0) + value);
-  };
-
-  const handleMemorySub = () => {
-    const value = getCurrentValue();
-    setMemoryValue((prev) => (prev ?? 0) - value);
-  };
-
-  const handleMemoryRecall = () => {
-    setCalcError(null);
-    setCalcValue(formatCalcResult(memoryValue ?? 0));
-  };
-
-  const handleTaxRateSet = () => {
-    const value = getCurrentValue();
-    setTaxRate(value);
-  };
-
-  const handleTaxAdjust = (direction: "add" | "sub") => {
-    const base = getCurrentValue();
-    const delta = (base * taxRate) / 100;
-    const next = direction === "add" ? base + delta : base - delta;
-    setCalcError(null);
-    setCalcValue(formatCalcResult(next));
   };
 
   type Token =
@@ -266,7 +219,6 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
         return;
       }
       setCalcError(null);
-      setGrandTotal((prev) => prev + result);
       setCalcValue(formatCalcResult(result));
     } catch (err) {
       setCalcError("Expressao invalida.");
@@ -553,14 +505,14 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gridTemplateRows: "repeat(7, clamp(40px, 10vw, 52px))",
+                gridTemplateRows: "repeat(5, clamp(40px, 10vw, 52px))",
                 gap: 6,
                 background: "transparent",
               }}
             >
               {calculatorKeys.map((key) => {
                 const isOperator = key.variant === "operator";
-                const isFunction = key.variant === "function" || key.variant === "memory";
+                const isFunction = key.variant === "function";
                 const isDanger = key.variant === "danger";
                 const background = isOperator
                   ? "linear-gradient(180deg, #f4b564, #f08a2f)"
@@ -576,16 +528,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                     type="button"
                     onClick={() => {
                       if (key.action === "clear") return clearCalc();
-                      if (key.action === "backspace") return backspaceCalc();
                       if (key.action === "toggle_sign") return toggleSign();
-                      if (key.action === "memory_clear") return setMemoryValue(null);
-                      if (key.action === "memory_add") return handleMemoryAdd();
-                      if (key.action === "memory_sub") return handleMemorySub();
-                      if (key.action === "memory_recall") return handleMemoryRecall();
-                      if (key.action === "grand_total") return setCalcValue(formatCalcResult(grandTotal));
-                      if (key.action === "set_rate") return handleTaxRateSet();
-                      if (key.action === "tax_add") return handleTaxAdjust("add");
-                      if (key.action === "tax_sub") return handleTaxAdjust("sub");
                       if (key.action === "evaluate") return evaluateCalc();
                       if (key.action === "append" && key.value) return appendCalcValue(key.value);
                       return undefined;
