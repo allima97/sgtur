@@ -413,19 +413,22 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
           transform: calcPosition ? "none" : "translate(-50%, -50%)",
           background: "#3f3f3f",
           border: "1px solid #2f2f2f",
+          borderRadius: 12,
+          boxShadow: "0 18px 40px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25)",
         }}
         ref={calcPanelRef}
       >
         <div style={{ background: "#4b4b4b" }}>
           <div
             style={{
-              background: "linear-gradient(135deg, #3f3f3f, #2f2f2f)",
+              background: "linear-gradient(135deg, #4a4a4a, #2f2f2f)",
               padding: "clamp(12px, 4vw, 16px) clamp(12px, 3vw, 14px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
               position: "relative",
               cursor: calcDragging ? "grabbing" : "grab",
+              borderBottom: "1px solid #2b2b2b",
             }}
             onMouseDown={handleCalcMouseDown}
             onTouchStart={handleCalcTouchStart}
@@ -498,7 +501,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                 gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                 gridTemplateRows: "repeat(5, clamp(44px, 10vw, 54px))",
                 gap: 1,
-                background: "#4b4b4b",
+                background: "#2f2f2f",
               }}
             >
               {calculatorKeys.map((key) => {
@@ -536,6 +539,8 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      borderRadius: 0,
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
                     }}
                   >
                     {key.label}

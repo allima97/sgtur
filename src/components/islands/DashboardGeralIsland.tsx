@@ -1154,6 +1154,8 @@ const DashboardGeralIsland: React.FC = () => {
     );
   };
 
+  const tableScrollMaxHeight = 180;
+
   const renderWidget = (id: WidgetId) => {
     switch (id) {
       case "kpis":
@@ -1527,11 +1529,18 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
-      case "orcamentos":
+      case "orcamentos": {
+        const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
         return (
           <div className="card-base card-purple mb-3">
             <h3 style={{ marginBottom: 8 }}>Orçamentos recentes ({orcamentosRecentes.length})</h3>
-            <div className="table-container overflow-x-auto">
+            <div
+              className="table-container overflow-x-auto"
+              style={{
+                maxHeight: shouldScrollOrcamentos ? tableScrollMaxHeight : undefined,
+                overflowY: shouldScrollOrcamentos ? "auto" : "visible",
+              }}
+            >
               <table className="table-default min-w-[680px]">
                 <thead>
                   <tr>
@@ -1568,14 +1577,22 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
-      case "viagens":
+      }
+      case "viagens": {
+        const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
         return (
           <div className="card-base card-purple mb-3">
             <h3 style={{ marginBottom: 8 }}>Próximas viagens ({proximasViagensAgrupadas.length})</h3>
             {permissaoOperacao.permissao === "none" ? (
               <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
             ) : (
-              <div className="table-container overflow-x-auto">
+              <div
+                className="table-container overflow-x-auto"
+                style={{
+                  maxHeight: shouldScrollViagens ? tableScrollMaxHeight : undefined,
+                  overflowY: shouldScrollViagens ? "auto" : "visible",
+                }}
+              >
                 <table className="table-default min-w-[760px]">
                   <thead>
                     <tr>
@@ -1621,11 +1638,19 @@ const DashboardGeralIsland: React.FC = () => {
             )}
           </div>
         );
-      case "aniversariantes":
+      }
+      case "aniversariantes": {
+        const shouldScrollAniversariantes = aniversariantesMes.length > 3;
         return (
           <div className="card-base card-purple mb-3">
             <h3 style={{ marginBottom: 8 }}>Aniversariantes do mês ({aniversariantesMes.length})</h3>
-            <div className="table-container overflow-x-auto">
+            <div
+              className="table-container overflow-x-auto"
+              style={{
+                maxHeight: shouldScrollAniversariantes ? tableScrollMaxHeight : undefined,
+                overflowY: shouldScrollAniversariantes ? "auto" : "visible",
+              }}
+            >
               <table className="table-default min-w-[520px]">
                 <thead>
                   <tr>
@@ -1663,11 +1688,19 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
-      case "follow_up":
+      }
+      case "follow_up": {
+        const shouldScrollFollowUp = followUpsRecentes.length > 3;
         return (
           <div className="card-base card-purple mb-3">
             <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
-            <div className="table-container overflow-x-auto">
+            <div
+              className="table-container overflow-x-auto"
+              style={{
+                maxHeight: shouldScrollFollowUp ? tableScrollMaxHeight : undefined,
+                overflowY: shouldScrollFollowUp ? "auto" : "visible",
+              }}
+            >
               <table className="table-default min-w-[640px]">
                 <thead>
                   <tr>
@@ -1702,6 +1735,7 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
           </div>
         );
+      }
       default:
         return null;
     }
