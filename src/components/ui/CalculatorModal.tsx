@@ -6,25 +6,34 @@ type CalculatorModalProps = {
 };
 
 const calculatorKeys = [
-  { label: "AC", action: "clear", gridColumn: "1", gridRow: "1", variant: "function" },
-  { label: "+/-", action: "toggle_sign", gridColumn: "2", gridRow: "1", variant: "function" },
-  { label: "%", action: "append", value: "%", gridColumn: "3", gridRow: "1", variant: "function" },
-  { label: "/", action: "append", value: "/", gridColumn: "4", gridRow: "1", variant: "operator" },
-  { label: "7", action: "append", value: "7", gridColumn: "1", gridRow: "2", variant: "number" },
-  { label: "8", action: "append", value: "8", gridColumn: "2", gridRow: "2", variant: "number" },
-  { label: "9", action: "append", value: "9", gridColumn: "3", gridRow: "2", variant: "number" },
-  { label: "x", action: "append", value: "x", gridColumn: "4", gridRow: "2", variant: "operator" },
-  { label: "4", action: "append", value: "4", gridColumn: "1", gridRow: "3", variant: "number" },
-  { label: "5", action: "append", value: "5", gridColumn: "2", gridRow: "3", variant: "number" },
-  { label: "6", action: "append", value: "6", gridColumn: "3", gridRow: "3", variant: "number" },
-  { label: "-", action: "append", value: "-", gridColumn: "4", gridRow: "3", variant: "operator" },
-  { label: "1", action: "append", value: "1", gridColumn: "1", gridRow: "4", variant: "number" },
-  { label: "2", action: "append", value: "2", gridColumn: "2", gridRow: "4", variant: "number" },
-  { label: "3", action: "append", value: "3", gridColumn: "3", gridRow: "4", variant: "number" },
-  { label: "+", action: "append", value: "+", gridColumn: "4", gridRow: "4", variant: "operator" },
-  { label: "0", action: "append", value: "0", gridColumn: "1 / span 2", gridRow: "5", variant: "number" },
-  { label: ",", action: "append", value: ".", gridColumn: "3", gridRow: "5", variant: "number" },
-  { label: "=", action: "evaluate", gridColumn: "4", gridRow: "5", variant: "operator" },
+  { label: "MC", action: "memory_clear", gridColumn: "1", gridRow: "1", variant: "memory" },
+  { label: "M+", action: "memory_add", gridColumn: "2", gridRow: "1", variant: "memory" },
+  { label: "M-", action: "memory_sub", gridColumn: "3", gridRow: "1", variant: "memory" },
+  { label: "MR", action: "memory_recall", gridColumn: "4", gridRow: "1", variant: "memory" },
+  { label: "GT", action: "grand_total", gridColumn: "1", gridRow: "2", variant: "function" },
+  { label: "RATE", action: "set_rate", gridColumn: "2", gridRow: "2", variant: "function" },
+  { label: "TAX-", action: "tax_sub", gridColumn: "3", gridRow: "2", variant: "function" },
+  { label: "TAX+", action: "tax_add", gridColumn: "4", gridRow: "2", variant: "function" },
+  { label: "AC", action: "clear", gridColumn: "1", gridRow: "3", variant: "danger" },
+  { label: "%", action: "append", value: "%", gridColumn: "2", gridRow: "3", variant: "function" },
+  { label: "+/-", action: "toggle_sign", gridColumn: "3", gridRow: "3", variant: "function" },
+  { label: "/", action: "append", value: "/", gridColumn: "4", gridRow: "3", variant: "operator" },
+  { label: "7", action: "append", value: "7", gridColumn: "1", gridRow: "4", variant: "number" },
+  { label: "8", action: "append", value: "8", gridColumn: "2", gridRow: "4", variant: "number" },
+  { label: "9", action: "append", value: "9", gridColumn: "3", gridRow: "4", variant: "number" },
+  { label: "x", action: "append", value: "x", gridColumn: "4", gridRow: "4", variant: "operator" },
+  { label: "4", action: "append", value: "4", gridColumn: "1", gridRow: "5", variant: "number" },
+  { label: "5", action: "append", value: "5", gridColumn: "2", gridRow: "5", variant: "number" },
+  { label: "6", action: "append", value: "6", gridColumn: "3", gridRow: "5", variant: "number" },
+  { label: "-", action: "append", value: "-", gridColumn: "4", gridRow: "5", variant: "operator" },
+  { label: "1", action: "append", value: "1", gridColumn: "1", gridRow: "6", variant: "number" },
+  { label: "2", action: "append", value: "2", gridColumn: "2", gridRow: "6", variant: "number" },
+  { label: "3", action: "append", value: "3", gridColumn: "3", gridRow: "6", variant: "number" },
+  { label: "+", action: "append", value: "+", gridColumn: "4", gridRow: "6", variant: "operator" },
+  { label: "0", action: "append", value: "0", gridColumn: "1", gridRow: "7", variant: "number" },
+  { label: ",", action: "append", value: ".", gridColumn: "2", gridRow: "7", variant: "number" },
+  { label: "DEL", action: "backspace", gridColumn: "3", gridRow: "7", variant: "function" },
+  { label: "=", action: "evaluate", gridColumn: "4", gridRow: "7", variant: "operator" },
 ] as const;
 
 const sanitizeCalcInput = (value: string) =>
@@ -42,6 +51,9 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
   const [calcError, setCalcError] = useState<string | null>(null);
   const [calcPosition, setCalcPosition] = useState<{ x: number; y: number } | null>(null);
   const [calcDragging, setCalcDragging] = useState(false);
+  const [memoryValue, setMemoryValue] = useState<number | null>(null);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [taxRate, setTaxRate] = useState(0);
   const calcPanelRef = useRef<HTMLDivElement | null>(null);
   const calcInputRef = useRef<HTMLInputElement | null>(null);
   const calcDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -91,6 +103,41 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
       }
       return trimmed.slice(0, start) + "-" + trimmed.slice(start);
     });
+  };
+
+  const getCurrentValue = () => {
+    const expr = sanitizeCalcInput(calcValue).trim().replace(/x/gi, "*");
+    if (!expr) return 0;
+    const result = evaluateExpression(expr);
+    return result ?? 0;
+  };
+
+  const handleMemoryAdd = () => {
+    const value = getCurrentValue();
+    setMemoryValue((prev) => (prev ?? 0) + value);
+  };
+
+  const handleMemorySub = () => {
+    const value = getCurrentValue();
+    setMemoryValue((prev) => (prev ?? 0) - value);
+  };
+
+  const handleMemoryRecall = () => {
+    setCalcError(null);
+    setCalcValue(formatCalcResult(memoryValue ?? 0));
+  };
+
+  const handleTaxRateSet = () => {
+    const value = getCurrentValue();
+    setTaxRate(value);
+  };
+
+  const handleTaxAdjust = (direction: "add" | "sub") => {
+    const base = getCurrentValue();
+    const delta = (base * taxRate) / 100;
+    const next = direction === "add" ? base + delta : base - delta;
+    setCalcError(null);
+    setCalcValue(formatCalcResult(next));
   };
 
   type Token =
@@ -219,6 +266,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
         return;
       }
       setCalcError(null);
+      setGrandTotal((prev) => prev + result);
       setCalcValue(formatCalcResult(result));
     } catch (err) {
       setCalcError("Expressao invalida.");
@@ -411,24 +459,28 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
           left: calcPosition ? calcPosition.x : "50%",
           top: calcPosition ? calcPosition.y : "50%",
           transform: calcPosition ? "none" : "translate(-50%, -50%)",
-          background: "#3f3f3f",
-          border: "1px solid #2f2f2f",
-          borderRadius: 12,
-          boxShadow: "0 18px 40px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25)",
+          background: "#d0d0d0",
+          backgroundImage:
+            "repeating-linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.35) 2px, rgba(0,0,0,0.06) 4px)",
+          border: "1px solid #8b8b8b",
+          borderRadius: 10,
+          boxShadow: "0 14px 26px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.7)",
         }}
         ref={calcPanelRef}
       >
-        <div style={{ background: "#4b4b4b" }}>
+        <div style={{ background: "transparent", padding: "10px 10px 12px" }}>
           <div
             style={{
-              background: "linear-gradient(135deg, #4a4a4a, #2f2f2f)",
-              padding: "clamp(12px, 4vw, 16px) clamp(12px, 3vw, 14px)",
+              background: "linear-gradient(180deg, #86c2d1, #7bb7c6)",
+              padding: "clamp(12px, 4vw, 18px) clamp(12px, 3vw, 16px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
               position: "relative",
               cursor: calcDragging ? "grabbing" : "grab",
-              borderBottom: "1px solid #2b2b2b",
+              border: "1px solid #5f7f86",
+              borderRadius: 6,
+              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.25)",
             }}
             onMouseDown={handleCalcMouseDown}
             onTouchStart={handleCalcTouchStart}
@@ -443,7 +495,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                 top: 10,
                 border: "none",
                 background: "transparent",
-                color: "#f8fafc",
+                color: "#2f2f2f",
                 fontSize: "0.85rem",
                 cursor: "pointer",
               }}
@@ -472,12 +524,12 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#f8fafc",
-                fontSize: "clamp(1.5rem, 7vw, 2rem)",
+                color: "#1f2937",
+                fontSize: "clamp(1.6rem, 7vw, 2.1rem)",
                 textAlign: "right",
                 width: "100%",
                 outline: "none",
-                fontWeight: 500,
+                fontWeight: 600,
               }}
               aria-label="Calculadora"
             />
@@ -485,41 +537,55 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
           {calcError && (
             <div
               style={{
-                background: "#2f2f2f",
+                background: "#b94f45",
                 color: "#fca5a5",
                 fontSize: "clamp(0.75rem, 2.5vw, 0.8rem)",
                 padding: "6px 12px",
+                borderRadius: 6,
+                marginTop: 8,
               }}
             >
               {calcError}
             </div>
           )}
-          <div style={{ background: "#cbd5e1", padding: 1 }}>
+          <div style={{ background: "#8e8e8e", padding: 6, borderRadius: 8, marginTop: 10 }}>
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gridTemplateRows: "repeat(5, clamp(44px, 10vw, 54px))",
-                gap: 1,
-                background: "#2f2f2f",
+                gridTemplateRows: "repeat(7, clamp(40px, 10vw, 52px))",
+                gap: 6,
+                background: "transparent",
               }}
             >
               {calculatorKeys.map((key) => {
                 const isOperator = key.variant === "operator";
-                const isFunction = key.variant === "function";
+                const isFunction = key.variant === "function" || key.variant === "memory";
+                const isDanger = key.variant === "danger";
                 const background = isOperator
-                  ? "linear-gradient(180deg, #f59e0b, #f97316)"
+                  ? "linear-gradient(180deg, #f4b564, #f08a2f)"
+                  : isDanger
+                  ? "linear-gradient(180deg, #e58376, #cc5a4f)"
                   : isFunction
-                  ? "linear-gradient(180deg, #5f5f5f, #505050)"
-                  : "linear-gradient(180deg, #6b6b6b, #5c5c5c)";
-                const color = isOperator ? "#ffffff" : "#f8fafc";
+                  ? "linear-gradient(180deg, #cfd3da, #aeb4bf)"
+                  : "linear-gradient(180deg, #d7d5cc, #bdbbb2)";
+                const color = isOperator ? "#1f1f1f" : "#1f2937";
                 return (
                   <button
                     key={key.label}
                     type="button"
                     onClick={() => {
                       if (key.action === "clear") return clearCalc();
+                      if (key.action === "backspace") return backspaceCalc();
                       if (key.action === "toggle_sign") return toggleSign();
+                      if (key.action === "memory_clear") return setMemoryValue(null);
+                      if (key.action === "memory_add") return handleMemoryAdd();
+                      if (key.action === "memory_sub") return handleMemorySub();
+                      if (key.action === "memory_recall") return handleMemoryRecall();
+                      if (key.action === "grand_total") return setCalcValue(formatCalcResult(grandTotal));
+                      if (key.action === "set_rate") return handleTaxRateSet();
+                      if (key.action === "tax_add") return handleTaxAdjust("add");
+                      if (key.action === "tax_sub") return handleTaxAdjust("sub");
                       if (key.action === "evaluate") return evaluateCalc();
                       if (key.action === "append" && key.value) return appendCalcValue(key.value);
                       return undefined;
@@ -527,7 +593,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                     style={{
                       gridColumn: key.gridColumn,
                       gridRow: key.gridRow,
-                      border: "none",
+                      border: "1px solid rgba(0,0,0,0.35)",
                       background,
                       color,
                       fontWeight: 600,
@@ -539,8 +605,9 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      borderRadius: 0,
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+                      borderRadius: 6,
+                      boxShadow:
+                        "inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 rgba(0,0,0,0.2)",
                     }}
                   >
                     {key.label}
