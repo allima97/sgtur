@@ -30,11 +30,76 @@ const calculatorKeys = [
 const sanitizeCalcInput = (value: string) =>
   value.replace(/,/g, ".").replace(/[^0-9+\-*/().x%\s]/gi, "");
 
+const normalizeCalcNumberToken = (token: string) => {
+  if (!token) return "";
+  let normalized = token;
+  if (normalized.startsWith(".") || normalized.startsWith(",")) {
+    normalized = `0${normalized}`;
+  }
+  if (normalized.includes(",")) {
+    const [intPart, ...decParts] = normalized.split(",");
+    const integer = intPart.replace(/\./g, "");
+    const decimal = decParts.join("").replace(/\./g, "");
+    return decimal.length ? `${integer}.${decimal}` : `${integer}.`;
+  }
+  const dotCount = (normalized.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    return normalized.replace(/\./g, "");
+  }
+  if (dotCount === 1) {
+    const [intPart, decPart] = normalized.split(".");
+    if (decPart.length === 3 && intPart.length > 0) {
+      return `${intPart}${decPart}`;
+    }
+    return `${intPart}.${decPart}`;
+  }
+  return normalized;
+};
+
+const normalizeCalcDisplayInput = (value: string) => {
+  const cleaned = value.replace(/[^0-9+\-*/().,%x\s]/gi, "");
+  let result = "";
+  let currentNumber = "";
+  const flushNumber = () => {
+    if (!currentNumber) return;
+    result += normalizeCalcNumberToken(currentNumber);
+    currentNumber = "";
+  };
+  for (let i = 0; i < cleaned.length; i += 1) {
+    const ch = cleaned[i];
+    if (/[0-9.,]/.test(ch)) {
+      currentNumber += ch;
+      continue;
+    }
+    flushNumber();
+    if (/[+\-*/()%x\s()]/i.test(ch)) {
+      result += ch.toLowerCase() === "x" ? "x" : ch;
+    }
+  }
+  flushNumber();
+  return result;
+};
+
 const formatCalcResult = (value: number) => {
   if (!Number.isFinite(value)) return "0";
   if (Number.isInteger(value)) return String(value);
   const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
   return rounded.toFixed(2);
+};
+
+const formatCalcDisplay = (value: string) => {
+  if (!value) return "";
+  return value.replace(/(\d+(?:\.\d*)?|\.\d+)/g, (match) => {
+    let [intPart, decPart] = match.split(".");
+    if (!intPart) intPart = "0";
+    const normalizedInt = intPart.replace(/^0+(?=\d)/, "");
+    const baseInt = normalizedInt || "0";
+    const formattedInt = baseInt.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    if (decPart !== undefined) {
+      return `${formattedInt},${decPart}`;
+    }
+    return formattedInt;
+  });
 };
 
 const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
@@ -458,10 +523,10 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ open, onClose }) => {
             </button>
             <input
               type="text"
-              value={calcValue}
+              value={formatCalcDisplay(calcValue)}
               onChange={(e) => {
                 setCalcError(null);
-                setCalcValue(sanitizeCalcInput(e.target.value));
+                setCalcValue(normalizeCalcDisplayInput(e.target.value));
               }}
               ref={calcInputRef}
               onKeyDown={(e) => {
