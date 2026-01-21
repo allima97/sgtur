@@ -806,21 +806,11 @@ export default function VendasConsultaIsland() {
   // UI — LISTAGEM
   // ================================
   return (
-
-      <div className="vendas-consulta-page">
-        {/* BUSCA */}
-      <div className="card-base mb-3">
-        <div
-          className="form-row"
-          style={{
-            marginTop: 8,
-            display: "flex",
-            alignItems: "end",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+    <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
+      {/* BUSCA */}
+      <div className="card-base mb-3 list-toolbar-sticky">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="form-group flex-1 min-w-0">
             <label className="form-label">Buscar venda</label>
             <input
               className="form-input"
@@ -835,32 +825,14 @@ export default function VendasConsultaIsland() {
             )}
           </div>
           {podeCriar && (
-            <div
-              className="form-group"
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                gap: 8,
-                marginBottom: 0,
-                marginLeft: "auto",
-                flexWrap: "nowrap",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                alignSelf: "center",
-                marginTop: -4,
-              }}
-            >
-              <a
-                className="btn btn-primary"
-                href="/vendas/cadastro"
-                style={{ textDecoration: "none" }}
-            >
-              Nova venda
-            </a>
-          </div>
-        )}
+            <div className="hidden sm:flex sm:items-end sm:ml-auto">
+              <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
+                Nova venda
+              </a>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
 
       <div className="dashboard-grid-kpi mb-3">
         <div className="kpi-card kpi-vendas">
@@ -1333,6 +1305,13 @@ export default function VendasConsultaIsland() {
               {t.message}
             </div>
           ))}
+        </div>
+      )}
+      {podeCriar && (
+        <div className="mobile-actionbar sm:hidden">
+          <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
+            Nova venda
+          </a>
         </div>
       )}
     </div>

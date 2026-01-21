@@ -181,6 +181,14 @@ export default function MenuIsland({ activePage }) {
     if (typeof window !== "undefined" && window.innerWidth <= 1024) closeMobile();
   };
 
+  type MobileNavItem = {
+    key: string;
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+    active: string;
+  };
+
   const clearTimers = useCallback(() => {
     if (logoutTimeoutRef.current) {
       window.clearTimeout(logoutTimeoutRef.current);
@@ -408,9 +416,77 @@ export default function MenuIsland({ activePage }) {
       )
     : null;
 
+  const mobileNavItems: MobileNavItem[] = [];
+  if (can("Dashboard")) {
+    mobileNavItems.push({
+      key: "dashboard",
+      label: "Dashboard",
+      href: "/",
+      icon: "📊",
+      active: "dashboard",
+    });
+  }
+  if (can("Vendas")) {
+    mobileNavItems.push({
+      key: "vendas",
+      label: "Vendas",
+      href: "/vendas/consulta",
+      icon: "🧾",
+      active: "vendas",
+    });
+  }
+  if (can("Orcamentos")) {
+    mobileNavItems.push({
+      key: "orcamentos",
+      label: "Orçamentos",
+      href: "/orcamentos/consulta",
+      icon: "💼",
+      active: "orcamentos",
+    });
+  }
+  if (can("Clientes")) {
+    mobileNavItems.push({
+      key: "clientes",
+      label: "Clientes",
+      href: "/clientes/carteira",
+      icon: "👥",
+      active: "clientes",
+    });
+  }
+
+  const mobileBottomNav = mounted
+    ? createPortal(
+        <nav className="mobile-bottom-nav" aria-label="Atalhos principais">
+          {mobileNavItems.map((item) => (
+            <a
+              key={item.key}
+              className={`mobile-bottom-nav-item ${activePage === item.active ? "active" : ""}`}
+              href={item.href}
+              onClick={handleNavClick}
+            >
+              <span className="mobile-bottom-nav-icon">{item.icon}</span>
+              <span className="mobile-bottom-nav-label">{item.label}</span>
+            </a>
+          ))}
+          <button
+            type="button"
+            className="mobile-bottom-nav-item"
+            aria-expanded={mobileOpen}
+            aria-controls={sidebarId}
+            onClick={toggleMobile}
+          >
+            <span className="mobile-bottom-nav-icon">☰</span>
+            <span className="mobile-bottom-nav-label">Mais</span>
+          </button>
+        </nav>,
+        document.body
+      )
+    : null;
+
   return (
     <>
       {mobileControls}
+      {mobileBottomNav}
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
             <div className="sidebar-logo">{SYSTEM_NAME}</div>
 

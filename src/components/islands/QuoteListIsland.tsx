@@ -83,6 +83,7 @@ export default function QuoteListIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [deletandoId, setDeletandoId] = useState<string | null>(null);
   const [visualizandoQuote, setVisualizandoQuote] = useState<QuoteRow | null>(null);
   const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
@@ -232,8 +233,8 @@ export default function QuoteListIsland() {
 
   return (
     <div className="page-content-wrap">
-      <div className="card-base mb-3">
-        <div className="form-row">
+      <div className="card-base mb-3 list-toolbar-sticky">
+        <div className="flex flex-col gap-2 sm:hidden">
           <div className="form-group">
             <label className="form-label">Buscar</label>
             <input
@@ -243,23 +244,80 @@ export default function QuoteListIsland() {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-input"
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value)}
-            >
-              <option value="all">Todos</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+        </div>
+        <div className="hidden sm:block">
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Buscar</label>
+              <input
+                className="form-input"
+                placeholder="Cliente, item, status..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-input"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value)}
+              >
+                <option value="all">Todos</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Status</label>
+              <select
+                className="form-input"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value)}
+              >
+                <option value="all">Todos</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => setShowFilters(false)}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">

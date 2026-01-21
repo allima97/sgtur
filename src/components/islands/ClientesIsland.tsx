@@ -1211,12 +1211,23 @@ export default function ClientesIsland() {
     </div>
   );
 
+  const iniciarNovoCliente = () => {
+    setForm(initialForm);
+    setEditId(null);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    resetAcompForm(true);
+    setAbaFormCliente("dados");
+    setMsg(null);
+    setMostrarFormCliente(true);
+  };
+
   // =====================================
   // UI
   // =====================================
   return (
     <>
-    <div className="clientes-page">
+    <div className={`clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
 
       {/* FORMULÁRIO */}
       {!modoSomenteLeitura && mostrarFormCliente && (
@@ -1481,18 +1492,9 @@ export default function ClientesIsland() {
       )}
 
       {/* BUSCA */}
-      <div className="card-base mb-3">
-        <div
-          className="form-row"
-          style={{
-            marginTop: 12,
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            alignItems: "flex-end",
-          }}
-        >
-          <div className="form-group" style={{ flex: "1 1 300px" }}>
+      <div className="card-base mb-3 list-toolbar-sticky">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="form-group flex-1 min-w-0">
             <label className="form-label">Buscar cliente</label>
             <input
               className="form-input"
@@ -1502,20 +1504,11 @@ export default function ClientesIsland() {
             />
           </div>
           {podeCriar && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
+            <div className="hidden sm:flex sm:items-end sm:ml-auto">
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => {
-                  setForm(initialForm);
-                  setEditId(null);
-                  setAcompanhantes([]);
-                  setAcompErro(null);
-                  resetAcompForm(true);
-                  setAbaFormCliente("dados");
-                  setMsg(null);
-                  setMostrarFormCliente(true);
-                }}
+                onClick={iniciarNovoCliente}
                 disabled={mostrarFormCliente}
               >
                 Adicionar cliente
@@ -1625,6 +1618,18 @@ export default function ClientesIsland() {
           </tbody>
         </table>
       </div>
+      {podeCriar && (
+        <div className="mobile-actionbar sm:hidden">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={iniciarNovoCliente}
+            disabled={mostrarFormCliente}
+          >
+            Adicionar cliente
+          </button>
+        </div>
+      )}
     </div>
     {historicoCliente && (
       <div className="modal-backdrop">
