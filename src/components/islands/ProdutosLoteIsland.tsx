@@ -634,7 +634,7 @@ export default function ProdutosLoteIsland() {
           </datalist>
 
           <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-            <table className="table-default min-w-[1400px]">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[1400px]">
               <thead>
                 <tr>
                   <th>Tipo *</th>
@@ -650,7 +650,7 @@ export default function ProdutosLoteIsland() {
                 {produtos.map((produto, index) => (
                   <React.Fragment key={produto.id}>
                     <tr>
-                      <td>
+                      <td data-label="Tipo">
                         <select
                           className="form-select"
                           value={produto.tipo_produto}
@@ -665,7 +665,7 @@ export default function ProdutosLoteIsland() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Nome do produto">
                         <input
                           className="form-input"
                           value={produto.nome}
@@ -678,7 +678,7 @@ export default function ProdutosLoteIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td>
+                      <td data-label="Destino">
                         <input
                           className="form-input"
                           list="destinos-lote-list"
@@ -692,7 +692,7 @@ export default function ProdutosLoteIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td>
+                      <td data-label="Nivel de preco">
                         <select
                           className="form-select"
                           value={produto.nivel_preco}
@@ -707,7 +707,7 @@ export default function ProdutosLoteIsland() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Imagem (URL)">
                         <input
                           className="form-input"
                           value={produto.imagem_url}
@@ -716,7 +716,7 @@ export default function ProdutosLoteIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td>
+                      <td data-label="Info">
                         <button
                           type="button"
                           className="btn btn-light"
@@ -725,7 +725,7 @@ export default function ProdutosLoteIsland() {
                           {infosAbertos[produto.id] ? "-" : "+"}
                         </button>
                       </td>
-                      <td>
+                      <td data-label="Ações">
                         <button
                           type="button"
                           className="btn btn-light"

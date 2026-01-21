@@ -293,7 +293,7 @@ export default function AdminPermissoesIsland() {
 
       {/* TABELA DE USUÁRIOS */}
       <div className="table-container mb-3 overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[780px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[780px]">
           <thead>
             <tr>
               <th>Nome</th>
@@ -311,28 +311,30 @@ export default function AdminPermissoesIsland() {
 
             {usuariosFiltrados.map((u) => (
               <tr key={u.id}>
-                <td>{u.nome_completo}</td>
-                <td>{u.email || "-"}</td>
-                <td>{u.active ? "Ativo" : "Bloqueado"}</td>
-                <td className="th-actions">
-                  <button
-                    className="btn-icon"
-                    title="Editar permissões"
-                    onClick={() => abrirEditor(u)}
-                  >
-                    ⚙️
-                  </button>
-                  {usuarioLogadoId !== u.id && (
+                <td data-label="Nome">{u.nome_completo}</td>
+                <td data-label="E-mail">{u.email || "-"}</td>
+                <td data-label="Status">{u.active ? "Ativo" : "Bloqueado"}</td>
+                <td className="th-actions" data-label="Ações">
+                  <div className="action-buttons">
                     <button
-                      className={`btn-icon ${
-                        u.active ? "btn-danger" : ""
-                      }`}
-                      title={u.active ? "Bloquear usuário" : "Reativar usuário"}
-                      onClick={() => toggleUsuarioAtivo(u)}
+                      className="btn-icon"
+                      title="Editar permissões"
+                      onClick={() => abrirEditor(u)}
                     >
-                      {u.active ? "🚫" : "✅"}
+                      ⚙️
                     </button>
-                  )}
+                    {usuarioLogadoId !== u.id && (
+                      <button
+                        className={`btn-icon ${
+                          u.active ? "btn-danger" : ""
+                        }`}
+                        title={u.active ? "Bloquear usuário" : "Reativar usuário"}
+                        onClick={() => toggleUsuarioAtivo(u)}
+                      >
+                        {u.active ? "🚫" : "✅"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -347,7 +349,7 @@ export default function AdminPermissoesIsland() {
             Permissões de: <span className="font-semibold">{selecionado.nome_completo}</span>
           </h3>
           <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-blue min-w-[500px]">
+            <table className="table-default table-header-blue table-mobile-cards min-w-[500px]">
               <thead>
                 <tr>
                   <th>Módulo</th>
@@ -357,8 +359,8 @@ export default function AdminPermissoesIsland() {
               <tbody>
                 {MODULOS.map((modulo) => (
                   <tr key={modulo}>
-                    <td>{modulo}</td>
-                    <td>
+                    <td data-label="Módulo">{modulo}</td>
+                    <td data-label="Nível">
                       <select
                         className="form-select"
                         value={formPermissoes[modulo] || "none"}

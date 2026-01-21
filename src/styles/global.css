@@ -651,6 +651,12 @@ body {
     border-bottom: 0;
   }
 
+  .table-mobile-cards .form-input,
+  .table-mobile-cards .form-select {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
   .table-mobile-cards tfoot {
     display: none;
   }

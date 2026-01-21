@@ -215,7 +215,7 @@ export default function LogsIsland() {
       <div className="card-base card-red">
         <h3 className="mb-3 font-semibold">Registros ({logsFiltrados.length})</h3>
         <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red min-w-[820px]">
+          <table className="table-default table-header-red table-mobile-cards min-w-[820px]">
             <thead>
               <tr>
                 <th className="min-w-[150px]">Data</th>
@@ -223,7 +223,7 @@ export default function LogsIsland() {
                 <th>Ação</th>
                 <th>Módulo</th>
                 <th>IP</th>
-                <th>Ver</th>
+                <th className="th-actions">Ver</th>
               </tr>
             </thead>
             <tbody>
@@ -234,18 +234,20 @@ export default function LogsIsland() {
               )}
               {logsFiltrados.map((l) => (
                 <tr key={l.id}>
-                  <td>{new Date(l.created_at).toLocaleString("pt-BR")}</td>
-                  <td>{l.users?.nome_completo || "Desconhecido"}</td>
-                  <td>{l.acao}</td>
-                  <td>{l.modulo || "-"}</td>
-                  <td>{l.ip || "-"}</td>
-                  <td>
-                    <button
-                      className="btn btn-light"
-                      onClick={() => setLogSelecionado(l)}
-                    >
-                      Ver
-                    </button>
+                  <td data-label="Data">{new Date(l.created_at).toLocaleString("pt-BR")}</td>
+                  <td data-label="Usuário">{l.users?.nome_completo || "Desconhecido"}</td>
+                  <td data-label="Ação">{l.acao}</td>
+                  <td data-label="Módulo">{l.modulo || "-"}</td>
+                  <td data-label="IP">{l.ip || "-"}</td>
+                  <td className="th-actions" data-label="Ver">
+                    <div className="action-buttons">
+                      <button
+                        className="btn btn-light"
+                        onClick={() => setLogSelecionado(l)}
+                      >
+                        Ver
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

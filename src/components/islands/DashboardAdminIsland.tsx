@@ -624,7 +624,7 @@ export default function DashboardAdminIsland() {
           </button>
         </div>
         <div className="table-container overflow-x-auto mt-4">
-          <table className="table-default table-header-red min-w-[760px]">
+          <table className="table-default table-header-red table-mobile-cards min-w-[760px]">
             <thead>
               <tr>
                 <th>Nome</th>
@@ -632,7 +632,7 @@ export default function DashboardAdminIsland() {
                 <th>Tipo</th>
                 <th>Empresa</th>
                 <th>Ativo</th>
-                <th>Ações</th>
+                <th className="th-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -643,21 +643,26 @@ export default function DashboardAdminIsland() {
               ) : (
                 usuarios.map((u) => (
                   <tr key={u.id}>
-                    <td>{u.nome_completo}</td>
-                    <td>{u.email || "-"}</td>
-                    <td>{u.user_types?.name || "—"}</td>
-                    <td>{u.company_id ? companyMap[u.company_id] || "-" : "—"}</td>
-                    <td className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}>
+                    <td data-label="Nome">{u.nome_completo}</td>
+                    <td data-label="E-mail">{u.email || "-"}</td>
+                    <td data-label="Tipo">{u.user_types?.name || "—"}</td>
+                    <td data-label="Empresa">{u.company_id ? companyMap[u.company_id] || "-" : "—"}</td>
+                    <td
+                      data-label="Ativo"
+                      className={u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold"}
+                    >
                       {u.active ? "Sim" : "Não"}
                     </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-light"
-                        onClick={() => openEditUserModal(u)}
-                      >
-                        Editar
-                      </button>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        <button
+                          type="button"
+                          className="btn btn-light"
+                          onClick={() => openEditUserModal(u)}
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

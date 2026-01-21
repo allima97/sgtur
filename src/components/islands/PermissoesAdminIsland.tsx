@@ -208,7 +208,7 @@ export default function PermissoesAdminIsland() {
       <div className="card-base card-red">
         <h3 className="mb-3 font-semibold">Usuários</h3>
         <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red min-w-[900px]">
+          <table className="table-default table-header-red table-mobile-cards min-w-[900px]">
             <thead>
               <tr>
                 <th className="min-w-[180px]">Usuário</th>
@@ -220,7 +220,7 @@ export default function PermissoesAdminIsland() {
             <tbody>
               {usuarios.map((u) => (
                 <tr key={u.id}>
-                  <td>
+                  <td data-label="Usuário">
                     <strong>{u.nome_completo}</strong>
                     <br />
                     <small>{u.email}</small>
@@ -230,7 +230,7 @@ export default function PermissoesAdminIsland() {
                   {MODULOS.map((m) => {
                     const per = getPermissao(u.id, m);
                     return (
-                      <td key={m}>
+                      <td key={m} data-label={m}>
                         <div className="flex flex-col gap-1">
                           {/* Toggle ATIVO */}
                           <label className="text-xs">
