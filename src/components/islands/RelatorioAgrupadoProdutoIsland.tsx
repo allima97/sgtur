@@ -971,7 +971,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
             </div>
           </div>
           <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-purple min-w-[620px]">
+            <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
               <thead>
                 <tr>
                   <th>Tipo de Produto</th>
@@ -1011,10 +1011,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 {!loading &&
                   linhasFiltradas.map((l, idx) => (
                     <tr key={l.produto_id ?? `sem-${idx}`}>
-                      <td>{l.produto_nome}</td>
-                      <td>{l.quantidade}</td>
-                      <td>{formatCurrency(l.total)}</td>
-                      <td>{formatCurrency(l.ticketMedio)}</td>
+                      <td data-label="Tipo de Produto">{l.produto_nome}</td>
+                      <td data-label="Qtde">{l.quantidade}</td>
+                      <td data-label="Faturamento">{formatCurrency(l.total)}</td>
+                      <td data-label="Ticket médio">{formatCurrency(l.ticketMedio)}</td>
                     </tr>
                   ))}
               </tbody>
@@ -1045,7 +1045,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
             </div>
           </div>
           <div className="table-container overflow-x-auto">
-            <table className="table-default table-header-purple min-w-[720px]">
+            <table className="table-default table-header-purple table-mobile-cards min-w-[720px]">
               <thead>
                 <tr>
                   <th>Recibo</th>
@@ -1077,15 +1077,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
                       : "-";
                     return (
                       <tr key={`${recibo.vendaId}-${recibo.numeroRecibo || "sem"}`}>
-                        <td>{recibo.numeroRecibo || "-"}</td>
-                        <td>{recibo.produtoNome}</td>
-                        <td>{recibo.cidadeNome || "-"}</td>
-                        <td>{recibo.destinoNome || "-"}</td>
-                        <td>{dataLabel}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td data-label="Recibo">{recibo.numeroRecibo || "-"}</td>
+                        <td data-label="Produto">{recibo.produtoNome}</td>
+                        <td data-label="Cidade">{recibo.cidadeNome || "-"}</td>
+                        <td data-label="Destino">{recibo.destinoNome || "-"}</td>
+                        <td data-label="Data">{dataLabel}</td>
+                        <td data-label="Valor total" style={{ textAlign: "right" }}>
                           {formatCurrency(recibo.valorTotal)}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td data-label="Taxas" style={{ textAlign: "right" }}>
                           {formatCurrency(recibo.valorTaxas)}
                         </td>
                       </tr>

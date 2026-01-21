@@ -611,7 +611,7 @@ export default function MetasVendedorIsland() {
 
       {/* LISTAGEM */}
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[880px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[880px]">
           <thead>
             <tr>
               <th>Período</th>
@@ -631,20 +631,20 @@ export default function MetasVendedorIsland() {
 
             {listaMetas.map((m) => (
               <tr key={m.id}>
-                <td>{m.periodo.slice(0, 7)}</td>
-                <td>
+                <td data-label="Período">{m.periodo.slice(0, 7)}</td>
+                <td data-label="Meta Geral">
                   {m.meta_geral.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   })}
                 </td>
-                <td>
+                <td data-label="Meta Diferenciada">
                   {m.meta_diferenciada.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   })}
                 </td>
-                <td>
+                <td data-label="Produtos">
                   {(detalhesMetas[m.id] || []).length === 0
                     ? "—"
                     : (detalhesMetas[m.id] || [])
@@ -657,32 +657,34 @@ export default function MetasVendedorIsland() {
                         })
                         .join(" | ")}
                 </td>
-                <td>{m.ativo ? "Sim" : "Não"}</td>
+                <td data-label="Ativo">{m.ativo ? "Sim" : "Não"}</td>
 
                 {usuarioPodeEditar && (
-                  <td className="th-actions">
-                    <button
-                      className="btn-icon"
-                      title="Editar"
-                      onClick={() => iniciarEdicao(m)}
-                    >
-                      ✏️
-                    </button>
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons">
+                      <button
+                        className="btn-icon"
+                        title="Editar"
+                        onClick={() => iniciarEdicao(m)}
+                      >
+                        ✏️
+                      </button>
 
-                    <button
-                      className="btn-icon btn-danger"
-                      title="Excluir"
-                      onClick={() => excluirMeta(m.id)}
-                    >
-                      🗑️
-                    </button>
-                    <button
-                      className="btn-icon"
-                      title={m.ativo ? "Inativar" : "Ativar"}
-                      onClick={() => toggleAtivo(m.id, m.ativo)}
-                    >
-                      {m.ativo ? "⏸️" : "▶️"}
-                    </button>
+                      <button
+                        className="btn-icon btn-danger"
+                        title="Excluir"
+                        onClick={() => excluirMeta(m.id)}
+                      >
+                        🗑️
+                      </button>
+                      <button
+                        className="btn-icon"
+                        title={m.ativo ? "Inativar" : "Ativar"}
+                        onClick={() => toggleAtivo(m.id, m.ativo)}
+                      >
+                        {m.ativo ? "⏸️" : "▶️"}
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>

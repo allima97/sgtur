@@ -688,7 +688,7 @@ export default function CidadesIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[720px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>
               <th>Cidade</th>
@@ -712,27 +712,29 @@ export default function CidadesIsland() {
             {!loading &&
               filtradas.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.nome}</td>
-                  <td>{(c as any).subdivisao_nome || "-"}</td>
-                  <td>{(c as any).pais_nome || "-"}</td>
-                  <td>{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
+                  <td data-label="Cidade">{c.nome}</td>
+                  <td data-label="Subdivisao">{(c as any).subdivisao_nome || "-"}</td>
+                  <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
+                  <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
                   {(podeEditar || podeExcluir) && (
-                    <td className="th-actions">
-                      {podeEditar && (
-                        <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
-                          ✏️
-                        </button>
-                      )}
-                      {podeExcluir && (
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={() => excluir(c.id)}
-                          disabled={excluindoId === c.id}
-                          title="Excluir"
-                        >
-                          {excluindoId === c.id ? "..." : "🗑️"}
-                        </button>
-                      )}
+                    <td className="th-actions" data-label="Acoes">
+                      <div className="action-buttons">
+                        {podeEditar && (
+                          <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
+                            ✏️
+                          </button>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => excluir(c.id)}
+                            disabled={excluindoId === c.id}
+                            title="Excluir"
+                          >
+                            {excluindoId === c.id ? "..." : "🗑️"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

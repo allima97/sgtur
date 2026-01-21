@@ -741,7 +741,7 @@ export default function ViagensListaIsland() {
         )}
 
         <div className="table-container overflow-x-auto">
-          <table className="table-default min-w-[760px]">
+          <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
             <thead>
               <tr>
                 <th>Cliente</th>
@@ -750,7 +750,7 @@ export default function ViagensListaIsland() {
                 <th>Status</th>
                 <th>Produto</th>
                 <th>Valor</th>
-                <th style={{ textAlign: "center" }}>Ações</th>
+                <th className="th-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -779,62 +779,56 @@ export default function ViagensListaIsland() {
                 const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
                 return (
                   <tr key={v.id}>
-                    <td>{v.clientes?.nome || "-"}</td>
-                    <td>{formatarDataParaExibicao(v.data_inicio)}</td>
-                    <td>{formatarDataParaExibicao(v.data_fim)}</td>
-                    <td>{statusLabel}</td>
-                    <td>{produtoLabel}</td>
-                    <td>{valorLabel}</td>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <a
-                        className="btn-icon"
-                        href={`/operacao/viagens/${v.id}`}
-                        title="Ver viagem"
-                        style={{ padding: "4px 6px" }}
-                      >
-                        👁️
-                      </a>
-                      {whatsappLink && (
+                    <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
+                    <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                    <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
+                    <td data-label="Status">{statusLabel}</td>
+                    <td data-label="Produto">{produtoLabel}</td>
+                    <td data-label="Valor">{valorLabel}</td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
                         <a
                           className="btn-icon"
-                          href={whatsappLink}
-                          title="Enviar WhatsApp"
-                          target="_blank"
-                          rel="noreferrer"
+                          href={`/operacao/viagens/${v.id}`}
+                          title="Ver viagem"
                           style={{ padding: "4px 6px" }}
                         >
-                          💬
+                          👁️
                         </a>
-                      )}
-                      {podeEditar && (
-                        <a
-                          className="btn-icon"
-                          href={`/operacao/viagens/${v.id}?modo=editar`}
-                          title="Editar viagem"
-                          style={{ padding: "4px 6px" }}
-                        >
-                          ✏️
-                        </a>
-                      )}
-                      {podeExcluir && (
-                        <button
-                          className="btn-icon btn-danger"
-                          title="Excluir viagem"
-                          onClick={() => excluirViagem(v)}
-                          disabled={deletandoViagemId === v.id}
-                          style={{ padding: "4px 6px" }}
-                        >
-                          {deletandoViagemId === v.id ? "..." : "🗑️"}
-                        </button>
-                      )}
+                        {whatsappLink && (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            title="Enviar WhatsApp"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ padding: "4px 6px" }}
+                          >
+                            💬
+                          </a>
+                        )}
+                        {podeEditar && (
+                          <a
+                            className="btn-icon"
+                            href={`/operacao/viagens/${v.id}?modo=editar`}
+                            title="Editar viagem"
+                            style={{ padding: "4px 6px" }}
+                          >
+                            ✏️
+                          </a>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            title="Excluir viagem"
+                            onClick={() => excluirViagem(v)}
+                            disabled={deletandoViagemId === v.id}
+                            style={{ padding: "4px 6px" }}
+                          >
+                            {deletandoViagemId === v.id ? "..." : "🗑️"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

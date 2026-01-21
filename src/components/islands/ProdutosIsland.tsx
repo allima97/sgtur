@@ -1250,7 +1250,7 @@ export default function ProdutosIsland() {
 
       {/* Tabela */}
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[1080px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
           <thead>
             <tr>
               <th>Tipo</th>
@@ -1279,14 +1279,16 @@ export default function ProdutosIsland() {
             {!loading &&
               produtosFiltrados.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.tipo_nome || "-"}</td>
-                  <td>{p.nome}</td>
-                  <td>{p.destino || "-"}</td>
-                  <td>{(p as any).cidade_nome || "-"}</td>
-                  <td>{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
-                  <td>{p.ativo ? "Sim" : "Nao"}</td>
-                  <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
-                  <td className="th-actions">
+                  <td data-label="Tipo">{p.tipo_nome || "-"}</td>
+                  <td data-label="Produto">{p.nome}</td>
+                  <td data-label="Destino">{p.destino || "-"}</td>
+                  <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
+                  <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
+                  <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
+                  <td data-label="Criado em">
+                    {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+                  </td>
+                  <td className="th-actions" data-label="Acoes">
                     <div className="action-buttons">
                       {permissao !== "view" && (
                         <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>

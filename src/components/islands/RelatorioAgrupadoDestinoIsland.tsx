@@ -594,7 +594,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
       </div>
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple min-w-[620px]">
+        <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
           <thead>
             <tr>
               <th>Destino</th>
@@ -634,15 +634,15 @@ export default function RelatorioAgrupadoDestinoIsland() {
             {!loading &&
               linhas.map((l) => (
                 <tr key={l.destino_id}>
-                  <td>{l.destino_nome}</td>
-                  <td>{l.quantidade}</td>
-                  <td>
+                  <td data-label="Destino">{l.destino_nome}</td>
+                  <td data-label="Qtde">{l.quantidade}</td>
+                  <td data-label="Faturamento">
                     {l.total.toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     })}
                   </td>
-                  <td>
+                  <td data-label="Ticket médio">
                     {l.ticketMedio.toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

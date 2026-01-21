@@ -1585,7 +1585,7 @@ export default function CircuitosIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[840px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[840px]">
           <thead>
             <tr>
               <th>Circuito</th>
@@ -1609,25 +1609,27 @@ export default function CircuitosIsland() {
             {!loading &&
               circuitosFiltrados.map((circuito) => (
                 <tr key={circuito.id}>
-                  <td>{circuito.nome}</td>
-                  <td>{circuito.codigo || "-"}</td>
-                  <td>{circuito.operador || "-"}</td>
-                  <td>{circuito.ativo ? "Ativo" : "Inativo"}</td>
-                  <td className="flex flex-wrap gap-2">
-                    <button type="button" className="btn btn-light" onClick={() => iniciarEdicao(circuito.id)}>
-                      Editar
-                    </button>
-                    <button type="button" className="btn btn-light" onClick={() => abrirPreview(circuito.id)}>
-                      Visualizar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-light"
-                      onClick={() => excluir(circuito.id)}
-                      disabled={excluindoId === circuito.id}
-                    >
-                      {excluindoId === circuito.id ? "Excluindo..." : "Excluir"}
-                    </button>
+                  <td data-label="Circuito">{circuito.nome}</td>
+                  <td data-label="Codigo">{circuito.codigo || "-"}</td>
+                  <td data-label="Operador">{circuito.operador || "-"}</td>
+                  <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
+                  <td className="th-actions" data-label="Acoes">
+                    <div className="action-buttons">
+                      <button type="button" className="btn btn-light" onClick={() => iniciarEdicao(circuito.id)}>
+                        Editar
+                      </button>
+                      <button type="button" className="btn btn-light" onClick={() => abrirPreview(circuito.id)}>
+                        Visualizar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-light"
+                        onClick={() => excluir(circuito.id)}
+                        disabled={excluindoId === circuito.id}
+                      >
+                        {excluindoId === circuito.id ? "Excluindo..." : "Excluir"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

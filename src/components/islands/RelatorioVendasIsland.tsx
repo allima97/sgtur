@@ -1543,7 +1543,7 @@ export default function RelatorioVendasIsland() {
       </div>
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-purple min-w-[1100px]">
+        <table className="table-default table-header-purple table-mobile-cards min-w-[1100px]">
           <thead>
             <tr>
               <th>Data lançamento</th>
@@ -1578,34 +1578,34 @@ export default function RelatorioVendasIsland() {
                 const comissao = comissaoPorRecibo.get(r.id) ?? 0;
                 return (
                   <tr key={r.id}>
-                    <td>
+                    <td data-label="Data lançamento">
                       {r.data_lancamento
                         ? new Date(r.data_lancamento).toLocaleDateString("pt-BR")
                         : "-"}
                     </td>
-                    <td>{r.numero_recibo || "-"}</td>
-                    <td>{r.cliente_nome}</td>
-                    <td>{r.cliente_cpf}</td>
-                    <td>{r.produto_tipo}</td>
-                    <td>{r.cidade_nome || "-"}</td>
-                    <td>{r.produto_nome}</td>
-                    <td>
+                    <td data-label="Nº Recibo">{r.numero_recibo || "-"}</td>
+                    <td data-label="Cliente">{r.cliente_nome}</td>
+                    <td data-label="CPF">{r.cliente_cpf}</td>
+                    <td data-label="Tipo produto">{r.produto_tipo}</td>
+                    <td data-label="Cidade">{r.cidade_nome || "-"}</td>
+                    <td data-label="Produto">{r.produto_nome}</td>
+                    <td data-label="Data embarque">
                       {r.data_embarque
                         ? new Date(r.data_embarque).toLocaleDateString("pt-BR")
                         : "-"}
                     </td>
-                    <td>
+                    <td data-label="Valor total">
                       {r.valor_total != null ? formatCurrency(r.valor_total) : "-"}
                     </td>
-                    <td>
+                    <td data-label="Taxas">
                       {r.valor_taxas != null ? formatCurrency(r.valor_taxas) : "-"}
                     </td>
-                    <td>
+                    <td data-label="Valor líquido">
                       {r.valor_total != null
                         ? formatCurrency(r.valor_total - (r.valor_taxas ?? 0))
                         : "-"}
                     </td>
-                    <td>{formatCurrency(comissao)}</td>
+                    <td data-label="Comissão">{formatCurrency(comissao)}</td>
                   </tr>
                 );
               })}

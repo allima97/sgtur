@@ -553,7 +553,7 @@ export default function TipoProdutosIsland() {
 
       {/* TABELA */}
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[720px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>
               <th>Nome</th>
@@ -582,37 +582,41 @@ export default function TipoProdutosIsland() {
             {!loading &&
               tiposFiltrados.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.nome || p.tipo}</td>
-                  <td>{p.regra_comissionamento}</td>
-                  <td>
+                  <td data-label="Nome">{p.nome || p.tipo}</td>
+                  <td data-label="Regra">{p.regra_comissionamento}</td>
+                  <td data-label="Regra vinculada">
                     {produtoRegraMap[p.id]?.rule_id
                       ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-"
                       : produtoRegraMap[p.id]?.fix_meta_atingida
                         ? "Comissão fixa"
                         : "-"}
                   </td>
-                  <td>{p.soma_na_meta ? "Sim" : "Não"}</td>
-                  <td style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
+                  <td data-label="Soma meta">{p.soma_na_meta ? "Sim" : "Não"}</td>
+                  <td data-label="Ativo" style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
                     {p.ativo ? "Ativo" : "Inativo"}
                   </td>
-                  <td>{p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}</td>
+                  <td data-label="Criado em">
+                    {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+                  </td>
 
-                  <td className="th-actions">
-                    {permissao !== "view" && (
-                      <button className="btn-icon" onClick={() => iniciarEdicao(p)}>
-                        ✏️
-                      </button>
-                    )}
+                  <td className="th-actions" data-label="Ações">
+                    <div className="action-buttons">
+                      {permissao !== "view" && (
+                        <button className="btn-icon" onClick={() => iniciarEdicao(p)}>
+                          ✏️
+                        </button>
+                      )}
 
-                    {permissao === "admin" && (
-                      <button
-                        className="btn-icon btn-danger"
-                        onClick={() => excluir(p.id)}
-                        disabled={excluindoId === p.id}
-                      >
-                        {excluindoId === p.id ? "..." : "🗑️"}
-                      </button>
-                    )}
+                      {permissao === "admin" && (
+                        <button
+                          className="btn-icon btn-danger"
+                          onClick={() => excluir(p.id)}
+                          disabled={excluindoId === p.id}
+                        >
+                          {excluindoId === p.id ? "..." : "🗑️"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

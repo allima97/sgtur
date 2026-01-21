@@ -318,7 +318,7 @@ export default function SubdivisoesIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[720px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>
               <th>Subdivisao</th>
@@ -345,29 +345,31 @@ export default function SubdivisoesIsland() {
             {!loading &&
               filtrados.map((s) => (
                 <tr key={s.id}>
-                  <td>{s.nome}</td>
-                  <td>{s.codigo_admin1}</td>
-                  <td>{(s as any).pais_nome || "-"}</td>
-                  <td>{s.tipo || "-"}</td>
-                  <td>{s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}</td>
-                  <td className="th-actions">
-                        {permissao !== "view" && (
-                          <>
-                            <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
-                              ✏️
-                            </button>
-                            {permissao === "admin" && (
-                              <button
-                                className="btn-icon btn-danger"
-                                title="Excluir"
-                                onClick={() => excluir(s.id)}
-                                disabled={excluindoId === s.id}
-                              >
-                                {excluindoId === s.id ? "..." : "🗑️"}
-                              </button>
-                            )}
-                          </>
+                  <td data-label="Subdivisao">{s.nome}</td>
+                  <td data-label="Codigo">{s.codigo_admin1}</td>
+                  <td data-label="Pais">{(s as any).pais_nome || "-"}</td>
+                  <td data-label="Tipo">{s.tipo || "-"}</td>
+                  <td data-label="Criado em">
+                    {s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}
+                  </td>
+                  <td className="th-actions" data-label="Acoes">
+                    {permissao !== "view" && (
+                      <div className="action-buttons">
+                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
+                          ✏️
+                        </button>
+                        {permissao === "admin" && (
+                          <button
+                            className="btn-icon btn-danger"
+                            title="Excluir"
+                            onClick={() => excluir(s.id)}
+                            disabled={excluindoId === s.id}
+                          >
+                            {excluindoId === s.id ? "..." : "🗑️"}
+                          </button>
                         )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

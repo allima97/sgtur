@@ -377,10 +377,9 @@ function formatCep(value: string) {
             <small>Selecione conforme a forma de uso (pessoal ou vinculada à empresa).</small>
           </div>
           <div
+            className="perfil-grid"
             style={{
-              display: "grid",
               gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr)",
-              gap: 12,
               marginTop: 16,
             }}
           >
@@ -424,10 +423,9 @@ function formatCep(value: string) {
           </div>
 
           <div
+            className="perfil-grid"
             style={{
-              display: "grid",
               gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr)",
-              gap: 12,
               marginTop: 12,
             }}
           >
@@ -486,10 +484,9 @@ function formatCep(value: string) {
           </div>
 
           <div
+            className="perfil-grid"
             style={{
-              display: "grid",
               gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr)",
-              gap: 12,
               marginTop: 12,
             }}
           >
@@ -602,7 +599,7 @@ function formatCep(value: string) {
           <div className="card-base" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
             <h3>🏢 Empresa</h3>
             {empresaAtual ? (
-              <p style={{ marginBottom: 12, lineHeight: 1.5 }}>
+              <p className="perfil-text-wrap" style={{ marginBottom: 12, lineHeight: 1.5 }}>
                 <strong>Empresa:</strong> {empresaAtual.nome || "-"}<br />
                 <strong>CNPJ:</strong> {empresaAtual.cnpj || "-"}<br />
                 <strong>Endereço:</strong> {perfil.company?.endereco || "-"}<br />

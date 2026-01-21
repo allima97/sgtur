@@ -332,7 +332,7 @@ export default function ParametrosCambiosIsland() {
             Recarregar
           </button>
         </div>
-        <table className="table-default table-header-blue min-w-[600px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[600px]">
           <thead>
             <tr>
               <th>Data</th>
@@ -351,16 +351,18 @@ export default function ParametrosCambiosIsland() {
             )}
             {cambios.map((cambio) => (
               <tr key={cambio.id}>
-                <td>{cambio.data}</td>
-                <td>{cambio.moeda}</td>
-                <td>{formatValorNumber(cambio.valor)}</td>
-                <td>{cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}</td>
-                <td>
+                <td data-label="Data">{cambio.data}</td>
+                <td data-label="Moeda">{cambio.moeda}</td>
+                <td data-label="Valor (R$)">{formatValorNumber(cambio.valor)}</td>
+                <td data-label="Cadastrado por">
+                  {cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}
+                </td>
+                <td data-label="Criado em">
                   {cambio.created_at
                     ? new Date(cambio.created_at).toLocaleString("pt-BR")
                     : "—"}
                 </td>
-                <td className="th-actions">
+                <td className="th-actions" data-label="Ações">
                   <div className="action-buttons">
                     {podeEscrever && (
                       <button

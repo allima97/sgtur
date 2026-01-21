@@ -402,7 +402,7 @@ export default function CommissionRulesIsland() {
               </div>
             </div>
             <div className="table-container overflow-x-auto">
-              <table className="table-default table-header-blue min-w-[800px]">
+              <table className="table-default table-header-blue table-mobile-cards min-w-[800px]">
                 <thead>
                   <tr>
                     <th>Faixa</th>
@@ -421,8 +421,8 @@ export default function CommissionRulesIsland() {
                   )}
                   {form.tiers?.map((t, idx) => (
                     <tr key={idx}>
-                      <td>{t.faixa}</td>
-                      <td>
+                      <td data-label="Faixa">{t.faixa}</td>
+                      <td data-label="De (%)">
                         <input
                           className="form-input"
                           type="number"
@@ -432,7 +432,7 @@ export default function CommissionRulesIsland() {
                           disabled={!podeEditar}
                         />
                       </td>
-                      <td>
+                      <td data-label="Até (%)">
                         <input
                           className="form-input"
                           type="number"
@@ -442,7 +442,7 @@ export default function CommissionRulesIsland() {
                           disabled={!podeEditar}
                         />
                       </td>
-                      <td>
+                      <td data-label="Inc. Meta (%)">
                         <input
                           className="form-input"
                           type="number"
@@ -452,7 +452,7 @@ export default function CommissionRulesIsland() {
                           disabled={!podeEditar}
                         />
                       </td>
-                      <td>
+                      <td data-label="Inc. Comissão (%)">
                         <input
                           className="form-input"
                           type="number"
@@ -462,15 +462,17 @@ export default function CommissionRulesIsland() {
                           disabled={!podeEditar}
                         />
                       </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn-icon btn-danger"
-                          onClick={() => removeTier(idx)}
-                          disabled={!podeEditar}
-                        >
-                          🗑️
-                        </button>
+                      <td className="th-actions" data-label="Ações">
+                        <div className="action-buttons">
+                          <button
+                            type="button"
+                            className="btn-icon btn-danger"
+                            onClick={() => removeTier(idx)}
+                            disabled={!podeEditar}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -497,7 +499,7 @@ export default function CommissionRulesIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-blue min-w-[900px]">
+          <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
             <thead>
               <tr>
                 <th>Nome</th>
@@ -521,30 +523,32 @@ export default function CommissionRulesIsland() {
               {!loading &&
                 rules.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.nome}</td>
-                    <td>{r.tipo}</td>
-                    <td>{r.ativo ? "Sim" : "Não"}</td>
-                    <td>{r.commission_tier?.length || 0}</td>
-                    <td className="th-actions">
-                      <button className="btn-icon" onClick={() => editar(r)} title="Editar">
-                        ✏️
-                      </button>
-                      <button
-                        className="btn-icon btn-danger"
-                        onClick={() => inativar(r.id)}
-                        disabled={!podeEditar}
-                        title="Inativar"
-                      >
-                        ⏸️
-                      </button>
-                      <button
-                        className="btn-icon btn-danger"
-                        onClick={() => excluirRegra(r.id)}
-                        disabled={!podeEditar}
-                        title="Excluir"
-                      >
-                        🗑️
-                      </button>
+                    <td data-label="Nome">{r.nome}</td>
+                    <td data-label="Tipo">{r.tipo}</td>
+                    <td data-label="Ativo">{r.ativo ? "Sim" : "Não"}</td>
+                    <td data-label="Faixas">{r.commission_tier?.length || 0}</td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        <button className="btn-icon" onClick={() => editar(r)} title="Editar">
+                          ✏️
+                        </button>
+                        <button
+                          className="btn-icon btn-danger"
+                          onClick={() => inativar(r.id)}
+                          disabled={!podeEditar}
+                          title="Inativar"
+                        >
+                          ⏸️
+                        </button>
+                        <button
+                          className="btn-icon btn-danger"
+                          onClick={() => excluirRegra(r.id)}
+                          disabled={!podeEditar}
+                          title="Excluir"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

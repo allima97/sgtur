@@ -344,7 +344,7 @@ export default function QuotePrintSettingsIsland() {
             <img
               src={logoPreview}
               alt="Logo do orcamento"
-              style={{ marginTop: 8, maxHeight: 80, objectFit: "contain" }}
+              style={{ marginTop: 8, maxHeight: 80, maxWidth: "100%", objectFit: "contain" }}
             />
           )}
         </div>
@@ -465,7 +465,7 @@ export default function QuotePrintSettingsIsland() {
           <img
             src={complementImagePreview}
             alt="Imagem complementar do orcamento"
-            style={{ marginTop: 8, maxHeight: 140, objectFit: "contain" }}
+            style={{ marginTop: 8, maxHeight: 140, maxWidth: "100%", objectFit: "contain" }}
           />
         )}
       </div>

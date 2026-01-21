@@ -306,7 +306,7 @@ export default function PaisesIsland() {
       )}
 
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[520px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[520px]">
           <thead>
             <tr>
               <th>Nome</th>
@@ -332,17 +332,17 @@ export default function PaisesIsland() {
             {!loading &&
               paisesFiltrados.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.nome}</td>
-                  <td>{p.codigo_iso || "-"}</td>
-                  <td>{p.continente || "-"}</td>
-                  <td>
+                  <td data-label="Nome">{p.nome}</td>
+                  <td data-label="Codigo ISO">{p.codigo_iso || "-"}</td>
+                  <td data-label="Continente">{p.continente || "-"}</td>
+                  <td data-label="Criado em">
                     {p.created_at
                       ? new Date(p.created_at).toLocaleDateString("pt-BR")
                       : "-"}
                   </td>
-                  <td className="th-actions">
+                  <td className="th-actions" data-label="Acoes">
                     {permissao !== "view" && (
-                      <>
+                      <div className="action-buttons">
                         <button
                           className="btn-icon"
                           title="Editar"
@@ -360,7 +360,7 @@ export default function PaisesIsland() {
                             {excluindoId === p.id ? "..." : "🗑️"}
                           </button>
                         )}
-                      </>
+                      </div>
                     )}
                   </td>
                 </tr>
