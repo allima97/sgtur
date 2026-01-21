@@ -167,8 +167,8 @@ body {
     align-items: center;
     gap: 8px;
     position: fixed;
-    top: 12px;
-    left: 12px;
+    top: calc(12px + env(safe-area-inset-top));
+    left: calc(12px + env(safe-area-inset-left));
     z-index: 60;
     background: #0f172a;
     color: #e2e8f0;
@@ -186,7 +186,7 @@ body {
   }
 
   .app-main {
-    padding: 72px 16px 40px;
+    padding: calc(72px + env(safe-area-inset-top)) 16px 40px;
   }
 
   .sidebar-logo {
@@ -337,6 +337,29 @@ body {
 .table-container {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.table-container::before,
+.table-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.table-container::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(248,250,252,0.95), rgba(248,250,252,0));
+}
+
+.table-container::after {
+  right: 0;
+  background: linear-gradient(-90deg, rgba(248,250,252,0.95), rgba(248,250,252,0));
 }
 
 .table-default {
@@ -527,6 +550,68 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .table-mobile-cards thead {
+    display: none;
+  }
+
+  .table-mobile-cards,
+  .table-mobile-cards tbody,
+  .table-mobile-cards tr,
+  .table-mobile-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-mobile-cards {
+    min-width: 0 !important;
+  }
+
+  .table-mobile-cards tr {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .table-mobile-cards tbody tr:nth-child(even),
+  .table-mobile-cards tbody tr:hover {
+    background: #fff;
+  }
+
+  .table-mobile-cards td {
+    display: grid !important;
+    grid-template-columns: 140px 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .table-mobile-cards td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .table-mobile-cards td[colspan] {
+    grid-template-columns: 1fr;
+  }
+
+  .table-mobile-cards td[colspan]::before {
+    display: none;
+  }
+
+  .table-mobile-cards td:last-child {
+    border-bottom: 0;
+  }
+
+  .table-mobile-cards .th-actions .action-buttons {
+    justify-content: flex-start;
+  }
 }
 
 /* Utilities */

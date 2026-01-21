@@ -1,4 +1,5 @@
 ---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import { supabaseServer as supabase } from "../../lib/supabaseServer";
 
 /* KPIs VENDAS */
@@ -43,15 +44,17 @@ const comissaoAprovada =
     .reduce((s, c) => s + Number(c.amount), 0) ?? 0;
 ---
 
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-  </head>
-  <body>
-    <h1>📊 Dashboard Financeiro</h1>
+<DashboardLayout title="Dashboard Financeiro">
+  <div class="page-content-wrap">
+    <div class="page-header blue-header">
+      <div>
+        <h1>Dashboard Financeiro</h1>
+        <p>Resumo de vendas e comissões</p>
+      </div>
+    </div>
 
-    <section>
-      <h2>Resumo</h2>
+    <section class="card-base mb-3">
+      <h2 class="page-title">Resumo</h2>
       <ul>
         <li><strong>Receita total:</strong> BRL {receitaTotal}</li>
         <li><strong>Recebido:</strong> BRL {recebido}</li>
@@ -60,38 +63,40 @@ const comissaoAprovada =
       </ul>
     </section>
 
-    <section>
-      <h2>Comissões</h2>
+    <section class="card-base mb-3">
+      <h2 class="page-title">Comissões</h2>
       <ul>
         <li><strong>Pendente:</strong> BRL {comissaoPendente}</li>
         <li><strong>Aprovada:</strong> BRL {comissaoAprovada}</li>
       </ul>
     </section>
 
-    <section>
-      <h2>Últimas vendas</h2>
-      <table border="1" cellpadding="6">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Total</th>
-            <th>Pago</th>
-            <th>Saldo</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recentSales?.map((s) => (
+    <section class="card-base">
+      <h2 class="page-title">Últimas vendas</h2>
+      <div class="table-container overflow-x-auto">
+        <table class="table-default table-header-blue table-mobile-cards min-w-[520px]">
+          <thead>
             <tr>
-              <td>{s.id}</td>
-              <td>BRL {s.total}</td>
-              <td>BRL {s.paid_total}</td>
-              <td>BRL {s.balance_due}</td>
-              <td>{s.financial_status}</td>
+              <th>ID</th>
+              <th>Total</th>
+              <th>Pago</th>
+              <th>Saldo</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {recentSales?.map((s) => (
+              <tr>
+                <td data-label="ID">{s.id}</td>
+                <td data-label="Total">BRL {s.total}</td>
+                <td data-label="Pago">BRL {s.paid_total}</td>
+                <td data-label="Saldo">BRL {s.balance_due}</td>
+                <td data-label="Status">{s.financial_status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
-  </body>
-</html>
+  </div>
+</DashboardLayout>

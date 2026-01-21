@@ -463,7 +463,7 @@ export default function FornecedoresIsland() {
         <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>
         {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
         <div className="table-container overflow-x-auto">
-          <table className="table-default min-w-[720px]">
+          <table className="table-default table-mobile-cards min-w-[720px]">
             <thead>
               <tr>
                 <th>Nome fantasia</th>
@@ -487,18 +487,22 @@ export default function FornecedoresIsland() {
               {!loading &&
                 fornecedoresFiltrados.map((fornecedor) => (
                 <tr key={fornecedor.id}>
-                  <td>{fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}</td>
-                  <td>
+                  <td data-label="Nome fantasia">
+                    {fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}
+                  </td>
+                  <td data-label="Local">
                     {formatLocalizacao(fornecedor.localizacao)}
                     {fornecedor.cidade ? ` • ${fornecedor.cidade}` : ""}
                     {fornecedor.estado ? `/${fornecedor.estado}` : ""}
                   </td>
-                  <td>{formatFaturamento(fornecedor.tipo_faturamento)}</td>
-                  <td>
+                  <td data-label="Faturamento">
+                    {formatFaturamento(fornecedor.tipo_faturamento)}
+                  </td>
+                  <td data-label="Contato">
                     {fornecedor.telefone || "-"}
                     {fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`}
                   </td>
-                  <td style={{ maxWidth: 240, whiteSpace: "normal" }}>
+                  <td data-label="Serviços" style={{ maxWidth: 240, whiteSpace: "normal" }}>
                     {fornecedor.principais_servicos
                       ? fornecedor.principais_servicos.length > 80
                         ? `${fornecedor.principais_servicos.slice(0, 80)}...`

@@ -273,7 +273,7 @@ export default function QuoteListIsland() {
       )}
 
       <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-purple min-w-[1100px]">
+        <table className="table-default table-header-purple table-mobile-cards min-w-[1100px]">
           <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
             <tr>
               <th>Cliente</th>
@@ -317,8 +317,8 @@ export default function QuoteListIsland() {
                   (quote.client_id ? "Cliente" : "-");
                 return (
                   <tr key={quote.id}>
-                    <td>{clienteLabel}</td>
-                    <td>
+                    <td data-label="Cliente">{clienteLabel}</td>
+                    <td data-label="Itens">
                       {itensLabel.length === 0 ? (
                         "-"
                       ) : (
@@ -329,7 +329,7 @@ export default function QuoteListIsland() {
                         </div>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <select
                         className="form-input"
                         value={statusAtual}
@@ -343,10 +343,12 @@ export default function QuoteListIsland() {
                         ))}
                       </select>
                     </td>
-                    <td>{formatCurrency(Number(quote.total || 0))}</td>
-                    <td>{formatDate(quote.created_at)}</td>
-                    <td>{quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}</td>
-                    <td className="th-actions th-actions-quote">
+                    <td data-label="Total">{formatCurrency(Number(quote.total || 0))}</td>
+                    <td data-label="Criado">{formatDate(quote.created_at)}</td>
+                    <td data-label="Última interação">
+                      {quote.last_interaction_at ? formatDate(quote.last_interaction_at) : "-"}
+                    </td>
+                    <td className="th-actions th-actions-quote" data-label="Ações">
                       <div className="action-buttons action-buttons-quote">
                         <button
                           className="btn-icon"

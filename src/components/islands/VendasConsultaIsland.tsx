@@ -898,7 +898,7 @@ export default function VendasConsultaIsland() {
 
       {/* TABELA */}
       <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-green min-w-[820px]">
+        <table className="table-default table-header-green table-mobile-cards min-w-[820px]">
           <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
             <tr>
               <th>Cliente</th>
@@ -934,9 +934,9 @@ export default function VendasConsultaIsland() {
 
                 return (
                   <tr key={v.id}>
-                    <td>{v.cliente_nome}</td>
-                    <td>{v.destino_cidade_nome || "-"}</td>
-                    <td>
+                    <td data-label="Cliente">{v.cliente_nome}</td>
+                    <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
+                    <td data-label="Produto">
                       {produtosVenda.length === 0 ? (
                         "-"
                       ) : (
@@ -947,14 +947,14 @@ export default function VendasConsultaIsland() {
                         </div>
                       )}
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td data-label="Embarque" style={{ textAlign: "center" }}>
                       {formatarDataCorretamente(v.data_embarque)}
                     </td>
-                    <td>
+                    <td data-label="Valor">
                       R${" "}
                       {totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td>
+                    <td data-label="Taxas">
                       {totalTaxas === 0
                         ? "-"
                         : `R$ ${totalTaxas.toLocaleString("pt-BR", {
@@ -962,34 +962,27 @@ export default function VendasConsultaIsland() {
                             maximumFractionDigits: 2,
                           })}`}
                     </td>
-                    <td
-                      className="th-actions"
-                      style={{
-                        textAlign: "center",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      {whatsappLink && (
-                        <a
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {whatsappLink && (
+                          <a
+                            className="btn-icon"
+                            href={whatsappLink}
+                            title="Enviar WhatsApp"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            💬
+                          </a>
+                        )}
+                        <button
                           className="btn-icon"
-                          href={whatsappLink}
-                          title="Enviar WhatsApp"
-                          target="_blank"
-                          rel="noreferrer"
+                          title="Ver detalhes"
+                          onClick={() => setModalVenda(v)}
                         >
-                          💬
-                        </a>
-                      )}
-                      <button
-                        className="btn-icon"
-                        title="Ver detalhes"
-                        onClick={() => setModalVenda(v)}
-                      >
-                        👁️
-                      </button>
+                          👁️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

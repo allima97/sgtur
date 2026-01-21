@@ -1537,18 +1537,18 @@ export default function ClientesIsland() {
         className="table-container overflow-x-auto"
         style={{ maxHeight: "65vh", overflowY: "auto" }}
       >
-        <table className="table-default table-header-blue clientes-table min-w-[820px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Telefone</th>
-                <th>E-mail</th>
-                {exibeColunaAcoes && (
-                  <th className="th-actions" style={{ textAlign: "center" }}>
-                    Ações
-                  </th>
-                )}
+        <table className="table-default table-header-blue clientes-table table-mobile-cards min-w-[820px]">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Telefone</th>
+              <th>E-mail</th>
+              {exibeColunaAcoes && (
+                <th className="th-actions" style={{ textAlign: "center" }}>
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -1566,65 +1566,58 @@ export default function ClientesIsland() {
 
             {!loading &&
               filtrados.map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.nome}</td>
-                    <td>{c.cpf}</td>
-                    <td>{c.telefone}</td>
-                    <td>{c.email || "-"}</td>
+                <tr key={c.id}>
+                  <td data-label="Nome">{c.nome}</td>
+                  <td data-label="CPF">{c.cpf}</td>
+                  <td data-label="Telefone">{c.telefone}</td>
+                  <td data-label="E-mail">{c.email || "-"}</td>
 
                   {exibeColunaAcoes && (
-                    <td
-                      className="th-actions"
-                      style={{
-                        textAlign: "center",
-                        display: "flex",
-                        gap: 6,
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      {(() => {
-                        const whatsappLink = construirLinkWhatsApp(c.whatsapp);
-                        if (!whatsappLink) return null;
-                        return (
-                          <a
-                            className="btn-icon"
-                            href={whatsappLink}
-                            title="Abrir WhatsApp"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            💬
-                          </a>
-                        );
-                      })()}
-                      <button
-                        className="btn-icon"
-                        onClick={() => abrirHistorico(c)}
-                        title="Histórico"
-                      >
-                        🗂️
-                      </button>
-                      {podeEditar && (
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {(() => {
+                          const whatsappLink = construirLinkWhatsApp(c.whatsapp);
+                          if (!whatsappLink) return null;
+                          return (
+                            <a
+                              className="btn-icon"
+                              href={whatsappLink}
+                              title="Abrir WhatsApp"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              💬
+                            </a>
+                          );
+                        })()}
                         <button
                           className="btn-icon"
-                          onClick={() => iniciarEdicao(c)}
-                          title="Editar"
+                          onClick={() => abrirHistorico(c)}
+                          title="Histórico"
                         >
-                          ✏️
+                          🗂️
                         </button>
-                      )}
+                        {podeEditar && (
+                          <button
+                            className="btn-icon"
+                            onClick={() => iniciarEdicao(c)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                        )}
 
-                      {podeExcluir && (
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={() => excluir(c.id)}
-                          disabled={excluindoId === c.id}
-                          title="Excluir"
-                        >
-                          {excluindoId === c.id ? "..." : "🗑️"}
-                        </button>
-                      )}
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => excluir(c.id)}
+                            disabled={excluindoId === c.id}
+                            title="Excluir"
+                          >
+                            {excluindoId === c.id ? "..." : "🗑️"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
