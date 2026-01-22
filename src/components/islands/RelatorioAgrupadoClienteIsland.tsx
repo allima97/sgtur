@@ -49,15 +49,6 @@ type ExportFlags = {
   excel: boolean;
 };
 
-type MobileFiltroTipo = "status" | "data";
-type MobilePeriodoPreset =
-  | "hoje"
-  | "7"
-  | "30"
-  | "mes_atual"
-  | "mes_anterior"
-  | "personalizado";
-
 function hojeISO() {
   return new Date().toISOString().substring(0, 10);
 }
@@ -70,6 +61,10 @@ function addDays(base: Date, days: number) {
 
 function formatISO(date: Date) {
   return date.toISOString().substring(0, 10);
+}
+
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function startOfMonth(date: Date) {
@@ -96,6 +91,7 @@ export default function RelatorioAgrupadoClienteIsland() {
   });
   const [dataFim, setDataFim] = useState<string>(hojeISO());
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
+  const [buscaCliente, setBuscaCliente] = useState("");
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,12 +102,7 @@ export default function RelatorioAgrupadoClienteIsland() {
     pdf: true,
     excel: true,
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [mobileFiltroTipo, setMobileFiltroTipo] =
-    useState<MobileFiltroTipo>("data");
-  const [mobilePeriodoPreset, setMobilePeriodoPreset] =
-    useState<MobilePeriodoPreset>("30");
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
@@ -269,8 +260,24 @@ export default function RelatorioAgrupadoClienteIsland() {
     return arr;
   }, [vendas, clientes, ordenacao, ordemDesc]);
 
-  const totalGeral = linhas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhas.reduce((acc, l) => acc + l.quantidade, 0);
+  const linhasFiltradas = useMemo(() => {
+    const term = normalizeText(buscaCliente.trim());
+    if (!term) return linhas;
+    const termDigits = term.replace(/\D/g, "");
+    return linhas.filter((l) => {
+      if (normalizeText(l.cliente_nome).includes(term)) return true;
+      const cpfRaw = l.cliente_cpf || "";
+      if (normalizeText(cpfRaw).includes(term)) return true;
+      if (termDigits) {
+        const cpfDigits = cpfRaw.replace(/\D/g, "");
+        return cpfDigits.includes(termDigits);
+      }
+      return false;
+    });
+  }, [linhas, buscaCliente]);
+
+  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
+  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
 
   function aplicarPeriodoPreset(
@@ -380,13 +387,13 @@ export default function RelatorioAgrupadoClienteIsland() {
   }, [userCtx]);
 
   function exportarCSV() {
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
     const header = ["cliente", "cpf", "quantidade", "total", "ticket_medio"];
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade.toString(),
@@ -422,12 +429,12 @@ export default function RelatorioAgrupadoClienteIsland() {
       alert("Exportação Excel desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const data = linhas.map((l) => ({
+    const data = linhasFiltradas.map((l) => ({
       Cliente: l.cliente_nome,
       CPF: l.cliente_cpf,
       Quantidade: l.quantidade,
@@ -448,7 +455,7 @@ export default function RelatorioAgrupadoClienteIsland() {
       alert("Exportação PDF desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
@@ -465,7 +472,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         : undefined;
 
     const headers = ["Cliente", "CPF", "Qtde", "Faturamento", "Ticket médio"];
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade,
@@ -506,9 +513,15 @@ export default function RelatorioAgrupadoClienteIsland() {
     <div className="relatorio-vendas-cliente-page">
       <div className="card-base card-purple form-card mb-3">
         <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
+          <div className="form-group">
+            <label className="form-label">Buscar cliente ou CPF</label>
+            <input
+              className="form-input"
+              value={buscaCliente}
+              onChange={(e) => setBuscaCliente(e.target.value)}
+              placeholder="Nome do cliente ou CPF..."
+            />
+          </div>
           <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
             Exportar
           </button>
@@ -633,131 +646,6 @@ export default function RelatorioAgrupadoClienteIsland() {
         </div>
       </div>
 
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Filtrar por</label>
-              <select
-                className="form-select"
-                value={mobileFiltroTipo}
-                onChange={(e) => setMobileFiltroTipo(e.target.value as MobileFiltroTipo)}
-                style={{ width: "100%" }}
-              >
-                <option value="status">Por Status</option>
-                <option value="data">Por Data</option>
-              </select>
-            </div>
-
-            {mobileFiltroTipo === "status" && (
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select
-                  className="form-select"
-                  value={statusFiltro}
-                  onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
-                  style={{ width: "100%" }}
-                >
-                  <option value="todos">Todos</option>
-                  <option value="aberto">Aberto</option>
-                  <option value="confirmado">Confirmado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </div>
-            )}
-
-            {mobileFiltroTipo === "data" && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Período</label>
-                  <select
-                    className="form-select"
-                    value={mobilePeriodoPreset}
-                    onChange={(e) => {
-                      const nextPreset = e.target.value as MobilePeriodoPreset;
-                      setMobilePeriodoPreset(nextPreset);
-                      if (nextPreset !== "personalizado") {
-                        aplicarPeriodoPreset(nextPreset);
-                      }
-                    }}
-                    style={{ width: "100%" }}
-                  >
-                    <option value="hoje">Hoje</option>
-                    <option value="7">Últimos 7 dias</option>
-                    <option value="30">Últimos 30 dias</option>
-                    <option value="mes_atual">Este mês</option>
-                    <option value="mes_anterior">Mês anterior</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
-
-                {mobilePeriodoPreset === "personalizado" && (
-                  <>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Data início</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataInicio}
-                        onChange={(e) => {
-                          const nextInicio = e.target.value;
-                          setMobilePeriodoPreset("personalizado");
-                          setDataInicio(nextInicio);
-                          if (dataFim && nextInicio && dataFim < nextInicio) {
-                            setDataFim(nextInicio);
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Data fim</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataFim}
-                        min={dataInicio || undefined}
-                        onChange={(e) => {
-                          setMobilePeriodoPreset("personalizado");
-                          const nextFim = e.target.value;
-                          const boundedFim =
-                            dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                          setDataFim(boundedFim);
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                carregar();
-                setShowFilters(false);
-              }}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
 
       {showExport && (
         <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
@@ -840,7 +728,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         <div className="form-row">
           <div className="form-group">
             <span>
-              Clientes: <strong>{linhas.length}</strong>
+              Clientes: <strong>{linhasFiltradas.length}</strong>
             </span>
           </div>
           <div className="form-group">
@@ -885,13 +773,13 @@ export default function RelatorioAgrupadoClienteIsland() {
                 <td colSpan={5}>Carregando...</td>
               </tr>
             )}
-            {!loading && linhas.length === 0 && (
+            {!loading && linhasFiltradas.length === 0 && (
               <tr>
                 <td colSpan={5}>Nenhum cliente encontrado com os filtros atuais.</td>
               </tr>
             )}
             {!loading &&
-              linhas.map((l) => (
+              linhasFiltradas.map((l) => (
                 <tr key={l.cliente_id}>
                   <td data-label="Cliente">{l.cliente_nome}</td>
                   <td data-label="CPF">{l.cliente_cpf}</td>
