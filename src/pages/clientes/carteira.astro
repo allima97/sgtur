@@ -7,11 +7,13 @@ const activePage = "clientes";
 ---
 
 <DashboardLayout title="Carteira de Clientes" {activePage}>
-  <HeaderPage
-    title="Carteira de Clientes"
-    subtitle="Gerencie seus clientes com visão de CRM."
-    color="blue"
-  />
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Carteira de Clientes"
+      subtitle="Gerencie seus clientes com visão de CRM."
+      color="blue"
+    />
 
-  <ClientesConsultaIsland client:load />
+    <ClientesConsultaIsland client:load />
+  </div>
 </DashboardLayout>
