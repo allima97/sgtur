@@ -143,11 +143,9 @@ export default function ProdutosLoteIsland() {
       try {
         const [
           { data: tiposData, error: tiposErr },
-          { data: destinosData, error: destinosErr },
           { data: destinosProdutosData, error: destinosProdutosErr },
         ] = await Promise.all([
           supabase.from("tipo_produtos").select("id, nome, tipo").order("tipo", { ascending: true }),
-          supabase.from("destinos").select("id, nome, atracao_principal, melhor_epoca").order("nome"),
           supabase
             .from("produtos")
             .select("destino, atracao_principal, melhor_epoca")
@@ -164,19 +162,6 @@ export default function ProdutosLoteIsland() {
         const destinosNomes: string[] = [];
         const atracoesNomes: string[] = [];
         const melhoresEpocasNomes: string[] = [];
-
-        if (destinosErr) {
-          console.error("Erro ao carregar destinos:", destinosErr);
-        } else {
-          (destinosData || []).forEach((destino: any) => {
-            const nome = (destino?.nome || "").trim();
-            if (nome) destinosNomes.push(nome);
-            const atracao = (destino?.atracao_principal || "").trim();
-            if (atracao) atracoesNomes.push(atracao);
-            const melhorEpoca = (destino?.melhor_epoca || "").trim();
-            if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
-          });
-        }
 
         if (destinosProdutosErr) {
           console.error("Erro ao carregar destinos de produtos:", destinosProdutosErr);
@@ -471,7 +456,7 @@ export default function ProdutosLoteIsland() {
         </div>
       )}
 
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue form-card mb-3">
         <form onSubmit={salvarProdutos}>
           <div className="form-row">
             <div className="form-group">

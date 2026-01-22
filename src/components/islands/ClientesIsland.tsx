@@ -1026,7 +1026,7 @@ export default function ClientesIsland() {
   // =====================================
   const modoSomenteLeitura = !podeCriar && !podeEditar;
   const acompanhantesCard = (
-    <div className="card-base card-blue mb-2">
+    <div className="card-base card-blue form-card mb-2">
       <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
       {acompErro && (
         <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
@@ -1231,7 +1231,7 @@ export default function ClientesIsland() {
 
       {/* FORMULÁRIO */}
       {!modoSomenteLeitura && mostrarFormCliente && (
-        <div className="card-base card-blue mb-3">
+        <div className="card-base card-blue form-card mb-3">
           <h3>{editId ? "Editar cliente" : "Novo cliente"}</h3>
           {editId && (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -1254,15 +1254,7 @@ export default function ClientesIsland() {
           {(!editId || abaFormCliente === "dados") && (
           <form onSubmit={salvar}>
 
-            <div
-              className="form-row"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
+            <div className="form-row clientes-form-grid-primary" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Nome completo *</label>
                 <input
@@ -1322,15 +1314,7 @@ export default function ClientesIsland() {
               </div>
             </div>
 
-            <div
-              className="form-row"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: 12,
-              }}
-            >
+            <div className="form-row clientes-form-grid-contact" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">Telefone *</label>
                 <input
@@ -1372,16 +1356,7 @@ export default function ClientesIsland() {
               </div>
             </div>
 
-            <div
-              className="form-row"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns:
-                  "minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr)",
-                gap: 12,
-              }}
-            >
+            <div className="form-row clientes-form-grid-address" style={{ marginTop: 12 }}>
               <div className="form-group">
                 <label className="form-label">CEP</label>
                 <input

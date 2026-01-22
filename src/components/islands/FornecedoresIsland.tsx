@@ -269,7 +269,7 @@ export default function FornecedoresIsland() {
       </div>
 
       {mostrarFormulario && (
-        <div className="card-base card-blue" style={{ marginTop: 12, padding: 16 }}>
+        <div className="card-base card-blue form-card" style={{ marginTop: 12, padding: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Novo fornecedor</div>
           <div className="form-row">
             <div className="form-group" style={{ flex: 1 }}>

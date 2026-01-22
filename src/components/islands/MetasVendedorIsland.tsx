@@ -422,7 +422,7 @@ export default function MetasVendedorIsland() {
         </div>
       )}
 
-      <div className="card-base card-blue mb-2">
+      <div className={`card-base card-blue mb-2${mostrarFormularioMeta ? " form-card" : ""}`}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <h3>Metas cadastradas</h3>
           {usuarioPodeEditar && (

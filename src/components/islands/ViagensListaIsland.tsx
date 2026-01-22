@@ -508,10 +508,10 @@ export default function ViagensListaIsland() {
   }
 
   return (
-      <div className="card-base card-purple">
+      <div className="card-base card-purple viagens-page">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {showForm && (
-            <div className="card-base card-blue" style={{ padding: 16 }}>
+            <div className="card-base card-blue form-card viagens-form" style={{ padding: 16 }}>
               <datalist id="cidades-list">
                 {cidades.map((cidade) => (
                   <option
@@ -627,7 +627,7 @@ export default function ViagensListaIsland() {
               </div>
               <div
                 className="form-row"
-                style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-start" }}
+                style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-start" }}
               >
                 <button
                   className="btn btn-primary"
@@ -703,20 +703,7 @@ export default function ViagensListaIsland() {
                 }}
               />
             </div>
-            <div
-              className="form-group"
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                gap: 8,
-                marginBottom: 0,
-                marginLeft: "auto",
-                flexWrap: "nowrap",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                alignSelf: "center",
-              }}
-            >
+            <div className="form-group viagens-actions">
               <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
                 {loading ? "Atualizando..." : "Atualizar"}
               </button>
@@ -786,12 +773,11 @@ export default function ViagensListaIsland() {
                     <td data-label="Produto">{produtoLabel}</td>
                     <td data-label="Valor">{valorLabel}</td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
+                      <div className="action-buttons viagens-action-buttons">
                         <a
                           className="btn-icon"
                           href={`/operacao/viagens/${v.id}`}
                           title="Ver viagem"
-                          style={{ padding: "4px 6px" }}
                         >
                           👁️
                         </a>
@@ -802,7 +788,6 @@ export default function ViagensListaIsland() {
                             title="Enviar WhatsApp"
                             target="_blank"
                             rel="noreferrer"
-                            style={{ padding: "4px 6px" }}
                           >
                             💬
                           </a>
@@ -812,7 +797,6 @@ export default function ViagensListaIsland() {
                             className="btn-icon"
                             href={`/operacao/viagens/${v.id}?modo=editar`}
                             title="Editar viagem"
-                            style={{ padding: "4px 6px" }}
                           >
                             ✏️
                           </a>
@@ -823,7 +807,6 @@ export default function ViagensListaIsland() {
                             title="Excluir viagem"
                             onClick={() => excluirViagem(v)}
                             disabled={deletandoViagemId === v.id}
-                            style={{ padding: "4px 6px" }}
                           >
                             {deletandoViagemId === v.id ? "..." : "🗑️"}
                           </button>

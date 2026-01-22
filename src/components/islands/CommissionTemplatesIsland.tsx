@@ -253,7 +253,7 @@ export default function CommissionTemplatesIsland() {
   return (
     <div className="commission-templates-page">
       {/* FORMULÁRIO */}
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue form-card mb-3">
         <form onSubmit={salvar}>
           <div className="form-row">
             <div className="form-group">
@@ -572,7 +572,7 @@ export default function CommissionTemplatesIsland() {
       </div>
 
       {/* BUSCA */}
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue form-card mb-3">
         <div className="form-group">
           <label className="form-label">Buscar template</label>
           <input

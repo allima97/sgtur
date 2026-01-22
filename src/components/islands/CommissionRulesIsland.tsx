@@ -287,7 +287,7 @@ export default function CommissionRulesIsland() {
   }
 
   return (
-      <div className="card-base card-blue">
+      <div className="card-base card-blue form-card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>

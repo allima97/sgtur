@@ -235,7 +235,7 @@ export default function PaisesIsland() {
       </div>
 
       {mostrarFormulario && (
-        <div className="card-base card-blue mb-3">
+        <div className="card-base card-blue form-card mb-3">
           <form onSubmit={salvar}>
             <div className="form-row">
               <div className="form-group">

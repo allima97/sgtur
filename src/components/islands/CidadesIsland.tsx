@@ -576,7 +576,7 @@ export default function CidadesIsland() {
       </div>
 
       {(podeCriar || podeEditar) && mostrarFormulario && (
-        <div className="card-base card-blue mb-3">
+        <div className="card-base card-blue form-card mb-3">
           <form onSubmit={salvar}>
             <h3>{editId ? "Editar cidade" : "Nova cidade"}</h3>
 

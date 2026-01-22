@@ -440,7 +440,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
 
   return (
     <div className="relatorio-vendas-destino-page">
-      <div className="card-base card-purple mb-3">
+      <div className="card-base card-purple form-card mb-3">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>

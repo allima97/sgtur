@@ -1201,7 +1201,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
     <div className="min-h-screen bg-slate-50 p-2 md:p-6">
 
       {/* FORM VENDA */}
-      <div className="card-base card-green mb-3">
+      <div className="card-base card-green form-card mb-3">
         <h3>{editId ? "Editar venda" : "Cadastro de Venda"}</h3>
         {editId && (
           <small style={{ color: "#0f172a" }}>

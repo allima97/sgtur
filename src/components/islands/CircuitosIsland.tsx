@@ -1120,7 +1120,7 @@ export default function CircuitosIsland() {
         </div>
       )}
 
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue form-card mb-3">
         <div className="form-row">
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Buscar circuito</label>
@@ -1147,7 +1147,7 @@ export default function CircuitosIsland() {
       </div>
 
       {mostrarFormulario && (
-        <div className="card-base card-blue mb-3">
+        <div className="card-base card-blue form-card mb-3">
           <form onSubmit={salvar}>
             <div className="form-row">
               <div className="form-group" style={{ flex: 1 }}>
@@ -1615,19 +1615,33 @@ export default function CircuitosIsland() {
                   <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
                   <td className="th-actions" data-label="Acoes">
                     <div className="action-buttons">
-                      <button type="button" className="btn btn-light" onClick={() => iniciarEdicao(circuito.id)}>
-                        Editar
-                      </button>
-                      <button type="button" className="btn btn-light" onClick={() => abrirPreview(circuito.id)}>
-                        Visualizar
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => iniciarEdicao(circuito.id)}
+                        title="Editar"
+                        aria-label="Editar"
+                      >
+                        ✏️
                       </button>
                       <button
                         type="button"
-                        className="btn btn-light"
+                        className="btn-icon"
+                        onClick={() => abrirPreview(circuito.id)}
+                        title="Visualizar"
+                        aria-label="Visualizar"
+                      >
+                        👁️
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-icon btn-danger"
                         onClick={() => excluir(circuito.id)}
                         disabled={excluindoId === circuito.id}
+                        title="Excluir"
+                        aria-label="Excluir"
                       >
-                        {excluindoId === circuito.id ? "Excluindo..." : "Excluir"}
+                        {excluindoId === circuito.id ? "⏳" : "🗑️"}
                       </button>
                     </div>
                   </td>

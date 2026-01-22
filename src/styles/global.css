@@ -355,13 +355,71 @@ body {
   font-size: 0.95rem;
 }
 
+.clientes-page .form-group {
+  min-width: 0;
+}
+
+.clientes-page .form-input,
+.clientes-page .form-select,
+.clientes-page .form-textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.clientes-form-grid-primary {
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.clientes-form-grid-contact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.clientes-form-grid-address {
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.7fr) minmax(0, 0.8fr)
+    minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+  gap: 12px;
+}
+
+.viagens-form .form-group {
+  min-width: 0;
+}
+
+.viagens-form .form-input,
+.viagens-form .form-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.viagens-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 0;
+  margin-left: auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  align-self: center;
+}
+
+@media (max-width: 1024px) {
+  .clientes-form-grid-primary,
+  .clientes-form-grid-contact,
+  .clientes-form-grid-address {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Tables */
 .table-container {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   position: relative;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
   scrollbar-gutter: stable both-edges;
 }
 
@@ -579,6 +637,45 @@ body {
 }
 
 @media (max-width: 640px) {
+  .clientes-form-grid-primary,
+  .clientes-form-grid-contact,
+  .clientes-form-grid-address {
+    grid-template-columns: 1fr;
+  }
+
+  .form-card.card-blue,
+  .form-card.card-green,
+  .form-card.card-purple,
+  .form-card.card-teal {
+    background: #fff;
+    border-color: var(--color-border);
+  }
+
+  .viagens-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .viagens-actions {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .viagens-page .viagens-action-buttons {
+    gap: 4px;
+  }
+
+  .viagens-page .viagens-action-buttons .btn-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+    font-size: 14px;
+    line-height: 1;
+  }
+
   .table-mobile-cards thead {
     display: none;
   }
@@ -629,6 +726,9 @@ body {
     text-align: left !important;
     justify-items: start;
     align-items: start;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .table-mobile-cards td::before {
@@ -735,6 +835,17 @@ body {
 
   .btn-icon {
     min-width: 44px;
+  }
+
+  .form-card .btn-icon,
+  form .btn-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .mobile-actionbar {

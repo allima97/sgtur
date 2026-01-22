@@ -287,7 +287,7 @@ export default function DestinosIsland() {
   return (
     <div className="destinos-page">
       {/* Formulario */}
-      <div className="card-base card-blue mb-3">
+      <div className="card-base card-blue form-card mb-3">
         <form onSubmit={salvar}>
           <div className="form-row">
             <div className="form-group">

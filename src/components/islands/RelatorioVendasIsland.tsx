@@ -188,19 +188,7 @@ function getPeriodosMeses(inicio: string, fim: string) {
 
 async function carregarProdutosComissionamento() {
   const baseCols = "id, nome, tipo_produto, cidade_id";
-  const extraCols =
-    ", regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao";
-
-  const { data, error } = await supabase
-    .from("produtos")
-    .select(`${baseCols}${extraCols}`)
-    .order("nome", { ascending: true });
-
-  if (error && error.code === "42703") {
-    return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
-  }
-
-  return { data, error };
+  return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
 }
 
 async function carregarTiposProdutosComissionamento() {
@@ -1205,7 +1193,7 @@ export default function RelatorioVendasIsland() {
           Relatório limitado a {userCtx.papel === "GESTOR" ? "sua equipe" : "suas vendas"}.
         </div>
       )}
-      <div className="card-base card-purple mb-3">
+      <div className="card-base card-purple form-card mb-3">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>

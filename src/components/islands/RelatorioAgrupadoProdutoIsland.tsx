@@ -37,6 +37,7 @@ type LinhaProduto = {
 };
 
 type ReciboDetalhe = {
+  rowId: string;
   vendaId: string;
   numeroRecibo: string | null;
   produtoNome: string;
@@ -438,9 +439,11 @@ export default function RelatorioAgrupadoProdutoIsland() {
       const destinoNome = v.destinos?.nome || null;
       const recibos = v.vendas_recibos || [];
       if (recibos.length) {
-        recibos.forEach((r) => {
+        recibos.forEach((r, idx) => {
           const produtoNome = r.produtos?.nome || nomeFallback(r.produto_id);
+          const rowId = `${v.id}-${r.numero_recibo || "sem"}-${r.produto_id || "sem"}-${idx}`;
           rows.push({
+            rowId,
             vendaId: v.id,
             numeroRecibo: r.numero_recibo || null,
             tipoId: r.produto_id || null,
@@ -455,7 +458,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
           });
         });
       } else {
+        const rowId = `${v.id}-sem-${v.produto_id || "sem"}-0`;
         rows.push({
+          rowId,
           vendaId: v.id,
           numeroRecibo: null,
           tipoId: v.produto_id || null,
@@ -732,7 +737,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
   return (
     <div className="relatorio-vendas-produto-page">
-      <div className="card-base card-purple mb-3">
+      <div className="card-base card-purple form-card mb-3">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>
@@ -1076,7 +1081,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                       ? recibo.dataLancamento.split("T")[0]
                       : "-";
                     return (
-                      <tr key={`${recibo.vendaId}-${recibo.numeroRecibo || "sem"}`}>
+                      <tr key={recibo.rowId}>
                         <td data-label="Recibo">{recibo.numeroRecibo || "-"}</td>
                         <td data-label="Produto">{recibo.produtoNome}</td>
                         <td data-label="Cidade">{recibo.cidadeNome || "-"}</td>
