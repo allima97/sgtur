@@ -1249,7 +1249,10 @@ export default function ProdutosIsland() {
       )}
 
       {/* Tabela */}
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
           <thead>
             <tr>
