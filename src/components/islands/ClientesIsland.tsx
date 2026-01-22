@@ -1222,6 +1222,17 @@ export default function ClientesIsland() {
     setMostrarFormCliente(true);
   };
 
+  useEffect(() => {
+    if (loadPerm || modoSomenteLeitura) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("novo") !== "1") return;
+    iniciarNovoCliente();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", url.toString());
+  }, [loadPerm, modoSomenteLeitura]);
+
   // =====================================
   // UI
   // =====================================
