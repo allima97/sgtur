@@ -1,6 +1,43 @@
-// Legacy ClientesIsland removed — functionality moved to ClientesConsultaIsland.
-// This file is kept as a placeholder to avoid accidental imports during transition.
-export default null;
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { usePermissao } from "../../lib/usePermissao";
+import { registrarLog } from "../../lib/logs";
+import { titleCaseWithExceptions } from "../../lib/titleCase";
+import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import { construirLinkWhatsApp } from "../../lib/whatsapp";
+import { parentescoOptions } from "../../lib/parentescoOptions";
+
+function titleCaseAllWords(valor: string) {
+  const trimmed = (valor || "").trim();
+  if (!trimmed) return "";
+  return trimmed
+    .split(/\s+/)
+    .map((palavra) => {
+      const lower = palavra.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
+type Cliente = {
+  id: string;
+  nome: string;
+  nascimento: string | null;
+  cpf: string;
+  telefone: string;
+  whatsapp: string | null;
+  email: string | null;
+  classificacao: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep: string | null;
+  rg: string | null;
+  genero: string | null;
+  nacionalidade: string | null;
+  tags: string[] | null;
   tipo_cliente: string | null;
   notas: string | null;
   ativo: boolean;
@@ -1493,7 +1530,7 @@ export default function ClientesIsland() {
         className="table-container overflow-x-auto"
         style={{ maxHeight: "65vh", overflowY: "auto" }}
       >
-        <table className="table-default table-header-blue clientes-table table-mobile-cards">
+        <table className="table-default table-header-blue clientes-table table-mobile-cards min-w-[820px]">
           <thead>
             <tr>
               <th>Nome</th>
