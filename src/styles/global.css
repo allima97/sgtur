@@ -598,9 +598,14 @@ body {
     overflow-x: hidden;
   }
 
+  .clientes-page .card-base {
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+
   .clientes-page .mobile-actionbar {
-    padding-left: calc(16px + env(safe-area-inset-left));
-    padding-right: calc(16px + env(safe-area-inset-right));
+    padding-left: calc(22px + env(safe-area-inset-left));
+    padding-right: calc(22px + env(safe-area-inset-right));
   }
 
   .clientes-page .table-mobile-cards td {
@@ -839,6 +844,9 @@ body {
   .mobile-actionbar .btn {
     width: 100%;
     justify-content: center;
+    flex-wrap: wrap;
+    text-align: center;
+    white-space: normal;
   }
 
   .has-mobile-actionbar {
