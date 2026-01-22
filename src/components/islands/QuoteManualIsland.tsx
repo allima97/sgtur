@@ -835,7 +835,10 @@ export default function QuoteManualIsland() {
         <div style={{ marginBottom: 12, fontSize: 14 }}>
           Total estimado: R$ {formatCurrency(total)}
         </div>
-        <div className="table-container overflow-x-auto">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
           <table className="table-default table-compact table-mobile-cards quote-items-table">
             <thead>
               <tr>
