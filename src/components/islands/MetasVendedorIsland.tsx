@@ -465,7 +465,7 @@ export default function MetasVendedorIsland() {
               <label className="form-label">Período *</label>
               <input
                 type="month"
-                className="form-input"
+                className="form-input w-full"
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
               />
@@ -539,10 +539,10 @@ export default function MetasVendedorIsland() {
                     </div>
                   </div>
                 ))}
-                <div className="form-row" style={{ alignItems: "center" }}>
+                <div className="form-row mobile-stack" style={{ alignItems: "center" }}>
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary w-full sm:w-auto"
                     onClick={() =>
                       setMetaProdutos([...metaProdutos, { produto_id: "", valor: "" }])
                     }

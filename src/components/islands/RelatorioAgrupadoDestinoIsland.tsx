@@ -6,6 +6,12 @@ import { formatarDataParaExibicao } from "../../lib/formatDate";
 
 type Destino = {
   id: string;
+  nome: string | null;
+  cidade_id?: string | null;
+};
+
+type Cidade = {
+  id: string;
   nome: string;
 };
 
@@ -33,6 +39,7 @@ type MobilePeriodoPreset =
 type LinhaDestino = {
   destino_id: string;
   destino_nome: string;
+  cidade_nome: string;
   quantidade: number;
   total: number;
   ticketMedio: number;
@@ -67,6 +74,10 @@ function formatISO(date: Date) {
   return date.toISOString().substring(0, 10);
 }
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -84,6 +95,7 @@ function csvEscape(value: string): string {
 
 export default function RelatorioAgrupadoDestinoIsland() {
   const [destinos, setDestinos] = useState<Destino[]>([]);
+  const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const hoje = new Date();
     const inicio = addDays(hoje, -30);
@@ -91,6 +103,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
   });
   const [dataFim, setDataFim] = useState<string>(hojeISO());
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
+  const [buscaDestino, setBuscaDestino] = useState("");
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -120,16 +133,31 @@ export default function RelatorioAgrupadoDestinoIsland() {
   useEffect(() => {
     async function carregarBase() {
       try {
-        const { data, error } = await supabase
-          .from("produtos")
-          .select("id, nome")
-          .order("nome", { ascending: true });
+        const [
+          { data: destinosData, error: destinosErr },
+          { data: cidadesData, error: cidadesErr },
+        ] = await Promise.all([
+          supabase
+            .from("produtos")
+            .select("id, nome, cidade_id")
+            .order("nome", { ascending: true }),
+          supabase.from("cidades").select("id, nome").order("nome", { ascending: true }),
+        ]);
 
-        if (error) throw error;
-        setDestinos((data || []) as Destino[]);
+        if (destinosErr) throw destinosErr;
+        if (cidadesErr) throw cidadesErr;
+        setDestinos((destinosData || []) as Destino[]);
+
+        const map: Record<string, string> = {};
+        (cidadesData || []).forEach((cidade: Cidade) => {
+          if (cidade.id && cidade.nome) {
+            map[cidade.id] = cidade.nome;
+          }
+        });
+        setCidadesMap(map);
       } catch (e: any) {
         console.error(e);
-        setErro("Erro ao carregar destinos.");
+        setErro("Erro ao carregar destinos e cidades.");
       }
     }
 
@@ -210,17 +238,20 @@ export default function RelatorioAgrupadoDestinoIsland() {
   }, []);
 
   const linhas: LinhaDestino[] = useMemo(() => {
-    const destMap = new Map(destinos.map((d) => [d.id, d.nome]));
+    const destMap = new Map(destinos.map((d) => [d.id, d]));
     const map = new Map<string, LinhaDestino>();
 
     vendas.forEach((v) => {
       const key = v.destino_id;
-      const nome = destMap.get(key) || "(sem destino)";
+      const base = destMap.get(key);
+      const nome = base?.nome || "(sem destino)";
+      const cidadeNome = base?.cidade_id ? cidadesMap[base.cidade_id] || "" : "";
       const atual =
         map.get(key) ||
         {
           destino_id: key,
           destino_nome: nome,
+          cidade_nome: cidadeNome,
           quantidade: 0,
           total: 0,
           ticketMedio: 0,
@@ -253,10 +284,21 @@ export default function RelatorioAgrupadoDestinoIsland() {
     });
 
     return arr;
-  }, [vendas, destinos, ordenacao, ordemDesc]);
+  }, [vendas, destinos, ordenacao, ordemDesc, cidadesMap]);
 
-  const totalGeral = linhas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhas.reduce((acc, l) => acc + l.quantidade, 0);
+  const linhasFiltradas = useMemo(() => {
+    const term = normalizeText(buscaDestino.trim());
+    if (!term) return linhas;
+    return linhas.filter((l) => {
+      return (
+        normalizeText(l.destino_nome).includes(term) ||
+        normalizeText(l.cidade_nome).includes(term)
+      );
+    });
+  }, [linhas, buscaDestino]);
+
+  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
+  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
 
   function aplicarPeriodoPreset(
@@ -366,14 +408,14 @@ export default function RelatorioAgrupadoDestinoIsland() {
   }, [userCtx]);
 
   function exportarCSV() {
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
     const header = ["destino", "quantidade", "total", "ticket_medio"];
 
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.destino_nome,
       l.quantidade.toString(),
       l.total.toFixed(2).replace(".", ","),
@@ -407,12 +449,12 @@ export default function RelatorioAgrupadoDestinoIsland() {
       alert("Exportação Excel desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const data = linhas.map((l) => ({
+    const data = linhasFiltradas.map((l) => ({
       Destino: l.destino_nome,
       Quantidade: l.quantidade,
       "Faturamento (R$)": l.total,
@@ -432,7 +474,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
       alert("Exportação PDF desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
@@ -443,7 +485,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
       "Faturamento",
       "Ticket médio",
     ];
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.destino_nome,
       l.quantidade,
       l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
@@ -491,9 +533,15 @@ export default function RelatorioAgrupadoDestinoIsland() {
     <div className="relatorio-vendas-destino-page">
       <div className="card-base card-purple form-card mb-3">
         <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
+          <div className="form-group">
+            <label className="form-label">Buscar destino ou cidade</label>
+            <input
+              className="form-input"
+              value={buscaDestino}
+              onChange={(e) => setBuscaDestino(e.target.value)}
+              placeholder="Destino ou cidade..."
+            />
+          </div>
           <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
             Exportar
           </button>
@@ -795,7 +843,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
         <div className="form-row">
           <div className="form-group">
             <span>
-              Destinos: <strong>{linhas.length}</strong>
+              Destinos: <strong>{linhasFiltradas.length}</strong>
             </span>
           </div>
           <div className="form-group">
@@ -854,7 +902,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
                 <td colSpan={4}>Carregando...</td>
               </tr>
             )}
-            {!loading && linhas.length === 0 && (
+            {!loading && linhasFiltradas.length === 0 && (
               <tr>
                 <td colSpan={4}>
                   Nenhum destino encontrado com os filtros atuais.
@@ -862,7 +910,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
               </tr>
             )}
             {!loading &&
-              linhas.map((l) => (
+              linhasFiltradas.map((l) => (
                 <tr key={l.destino_id}>
                   <td data-label="Destino">{l.destino_nome}</td>
                   <td data-label="Qtde">{l.quantidade}</td>
