@@ -1,8 +1,8 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
-import { P as ProdutosIsland } from '../../chunks/ProdutosIsland_DeWM3FG7.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
+import { P as ProdutosIsland } from '../../chunks/ProdutosIsland_Dxnc3AuC.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 
 const $$Produtos = createComponent(($$result, $$props, $$slots) => {

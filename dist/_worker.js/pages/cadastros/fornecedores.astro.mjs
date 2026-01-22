@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -178,7 +178,7 @@ function FornecedoresIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Cadastros." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3", children: [
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
@@ -197,8 +197,8 @@ function FornecedoresIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: "form-row",
-          style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+          className: "form-row mobile-stack",
+          style: { gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" },
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar fornecedor" }),
@@ -212,21 +212,28 @@ function FornecedoresIsland() {
                 }
               )
             ] }),
-            podeSalvar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", style: { alignItems: "flex-end" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
+            podeSalvar && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
               {
-                type: "button",
-                className: "btn btn-primary",
-                onClick: abrirFormularioFornecedor,
-                disabled: mostrarFormulario,
-                children: "Adicionar fornecedor"
+                className: "form-group mobile-stack-buttons",
+                style: { alignItems: "flex-end", justifyContent: "flex-end" },
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-primary w-full sm:w-auto",
+                    onClick: abrirFormularioFornecedor,
+                    disabled: mostrarFormulario,
+                    children: "Adicionar fornecedor"
+                  }
+                )
               }
-            ) })
+            )
           ]
         }
       )
     ] }),
-    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", style: { marginTop: 12, padding: 16 }, children: [
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue form-card", style: { marginTop: 12, padding: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600, marginBottom: 8 }, children: "Novo fornecedor" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Localização" }),
@@ -412,71 +419,67 @@ function FornecedoresIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          style: {
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 8,
-            flexWrap: "wrap"
-          },
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "btn btn-primary",
-                onClick: salvarFornecedor,
-                disabled: salvando || !podeSalvar,
-                children: salvando ? "Salvando..." : "Salvar fornecedor"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "btn btn-light",
-                onClick: fecharFormularioFornecedor,
-                disabled: salvando,
-                children: "Cancelar"
-              }
-            )
-          ]
-        }
-      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons", style: { justifyContent: "flex-end" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-primary",
+            onClick: salvarFornecedor,
+            disabled: salvando || !podeSalvar,
+            children: salvando ? "Salvando..." : "Salvar fornecedor"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "btn btn-light",
+            onClick: fecharFormularioFornecedor,
+            disabled: salvando,
+            children: "Cancelar"
+          }
+        )
+      ] }),
       formError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginTop: 8 }, children: formError })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 16 }, children: [
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { style: { marginBottom: 8 }, children: "Fornecedores cadastrados" }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "red", marginBottom: 8 }, children: erro }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default min-w-[720px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome fantasia" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Local" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Faturamento" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Contato" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Serviços" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando fornecedores..." }) }),
-          !loading && fornecedoresFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhum fornecedor cadastrado." }) }),
-          !loading && fornecedoresFiltrados.map((fornecedor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: fornecedor.nome_fantasia || fornecedor.nome_completo || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-              formatLocalizacao(fornecedor.localizacao),
-              fornecedor.cidade ? ` • ${fornecedor.cidade}` : "",
-              fornecedor.estado ? `/${fornecedor.estado}` : ""
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatFaturamento(fornecedor.tipo_faturamento) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
-              fornecedor.telefone || "-",
-              fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { maxWidth: 240, whiteSpace: "normal" }, children: fornecedor.principais_servicos ? fornecedor.principais_servicos.length > 80 ? `${fornecedor.principais_servicos.slice(0, 80)}...` : fornecedor.principais_servicos : "-" })
-          ] }, fornecedor.id))
-        ] })
-      ] }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "table-container overflow-x-auto",
+          style: { maxHeight: "65vh", overflowY: "auto" },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-teal table-mobile-cards min-w-[720px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome fantasia" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Local" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Faturamento" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Contato" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Serviços" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+              loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando fornecedores..." }) }),
+              !loading && fornecedoresFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhum fornecedor cadastrado." }) }),
+              !loading && fornecedoresFiltrados.map((fornecedor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nome fantasia", children: fornecedor.nome_fantasia || fornecedor.nome_completo || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { "data-label": "Local", children: [
+                  formatLocalizacao(fornecedor.localizacao),
+                  fornecedor.cidade ? ` • ${fornecedor.cidade}` : "",
+                  fornecedor.estado ? `/${fornecedor.estado}` : ""
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Faturamento", children: formatFaturamento(fornecedor.tipo_faturamento) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { "data-label": "Contato", children: [
+                  fornecedor.telefone || "-",
+                  fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Serviços", style: { maxWidth: 240, whiteSpace: "normal" }, children: fornecedor.principais_servicos ? fornecedor.principais_servicos.length > 80 ? `${fornecedor.principais_servicos.slice(0, 80)}...` : fornecedor.principais_servicos : "-" })
+              ] }, fornecedor.id))
+            ] })
+          ] })
+        }
+      )
     ] })
   ] });
 }

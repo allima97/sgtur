@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -231,21 +231,21 @@ function CommissionRulesIsland() {
   if (!ativo) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: "Acesso negado ao módulo de Parâmetros." });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-blue form-card", children: [
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "card-title", style: { marginBottom: 6 }, children: "Regras cadastradas" }) }),
       podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
-          className: "btn btn-primary",
+          className: "btn btn-primary w-full sm:w-auto",
           onClick: abrirFormularioRegra,
           disabled: mostrarFormulario,
           children: "Adicionar regra"
         }
       )
     ] }),
-    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
+    !mostrarFormulario && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     mostrarFormulario && erroValidacao && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erroValidacao }) }),
     mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 12 }, children: [
@@ -342,7 +342,7 @@ function CommissionRulesIsland() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: () => addTier("POS"), disabled: !podeEditar, children: "+ Faixa POS" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[800px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[800px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Faixa" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "De (%)" }),
@@ -354,8 +354,8 @@ function CommissionRulesIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
             (!form.tiers || form.tiers.length === 0) && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhuma faixa adicionada." }) }),
             form.tiers?.map((t, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.faixa }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Faixa", children: t.faixa }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "De (%)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   className: "form-input",
@@ -366,7 +366,7 @@ function CommissionRulesIsland() {
                   disabled: !podeEditar
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Até (%)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   className: "form-input",
@@ -377,7 +377,7 @@ function CommissionRulesIsland() {
                   disabled: !podeEditar
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Inc. Meta (%)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   className: "form-input",
@@ -388,7 +388,7 @@ function CommissionRulesIsland() {
                   disabled: !podeEditar
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Inc. Comissão (%)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   className: "form-input",
@@ -399,7 +399,7 @@ function CommissionRulesIsland() {
                   disabled: !podeEditar
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "action-buttons", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
@@ -408,12 +408,12 @@ function CommissionRulesIsland() {
                   disabled: !podeEditar,
                   children: "🗑️"
                 }
-              ) })
+              ) }) })
             ] }, idx))
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 flex-wrap mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", type: "submit", disabled: !podeEditar || salvando, children: salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar regra" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -427,48 +427,55 @@ function CommissionRulesIsland() {
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[900px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Faixas" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando..." }) }),
-        !loading && rules.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma regra cadastrada." }) }),
-        !loading && rules.map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.tipo }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.ativo ? "Sim" : "Não" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.commission_tier?.length || 0 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => editar(r), title: "Editar", children: "✏️" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon btn-danger",
-                onClick: () => inativar(r.id),
-                disabled: !podeEditar,
-                title: "Inativar",
-                children: "⏸️"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon btn-danger",
-                onClick: () => excluirRegra(r.id),
-                disabled: !podeEditar,
-                title: "Excluir",
-                children: "🗑️"
-              }
-            )
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "table-container overflow-x-auto",
+        style: { maxHeight: "65vh", overflowY: "auto" },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[900px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Faixas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+            loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando..." }) }),
+            !loading && rules.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma regra cadastrada." }) }),
+            !loading && rules.map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nome", children: r.nome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Tipo", children: r.tipo }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Ativo", children: r.ativo ? "Sim" : "Não" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Faixas", children: r.commission_tier?.length || 0 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => editar(r), title: "Editar", children: "✏️" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon btn-danger",
+                    onClick: () => inativar(r.id),
+                    disabled: !podeEditar,
+                    title: "Inativar",
+                    children: "⏸️"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon btn-danger",
+                    onClick: () => excluirRegra(r.id),
+                    disabled: !podeEditar,
+                    title: "Excluir",
+                    children: "🗑️"
+                  }
+                )
+              ] }) })
+            ] }, r.id))
           ] })
-        ] }, r.id))
-      ] })
-    ] }) })
+        ] })
+      }
+    )
   ] });
 }
 

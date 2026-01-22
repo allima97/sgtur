@@ -1,11 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
-import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DyslCs8o.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_C-2SP29-.mjs';
 import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
 function normalizeText(value) {
@@ -65,6 +66,9 @@ function RelatorioAgrupadoProdutoIsland() {
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
   const [cidadesMap, setCidadesMap] = reactExports.useState({});
   const [exportFlags, setExportFlags] = reactExports.useState({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = reactExports.useState(false);
+  const [showExport, setShowExport] = reactExports.useState(false);
+  const [exportTipo, setExportTipo] = reactExports.useState("csv");
   const [ordenacao, setOrdenacao] = reactExports.useState("total");
   const [ordemDesc, setOrdemDesc] = reactExports.useState(true);
   const [activeTab, setActiveTab] = reactExports.useState("recibos");
@@ -72,6 +76,15 @@ function RelatorioAgrupadoProdutoIsland() {
     { id: "recibos", label: "Produtos por recibo" },
     { id: "agrupado", label: "Resumo por tipo" }
   ];
+  reactExports.useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
   reactExports.useEffect(() => {
     async function carregarBase() {
       try {
@@ -304,9 +317,11 @@ function RelatorioAgrupadoProdutoIsland() {
       const destinoNome = v.destinos?.nome || null;
       const recibos = v.vendas_recibos || [];
       if (recibos.length) {
-        recibos.forEach((r) => {
+        recibos.forEach((r, idx) => {
           const produtoNome = r.produtos?.nome || nomeFallback(r.produto_id);
+          const rowId = `${v.id}-${r.numero_recibo || "sem"}-${r.produto_id || "sem"}-${idx}`;
           rows.push({
+            rowId,
             vendaId: v.id,
             numeroRecibo: r.numero_recibo || null,
             tipoId: r.produto_id || null,
@@ -321,7 +336,9 @@ function RelatorioAgrupadoProdutoIsland() {
           });
         });
       } else {
+        const rowId = `${v.id}-sem-${v.produto_id || "sem"}-0`;
         rows.push({
+          rowId,
           vendaId: v.id,
           numeroRecibo: null,
           tipoId: v.produto_id || null,
@@ -381,6 +398,11 @@ function RelatorioAgrupadoProdutoIsland() {
   const totalRecibosTaxas = recibosFiltrados.reduce((acc, r) => acc + r.valorTaxas, 0);
   function aplicarPeriodoPreset(tipo) {
     const hoje = /* @__PURE__ */ new Date();
+    if (tipo === "hoje") {
+      setDataInicio(hojeISO());
+      setDataFim(hojeISO());
+      return;
+    }
     if (tipo === "7") {
       const inicio = addDays(hoje, -7);
       setDataInicio(formatISO(inicio));
@@ -407,6 +429,10 @@ function RelatorioAgrupadoProdutoIsland() {
       setDataInicio(formatISO(inicio));
       setDataFim(formatISO(fim));
       return;
+    }
+    if (tipo === "limpar") {
+      setDataInicio("");
+      setDataFim("");
     }
   }
   async function carregar() {
@@ -470,17 +496,38 @@ function RelatorioAgrupadoProdutoIsland() {
     }
   }, [userCtx]);
   function exportarCSV() {
-    if (linhasFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
-      return;
+    let header = [];
+    let rows = [];
+    let fileBase = "relatorio-vendas-por-produto";
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+      header = ["produto", "quantidade", "total", "ticket_medio"];
+      rows = linhasFiltradas.map((l) => [
+        l.produto_nome,
+        l.quantidade.toString(),
+        l.total.toFixed(2).replace(".", ","),
+        l.ticketMedio.toFixed(2).replace(".", ",")
+      ]);
+    } else {
+      if (recibosFiltrados.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+      header = ["recibo", "produto", "cidade", "destino", "data", "valor_total", "taxas"];
+      rows = recibosFiltrados.map((recibo) => [
+        recibo.numeroRecibo || "",
+        recibo.produtoNome,
+        recibo.cidadeNome || "",
+        recibo.destinoNome || "",
+        recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "",
+        recibo.valorTotal.toFixed(2).replace(".", ","),
+        recibo.valorTaxas.toFixed(2).replace(".", ",")
+      ]);
+      fileBase = "relatorio-produtos-por-recibo";
     }
-    const header = ["produto", "quantidade", "total", "ticket_medio"];
-    const rows = linhasFiltradas.map((l) => [
-      l.produto_nome,
-      l.quantidade.toString(),
-      l.total.toFixed(2).replace(".", ","),
-      l.ticketMedio.toFixed(2).replace(".", ",")
-    ]);
     const all = [header, ...rows].map((cols) => cols.map((c) => csvEscape(c)).join(";")).join("\n");
     const blob = new Blob([all], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -493,11 +540,53 @@ function RelatorioAgrupadoProdutoIsland() {
     ).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `relatorio-vendas-por-produto-${ts}.csv`);
+    link.setAttribute("download", `${fileBase}-${ts}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+  function exportarExcel() {
+    if (!exportFlags.excel) {
+      alert("Exportação Excel desabilitada nos parâmetros.");
+      return;
+    }
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+      const data2 = linhasFiltradas.map((l) => ({
+        "Tipo de Produto": l.produto_nome,
+        Quantidade: l.quantidade,
+        "Faturamento (R$)": l.total,
+        "Ticket médio (R$)": l.ticketMedio
+      }));
+      const ws2 = utils.json_to_sheet(data2);
+      const wb2 = utils.book_new();
+      utils.book_append_sheet(wb2, ws2, "Resumo por Produto");
+      const ts2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:T]/g, "").slice(0, 12);
+      writeFileSync(wb2, `relatorio-produtos-${ts2}.xlsx`);
+      return;
+    }
+    if (recibosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    const data = recibosFiltrados.map((recibo) => ({
+      Recibo: recibo.numeroRecibo || "-",
+      Produto: recibo.produtoNome,
+      Cidade: recibo.cidadeNome || "-",
+      Destino: recibo.destinoNome || "-",
+      Data: recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-",
+      "Valor total (R$)": recibo.valorTotal,
+      "Taxas (R$)": recibo.valorTaxas
+    }));
+    const ws = utils.json_to_sheet(data);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Produtos por Recibo");
+    const ts = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:T]/g, "").slice(0, 12);
+    writeFileSync(wb, `relatorio-produtos-recibos-${ts}.xlsx`);
   }
   function exportarPDF() {
     if (!exportFlags.pdf) {
@@ -560,186 +649,244 @@ function RelatorioAgrupadoProdutoIsland() {
       orientation: "landscape"
     });
   }
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+  const exportDisabled = exportTipo === "excel" && !exportFlags.excel || exportTipo === "pdf" && !exportFlags.pdf;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-produto-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataInicio,
-              onChange: (e) => setDataInicio(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataFim,
-              onChange: (e) => setDataFim(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              placeholder: "Digite a cidade",
-              value: cidadeNomeInput,
-              onChange: (e) => {
-                setCidadeNomeInput(e.target.value);
-                setCidadeFiltro("");
-                setMostrarSugestoesCidadeFiltro(true);
-              },
-              onFocus: () => {
-                if (cidadeNomeInput.trim().length > 0) {
-                  setMostrarSugestoesCidadeFiltro(true);
-                }
-              },
-              onBlur: () => {
-                setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
-                if (!cidadeNomeInput.trim()) {
-                  setCidadeFiltro("");
-                  return;
-                }
-                const match = cidadesLista.find(
-                  (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                );
-                if (match) {
-                  setCidadeFiltro(match.id);
-                  setCidadeNomeInput(match.nome);
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple form-card mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowFilters(true), children: "Filtros" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowExport(true), children: "Exportar" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden sm:block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
                 }
               }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Digite a cidade",
+                value: cidadeNomeInput,
+                onChange: (e) => {
+                  setCidadeNomeInput(e.target.value);
+                  setCidadeFiltro("");
+                  setMostrarSugestoesCidadeFiltro(true);
+                },
+                onFocus: () => {
+                  if (cidadeNomeInput.trim().length > 0) {
+                    setMostrarSugestoesCidadeFiltro(true);
+                  }
+                },
+                onBlur: () => {
+                  setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidadesLista.find(
+                    (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }
+              }
+            ),
+            mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "card-base card-config",
+                style: {
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0"
+                },
+                children: [
+                  buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                  !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn btn-ghost w-full text-left",
+                      style: { padding: "6px 12px" },
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        setCidadeFiltro(cidade.id);
+                        setCidadeNomeInput(cidade.nome);
+                        setMostrarSugestoesCidadeFiltro(false);
+                      },
+                      children: cidade.nome
+                    },
+                    cidade.id
+                  ))
+                ]
+              }
+            )
+          ] }),
+          activeTab === "recibos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: tipoReciboSelecionado,
+                onChange: (e) => setTipoReciboSelecionado(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
+                  produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome || p.tipo || p.id }, p.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                className: "form-input",
+                placeholder: "Nome do produto",
+                value: buscaProduto,
+                onChange: (e) => setBuscaProduto(e.target.value)
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("hoje"),
+              children: "Hoje"
             }
           ),
-          mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "card-base card-config",
-              style: {
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                maxHeight: 160,
-                overflowY: "auto",
-                zIndex: 20,
-                padding: "4px 0"
-              },
-              children: [
-                buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
-                !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
-                !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
-                !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "btn btn-ghost w-full text-left",
-                    style: { padding: "6px 12px" },
-                    onMouseDown: (e) => {
-                      e.preventDefault();
-                      setCidadeFiltro(cidade.id);
-                      setCidadeNomeInput(cidade.nome);
-                      setMostrarSugestoesCidadeFiltro(false);
-                    },
-                    children: cidade.nome
-                  },
-                  cidade.id
-                ))
-              ]
-            }
-          )
-        ] }),
-        activeTab === "recibos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de Produto" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-select",
-              value: tipoReciboSelecionado,
-              onChange: (e) => setTipoReciboSelecionado(e.target.value),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
-                produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome || p.tipo || p.id }, p.id))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar produto" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
+            "button",
             {
-              type: "text",
-              className: "form-input",
-              placeholder: "Nome do produto",
-              value: buscaProduto,
-              onChange: (e) => setBuscaProduto(e.target.value)
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("7"),
+              children: "Últimos 7 dias"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("30"),
+              children: "Últimos 30 dias"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_atual"),
+              children: "Este mês"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_anterior"),
+              children: "Mês anterior"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("limpar"),
+              children: "Limpar datas"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              onClick: exportarExcel,
+              disabled: !exportFlags.excel,
+              title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+              children: "Exportar Excel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: exportarPDF,
+              disabled: !exportFlags.pdf,
+              title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+              children: "Exportar PDF"
             }
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("7"),
-            children: "Últimos 7 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("30"),
-            children: "Últimos 30 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_atual"),
-            children: "Este mês"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_anterior"),
-            children: "Mês anterior"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: exportarPDF,
-            disabled: !exportFlags.pdf,
-            title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
-            children: "Exportar PDF"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: tabOptions.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 mobile-stack-buttons", children: tabOptions.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
@@ -750,6 +897,290 @@ function RelatorioAgrupadoProdutoIsland() {
         tab.id
       )) })
     ] }),
+    showFilters && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowFilters(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Filtros" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowFilters(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Digite a cidade",
+                value: cidadeNomeInput,
+                onChange: (e) => {
+                  setCidadeNomeInput(e.target.value);
+                  setCidadeFiltro("");
+                  setMostrarSugestoesCidadeFiltro(true);
+                },
+                onFocus: () => {
+                  if (cidadeNomeInput.trim().length > 0) {
+                    setMostrarSugestoesCidadeFiltro(true);
+                  }
+                },
+                onBlur: () => {
+                  setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidadesLista.find(
+                    (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }
+              }
+            ),
+            mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "card-base card-config",
+                style: {
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0"
+                },
+                children: [
+                  buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                  !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn btn-ghost w-full text-left",
+                      style: { padding: "6px 12px" },
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        setCidadeFiltro(cidade.id);
+                        setCidadeNomeInput(cidade.nome);
+                        setMostrarSugestoesCidadeFiltro(false);
+                      },
+                      children: cidade.nome
+                    },
+                    cidade.id
+                  ))
+                ]
+              }
+            )
+          ] }),
+          activeTab === "recibos" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo de Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: tipoReciboSelecionado,
+                onChange: (e) => setTipoReciboSelecionado(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
+                  produtos.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.id, children: p.nome || p.tipo || p.id }, p.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                className: "form-input",
+                placeholder: "Nome do produto",
+                value: buscaProduto,
+                onChange: (e) => setBuscaProduto(e.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("hoje"),
+                children: "Hoje"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("7"),
+                children: "Últimos 7 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("30"),
+                children: "Últimos 30 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_atual"),
+                children: "Este mês"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_anterior"),
+                children: "Mês anterior"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("limpar"),
+                children: "Limpar datas"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                carregar();
+                setShowFilters(false);
+              },
+              children: "Aplicar filtros"
+            }
+          )
+        ]
+      }
+    ) }),
+    showExport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowExport(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Exportar" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowExport(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Formato" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("csv"),
+                  children: "CSV"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("excel"),
+                  disabled: !exportFlags.excel,
+                  title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+                  children: "Excel"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("pdf"),
+                  disabled: !exportFlags.pdf,
+                  title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+                  children: "PDF"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                exportarSelecionado();
+                setShowExport(false);
+              },
+              disabled: exportDisabled,
+              children: "Exportar"
+            }
+          )
+        ]
+      }
+    ) }),
     loadingUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Carregando contexto do usuário..." }),
     userCtx && userCtx.papel !== "ADMIN" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config mb-3", style: { color: "#334155" }, children: [
       "Relatório limitado a ",
@@ -772,7 +1203,7 @@ function RelatorioAgrupadoProdutoIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(ticketGeral) })
         ] }) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[620px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple table-mobile-cards min-w-[620px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo de Produto" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -813,10 +1244,10 @@ function RelatorioAgrupadoProdutoIsland() {
           loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando..." }) }),
           !loading && linhasFiltradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum produto encontrado com os filtros atuais." }) }),
           !loading && linhasFiltradas.map((l, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.produto_nome }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.quantidade }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatCurrency(l.total) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatCurrency(l.ticketMedio) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Tipo de Produto", children: l.produto_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Qtde", children: l.quantidade }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Faturamento", children: formatCurrency(l.total) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Ticket médio", children: formatCurrency(l.ticketMedio) })
           ] }, l.produto_id ?? `sem-${idx}`))
         ] })
       ] }) })
@@ -836,7 +1267,7 @@ function RelatorioAgrupadoProdutoIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: formatCurrency(totalRecibosTaxas) })
         ] }) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[720px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple table-mobile-cards min-w-[720px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Recibo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Produto" }),
@@ -852,14 +1283,14 @@ function RelatorioAgrupadoProdutoIsland() {
           !loading && recibosFiltrados.map((recibo) => {
             const dataLabel = recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.numeroRecibo || "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.produtoNome }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.cidadeNome || "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: recibo.destinoNome || "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: dataLabel }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "right" }, children: formatCurrency(recibo.valorTotal) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "right" }, children: formatCurrency(recibo.valorTaxas) })
-            ] }, `${recibo.vendaId}-${recibo.numeroRecibo || "sem"}`);
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Recibo", children: recibo.numeroRecibo || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Produto", children: recibo.produtoNome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cidade", children: recibo.cidadeNome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Destino", children: recibo.destinoNome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Data", children: dataLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Valor total", style: { textAlign: "right" }, children: formatCurrency(recibo.valorTotal) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Taxas", style: { textAlign: "right" }, children: formatCurrency(recibo.valorTaxas) })
+            ] }, recibo.rowId);
           })
         ] })
       ] }) })

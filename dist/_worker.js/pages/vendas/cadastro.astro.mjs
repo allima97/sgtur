@@ -1,12 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
-import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
+import { a as reactExports, R as React } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
 import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
+import { C as CalculatorModal } from '../../chunks/CalculatorModal_yQtdp0pY.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -15,7 +16,8 @@ const initialVenda = {
   cliente_id: "",
   destino_id: "",
   data_lancamento: (/* @__PURE__ */ new Date()).toISOString().substring(0, 10),
-  data_embarque: ""
+  data_embarque: "",
+  data_final: ""
 };
 const initialRecibo = {
   produto_id: "",
@@ -58,6 +60,19 @@ function dataParaInput(value) {
   }
   return value.toISOString().split("T")[0];
 }
+function parseDateInput(value) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map((part) => Number(part));
+  if (!year || !month || !day) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+function isEndOnOrAfterStart(start, end) {
+  const startDate = parseDateInput(start);
+  const endDate = parseDateInput(end);
+  if (!startDate || !endDate) return true;
+  return endDate.getTime() >= startDate.getTime();
+}
 function calcularStatusPeriodo(inicio, fim) {
   if (!inicio) return "planejada";
   const hoje = /* @__PURE__ */ new Date();
@@ -80,6 +95,7 @@ function VendasCadastroIsland() {
   const [recibos, setRecibos] = reactExports.useState([]);
   const [reciboEmEdicao, setReciboEmEdicao] = reactExports.useState(null);
   const [editId, setEditId] = reactExports.useState(null);
+  const [orcamentoId, setOrcamentoId] = reactExports.useState(null);
   const [cidadePrefill, setCidadePrefill] = reactExports.useState({ id: "", nome: "" });
   const [erro, setErro] = reactExports.useState(null);
   const [salvando, setSalvando] = reactExports.useState(false);
@@ -87,6 +103,7 @@ function VendasCadastroIsland() {
   const [loadingVenda, setLoadingVenda] = reactExports.useState(false);
   const [toasts, setToasts] = reactExports.useState([]);
   const [toastCounter, setToastCounter] = reactExports.useState(0);
+  const [showCalculator, setShowCalculator] = reactExports.useState(false);
   const [buscaCliente, setBuscaCliente] = reactExports.useState("");
   const [buscaDestino, setBuscaDestino] = reactExports.useState("");
   const [buscaProduto, setBuscaProduto] = reactExports.useState("");
@@ -95,14 +112,14 @@ function VendasCadastroIsland() {
   const [buscandoCidade, setBuscandoCidade] = reactExports.useState(false);
   const [erroCidade, setErroCidade] = reactExports.useState(null);
   const [buscaCidadeSelecionada, setBuscaCidadeSelecionada] = reactExports.useState("");
-  async function carregarDados(vendaId, cidadePrefillParam) {
+  async function carregarDados(vendaId, cidadePrefillParam, orcamentoIdParam) {
     try {
       setLoading(true);
       const [c, d, p, tiposResp] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
         supabase.from("cidades").select("id, nome").order("nome"),
         supabase.from("produtos").select("id, nome, cidade_id, tipo_produto, todas_as_cidades").order("nome"),
-        supabase.from("tipo_produtos").select("id, nome")
+        supabase.from("tipo_produtos").select("id, nome, tipo")
       ]);
       setClientes(c.data || []);
       const cidadesLista = d.data || [];
@@ -116,6 +133,14 @@ function VendasCadastroIsland() {
       setTipos(tiposLista);
       if (vendaId) {
         await carregarVenda(vendaId, cidadesLista, produtosLista, cidadePrefillParam);
+      } else if (orcamentoIdParam) {
+        await carregarOrcamento(
+          orcamentoIdParam,
+          cidadesLista,
+          produtosLista,
+          c.data || [],
+          tiposLista
+        );
       }
     } catch (e) {
       console.error(e);
@@ -128,7 +153,7 @@ function VendasCadastroIsland() {
   async function carregarVenda(id, cidadesBase, produtosBase, cidadePrefillParam) {
     try {
       setLoadingVenda(true);
-      const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque").eq("id", id).maybeSingle();
+      const { data: vendaData, error: vendaErr } = await supabase.from("vendas").select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque, data_final").eq("id", id).maybeSingle();
       if (vendaErr) throw vendaErr;
       if (!vendaData) {
         setErro("Venda não encontrada para edição.");
@@ -157,7 +182,8 @@ function VendasCadastroIsland() {
         cliente_id: vendaData.cliente_id,
         destino_id: cidadeId,
         data_lancamento: dataParaInput(vendaData.data_lancamento),
-        data_embarque: dataParaInput(vendaData.data_embarque)
+        data_embarque: dataParaInput(vendaData.data_embarque),
+        data_final: dataParaInput(vendaData.data_final)
       });
       setBuscaDestino(cidadeNome || cidadeId || "");
       setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
@@ -196,10 +222,128 @@ function VendasCadastroIsland() {
       setLoadingVenda(false);
     }
   }
+  function formatarValorMoeda(valor) {
+    if (typeof valor !== "number" || !Number.isFinite(valor)) return "";
+    return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function gerarNumeroRecibo(orcamentoId2, index) {
+    const prefixo = (orcamentoId2 || "").replace(/-/g, "").slice(0, 6).toUpperCase();
+    const sequencia = String(index + 1).padStart(2, "0");
+    return `ORC-${prefixo}-${sequencia}`;
+  }
+  function resolverTipoId(tipoLabel, tiposBase) {
+    const normalized = normalizeText(tipoLabel || "");
+    if (!normalized) return "";
+    const match = tiposBase.find((t) => {
+      if (normalizeText(t.nome || "") === normalized) return true;
+      if (normalizeText(t.tipo || "") === normalized) return true;
+      return false;
+    });
+    return match?.id || "";
+  }
+  async function carregarOrcamento(id, cidadesBase, produtosBase, clientesBase, tiposBase) {
+    try {
+      const { data: orcamento, error } = await supabase.from("quote").select(
+        "id, client_id, client_name, destino_cidade_id, data_embarque, data_final, quote_item (id, item_type, title, product_name, total_amount, taxes_amount, start_date, end_date, cidade_id, order_index)"
+      ).eq("id", id).maybeSingle();
+      if (error) throw error;
+      if (!orcamento) {
+        setErro("Orcamento nao encontrado para conversao.");
+        showToast("Orcamento nao encontrado.", "error");
+        return;
+      }
+      const clientesLista = clientesBase || clientes;
+      const cidadesLista = cidadesBase || cidades;
+      const produtosLista = produtosBase || produtos;
+      const tiposLista = tiposBase || tipos;
+      let clienteId = orcamento.client_id || "";
+      if (!clienteId && orcamento.client_name) {
+        const match = clientesLista.find(
+          (c) => normalizeText(c.nome) === normalizeText(orcamento.client_name || "")
+        );
+        if (match) clienteId = match.id;
+        else setBuscaCliente(orcamento.client_name);
+      }
+      if (clienteId) {
+        setBuscaCliente("");
+      }
+      let destinoId = orcamento.destino_cidade_id || "";
+      if (!destinoId) {
+        const firstItemCity = (orcamento.quote_item || []).find((item) => item?.cidade_id)?.cidade_id;
+        destinoId = firstItemCity || "";
+      }
+      const destinoCidade = cidadesLista.find((c) => c.id === destinoId);
+      if (destinoCidade) {
+        setBuscaDestino(destinoCidade.nome);
+        setBuscaCidadeSelecionada(destinoCidade.nome);
+      }
+      setFormVenda((prev) => ({
+        ...prev,
+        cliente_id: clienteId,
+        destino_id: destinoId,
+        data_embarque: dataParaInput(orcamento.data_embarque),
+        data_final: dataParaInput(orcamento.data_final)
+      }));
+      const itensOrdenados = [...orcamento.quote_item || []].sort(
+        (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
+      );
+      const produtosAtualizados = [...produtosLista];
+      const recibosGerados = itensOrdenados.map((item, index) => {
+        const nomeItem = (item.product_name || item.title || item.item_type || "").trim();
+        const nomeNormalizado = normalizeText(nomeItem);
+        const cidadeBaseId = item.cidade_id || destinoId || "";
+        const tipoId = resolverTipoId(item.item_type || "", tiposLista);
+        let produtoMatch = produtosAtualizados.find(
+          (p) => normalizeText(p.nome) === nomeNormalizado && (!cidadeBaseId || p.cidade_id === cidadeBaseId || p.todas_as_cidades)
+        ) || (tipoId ? produtosAtualizados.find(
+          (p) => p.tipo_produto === tipoId && (!cidadeBaseId || p.cidade_id === cidadeBaseId || p.todas_as_cidades)
+        ) : null);
+        let produtoId = produtoMatch?.id || "";
+        if (!produtoId && nomeItem) {
+          const virtualId = `virtual-${tipoId || "sem-tipo"}-${index + 1}`;
+          produtosAtualizados.push({
+            id: virtualId,
+            nome: nomeItem,
+            cidade_id: cidadeBaseId || null,
+            tipo_produto: tipoId || null,
+            todas_as_cidades: false,
+            isVirtual: true
+          });
+          produtoId = virtualId;
+        }
+        const dataInicio = dataParaInput(item.start_date || orcamento.data_embarque);
+        const dataFim = dataParaInput(
+          item.end_date || orcamento.data_final || item.start_date || orcamento.data_embarque
+        );
+        return {
+          ...initialRecibo,
+          produto_id: produtoId,
+          numero_recibo: gerarNumeroRecibo(orcamento.id, index),
+          data_inicio: dataInicio,
+          data_fim: dataFim,
+          valor_total: formatarValorMoeda(Number(item.total_amount || 0)),
+          valor_taxas: formatarValorMoeda(Number(item.taxes_amount || 0)),
+          principal: index === 0
+        };
+      });
+      if (recibosGerados.length) {
+        setRecibos(garantirReciboPrincipal(recibosGerados));
+      }
+      if (produtosAtualizados.length !== produtosLista.length) {
+        setProdutos(produtosAtualizados);
+      }
+    } catch (err) {
+      console.error(err);
+      setErro("Erro ao carregar orcamento para conversao.");
+      showToast("Erro ao carregar orcamento.", "error");
+    }
+  }
   reactExports.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const idParam = params.get("id");
     if (idParam) setEditId(idParam);
+    const orcamentoParam = params.get("orcamentoId");
+    if (orcamentoParam && !idParam) setOrcamentoId(orcamentoParam);
     const cidadeIdParam = params.get("cidadeId") || "";
     const cidadeNomeParam = params.get("cidadeNome") || "";
     if (cidadeIdParam || cidadeNomeParam) {
@@ -207,8 +351,8 @@ function VendasCadastroIsland() {
     }
   }, []);
   reactExports.useEffect(() => {
-    if (!loadPerm && ativo) carregarDados(editId || void 0, cidadePrefill);
-  }, [loadPerm, ativo, editId, cidadePrefill]);
+    if (!loadPerm && ativo) carregarDados(editId || void 0, cidadePrefill, orcamentoId);
+  }, [loadPerm, ativo, editId, cidadePrefill, orcamentoId]);
   reactExports.useEffect(() => {
     if (buscaDestino.trim().length < 2) {
       setResultadosCidade([]);
@@ -254,11 +398,18 @@ function VendasCadastroIsland() {
   const clientesFiltrados = reactExports.useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
     const t = normalizeText(buscaCliente);
+    const cpfTermo = normalizarCpf(buscaCliente);
     return clientes.filter((c) => {
       const cpf = normalizarCpf(c.cpf || "");
-      return normalizeText(c.nome).includes(t) || cpf.includes(normalizarCpf(t));
+      if (normalizeText(c.nome).includes(t)) return true;
+      if (cpfTermo && cpf.includes(cpfTermo)) return true;
+      return false;
     });
   }, [clientes, buscaCliente]);
+  const clienteSelecionado = reactExports.useMemo(
+    () => clientes.find((c) => c.id === formVenda.cliente_id) || null,
+    [clientes, formVenda.cliente_id]
+  );
   reactExports.useMemo(() => {
     if (!buscaDestino.trim()) return cidades;
     const t = normalizeText(buscaDestino);
@@ -275,10 +426,27 @@ function VendasCadastroIsland() {
     [produtos]
   );
   const cidadeObrigatoria = reactExports.useMemo(() => recibos.length > 0, [recibos.length]);
+  function handleClienteInputChange(value) {
+    setBuscaCliente(value);
+    const normalized = normalizeText(value);
+    const cpfValue = normalizarCpf(value);
+    const match = clientes.find((c) => {
+      const cpf = normalizarCpf(c.cpf || "");
+      return normalizeText(c.nome) === normalized || cpfValue && cpf === cpfValue;
+    });
+    setFormVenda((prev) => ({
+      ...prev,
+      cliente_id: match ? match.id : ""
+    }));
+  }
   function handleCidadeDestino(valor) {
     setBuscaDestino(valor);
     const cidadeAtual = cidades.find((c) => c.id === formVenda.destino_id);
-    if (!cidadeAtual || !normalizeText(cidadeAtual.nome).includes(normalizeText(valor))) {
+    const valorNormalizado = normalizeText(valor);
+    const cidadeAtualNome = normalizeText(cidadeAtual?.nome || "");
+    const cidadeSelecionada = normalizeText(buscaCidadeSelecionada);
+    const valorMantemCidade = !!cidadeAtualNome && (valorNormalizado === cidadeAtualNome || valorNormalizado.startsWith(cidadeAtualNome)) || !!cidadeSelecionada && valorNormalizado === cidadeSelecionada;
+    if (!cidadeAtual || !valorMantemCidade) {
       setFormVenda((prev) => ({ ...prev, destino_id: "" }));
     }
     setMostrarSugestoesCidade(true);
@@ -320,7 +488,18 @@ function VendasCadastroIsland() {
   function updateRecibo(index, campo, valor) {
     setRecibos((prev) => {
       const novo = [...prev];
-      novo[index][campo] = valor;
+      const atualizado = { ...novo[index], [campo]: valor };
+      if (campo === "data_inicio") {
+        if (atualizado.data_fim && atualizado.data_fim < valor) {
+          atualizado.data_fim = valor;
+        }
+      }
+      if (campo === "data_fim") {
+        if (atualizado.data_inicio && atualizado.data_fim < atualizado.data_inicio) {
+          atualizado.data_fim = atualizado.data_inicio;
+        }
+      }
+      novo[index] = atualizado;
       return novo;
     });
   }
@@ -329,6 +508,7 @@ function VendasCadastroIsland() {
     updateRecibo(index, campo, formatado);
   }
   reactExports.useEffect(() => {
+    if (!formVenda.destino_id) return;
     setBuscaProduto("");
     setRecibos((prev) => {
       const atualizado = prev.map((r) => {
@@ -394,6 +574,26 @@ function VendasCadastroIsland() {
       setErro("Uma venda precisa ter ao menos 1 recibo.");
       showToast("Inclua ao menos um recibo na venda.", "error");
       return;
+    }
+    const clienteId = formVenda.cliente_id.trim();
+    if (!clienteId) {
+      setErro("Selecione um cliente valido antes de salvar.");
+      showToast("Selecione um cliente valido antes de salvar.", "error");
+      return;
+    }
+    if (formVenda.data_embarque && formVenda.data_final && !isEndOnOrAfterStart(formVenda.data_embarque, formVenda.data_final)) {
+      setErro("A data final deve ser igual ou após a data de embarque.");
+      showToast("A data final deve ser igual ou após a data de embarque.", "error");
+      return;
+    }
+    for (let i = 0; i < recibos.length; i += 1) {
+      const recibo = recibos[i];
+      if (recibo.data_inicio && recibo.data_fim && !isEndOnOrAfterStart(recibo.data_inicio, recibo.data_fim)) {
+        const msg = `Recibo ${i + 1}: a data fim deve ser igual ou após a data início.`;
+        setErro(msg);
+        showToast(msg, "error");
+        return;
+      }
     }
     try {
       setSalvando(true);
@@ -536,6 +736,17 @@ function VendasCadastroIsland() {
       }
       const getCidadeNome = (cidadeId) => cidades.find((c) => c.id === cidadeId)?.nome || "";
       let vendaId = editId;
+      async function marcarOrcamentoFechado() {
+        if (!orcamentoId) return;
+        const { error: fechamentoErr } = await supabase.from("quote").update({
+          status_negociacao: "Fechado",
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }).eq("id", orcamentoId);
+        if (fechamentoErr) {
+          console.error("Erro ao fechar orcamento:", fechamentoErr);
+          showToast("Venda salva, mas o orçamento não foi atualizado.", "error");
+        }
+      }
       async function criarViagemParaRecibo(params) {
         if (!params.reciboId) return;
         if (!vendaId) {
@@ -549,7 +760,7 @@ function VendasCadastroIsland() {
           company_id: companyId,
           venda_id: vendaId,
           recibo_id: params.reciboId,
-          cliente_id: formVenda.cliente_id,
+          cliente_id: clienteId,
           responsavel_user_id: userId,
           origem: origemLabel || null,
           destino: destinoLabel || null,
@@ -563,7 +774,7 @@ function VendasCadastroIsland() {
         if (!viagemId) return;
         const { error: passageiroError } = await supabase.from("viagem_passageiros").insert({
           viagem_id: viagemId,
-          cliente_id: formVenda.cliente_id,
+          cliente_id: clienteId,
           company_id: companyId,
           papel: "passageiro",
           created_by: userId
@@ -613,12 +824,13 @@ function VendasCadastroIsland() {
       }
       if (editId) {
         const { error: vendaErr } = await supabase.from("vendas").update({
-          cliente_id: formVenda.cliente_id,
+          cliente_id: clienteId,
           destino_id: produtoDestinoId,
           // FK para produtos
           destino_cidade_id: formVenda.destino_id || null,
           data_lancamento: formVenda.data_lancamento,
-          data_embarque: formVenda.data_embarque || null
+          data_embarque: formVenda.data_embarque || null,
+          data_final: formVenda.data_final || null
         }).eq("id", editId);
         if (vendaErr) throw vendaErr;
         if (oldReciboIds.length > 0) {
@@ -634,17 +846,19 @@ function VendasCadastroIsland() {
           modulo: "Vendas",
           detalhes: { id: editId, venda: formVenda, recibos }
         });
+        await marcarOrcamentoFechado();
         showToast("Venda atualizada com sucesso!", "success");
         setTimeout(() => resetFormAndGoToConsulta(), 200);
       } else {
         const { data: vendaData, error: vendaErr } = await supabase.from("vendas").insert({
           vendedor_id: userId,
-          cliente_id: formVenda.cliente_id,
+          cliente_id: clienteId,
           destino_id: produtoDestinoId,
           // FK para produtos
           destino_cidade_id: formVenda.destino_id || null,
           data_lancamento: formVenda.data_lancamento,
-          data_embarque: formVenda.data_embarque || null
+          data_embarque: formVenda.data_embarque || null,
+          data_final: formVenda.data_final || null
         }).select().single();
         if (vendaErr) throw vendaErr;
         vendaId = vendaData.id;
@@ -660,6 +874,7 @@ function VendasCadastroIsland() {
             id: vendaId
           }
         });
+        await marcarOrcamentoFechado();
         showToast("Venda cadastrada com sucesso!", "success");
         setTimeout(() => resetFormAndGoToConsulta(), 200);
       }
@@ -680,7 +895,7 @@ function VendasCadastroIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Você não possui permissão para cadastrar vendas." }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-slate-50 p-2 md:p-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-green mb-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-green form-card mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar venda" : "Cadastro de Venda" }),
       editId && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#0f172a" }, children: "Modo edição — altere cliente, cidade de destino, embarque e recibos." }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
@@ -694,33 +909,30 @@ function VendasCadastroIsland() {
                 className: "form-input",
                 list: "listaClientes",
                 placeholder: "Buscar cliente...",
-                value: clientes.find((c) => c.id === formVenda.cliente_id)?.nome || buscaCliente,
-                onChange: (e) => setBuscaCliente(e.target.value),
+                value: buscaCliente || clienteSelecionado?.nome || "",
+                onChange: (e) => handleClienteInputChange(e.target.value),
                 onBlur: () => {
-                  const texto = buscaCliente.toLowerCase();
+                  const texto = normalizeText(buscaCliente);
                   const cpfTexto = normalizarCpf(buscaCliente);
                   const achado = clientesFiltrados.find((c) => {
                     const cpf = normalizarCpf(c.cpf || "");
-                    return c.nome.toLowerCase() === texto || cpfTexto && cpf === cpfTexto;
+                    return normalizeText(c.nome) === texto || cpfTexto && cpf === cpfTexto;
                   });
                   if (achado) {
                     setFormVenda({
                       ...formVenda,
                       cliente_id: achado.id
                     });
+                    setBuscaCliente("");
                   }
                 },
                 required: true
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "listaClientes", children: clientesFiltrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "option",
-              {
-                value: c.nome,
-                label: c.cpf ? `CPF: ${c.cpf}` : void 0
-              },
-              c.id
-            )) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "listaClientes", children: clientesFiltrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c.nome, label: c.cpf ? `CPF: ${c.cpf}` : void 0 }),
+              c.cpf ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c.cpf, label: c.nome }) : null
+            ] }, c.id)) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[220px] relative", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade de Destino *" }),
@@ -767,6 +979,7 @@ function VendasCadastroIsland() {
                           e.preventDefault();
                           setFormVenda((prev) => ({ ...prev, destino_id: c.id }));
                           setBuscaDestino(label);
+                          setBuscaCidadeSelecionada(label);
                           setMostrarSugestoesCidade(false);
                           setResultadosCidade([]);
                         },
@@ -793,15 +1006,49 @@ function VendasCadastroIsland() {
                 className: "form-input",
                 type: "date",
                 value: formVenda.data_embarque,
+                onChange: (e) => setFormVenda((prev) => {
+                  const proximaData = e.target.value;
+                  const minDataFinal = proximaData || "";
+                  const dataFinalAtualizada = prev.data_final && minDataFinal && prev.data_final < minDataFinal ? minDataFinal : prev.data_final;
+                  return {
+                    ...prev,
+                    data_embarque: proximaData,
+                    data_final: dataFinalAtualizada
+                  };
+                })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-[180px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data final" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                type: "date",
+                value: formVenda.data_final,
+                min: formVenda.data_embarque || void 0,
                 onChange: (e) => setFormVenda({
                   ...formVenda,
-                  data_embarque: e.target.value
+                  data_final: formVenda.data_embarque && e.target.value && e.target.value < formVenda.data_embarque ? formVenda.data_embarque : e.target.value
                 })
               }
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-3 font-semibold text-lg", children: "Recibos da Venda" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-semibold text-lg", children: "Recibos da Venda" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light w-full sm:w-auto",
+              style: { marginLeft: "auto" },
+              onClick: () => setShowCalculator(true),
+              children: "Calculadora"
+            }
+          )
+        ] }),
         recibos.map((r, i) => {
           const produtoSelecionado = produtos.find((p) => p.id === r.produto_id);
           const nomeProdutoAtual = produtoSelecionado?.nome || "";
@@ -890,6 +1137,7 @@ function VendasCadastroIsland() {
                   className: "form-input",
                   type: "date",
                   value: r.data_fim,
+                  min: r.data_inicio || void 0,
                   onChange: (e) => updateRecibo(i, "data_fim", e.target.value),
                   required: true
                 }
@@ -937,12 +1185,12 @@ function VendasCadastroIsland() {
             ) })
           ] }) }, i);
         }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 mobile-stack-buttons", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "btn btn-primary",
+              className: "btn btn-primary w-full sm:w-auto",
               onClick: addRecibo,
               children: "➕ Adicionar recibo"
             }
@@ -951,7 +1199,7 @@ function VendasCadastroIsland() {
             "button",
             {
               type: "submit",
-              className: "btn btn-success",
+              className: "btn btn-primary w-full sm:w-auto",
               disabled: salvando,
               children: salvando ? "Salvando..." : "Salvar venda"
             }
@@ -960,7 +1208,7 @@ function VendasCadastroIsland() {
             "button",
             {
               type: "button",
-              className: "btn btn-outline bg-slate-100 text-slate-800",
+              className: "btn btn-light w-full sm:w-auto",
               onClick: cancelarCadastro,
               children: "Cancelar"
             }
@@ -995,6 +1243,13 @@ function VendasCadastroIsland() {
           },
           t.id
         ))
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CalculatorModal,
+      {
+        open: showCalculator,
+        onClose: () => setShowCalculator(false)
       }
     )
   ] });

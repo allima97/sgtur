@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C9jQHs-i.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -278,7 +278,7 @@ function ParametrosSistemaIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#64748b" }, children: "Mantém coerência com os módulos de relatórios e orçamentos." })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, marginTop: 16 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons", style: { display: "flex", gap: 10, marginTop: 16 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {

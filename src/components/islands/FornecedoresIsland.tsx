@@ -226,59 +226,52 @@ export default function FornecedoresIsland() {
 
   return (
     <div className="card-base card-purple">
-      <div className="card-base mb-3">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 600 }}>Fornecedores</div>
-            <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
+      {!mostrarFormulario && (
+        <div className="card-base mb-3">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600 }}>Fornecedores</div>
+              <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
+            </div>
           </div>
-        </div>
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar fornecedor</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Nome fantasia ou contato..."
-            />
-          </div>
-          {podeSalvar && (
-            <div
-              className="form-group mobile-stack-buttons"
-              style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
-            >
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormularioFornecedor}
-                disabled={mostrarFormulario}
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div className="form-group" style={{ flex: "1 1 320px" }}>
+              <label className="form-label">Buscar fornecedor</label>
+              <input
+                className="form-input"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome fantasia ou contato..."
+              />
+            </div>
+            {podeSalvar && (
+              <div
+                className="form-group mobile-stack-buttons"
+                style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
               >
-                Adicionar fornecedor
-              </button>
-              {mostrarFormulario && (
                 <button
                   type="button"
-                  className="btn btn-light w-full sm:w-auto"
-                  onClick={fecharFormularioFornecedor}
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormularioFornecedor}
+                  disabled={mostrarFormulario}
                 >
-                  Cancelar
+                  Adicionar fornecedor
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {mostrarFormulario && (
         <div className="card-base card-blue form-card" style={{ marginTop: 12, padding: 16 }}>
@@ -464,65 +457,67 @@ export default function FornecedoresIsland() {
         </div>
       )}
 
-      <div className="card-base" style={{ marginTop: 16 }}>
-        <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>
-        {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
-        >
-          <table className="table-default table-header-teal table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Nome fantasia</th>
-                <th>Local</th>
-                <th>Faturamento</th>
-                <th>Contato</th>
-                <th>Serviços</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
+      {!mostrarFormulario && (
+        <div className="card-base" style={{ marginTop: 16 }}>
+          <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>
+          {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          >
+            <table className="table-default table-header-teal table-mobile-cards min-w-[720px]">
+              <thead>
                 <tr>
-                  <td colSpan={5}>Carregando fornecedores...</td>
+                  <th>Nome fantasia</th>
+                  <th>Local</th>
+                  <th>Faturamento</th>
+                  <th>Contato</th>
+                  <th>Serviços</th>
                 </tr>
-              )}
-              {!loading && fornecedoresFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={5}>Nenhum fornecedor cadastrado.</td>
-                </tr>
-              )}
-              {!loading &&
-                fornecedoresFiltrados.map((fornecedor) => (
-                <tr key={fornecedor.id}>
-                  <td data-label="Nome fantasia">
-                    {fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}
-                  </td>
-                  <td data-label="Local">
-                    {formatLocalizacao(fornecedor.localizacao)}
-                    {fornecedor.cidade ? ` • ${fornecedor.cidade}` : ""}
-                    {fornecedor.estado ? `/${fornecedor.estado}` : ""}
-                  </td>
-                  <td data-label="Faturamento">
-                    {formatFaturamento(fornecedor.tipo_faturamento)}
-                  </td>
-                  <td data-label="Contato">
-                    {fornecedor.telefone || "-"}
-                    {fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`}
-                  </td>
-                  <td data-label="Serviços" style={{ maxWidth: 240, whiteSpace: "normal" }}>
-                    {fornecedor.principais_servicos
-                      ? fornecedor.principais_servicos.length > 80
-                        ? `${fornecedor.principais_servicos.slice(0, 80)}...`
-                        : fornecedor.principais_servicos
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={5}>Carregando fornecedores...</td>
+                  </tr>
+                )}
+                {!loading && fornecedoresFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>Nenhum fornecedor cadastrado.</td>
+                  </tr>
+                )}
+                {!loading &&
+                  fornecedoresFiltrados.map((fornecedor) => (
+                  <tr key={fornecedor.id}>
+                    <td data-label="Nome fantasia">
+                      {fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}
+                    </td>
+                    <td data-label="Local">
+                      {formatLocalizacao(fornecedor.localizacao)}
+                      {fornecedor.cidade ? ` • ${fornecedor.cidade}` : ""}
+                      {fornecedor.estado ? `/${fornecedor.estado}` : ""}
+                    </td>
+                    <td data-label="Faturamento">
+                      {formatFaturamento(fornecedor.tipo_faturamento)}
+                    </td>
+                    <td data-label="Contato">
+                      {fornecedor.telefone || "-"}
+                      {fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`}
+                    </td>
+                    <td data-label="Serviços" style={{ maxWidth: 240, whiteSpace: "normal" }}>
+                      {fornecedor.principais_servicos
+                        ? fornecedor.principais_servicos.length > 80
+                          ? `${fornecedor.principais_servicos.slice(0, 80)}...`
+                          : fornecedor.principais_servicos
+                        : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

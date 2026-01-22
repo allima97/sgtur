@@ -1,14 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { r as registrarLog } from '../../chunks/logs_CFVP_wVx.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
 import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
-import { c as construirLinkWhatsApp } from '../../chunks/whatsapp_-onX4vYF.mjs';
+import { c as construirLinkWhatsApp } from '../../chunks/whatsapp_C20KyoZc.mjs';
 
 function normalizeText(value) {
   return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -552,66 +552,27 @@ function VendasConsultaIsland() {
   if (!podeVer) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Você não possui permissão para visualizar Vendas." }) });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "vendas-consulta-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "form-row",
-        style: {
-          marginTop: 8,
-          display: "flex",
-          alignItems: "end",
-          gap: 16,
-          flexWrap: "wrap"
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1, minWidth: 0 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar venda" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                className: "form-input",
-                placeholder: "Nome, destino ou ID...",
-                value: busca,
-                onChange: (e) => setBusca(e.target.value)
-              }
-            ),
-            filtroLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
-              filtroLabel,
-              " ",
-              userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""
-            ] })
-          ] }),
-          podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              className: "form-group",
-              style: {
-                display: "flex",
-                flexDirection: "row",
-                gap: 8,
-                marginBottom: 0,
-                marginLeft: "auto",
-                flexWrap: "nowrap",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                alignSelf: "center",
-                marginTop: -4
-              },
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "a",
-                {
-                  className: "btn btn-primary",
-                  href: "/vendas/cadastro",
-                  style: { textDecoration: "none" },
-                  children: "Nova venda"
-                }
-              )
-            }
-          )
-        ]
-      }
-    ) }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3 list-toolbar-sticky", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:flex-row sm:items-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group flex-1 min-w-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar venda" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: "form-input",
+            placeholder: "Nome, destino ou ID...",
+            value: busca,
+            onChange: (e) => setBusca(e.target.value)
+          }
+        ),
+        filtroLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs("small", { style: { color: "#64748b" }, children: [
+          filtroLabel,
+          " ",
+          userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""
+        ] })
+      ] }),
+      podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "hidden sm:flex sm:items-end sm:ml-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-primary", href: "/vendas/cadastro", style: { textDecoration: "none" }, children: "Nova venda" }) })
+    ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dashboard-grid-kpi mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-card kpi-vendas", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "100%", textAlign: "center" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total de Vendas" }),
@@ -631,7 +592,7 @@ function VendasConsultaIsland() {
       ] }) })
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", style: { maxHeight: "65vh", overflowY: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green min-w-[820px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", style: { maxHeight: "65vh", overflowY: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green table-mobile-cards min-w-[820px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { style: { position: "sticky", top: 0, zIndex: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cliente" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
@@ -650,54 +611,41 @@ function VendasConsultaIsland() {
           const produtosVenda = recibosDaVenda(v.id).map((r) => r.produto_nome || "").filter(Boolean);
           const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.cliente_nome }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.destino_cidade_nome || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: produtosVenda.length === 0 ? "-" : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: produtosVenda.map((p, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: p }, `${v.id}-prod-${idx}`)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { style: { textAlign: "center" }, children: formatarDataCorretamente(v.data_embarque) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cliente", children: v.cliente_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Destino", children: v.destino_cidade_nome || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Produto", children: produtosVenda.length === 0 ? "-" : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: produtosVenda.map((p, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: p }, `${v.id}-prod-${idx}`)) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Embarque", style: { textAlign: "center" }, children: formatarDataCorretamente(v.data_embarque) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { "data-label": "Valor", children: [
               "R$",
               " ",
               totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: totalTaxas === 0 ? "-" : `R$ ${totalTaxas.toLocaleString("pt-BR", {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Taxas", children: totalTaxas === 0 ? "-" : `R$ ${totalTaxas.toLocaleString("pt-BR", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })}` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "td",
-              {
-                className: "th-actions",
-                style: {
-                  textAlign: "center",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 4
-                },
-                children: [
-                  whatsappLink && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "a",
-                    {
-                      className: "btn-icon",
-                      href: whatsappLink,
-                      title: "Enviar WhatsApp",
-                      target: "_blank",
-                      rel: "noreferrer",
-                      children: "💬"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      className: "btn-icon",
-                      title: "Ver detalhes",
-                      onClick: () => setModalVenda(v),
-                      children: "👁️"
-                    }
-                  )
-                ]
-              }
-            )
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
+              whatsappLink && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "a",
+                {
+                  className: "btn-icon",
+                  href: whatsappLink,
+                  title: "Enviar WhatsApp",
+                  target: "_blank",
+                  rel: "noreferrer",
+                  children: "💬"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  className: "btn-icon",
+                  title: "Ver detalhes",
+                  onClick: () => setModalVenda(v),
+                  children: "👁️"
+                }
+              )
+            ] }) })
           ] }, v.id);
         })
       ] })
@@ -1002,7 +950,8 @@ function VendasConsultaIsland() {
           t.id
         ))
       }
-    )
+    ),
+    podeCriar && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-actionbar sm:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { className: "btn btn-primary", href: "/vendas/cadastro", style: { textDecoration: "none" }, children: "Nova venda" }) })
   ] });
 }
 

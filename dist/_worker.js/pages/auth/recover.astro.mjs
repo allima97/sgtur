@@ -89,7 +89,7 @@ function AuthRecoverIsland() {
 
 const $$Recover = createComponent(($$result, $$props, $$slots) => {
   const pageTitle = `Recuperar senha - ${SYSTEM_NAME}`;
-  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthRecoverIsland", AuthRecoverIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthRecoverIsland.tsx", "client:component-export": "default" })} </body></html>`;
+  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthRecoverIsland", AuthRecoverIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthRecoverIsland.tsx", "client:component-export": "default" })} </body></html>`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/recover.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/recover.astro";

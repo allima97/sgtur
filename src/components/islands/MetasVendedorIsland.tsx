@@ -423,19 +423,21 @@ export default function MetasVendedorIsland() {
       )}
 
       <div className={`card-base card-blue mb-2${mostrarFormularioMeta ? " form-card" : ""}`}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
-          <h3>Metas cadastradas</h3>
-          {usuarioPodeEditar && (
-            <button
-              type="button"
-              className="btn btn-primary w-full sm:w-auto"
-              onClick={abrirFormularioMeta}
-              disabled={mostrarFormularioMeta}
-            >
-              Adicionar meta
-            </button>
-          )}
-        </div>
+        {!mostrarFormularioMeta && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
+            <h3>Metas cadastradas</h3>
+            {usuarioPodeEditar && (
+              <button
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
+                onClick={abrirFormularioMeta}
+                disabled={mostrarFormularioMeta}
+              >
+                Adicionar meta
+              </button>
+            )}
+          </div>
+        )}
         {mostrarFormularioMeta && (
           <form onSubmit={salvarMeta}>
           <div className="flex flex-col md:flex-row gap-4">
@@ -609,92 +611,93 @@ export default function MetasVendedorIsland() {
         )}
       </div>
 
-      {/* LISTAGEM */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[880px]">
-          <thead>
-            <tr>
-              <th>Período</th>
-              <th>Meta Geral</th>
-              <th>Meta Diferenciada</th>
-              <th>Produtos</th>
-              <th>Ativo</th>
-              {usuarioPodeEditar && <th>Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {listaMetas.length === 0 && (
+      {!mostrarFormularioMeta && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-header-blue table-mobile-cards min-w-[880px]">
+            <thead>
               <tr>
-                <td colSpan={usuarioPodeEditar ? 6 : 5}>Nenhuma meta cadastrada.</td>
+                <th>Período</th>
+                <th>Meta Geral</th>
+                <th>Meta Diferenciada</th>
+                <th>Produtos</th>
+                <th>Ativo</th>
+                {usuarioPodeEditar && <th>Ações</th>}
               </tr>
-            )}
+            </thead>
+            <tbody>
+              {listaMetas.length === 0 && (
+                <tr>
+                  <td colSpan={usuarioPodeEditar ? 6 : 5}>Nenhuma meta cadastrada.</td>
+                </tr>
+              )}
 
-            {listaMetas.map((m) => (
-              <tr key={m.id}>
-                <td data-label="Período">{m.periodo.slice(0, 7)}</td>
-                <td data-label="Meta Geral">
-                  {m.meta_geral.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </td>
-                <td data-label="Meta Diferenciada">
-                  {m.meta_diferenciada.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </td>
-                <td data-label="Produtos">
-                  {(detalhesMetas[m.id] || []).length === 0
-                    ? "—"
-                    : (detalhesMetas[m.id] || [])
-                        .map((d) => {
-                          const nome = produtos.find((p) => p.id === d.produto_id)?.nome || "Produto";
-                          return `${nome}: ${d.valor.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}`;
-                        })
-                        .join(" | ")}
-                </td>
-                <td data-label="Ativo">{m.ativo ? "Sim" : "Não"}</td>
-
-                {usuarioPodeEditar && (
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-icon"
-                        title="Editar"
-                        onClick={() => iniciarEdicao(m)}
-                      >
-                        ✏️
-                      </button>
-
-                      <button
-                        className="btn-icon btn-danger"
-                        title="Excluir"
-                        onClick={() => excluirMeta(m.id)}
-                      >
-                        🗑️
-                      </button>
-                      <button
-                        className="btn-icon"
-                        title={m.ativo ? "Inativar" : "Ativar"}
-                        onClick={() => toggleAtivo(m.id, m.ativo)}
-                      >
-                        {m.ativo ? "⏸️" : "▶️"}
-                      </button>
-                    </div>
+              {listaMetas.map((m) => (
+                <tr key={m.id}>
+                  <td data-label="Período">{m.periodo.slice(0, 7)}</td>
+                  <td data-label="Meta Geral">
+                    {m.meta_geral.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
                   </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <td data-label="Meta Diferenciada">
+                    {m.meta_diferenciada.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </td>
+                  <td data-label="Produtos">
+                    {(detalhesMetas[m.id] || []).length === 0
+                      ? "—"
+                      : (detalhesMetas[m.id] || [])
+                          .map((d) => {
+                            const nome = produtos.find((p) => p.id === d.produto_id)?.nome || "Produto";
+                            return `${nome}: ${d.valor.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}`;
+                          })
+                          .join(" | ")}
+                  </td>
+                  <td data-label="Ativo">{m.ativo ? "Sim" : "Não"}</td>
+
+                  {usuarioPodeEditar && (
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        <button
+                          className="btn-icon"
+                          title="Editar"
+                          onClick={() => iniciarEdicao(m)}
+                        >
+                          ✏️
+                        </button>
+
+                        <button
+                          className="btn-icon btn-danger"
+                          title="Excluir"
+                          onClick={() => excluirMeta(m.id)}
+                        >
+                          🗑️
+                        </button>
+                        <button
+                          className="btn-icon"
+                          title={m.ativo ? "Inativar" : "Ativar"}
+                          onClick={() => toggleAtivo(m.id, m.ativo)}
+                        >
+                          {m.ativo ? "⏸️" : "▶️"}
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

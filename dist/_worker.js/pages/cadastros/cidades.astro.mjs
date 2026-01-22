@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -396,11 +396,11 @@ function CidadesIsland() {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Voce nao possui permissao para visualizar Cidades." });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cidades-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3 list-toolbar-sticky", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "form-row",
-        style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+        className: "form-row mobile-stack",
+        style: { gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar cidade" }),
@@ -418,7 +418,7 @@ function CidadesIsland() {
             "button",
             {
               type: "button",
-              className: "btn btn-primary",
+              className: "btn btn-primary w-full sm:w-auto",
               onClick: abrirFormulario,
               disabled: mostrarFormulario,
               children: "Adicionar cidade"
@@ -427,7 +427,7 @@ function CidadesIsland() {
         ]
       }
     ) }),
-    (podeCriar || podeEditar) && mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    (podeCriar || podeEditar) && mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue form-card mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: editId ? "Editar cidade" : "Nova cidade" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
@@ -515,46 +515,53 @@ function CidadesIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons", style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", disabled: salvando, children: salvando ? "Salvando..." : "Salvar cidade" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: fecharFormulario, disabled: salvando, children: "Cancelar" })
       ] })
     ] }) }),
-    carregando && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" }),
-    !carregando && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-    !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cidade" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criada em" }),
-        (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando..." }) }),
-        !loading && filtradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma cidade encontrada." }) }),
-        !loading && filtradas.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.subdivisao_nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.pais_nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: c.created_at ? c.created_at.slice(0, 10) : "-" }),
-          (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
-            podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => iniciarEdicao(c), title: "Editar", children: "✏️" }),
-            podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon btn-danger",
-                onClick: () => excluir(c.id),
-                disabled: excluindoId === c.id,
-                title: "Excluir",
-                children: excluindoId === c.id ? "..." : "🗑️"
-              }
-            )
+    !mostrarFormulario && carregando && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, { className: "mb-3" }),
+    !mostrarFormulario && !carregando && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
+    !mostrarFormulario && !carregouTodos && !erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas." }),
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "table-container overflow-x-auto",
+        style: { maxHeight: "65vh", overflowY: "auto" },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[720px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criada em" }),
+            (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+            loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Carregando..." }) }),
+            !loading && filtradas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma cidade encontrada." }) }),
+            !loading && filtradas.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cidade", children: c.nome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Subdivisao", children: c.subdivisao_nome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Pais", children: c.pais_nome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Criada em", children: c.created_at ? c.created_at.slice(0, 10) : "-" }),
+              (podeEditar || podeExcluir) && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Acoes", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
+                podeEditar && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", onClick: () => iniciarEdicao(c), title: "Editar", children: "✏️" }),
+                podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon btn-danger",
+                    onClick: () => excluir(c.id),
+                    disabled: excluindoId === c.id,
+                    title: "Excluir",
+                    children: excluindoId === c.id ? "..." : "🗑️"
+                  }
+                )
+              ] }) })
+            ] }, c.id))
           ] })
-        ] }, c.id))
-      ] })
-    ] }) })
+        ] })
+      }
+    )
   ] });
 }
 

@@ -1,13 +1,14 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports, R as React } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as usePermissao } from '../../../chunks/usePermissao_p9GcBfMe.mjs';
 import { L as LoadingUsuarioContext } from '../../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
 import { f as formatarDataParaExibicao } from '../../../chunks/formatDate_DIYZa49I.mjs';
+import { p as parentescoOptions } from '../../../chunks/parentescoOptions_BETg71Hd.mjs';
 
 const STORAGE_BUCKET = "viagens";
 function sanitizeFileName(filename) {
@@ -727,16 +728,19 @@ function DossieViagemIsland({ viagemId }) {
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Parentesco" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
                       {
-                        className: "form-input",
+                        className: "form-select",
                         value: cadastroAcompForm.grau_parentesco,
                         onChange: (e) => setCadastroAcompForm((prev) => ({
                           ...prev,
                           grau_parentesco: e.target.value
                         })),
-                        placeholder: "Ex: Esposa, Filho"
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Selecione" }),
+                          parentescoOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt, children: opt }, opt))
+                        ]
                       }
                     )
                   ] })
@@ -940,7 +944,11 @@ function DossieViagemIsland({ viagemId }) {
                       type: "date",
                       className: "form-input",
                       value: servicoForm.data_inicio,
-                      onChange: (e) => setServicoForm((prev) => ({ ...prev, data_inicio: e.target.value }))
+                      onChange: (e) => setServicoForm((prev) => {
+                        const nextInicio = e.target.value;
+                        const nextFim = prev.data_fim && nextInicio && prev.data_fim < nextInicio ? nextInicio : prev.data_fim;
+                        return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                      })
                     }
                   )
                 ] }),
@@ -952,7 +960,12 @@ function DossieViagemIsland({ viagemId }) {
                       type: "date",
                       className: "form-input",
                       value: servicoForm.data_fim,
-                      onChange: (e) => setServicoForm((prev) => ({ ...prev, data_fim: e.target.value }))
+                      min: servicoForm.data_inicio || void 0,
+                      onChange: (e) => setServicoForm((prev) => {
+                        const nextFim = e.target.value;
+                        const boundedFim = prev.data_inicio && nextFim && nextFim < prev.data_inicio ? prev.data_inicio : nextFim;
+                        return { ...prev, data_fim: boundedFim };
+                      })
                     }
                   )
                 ] }),
@@ -1087,6 +1100,10 @@ function DossieViagemIsland({ viagemId }) {
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "bilhete", children: "Bilhete" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "roteiro", children: "Roteiro" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "seguro", children: "Seguro" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "passaporte", children: "Passaporte" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpf", children: "CPF" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "rg", children: "RG" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cnh", children: "CNH" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "outro", children: "Outro" })
                   ]
                 }

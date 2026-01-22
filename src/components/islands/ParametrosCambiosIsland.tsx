@@ -44,6 +44,7 @@ export default function ParametrosCambiosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
   const [form, setForm] = useState<FormState>(buildInitialForm());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [cambios, setCambios] = useState<CambioRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -60,6 +61,20 @@ export default function ParametrosCambiosIsland() {
     setForm(buildInitialForm());
     setEditingId(null);
   }, []);
+
+  const abrirFormulario = useCallback(() => {
+    resetForm();
+    setErro(null);
+    setSucesso(null);
+    setMostrarFormulario(true);
+  }, [resetForm]);
+
+  const fecharFormulario = useCallback(() => {
+    resetForm();
+    setErro(null);
+    setSucesso(null);
+    setMostrarFormulario(false);
+  }, [resetForm]);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -166,6 +181,7 @@ export default function ParametrosCambiosIsland() {
 
       setSucesso(editingId ? "Câmbio atualizado com sucesso." : "Câmbio salvo com sucesso.");
       resetForm();
+      setMostrarFormulario(false);
       await carregar();
       await registrarLog({
         user_id: userId,
@@ -220,6 +236,7 @@ export default function ParametrosCambiosIsland() {
     });
     setSucesso(null);
     setErro(null);
+    setMostrarFormulario(true);
   };
 
   const tituloTabela = useMemo(() => {
@@ -240,160 +257,192 @@ export default function ParametrosCambiosIsland() {
       <h2 className="card-title">Câmbios</h2>
       <p className="card-subtitle">Cadastre o valor de câmbio aplicado em cada dia.</p>
 
-      {erro && <div className="auth-error">{erro}</div>}
-      {sucesso && <div className="auth-success">{sucesso}</div>}
+      {!mostrarFormulario && (
+        <>
+          {erro && <div className="auth-error">{erro}</div>}
+          {sucesso && <div className="auth-success">{sucesso}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Moeda</label>
-            <input
-              type="text"
-              className="form-input"
-              list="moeda-sugestoes"
-              value={form.moeda}
-              onChange={(event) => handleFormChange("moeda", event.target.value)}
-              disabled={!podeEscrever}
-            />
-            <datalist id="moeda-sugestoes">
-              {MOEDA_SUGESTOES.map((moeda) => (
-                <option key={moeda} value={moeda} />
-              ))}
-            </datalist>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Data</label>
-            <input
-              type="date"
-              className="form-input"
-              value={form.data}
-              onChange={(event) => handleFormChange("data", event.target.value)}
-              disabled={!podeEscrever}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Valor (R$)</label>
-            <input
-              type="text"
-              className="form-input"
-              inputMode="decimal"
-              placeholder="Ex: 6,50"
-              value={form.valor}
-              onChange={(event) => handleFormChange("valor", event.target.value)}
-              disabled={!podeEscrever}
-            />
-          </div>
-
-            <div className="form-group mobile-stack-buttons" style={{ alignItems: "flex-end", gap: 8 }}>
+          {podeEscrever && (
+            <div className="mb-3">
               <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={!podeEscrever || salvando || !companyId}
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
+                onClick={abrirFormulario}
+                disabled={!companyId}
               >
-                {salvando ? (editingId ? "Atualizando..." : "Salvando...") : editingId ? "Atualizar câmbio" : "Salvar câmbio"}
+                Adicionar câmbio
               </button>
-              {editingId && (
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={resetForm}
-                  disabled={salvando}
-                >
-                  Cancelar edição
-                </button>
-              )}
+            </div>
+          )}
+
+          {!companyId && (
+            <div className="auth-error">
+              Você precisa estar vinculado a uma empresa para cadastrar câmbios.
+            </div>
+          )}
+          {!podeEscrever && (
+            <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
+              Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao
+              administrador.
+            </div>
+          )}
+
+          <div
+            className="table-container overflow-x-auto mt-6"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+              <strong>{tituloTabela}</strong>
+              <button
+                type="button"
+                className="btn btn-light w-full sm:w-auto"
+                onClick={carregar}
+                disabled={loading}
+              >
+                Recarregar
+              </button>
+            </div>
+            <table className="table-default table-header-blue table-mobile-cards min-w-[600px]">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Moeda</th>
+                  <th>Valor (R$)</th>
+                  <th>Cadastrado por</th>
+                  <th>Criado em</th>
+                  {podeExcluir && <th className="th-actions">Ações</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {cambios.length === 0 && (
+                  <tr>
+                    <td colSpan={podeExcluir ? 6 : 5}>Nenhum câmbio cadastrado ainda.</td>
+                  </tr>
+                )}
+                {cambios.map((cambio) => (
+                  <tr key={cambio.id}>
+                    <td data-label="Data">{cambio.data}</td>
+                    <td data-label="Moeda">{cambio.moeda}</td>
+                    <td data-label="Valor (R$)">{formatValorNumber(cambio.valor)}</td>
+                    <td data-label="Cadastrado por">
+                      {cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}
+                    </td>
+                    <td data-label="Criado em">
+                      {cambio.created_at
+                        ? new Date(cambio.created_at).toLocaleString("pt-BR")
+                        : "—"}
+                    </td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {podeEscrever && (
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Editar câmbio"
+                            onClick={() => handleEdit(cambio)}
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            type="button"
+                            className="btn-icon btn-danger"
+                            title="Excluir câmbio"
+                            onClick={() => handleDelete(cambio.id)}
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {mostrarFormulario && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Moeda</label>
+              <input
+                type="text"
+                className="form-input"
+                list="moeda-sugestoes"
+                value={form.moeda}
+                onChange={(event) => handleFormChange("moeda", event.target.value)}
+                disabled={!podeEscrever}
+              />
+              <datalist id="moeda-sugestoes">
+                {MOEDA_SUGESTOES.map((moeda) => (
+                  <option key={moeda} value={moeda} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Data</label>
+              <input
+                type="date"
+                className="form-input"
+                value={form.data}
+                onChange={(event) => handleFormChange("data", event.target.value)}
+                disabled={!podeEscrever}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Valor (R$)</label>
+              <input
+                type="text"
+                className="form-input"
+                inputMode="decimal"
+                placeholder="Ex: 6,50"
+                value={form.valor}
+                onChange={(event) => handleFormChange("valor", event.target.value)}
+                disabled={!podeEscrever}
+              />
             </div>
           </div>
 
-        {!companyId && (
-          <div className="auth-error">
-            Você precisa estar vinculado a uma empresa para cadastrar câmbios.
+          <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!podeEscrever || salvando || !companyId}
+            >
+              {salvando ? "Salvando..." : "Salvar câmbio"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={fecharFormulario}
+              disabled={salvando}
+            >
+              Cancelar
+            </button>
           </div>
-        )}
-        {!podeEscrever && (
-          <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
-            Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao
-            administrador.
-          </div>
-        )}
-      </form>
 
-      <div
-        className="table-container overflow-x-auto mt-6"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-          <strong>{tituloTabela}</strong>
-          <button
-            type="button"
-            className="btn btn-light w-full sm:w-auto"
-            onClick={carregar}
-            disabled={loading}
-          >
-            Recarregar
-          </button>
-        </div>
-        <table className="table-default table-header-blue table-mobile-cards min-w-[600px]">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Moeda</th>
-              <th>Valor (R$)</th>
-              <th>Cadastrado por</th>
-              <th>Criado em</th>
-              {podeExcluir && <th className="th-actions">Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {cambios.length === 0 && (
-              <tr>
-                <td colSpan={podeExcluir ? 6 : 5}>Nenhum câmbio cadastrado ainda.</td>
-              </tr>
-            )}
-            {cambios.map((cambio) => (
-              <tr key={cambio.id}>
-                <td data-label="Data">{cambio.data}</td>
-                <td data-label="Moeda">{cambio.moeda}</td>
-                <td data-label="Valor (R$)">{formatValorNumber(cambio.valor)}</td>
-                <td data-label="Cadastrado por">
-                  {cambio.owner_user?.nome_completo || cambio.owner_user_id || "—"}
-                </td>
-                <td data-label="Criado em">
-                  {cambio.created_at
-                    ? new Date(cambio.created_at).toLocaleString("pt-BR")
-                    : "—"}
-                </td>
-                <td className="th-actions" data-label="Ações">
-                  <div className="action-buttons">
-                    {podeEscrever && (
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        title="Editar câmbio"
-                        onClick={() => handleEdit(cambio)}
-                      >
-                        ✏️
-                      </button>
-                    )}
-                    {podeExcluir && (
-                      <button
-                        type="button"
-                        className="btn-icon btn-danger"
-                        title="Excluir câmbio"
-                        onClick={() => handleDelete(cambio.id)}
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          {erro && <div className="auth-error">{erro}</div>}
+          {sucesso && <div className="auth-success">{sucesso}</div>}
+
+          {!companyId && (
+            <div className="auth-error">
+              Você precisa estar vinculado a uma empresa para cadastrar câmbios.
+            </div>
+          )}
+          {!podeEscrever && (
+            <div style={{ marginTop: 8, color: "#f97316", fontSize: "0.9rem" }}>
+              Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao
+              administrador.
+            </div>
+          )}
+        </form>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
 /* empty css                                         */
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -27,6 +27,7 @@ function ParametrosCambiosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
   const [form, setForm] = reactExports.useState(buildInitialForm());
   const [editingId, setEditingId] = reactExports.useState(null);
+  const [mostrarFormulario, setMostrarFormulario] = reactExports.useState(false);
   const [cambios, setCambios] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [salvando, setSalvando] = reactExports.useState(false);
@@ -41,6 +42,18 @@ function ParametrosCambiosIsland() {
     setForm(buildInitialForm());
     setEditingId(null);
   }, []);
+  const abrirFormulario = reactExports.useCallback(() => {
+    resetForm();
+    setErro(null);
+    setSucesso(null);
+    setMostrarFormulario(true);
+  }, [resetForm]);
+  const fecharFormulario = reactExports.useCallback(() => {
+    resetForm();
+    setErro(null);
+    setSucesso(null);
+    setMostrarFormulario(false);
+  }, [resetForm]);
   const carregar = reactExports.useCallback(async () => {
     setLoading(true);
     setErro(null);
@@ -120,6 +133,7 @@ function ParametrosCambiosIsland() {
       if (error) throw error;
       setSucesso(editingId ? "Câmbio atualizado com sucesso." : "Câmbio salvo com sucesso.");
       resetForm();
+      setMostrarFormulario(false);
       await carregar();
       await registrarLog({
         user_id: userId,
@@ -172,6 +186,7 @@ function ParametrosCambiosIsland() {
     });
     setSucesso(null);
     setErro(null);
+    setMostrarFormulario(true);
   };
   const tituloTabela = reactExports.useMemo(() => {
     if (!cambios.length) return "Nenhum câmbio cadastrado.";
@@ -186,9 +201,87 @@ function ParametrosCambiosIsland() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "card-title", children: "Câmbios" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "card-subtitle", children: "Cadastre o valor de câmbio aplicado em cada dia." }),
-    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
-    sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", children: sucesso }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
+      sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", children: sucesso }),
+      podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "btn btn-primary w-full sm:w-auto",
+          onClick: abrirFormulario,
+          disabled: !companyId,
+          children: "Adicionar câmbio"
+        }
+      ) }),
+      !companyId && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Você precisa estar vinculado a uma empresa para cadastrar câmbios." }),
+      !podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, color: "#f97316", fontSize: "0.9rem" }, children: "Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao administrador." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "table-container overflow-x-auto mt-6",
+          style: { maxHeight: "65vh", overflowY: "auto" },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: tituloTabela }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "btn btn-light w-full sm:w-auto",
+                  onClick: carregar,
+                  disabled: loading,
+                  children: "Recarregar"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[600px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Moeda" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor (R$)" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cadastrado por" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
+                podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+                cambios.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: podeExcluir ? 6 : 5, children: "Nenhum câmbio cadastrado ainda." }) }),
+                cambios.map((cambio) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Data", children: cambio.data }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Moeda", children: cambio.moeda }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Valor (R$)", children: formatValorNumber(cambio.valor) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cadastrado por", children: cambio.owner_user?.nome_completo || cambio.owner_user_id || "—" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Criado em", children: cambio.created_at ? new Date(cambio.created_at).toLocaleString("pt-BR") : "—" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
+                    podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-icon",
+                        title: "Editar câmbio",
+                        onClick: () => handleEdit(cambio),
+                        children: "✏️"
+                      }
+                    ),
+                    podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-icon btn-danger",
+                        title: "Excluir câmbio",
+                        onClick: () => handleDelete(cambio.id),
+                        children: "🗑️"
+                      }
+                    )
+                  ] }) })
+                ] }, cambio.id))
+              ] })
+            ] })
+          ]
+        }
+      )
+    ] }),
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Moeda" }),
@@ -232,88 +325,33 @@ function ParametrosCambiosIsland() {
               disabled: !podeEscrever
             }
           )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { display: "flex", alignItems: "flex-end", gap: 8 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "submit",
-              className: "btn btn-primary",
-              disabled: !podeEscrever || salvando || !companyId,
-              children: salvando ? editingId ? "Atualizando..." : "Salvando..." : editingId ? "Atualizar câmbio" : "Salvar câmbio"
-            }
-          ),
-          editingId && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              className: "btn btn-light",
-              onClick: resetForm,
-              disabled: salvando,
-              children: "Cancelar edição"
-            }
-          )
         ] })
       ] }),
-      !companyId && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Você precisa estar vinculado a uma empresa para cadastrar câmbios." }),
-      !podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, color: "#f97316", fontSize: "0.9rem" }, children: "Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao administrador." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "table-container overflow-x-auto mt-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: tituloTabela }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons", style: { marginTop: 8 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "submit",
+            className: "btn btn-primary",
+            disabled: !podeEscrever || salvando || !companyId,
+            children: salvando ? "Salvando..." : "Salvar câmbio"
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             type: "button",
             className: "btn btn-light",
-            onClick: carregar,
-            disabled: loading,
-            children: "Recarregar"
+            onClick: fecharFormulario,
+            disabled: salvando,
+            children: "Cancelar"
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[600px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Moeda" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Valor (R$)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Cadastrado por" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
-          podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          cambios.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: podeExcluir ? 6 : 5, children: "Nenhum câmbio cadastrado ainda." }) }),
-          cambios.map((cambio) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: cambio.data }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: cambio.moeda }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatValorNumber(cambio.valor) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: cambio.owner_user?.nome_completo || cambio.owner_user_id || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: cambio.created_at ? new Date(cambio.created_at).toLocaleString("pt-BR") : "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
-              podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn-icon",
-                  title: "Editar câmbio",
-                  onClick: () => handleEdit(cambio),
-                  children: "✏️"
-                }
-              ),
-              podeExcluir && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn-icon btn-danger",
-                  title: "Excluir câmbio",
-                  onClick: () => handleDelete(cambio.id),
-                  children: "🗑️"
-                }
-              )
-            ] }) })
-          ] }, cambio.id))
-        ] })
-      ] })
+      erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: erro }),
+      sucesso && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-success", children: sucesso }),
+      !companyId && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-error", children: "Você precisa estar vinculado a uma empresa para cadastrar câmbios." }),
+      !podeEscrever && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, color: "#f97316", fontSize: "0.9rem" }, children: "Você não tem permissão para cadastrar ou remover câmbios. Solicite acesso ao administrador." })
     ] })
   ] });
 }

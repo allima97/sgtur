@@ -1,12 +1,13 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as usePermissao } from '../../chunks/usePermissao_p9GcBfMe.mjs';
 import { L as LoadingUsuarioContext } from '../../chunks/LoadingUsuarioContext_R_BoJegu.mjs';
+import { C as CalculatorModal } from '../../chunks/CalculatorModal_yQtdp0pY.mjs';
 
 const PERIODO_OPCOES = [
   { id: "mes_atual", label: "Mês atual" },
@@ -71,6 +72,29 @@ function formatPeriodoLabel(value) {
   const mesLabel = meses[mesIdx] || mes;
   return `${dia}-${mesLabel}-${ano}`;
 }
+function isSeguroProduto(produto) {
+  const nome = (produto?.nome || "").toLowerCase();
+  return nome.includes("seguro");
+}
+function formatPct(value) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + "%";
+}
+function formatPctList(values) {
+  const filtered = values.filter((v) => Number.isFinite(v));
+  if (!filtered.length) return "";
+  return filtered.map((v) => formatPct(v)).join(", ");
+}
+function buildKpiLabel(base, values) {
+  const list = formatPctList(values);
+  return list ? `${base} (${list})` : base;
+}
+function buildKpiLabelFromList(base, values) {
+  const list = values.filter(Boolean).join(", ");
+  return list ? `${base} (${list})` : base;
+}
 function ComissionamentoIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
   const metaProdEnabled = undefined                                            !== "false";
@@ -88,6 +112,8 @@ function ComissionamentoIsland() {
   const [erro, setErro] = reactExports.useState(null);
   const [preset, setPreset] = reactExports.useState("mes_atual");
   const [periodo, setPeriodo] = reactExports.useState(() => calcPeriodo("mes_atual"));
+  const [showCalculator, setShowCalculator] = reactExports.useState(false);
+  const [showFilters, setShowFilters] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (loadingPerm || !ativo) return;
     carregarTudo();
@@ -291,11 +317,19 @@ function ComissionamentoIsland() {
     let totalTaxas = 0;
     let comissaoGeral = 0;
     let comissaoDif = 0;
+    const pctComissaoGeralSet = /* @__PURE__ */ new Set();
+    const pctPassagemFacialSet = /* @__PURE__ */ new Set();
+    const pctSeguroFormulaSet = /* @__PURE__ */ new Set();
     const comissaoDifDetalhe = {};
     const produtosDiferenciados = [];
+    let comissaoFixaProdutos = 0;
     let comissaoMetaProd = 0;
     const comissaoMetaProdDetalhe = {};
     let comissaoPassagemFacial = 0;
+    let comissaoSeguroViagem = 0;
+    let totalValorMetaDiferenciada = 0;
+    let totalValorMetaEscalonavel = 0;
+    let totalValorMetaGeral = 0;
     const usaFocoFaturamentoLiquido = parametros.foco_faturamento === "liquido";
     Object.values(produtos).forEach((p) => {
       if (p.regra_comissionamento === "diferenciado") {
@@ -328,10 +362,13 @@ function ComissionamentoIsland() {
     Object.keys(brutoPorProduto).forEach((prodId) => {
       const prod = produtos[prodId];
       if (!prod) return;
+      const valorLiquidoProduto = liquidoPorProduto[prodId] || 0;
       const baseCom = usaFocoFaturamentoLiquido ? liquidoPorProduto[prodId] || 0 : brutoPorProduto[prodId] || 0;
       const nomeProdNormalizado = (prod.nome || "").toLowerCase().replace(/\s+/g, " ").trim();
       const isPassagemFacial = nomeProdNormalizado.includes("passagem facial");
+      const isSeguro = isSeguroProduto(prod);
       if (prod.regra_comissionamento === "diferenciado") {
+        totalValorMetaDiferenciada += valorLiquidoProduto;
         const regProd = regraProdutoMap[prodId];
         if (!regProd) return;
         const metaProd = metasProdutoMap[prodId] || 0;
@@ -340,7 +377,15 @@ function ComissionamentoIsland() {
         const pctMetaProd = temMetaProd ? baseMetaProd / metaProd * 100 : 0;
         const pctCom = temMetaProd ? baseMetaProd < metaProd ? 0 : pctMetaProd >= 120 ? regProd.fix_super_meta ?? regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_atingida ?? regProd.fix_meta_nao_atingida ?? 0 : regProd.fix_meta_nao_atingida ?? regProd.fix_meta_atingida ?? regProd.fix_super_meta ?? 0;
         const val = baseCom * (pctCom / 100);
+        comissaoFixaProdutos += val;
         const jogaParaGeral = prod.soma_na_meta && !prod.usa_meta_produto;
+        if (jogaParaGeral && pctCom > 0) {
+          if (isPassagemFacial) {
+            pctPassagemFacialSet.add(pctCom);
+          } else {
+            pctComissaoGeralSet.add(pctCom);
+          }
+        }
         if (jogaParaGeral) {
           if (isPassagemFacial) {
             comissaoPassagemFacial += val;
@@ -354,6 +399,11 @@ function ComissionamentoIsland() {
       } else {
         const ruleId = regraProdutoMap[prodId]?.rule_id;
         const reg = ruleId ? regras[ruleId] : void 0;
+        if (reg?.tipo === "ESCALONAVEL") {
+          totalValorMetaEscalonavel += valorLiquidoProduto;
+        } else {
+          totalValorMetaGeral += valorLiquidoProduto;
+        }
         let pctCom = 0;
         if (reg) {
           if (reg.tipo === "ESCALONAVEL") {
@@ -368,6 +418,13 @@ function ComissionamentoIsland() {
         const nomeProd = (prod.nome || "").toLowerCase();
         const normalizedNome = nomeProd.replace(/\s+/g, " ").trim();
         const isPassagemFacial2 = normalizedNome.includes("passagem facial");
+        if (pctCom > 0) {
+          if (isPassagemFacial2) {
+            pctPassagemFacialSet.add(pctCom);
+          } else {
+            pctComissaoGeralSet.add(pctCom);
+          }
+        }
         if (isPassagemFacial2) {
           comissaoPassagemFacial += valGeral;
         } else {
@@ -382,21 +439,42 @@ function ComissionamentoIsland() {
             const diff = prod.descontar_meta_geral === false ? valMetaProd : Math.max(valMetaProd - valGeral, 0);
             comissaoMetaProd += diff;
             comissaoMetaProdDetalhe[prodId] = (comissaoMetaProdDetalhe[prodId] || 0) + diff;
+            if (isSeguro) {
+              comissaoSeguroViagem += diff;
+              const metaPct = Number(prod.comissao_produto_meta_pct || 0);
+              const basePct = prod.descontar_meta_geral === false ? 0 : Number(pctCom || 0);
+              const diffPct = Math.max(metaPct - basePct, 0);
+              if (metaPct > 0) {
+                pctSeguroFormulaSet.add(formatPct(diffPct));
+              }
+            }
           }
         }
       }
     });
+    const totalComissao = comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial ;
+    const totalComissaoKpi = comissaoGeral + comissaoFixaProdutos;
+    const totalComissaoKpiSeguro = totalComissaoKpi + comissaoSeguroViagem;
     return {
       baseMeta,
       totalBruto,
       totalTaxas,
       totalLiquido,
+      totalValorMetaDiferenciada,
+      totalValorMetaEscalonavel,
+      totalValorMetaGeral,
       pctMetaGeral,
       comissaoGeral,
       comissaoDif,
       comissaoMetaProd: comissaoMetaProd ,
       comissaoPassagemFacial,
-      totalComissao: comissaoGeral + comissaoDif + comissaoMetaProd + comissaoPassagemFacial ,
+      comissaoSeguroViagem,
+      pctComissaoGeral: Array.from(pctComissaoGeralSet),
+      pctPassagemFacial: Array.from(pctPassagemFacialSet),
+      pctSeguroFormula: Array.from(pctSeguroFormulaSet),
+      totalComissaoKpi,
+      totalComissaoKpiSeguro,
+      totalComissao,
       comissaoDifDetalhe,
       comissaoMetaProdDetalhe: comissaoMetaProdDetalhe ,
       produtosDiferenciados,
@@ -405,24 +483,86 @@ function ComissionamentoIsland() {
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Você não possui acesso ao módulo de Vendas." });
-  const metaProdEntries = resumo ? Object.entries(resumo.comissaoMetaProdDetalhe || {}) : [];
-  const difProdutos = resumo?.produtosDiferenciados || [];
-  const mostraProdutoKpi = metaProdEntries.length > 0 || difProdutos.length > 0;
+  const labelComissao = resumo ? buildKpiLabel("Comissão", resumo.pctComissaoGeral || []) : "Comissão";
+  const labelPassagemFacial = resumo ? buildKpiLabel("Passagem Facial", resumo.pctPassagemFacial || []) : "Passagem Facial";
+  const labelSeguro = resumo ? buildKpiLabelFromList("Seguro Viagem", resumo.pctSeguroFormula || []) : "Seguro Viagem";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base bg-transparent shadow-none p-0", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row mb-0", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "form-select", value: preset, onChange: (e) => setPreset(e.target.value), children: PERIODO_OPCOES.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.id, children: o.label }, o.id)) })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons sm:hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowFilters(true), children: "Filtros" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowCalculator(true), children: "Calculadora" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.inicio), readOnly: true })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.fim), readOnly: true })
-      ] })
-    ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "hidden sm:block", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row mb-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "form-select", value: preset, onChange: (e) => setPreset(e.target.value), children: PERIODO_OPCOES.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.id, children: o.label }, o.id)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.inicio), readOnly: true })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.fim), readOnly: true })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "form-group",
+            style: { justifyContent: "flex-end", alignItems: "flex-end" },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", style: { visibility: "hidden" }, children: "Calculadora" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "btn btn-light",
+                  onClick: () => setShowCalculator(true),
+                  children: "Calculadora"
+                }
+              )
+            ]
+          }
+        )
+      ] }) })
+    ] }),
+    showFilters && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowFilters(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Filtros" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowFilters(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Período" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "form-select", value: preset, onChange: (e) => setPreset(e.target.value), children: PERIODO_OPCOES.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.id, children: o.label }, o.id)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.inicio), readOnly: true })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "form-input", value: formatPeriodoLabel(periodo.fim), readOnly: true })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => setShowFilters(false),
+              children: "Aplicar filtros"
+            }
+          )
+        ]
+      }
+    ) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando dados..." }),
     !loading && resumo && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -434,7 +574,7 @@ function ComissionamentoIsland() {
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (metaGeral?.meta_geral || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#ca8a04" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Total Bruto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: `Total Bruto (${resumo.pctMetaGeral.toFixed(2).replace(".", ",")}%)` }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalBruto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#c2410c" }, children: [
@@ -448,12 +588,32 @@ function ComissionamentoIsland() {
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", style: { color: "#2563eb" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalVendas })
+          ] }),
+          resumo.totalValorMetaDiferenciada > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas Diferenciadas" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalValorMetaDiferenciada.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL"
+            }) })
+          ] }),
+          resumo.totalValorMetaEscalonavel > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Vendas Escalonável" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalValorMetaEscalonavel.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL"
+            }) })
+          ] }),
+          resumo.totalValorMetaGeral > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Produtos com meta geral" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalValorMetaGeral.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL"
+            }) })
           ] })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 16px" }, children: "Seus Valores a Receber" }),
-        mostraProdutoKpi && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", color: "#0f172a", marginBottom: 8, fontSize: "0.9rem" }, children: "Produtos com comissão diferenciada" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -461,31 +621,49 @@ function ComissionamentoIsland() {
             style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: labelComissao }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
               ] }),
-              metaProdEntries.map(([pid, val]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) }),
-                val === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Meta não atingida" })
-              ] }, `meta-${pid}`)),
-              difProdutos.map((pid) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: produtos[pid]?.nome || "(produto)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: (resumo.comissaoDifDetalhe?.[pid] || 0).toLocaleString("pt-BR", {
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: labelPassagemFacial }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoPassagemFacial.toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL"
-                }) }),
-                (resumo.comissaoDifDetalhe?.[pid] || 0) === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("small", { style: { color: "#dc2626" }, children: "Sem comissão" })
-              ] }, pid)),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card kpi-highlight flex flex-col items-center text-center", children: [
+                }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão total" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalComissao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalComissaoKpi.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card flex flex-col items-center text-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: labelSeguro }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.comissaoSeguroViagem.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "kpi-card kpi-highlight flex flex-col items-center text-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-label", children: "Comissão + Seguro" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "kpi-value", children: resumo.totalComissaoKpiSeguro.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) })
               ] })
             ]
           }
         )
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CalculatorModal,
+      {
+        open: showCalculator,
+        onClose: () => setShowCalculator(false)
+      }
+    )
   ] });
 }
 

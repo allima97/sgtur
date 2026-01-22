@@ -499,11 +499,11 @@ export default function TipoProdutosIsland() {
           )}
 
           {permissao !== "view" && (
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-              <button className="btn btn-primary" type="submit">
+            <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
+              <button className="btn btn-primary w-full sm:w-auto" type="submit">
                 {editandoId ? "Salvar alterações" : "Salvar tipo"}
               </button>
-              <button type="button" className="btn btn-light" onClick={fecharFormularioTipo}>
+              <button type="button" className="btn btn-light w-full sm:w-auto" onClick={fecharFormularioTipo}>
                 Cancelar
               </button>
             </div>
@@ -512,62 +512,64 @@ export default function TipoProdutosIsland() {
         </div>
       )}
 
-  {/* BUSCA */}
-  <div className="card-base mb-3">
-    <div
-      className="form-row mobile-stack"
-      style={{
-        marginTop: 8,
-        gap: 8,
-        gridTemplateColumns: "minmax(220px, 1fr) auto",
-        alignItems: "end",
-      }}
-    >
-      <div className="form-group" style={{ minWidth: 220 }}>
-        <label className="form-label">Buscar tipo de produto</label>
-        <input
-          className="form-input"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Digite parte do nome..."
-          style={{ width: "100%" }}
-        />
-      </div>
-      {permissao !== "view" && (
-        <div className="form-group" style={{ alignItems: "flex-end" }}>
-          <span style={{ visibility: "hidden" }}>botão</span>
-          <button
-            className="btn btn-primary w-full sm:w-auto"
-            type="button"
-            onClick={abrirFormularioTipo}
-            disabled={mostrarFormulario}
+      {!mostrarFormulario && (
+        <>
+          {/* BUSCA */}
+          <div className="card-base mb-3">
+            <div
+              className="form-row mobile-stack"
+              style={{
+                marginTop: 8,
+                gap: 8,
+                gridTemplateColumns: "minmax(220px, 1fr) auto",
+                alignItems: "end",
+              }}
+            >
+              <div className="form-group" style={{ minWidth: 220 }}>
+                <label className="form-label">Buscar tipo de produto</label>
+                <input
+                  className="form-input"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Digite parte do nome..."
+                  style={{ width: "100%" }}
+                />
+              </div>
+              {permissao !== "view" && (
+                <div className="form-group" style={{ alignItems: "flex-end" }}>
+                  <span style={{ visibility: "hidden" }}>botão</span>
+                  <button
+                    className="btn btn-primary w-full sm:w-auto"
+                    type="button"
+                    onClick={abrirFormularioTipo}
+                    disabled={mostrarFormulario}
+                  >
+                    Novo produto
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {erro && <div className="card-base card-config mb-3">{erro}</div>}
+
+          {/* TABELA */}
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
           >
-            Novo produto
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
-
-      {erro && <div className="card-base card-config mb-3">{erro}</div>}
-
-      {/* TABELA */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Regra</th>
-              <th>Regra vinculada</th>
-              <th>Soma meta</th>
-              <th>Ativo</th>
-              <th>Criado em</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
+            <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Regra</th>
+                  <th>Regra vinculada</th>
+                  <th>Soma meta</th>
+                  <th>Ativo</th>
+                  <th>Criado em</th>
+                  <th className="th-actions">Ações</th>
+                </tr>
+              </thead>
 
           <tbody>
             {loading && (
@@ -626,6 +628,8 @@ export default function TipoProdutosIsland() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -6,29 +6,8 @@
   "exclude": [
     "/_astro/*",
     "/.DS_Store",
-    "/1-carrinho.md",
-    "/2-wireframe.md",
-    "/SGVTUR_DOCUMENTACAO.md",
-    "/cron-alerta-comissao.md",
-    "/cron-alerta-orcamentos.md",
-    "/cron-log-alertas.sql",
-    "/importacao-cvc.md",
-    "/migration-clientes-active.sql",
-    "/migration-clientes-campos-endereco.sql",
-    "/migration-clientes-company-id.sql",
-    "/migration-fornecedores.sql",
-    "/migration-modulo-operacao.sql",
-    "/migration-orcamentos-vendedor.sql",
-    "/migration-produtos-fornecedor.sql",
-    "/migration-viagem-passageiros.sql",
-    "/migration-viagens-acompanhantes.sql",
-    "/migration-viagens-cliente.sql",
-    "/migration-viagens-servicos-documentos.sql",
-    "/rls-policies-checklist.md",
-    "/rls-policies.sql",
-    "/seed-cliente-acompanhantes.sql",
-    "/sgtur-plano-modulos.md",
-    "/tessdata/*",
-    "/pdfs/*"
+    "/documentação/*",
+    "/pdfs/*",
+    "/tessdata/*"
   ]
 }

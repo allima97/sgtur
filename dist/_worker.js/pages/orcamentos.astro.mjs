@@ -6,7 +6,7 @@ const $$Astro = createAstro();
 const $$Index = createComponent(($$result, $$props, $$slots) => {
   const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
   Astro2.self = $$Index;
-  return Astro2.redirect("/orcamentos/importar");
+  return Astro2.redirect("/orcamentos/consulta");
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/orcamentos/index.astro";

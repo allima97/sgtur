@@ -158,7 +158,7 @@ function AuthResetIsland() {
 
 const $$Reset = createComponent(($$result, $$props, $$slots) => {
   const pageTitle = `Nova senha - ${SYSTEM_NAME}`;
-  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthResetIsland", AuthResetIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthResetIsland.tsx", "client:component-export": "default" })} </body></html>`;
+  return renderTemplate`<html lang="pt-BR"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${pageTitle}</title>${renderHead()}</head> <body class="auth-body"> ${renderComponent($$result, "AuthResetIsland", AuthResetIsland, { "client:load": true, "client:component-hydration": "load", "client:component-path": "/Users/allima97/Documents/GitHub/sgtur/src/components/islands/AuthResetIsland.tsx", "client:component-export": "default" })} </body></html>`;
 }, "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/reset.astro", void 0);
 
 const $$file = "/Users/allima97/Documents/GitHub/sgtur/src/pages/auth/reset.astro";

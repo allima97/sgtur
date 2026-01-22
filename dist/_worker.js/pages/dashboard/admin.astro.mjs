@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -445,22 +445,29 @@ function DashboardAdminIsland() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[760px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red table-mobile-cards min-w-[760px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "E-mail" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Empresa" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ações" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: usuarios.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum usuário encontrado." }) }) : usuarios.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.nome_completo }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.email || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.user_types?.name || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.company_id ? companyMap[u.company_id] || "-" : "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold", children: u.active ? "Sim" : "Não" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nome", children: u.nome_completo }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "E-mail", children: u.email || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Tipo", children: u.user_types?.name || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Empresa", children: u.company_id ? companyMap[u.company_id] || "-" : "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "td",
+            {
+              "data-label": "Ativo",
+              className: u.active ? "text-emerald-500 font-bold" : "text-rose-500 font-bold",
+              children: u.active ? "Sim" : "Não"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "action-buttons", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
@@ -468,7 +475,7 @@ function DashboardAdminIsland() {
               onClick: () => openEditUserModal(u),
               children: "Editar"
             }
-          ) })
+          ) }) })
         ] }, u.id)) })
       ] }) })
     ] }),

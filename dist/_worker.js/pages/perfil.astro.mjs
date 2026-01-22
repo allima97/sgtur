@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_C9jQHs-i.mjs';
 /* empty css                                      */
-import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../chunks/DashboardLayout_1RrlcxID.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -302,10 +302,9 @@ function PerfilIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
+            className: "perfil-grid",
             style: {
-              display: "grid",
               gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.1fr)",
-              gap: 12,
               marginTop: 16
             },
             children: [
@@ -364,10 +363,9 @@ function PerfilIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
+            className: "perfil-grid",
             style: {
-              display: "grid",
               gridTemplateColumns: "minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr)",
-              gap: 12,
               marginTop: 12
             },
             children: [
@@ -439,10 +437,9 @@ function PerfilIsland() {
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
+            className: "perfil-grid",
             style: {
-              display: "grid",
               gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.6fr)",
-              gap: 12,
               marginTop: 12
             },
             children: [
@@ -514,12 +511,12 @@ function PerfilIsland() {
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: salvarPerfil, disabled: salvando, children: salvando ? "Salvando..." : "Salvar dados" }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-stack-buttons", style: { marginTop: 16 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: salvarPerfil, disabled: salvando, children: salvando ? "Salvando..." : "Salvar dados" }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid md:grid-cols-2 gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🔐 Dados de acesso" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:flex-row sm:items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: 1 }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { children: "E-mail de login" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -533,7 +530,7 @@ function PerfilIsland() {
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: "Será necessário confirmar o novo e-mail." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary", onClick: alterarEmail, disabled: salvando, children: "Atualizar e-mail" }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-stack-buttons", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-secondary w-full sm:w-auto", onClick: alterarEmail, disabled: salvando, children: "Atualizar e-mail" }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { style: { marginTop: 6, marginBottom: 4 }, children: "Alterar senha" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 0 }, children: [
@@ -561,11 +558,11 @@ function PerfilIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: alterarSenha, disabled: salvando, children: "Alterar senha" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-stack-buttons", style: { marginTop: 16 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: alterarSenha, disabled: salvando, children: "Alterar senha" }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { display: "flex", flexDirection: "column", minHeight: "100%" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "🏢 Empresa" }),
-          empresaAtual ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { marginBottom: 12, lineHeight: 1.5 }, children: [
+          empresaAtual ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "perfil-text-wrap", style: { marginBottom: 12, lineHeight: 1.5 }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Empresa:" }),
             " ",
             empresaAtual.nome || "-",
@@ -598,7 +595,7 @@ function PerfilIsland() {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: trocarEmpresa, disabled: salvando, children: "Trocar empresa" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-stack-buttons", style: { marginTop: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn btn-primary", onClick: trocarEmpresa, disabled: salvando, children: "Trocar empresa" }) })
         ] })
       ] })
     ] })

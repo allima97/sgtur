@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -162,7 +162,7 @@ function CommissionTemplatesIsland() {
   if (loadingPerm) return /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingUsuarioContext, {});
   if (!acessoAtivo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Acesso bloqueado ao módulo Parâmetros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "commission-templates-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue form-card mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome *" }),
@@ -467,7 +467,7 @@ function CommissionTemplatesIsland() {
         }
       )
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue form-card mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar template" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
@@ -479,43 +479,50 @@ function CommissionTemplatesIsland() {
         }
       )
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[820px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Modo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando templates..." }) }),
-        !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum template encontrado." }) }),
-        !carregando && filtrados.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.modo }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.ativo ? "Sim" : "Não" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions flex gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon",
-                title: "Editar",
-                onClick: () => iniciarEdicao(t),
-                children: "✏️"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon btn-danger",
-                title: "Excluir",
-                onClick: () => excluir(t.id),
-                children: "🗑️"
-              }
-            )
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "table-container overflow-x-auto",
+        style: { maxHeight: "65vh", overflowY: "auto" },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[820px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Modo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ativo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ações" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+            carregando && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando templates..." }) }),
+            !carregando && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum template encontrado." }) }),
+            !carregando && filtrados.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.nome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.modo }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: t.ativo ? "Sim" : "Não" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions flex gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon",
+                    title: "Editar",
+                    onClick: () => iniciarEdicao(t),
+                    children: "✏️"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon btn-danger",
+                    title: "Excluir",
+                    onClick: () => excluir(t.id),
+                    children: "🗑️"
+                  }
+                )
+              ] })
+            ] }, t.id))
           ] })
-        ] }, t.id))
-      ] })
-    ] }) })
+        ] })
+      }
+    )
   ] });
 }
 

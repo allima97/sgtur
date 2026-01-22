@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -663,47 +663,54 @@ function FechamentoComissaoIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Vendas do período" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.8rem", opacity: 0.8 }, children: "Somente vendas não canceladas com recibos vinculados." })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green min-w-[720px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Qtd. Recibos" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Bruto (R$)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas (R$)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Líquido (R$)" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        vendasPeriodo.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma venda encontrada no período." }) }),
-        vendasPeriodo.map((v) => {
-          let bruto = 0;
-          let taxas = 0;
-          for (const r of v.vendas_recibos || []) {
-            const vt = r.valor_total ?? 0;
-            const tx = r.valor_taxas ?? 0;
-            bruto += vt + tx;
-            taxas += tx;
-          }
-          const liquido = bruto - taxas;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_lancamento ? new Date(v.data_lancamento).toLocaleDateString(
-              "pt-BR"
-            ) : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.vendas_recibos?.length || 0 }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: bruto.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: taxas.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: liquido.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL"
-            }) })
-          ] }, v.id);
-        })
-      ] })
-    ] }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "table-container overflow-x-auto",
+        style: { maxHeight: "65vh", overflowY: "auto" },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-green min-w-[720px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Qtd. Recibos" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Bruto (R$)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Taxas (R$)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Líquido (R$)" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+            vendasPeriodo.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 5, children: "Nenhuma venda encontrada no período." }) }),
+            vendasPeriodo.map((v) => {
+              let bruto = 0;
+              let taxas = 0;
+              for (const r of v.vendas_recibos || []) {
+                const vt = r.valor_total ?? 0;
+                const tx = r.valor_taxas ?? 0;
+                bruto += vt + tx;
+                taxas += tx;
+              }
+              const liquido = bruto - taxas;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.data_lancamento ? new Date(v.data_lancamento).toLocaleDateString(
+                  "pt-BR"
+                ) : "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: v.vendas_recibos?.length || 0 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: bruto.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: taxas.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: liquido.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL"
+                }) })
+              ] }, v.id);
+            })
+          ] })
+        ] })
+      }
+    )
   ] });
 }
 

@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -194,7 +194,7 @@ function AdminPermissoesIsland() {
       ] }) }),
       erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container mb-3 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[780px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container mb-3 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[780px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nome" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "E-mail" }),
@@ -204,10 +204,10 @@ function AdminPermissoesIsland() {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
         usuariosFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum usuário encontrado." }) }),
         usuariosFiltrados.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.nome_completo }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.email || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: u.active ? "Ativo" : "Bloqueado" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "th-actions", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nome", children: u.nome_completo }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "E-mail", children: u.email || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Status", children: u.active ? "Ativo" : "Bloqueado" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ações", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -226,7 +226,7 @@ function AdminPermissoesIsland() {
                 children: u.active ? "🚫" : "✅"
               }
             )
-          ] })
+          ] }) })
         ] }, u.id))
       ] })
     ] }) }),
@@ -235,14 +235,14 @@ function AdminPermissoesIsland() {
         "Permissões de: ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: selecionado.nome_completo })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[500px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[500px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Módulo" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nível" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: MODULOS.map((modulo) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: modulo }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Módulo", children: modulo }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nível", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "select",
             {
               className: "form-select",
@@ -253,7 +253,7 @@ function AdminPermissoesIsland() {
           ) })
         ] }, modulo)) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mobile-stack-buttons", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {

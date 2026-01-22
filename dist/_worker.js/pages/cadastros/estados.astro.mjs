@@ -1,7 +1,7 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -157,11 +157,11 @@ function SubdivisoesIsland() {
   }
   if (!ativo) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "paises-page", children: "Voce nao possui acesso ao modulo de Cadastros." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "paises-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3 list-toolbar-sticky", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "form-row",
-        style: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" },
+        className: "form-row mobile-stack",
+        style: { gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { flex: "1 1 320px" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Buscar subdivisão" }),
@@ -179,7 +179,7 @@ function SubdivisoesIsland() {
             "button",
             {
               type: "button",
-              className: "btn btn-primary",
+              className: "btn btn-primary w-full sm:w-auto",
               onClick: abrirFormulario,
               disabled: mostrarFormulario,
               children: "Adicionar Estado/Província"
@@ -188,7 +188,7 @@ function SubdivisoesIsland() {
         ]
       }
     ) }),
-    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
+    mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-blue form-card mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: salvar, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Nome da subdivisão *" }),
@@ -245,47 +245,54 @@ function SubdivisoesIsland() {
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando || permissao === "view", children: salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar Estado/Província" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mobile-stack-buttons", style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "btn btn-primary", disabled: salvando || permissao === "view", children: salvando ? "Salvando..." : "Salvar estado/província" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: fecharFormulario, disabled: salvando, children: "Cancelar" })
       ] })
     ] }) }),
-    !carregouTodos && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Subdivisoes Cadastradas (10). Digite na busca para consultar todas." }),
-    erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue min-w-[720px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Codigo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando subdivisoes..." }) }),
-        !loading && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhuma subdivisao encontrada." }) }),
-        !loading && filtrados.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.codigo_admin1 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.pais_nome || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.tipo || "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", children: permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(s), children: "✏️" }),
-            permissao === "admin" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn-icon btn-danger",
-                title: "Excluir",
-                onClick: () => excluir(s.id),
-                disabled: excluindoId === s.id,
-                children: excluindoId === s.id ? "..." : "🗑️"
-              }
-            )
-          ] }) })
-        ] }, s.id))
-      ] })
-    ] }) })
+    !mostrarFormulario && !carregouTodos && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Ultimas Subdivisoes Cadastradas (10). Digite na busca para consultar todas." }),
+    !mostrarFormulario && erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
+    !mostrarFormulario && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "table-container overflow-x-auto",
+        style: { maxHeight: "65vh", overflowY: "auto" },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-blue table-mobile-cards min-w-[720px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Subdivisao" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Codigo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Pais" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Tipo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Criado em" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Acoes" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+            loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Carregando subdivisoes..." }) }),
+            !loading && filtrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhuma subdivisao encontrada." }) }),
+            !loading && filtrados.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Subdivisao", children: s.nome }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Codigo", children: s.codigo_admin1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Pais", children: s.pais_nome || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Tipo", children: s.tipo || "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Criado em", children: s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Acoes", children: permissao !== "view" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "action-buttons", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-icon", title: "Editar", onClick: () => iniciarEdicao(s), children: "✏️" }),
+                permissao === "admin" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn-icon btn-danger",
+                    title: "Excluir",
+                    onClick: () => excluir(s.id),
+                    disabled: excluindoId === s.id,
+                    children: excluindoId === s.id ? "..." : "🗑️"
+                  }
+                )
+              ] }) })
+            ] }, s.id))
+          ] })
+        ] })
+      }
+    )
   ] });
 }
 

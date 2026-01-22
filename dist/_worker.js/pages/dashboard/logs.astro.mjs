@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -154,34 +154,41 @@ function LogsIsland() {
         logsFiltrados.length,
         ")"
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[820px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[150px]", children: "Data" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Usuário" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ação" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Módulo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "IP" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ver" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          logsFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum log encontrado." }) }),
-          logsFiltrados.map((l) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: new Date(l.created_at).toLocaleString("pt-BR") }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.users?.nome_completo || "Desconhecido" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.acao }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.modulo || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.ip || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                className: "btn btn-light",
-                onClick: () => setLogSelecionado(l),
-                children: "Ver"
-              }
-            ) })
-          ] }, l.id))
-        ] })
-      ] }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "table-container overflow-x-auto",
+          style: { maxHeight: "65vh", overflowY: "auto" },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red table-mobile-cards min-w-[820px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[150px]", children: "Data" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Usuário" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Ação" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Módulo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "IP" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "th-actions", children: "Ver" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+              logsFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, children: "Nenhum log encontrado." }) }),
+              logsFiltrados.map((l) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Data", children: new Date(l.created_at).toLocaleString("pt-BR") }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Usuário", children: l.users?.nome_completo || "Desconhecido" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Ação", children: l.acao }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Módulo", children: l.modulo || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "IP", children: l.ip || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "th-actions", "data-label": "Ver", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "action-buttons", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    className: "btn btn-light",
+                    onClick: () => setLogSelecionado(l),
+                    children: "Ver"
+                  }
+                ) }) })
+              ] }, l.id))
+            ] })
+          ] })
+        }
+      )
     ] }),
     logSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 flex justify-center items-center z-[100]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95%] max-w-[700px] max-h-[90vh] overflow-y-auto bg-slate-800 p-5 rounded-xl text-slate-100", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between mb-2", children: [

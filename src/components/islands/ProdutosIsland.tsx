@@ -869,34 +869,36 @@ export default function ProdutosIsland() {
 
   return (
     <div className="destinos-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar produto</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
-            />
-          </div>
-          {permissao !== "view" && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormularioProduto}
-                disabled={mostrarFormulario}
-              >
-                Adicionar produto
-              </button>
+      {!mostrarFormulario && (
+        <div className="card-base mb-3 list-toolbar-sticky">
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div className="form-group" style={{ flex: "1 1 320px" }}>
+              <label className="form-label">Buscar produto</label>
+              <input
+                className="form-input"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
+              />
             </div>
-          )}
+            {permissao !== "view" && (
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormularioProduto}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar produto
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {mostrarFormulario && formLayout === "selection" && (
         <div className="card-base card-blue mb-3">
@@ -1237,85 +1239,91 @@ export default function ProdutosIsland() {
           </form>
         </div>
 
-      )}      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {!carregouTodos && !erro && (
-        <div className="card-base card-config mb-3">
-          Ultimos Produtos Cadastrados (10). Digite na busca para consultar todos.
-        </div>
       )}
 
-      {/* Tabela */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Produto</th>
-              <th>Destino</th>
-              <th>Cidade</th>
-              <th>Nivel de preco</th>
-              <th>Ativo</th>
-              <th>Criado em</th>
-              <th className="th-actions">Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={8}>Carregando produtos...</td>
-              </tr>
-            )}
+      {!mostrarFormulario && (
+        <>
+          {erro && (
+            <div className="card-base card-config mb-3">
+              <strong>{erro}</strong>
+            </div>
+          )}
+          {!carregouTodos && !erro && (
+            <div className="card-base card-config mb-3">
+              Ultimos Produtos Cadastrados (10). Digite na busca para consultar todos.
+            </div>
+          )}
 
-            {!loading && produtosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={8}>Nenhum produto encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              produtosFiltrados.map((p) => (
-                <tr key={p.id}>
-                  <td data-label="Tipo">{p.tipo_nome || "-"}</td>
-                  <td data-label="Produto">{p.nome}</td>
-                  <td data-label="Destino">{p.destino || "-"}</td>
-                  <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
-                  <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
-                  <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
-                  <td data-label="Criado em">
-                    {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
-                  </td>
-                  <td className="th-actions" data-label="Acoes">
-                    <div className="action-buttons">
-                      {permissao !== "view" && (
-                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
-                          ✏️
-                        </button>
-                      )}
-
-                      {(permissao === "admin" || permissao === "delete") && (
-                        <button
-                          className="btn-icon btn-danger"
-                          title="Excluir"
-                          onClick={() => excluir(p.id)}
-                          disabled={excluindoId === p.id}
-                        >
-                          {excluindoId === p.id ? "..." : "🗑️"}
-                        </button>
-                      )}
-                    </div>
-                  </td>
+          {/* Tabela */}
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          >
+            <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Produto</th>
+                  <th>Destino</th>
+                  <th>Cidade</th>
+                  <th>Nivel de preco</th>
+                  <th>Ativo</th>
+                  <th>Criado em</th>
+                  <th className="th-actions">Acoes</th>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={8}>Carregando produtos...</td>
+                  </tr>
+                )}
+
+                {!loading && produtosFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={8}>Nenhum produto encontrado.</td>
+                  </tr>
+                )}
+
+                {!loading &&
+                  produtosFiltrados.map((p) => (
+                    <tr key={p.id}>
+                      <td data-label="Tipo">{p.tipo_nome || "-"}</td>
+                      <td data-label="Produto">{p.nome}</td>
+                      <td data-label="Destino">{p.destino || "-"}</td>
+                      <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
+                      <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
+                      <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
+                      <td data-label="Criado em">
+                        {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+                      </td>
+                      <td className="th-actions" data-label="Acoes">
+                        <div className="action-buttons">
+                          {permissao !== "view" && (
+                            <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
+                              ✏️
+                            </button>
+                          )}
+
+                          {(permissao === "admin" || permissao === "delete") && (
+                            <button
+                              className="btn-icon btn-danger"
+                              title="Excluir"
+                              onClick={() => excluir(p.id)}
+                              disabled={excluindoId === p.id}
+                            >
+                              {excluindoId === p.id ? "..." : "🗑️"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

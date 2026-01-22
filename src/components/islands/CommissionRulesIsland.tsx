@@ -288,32 +288,34 @@ export default function CommissionRulesIsland() {
 
   return (
       <div className="card-base card-blue form-card">
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div>
-            <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>
+        {!mostrarFormulario && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div>
+              <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>
+            </div>
+            {podeEditar && (
+              <button
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
+                onClick={abrirFormularioRegra}
+                disabled={mostrarFormulario}
+              >
+                Adicionar regra
+              </button>
+            )}
           </div>
-          {podeEditar && (
-            <button
-              type="button"
-              className="btn btn-primary w-full sm:w-auto"
-              onClick={abrirFormularioRegra}
-              disabled={mostrarFormulario}
-            >
-              Adicionar regra
-            </button>
-          )}
-        </div>
+        )}
 
-      {erro && (
-        <div className="card-base card-config mb-2">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {mostrarFormulario && erroValidacao && (
-        <div className="card-base card-config mb-2">
-          <strong>{erroValidacao}</strong>
-        </div>
-      )}
+        {!mostrarFormulario && erro && (
+          <div className="card-base card-config mb-2">
+            <strong>{erro}</strong>
+          </div>
+        )}
+        {mostrarFormulario && erroValidacao && (
+          <div className="card-base card-config mb-2">
+            <strong>{erroValidacao}</strong>
+          </div>
+        )}
 
       {mostrarFormulario && (
         <form onSubmit={salvar}>
@@ -498,26 +500,27 @@ export default function CommissionRulesIsland() {
           </form>
       )}
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-          <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Tipo</th>
-                <th>Ativo</th>
-                <th>Faixas</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
+      {!mostrarFormulario && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+            <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
+              <thead>
                 <tr>
-                  <td colSpan={5}>Carregando...</td>
+                  <th>Nome</th>
+                  <th>Tipo</th>
+                  <th>Ativo</th>
+                  <th>Faixas</th>
+                  <th>Ações</th>
                 </tr>
-              )}
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={5}>Carregando...</td>
+                  </tr>
+                )}
               {!loading && rules.length === 0 && (
                 <tr>
                   <td colSpan={5}>Nenhuma regra cadastrada.</td>
@@ -555,9 +558,10 @@ export default function CommissionRulesIsland() {
                     </td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
         </div>
+      )}
     </div>
   );
 }

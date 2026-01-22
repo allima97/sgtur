@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { s as supabase, j as jsxRuntimeExports } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DyslCs8o.mjs';
-import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_C-2SP29-.mjs';
 import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
 function calcularPctEscalonavel(regra, pctMeta) {
@@ -98,12 +98,7 @@ function getPeriodosMeses(inicio, fim) {
 }
 async function carregarProdutosComissionamento() {
   const baseCols = "id, nome, tipo_produto, cidade_id";
-  const extraCols = ", regra_comissionamento, soma_na_meta, usa_meta_produto, meta_produto_valor, comissao_produto_meta_pct, descontar_meta_geral, exibe_kpi_comissao";
-  const { data, error } = await supabase.from("produtos").select(`${baseCols}${extraCols}`).order("nome", { ascending: true });
-  if (error && error.code === "42703") {
-    return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
-  }
-  return { data, error };
+  return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
 }
 async function carregarTiposProdutosComissionamento() {
   const baseCols = "id, nome, tipo";
@@ -144,6 +139,9 @@ function RelatorioVendasIsland() {
   const [userCtx, setUserCtx] = reactExports.useState(null);
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
   const [exportFlags, setExportFlags] = reactExports.useState({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = reactExports.useState(false);
+  const [showExport, setShowExport] = reactExports.useState(false);
+  const [exportTipo, setExportTipo] = reactExports.useState("csv");
   const [parametrosComissao, setParametrosComissao] = reactExports.useState(null);
   const [regrasCommission, setRegrasCommission] = reactExports.useState(
     {}
@@ -156,6 +154,15 @@ function RelatorioVendasIsland() {
   const [, setCommissionLoading] = reactExports.useState(false);
   const [, setCommissionErro] = reactExports.useState(null);
   const metaProdEnabled = undefined                                            !== "false";
+  reactExports.useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
   reactExports.useEffect(() => {
     async function carregarUserCtx() {
       try {
@@ -885,6 +892,18 @@ function RelatorioVendasIsland() {
       orientation: "landscape"
     });
   }
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+  const exportDisabled = exportTipo === "excel" && !exportFlags.excel || exportTipo === "pdf" && !exportFlags.pdf;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-page", children: [
     loadingUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Carregando contexto do usuário..." }),
     userCtx && userCtx.papel !== "ADMIN" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config mb-3", style: { color: "#334155" }, children: [
@@ -892,298 +911,239 @@ function RelatorioVendasIsland() {
       userCtx.papel === "GESTOR" ? "sua equipe" : "suas vendas",
       "."
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataInicio,
-              onChange: (e) => setDataInicio(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataFim,
-              onChange: (e) => setDataFim(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-select",
-              value: statusFiltro,
-              onChange: (e) => setStatusFiltro(e.target.value),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor mínimo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              value: valorMin,
-              onChange: (e) => setValorMin(e.target.value),
-              placeholder: "0,00"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor máximo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              value: valorMax,
-              onChange: (e) => setValorMax(e.target.value),
-              placeholder: "0,00"
-            }
-          )
-        ] })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple form-card mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowFilters(true), children: "Filtros" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowExport(true), children: "Exportar" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              value: clienteBusca,
-              onChange: (e) => {
-                setClienteBusca(e.target.value);
-                setClienteSelecionado(null);
-              },
-              placeholder: "Nome ou CPF..."
-            }
-          ),
-          clienteBusca && !clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 4, maxHeight: 180, overflowY: "auto" }, children: [
-            clientesFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.85rem" }, children: "Nenhum cliente encontrado." }),
-            clientesFiltrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden sm:block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
               {
-                style: { padding: "4px 6px", cursor: "pointer" },
-                onClick: () => {
-                  setClienteSelecionado(c);
-                  setClienteBusca(c.nome);
-                },
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: c.nome }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.8rem", opacity: 0.7 }, children: c.cpf || "Sem CPF" })
-                ]
-              },
-              c.id
-            ))
-          ] }),
-          clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.8rem", marginTop: 4 }, children: [
-            "Selecionado: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: clienteSelecionado.nome })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group relative", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              placeholder: "Digite a cidade",
-              value: cidadeNomeInput,
-              onChange: (e) => {
-                const value = e.target.value;
-                setCidadeNomeInput(value);
-                setCidadeFiltro("");
-                if (value.trim().length > 0) {
-                  setMostrarSugestoesCidade(true);
-                }
-              },
-              onFocus: () => {
-                if (cidadeNomeInput.trim().length >= 2) {
-                  setMostrarSugestoesCidade(true);
-                }
-              },
-              onBlur: () => {
-                setTimeout(() => setMostrarSugestoesCidade(false), 150);
-                if (!cidadeNomeInput.trim()) {
-                  setCidadeFiltro("");
-                  return;
-                }
-                const match = cidades.find(
-                  (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                );
-                if (match) {
-                  setCidadeFiltro(match.id);
-                  setCidadeNomeInput(match.nome);
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
                 }
               }
-            }
-          ),
-          mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "card-base card-config",
-              style: {
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                maxHeight: 180,
-                overflowY: "auto",
-                zIndex: 20,
-                padding: "4px 0"
-              },
-              children: [
-                buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
-                !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
-                !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
-                !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "btn btn-ghost w-full text-left",
-                    style: { padding: "6px 12px" },
-                    onMouseDown: (e) => {
-                      e.preventDefault();
-                      setCidadeFiltro(cidade.id);
-                      setCidadeNomeInput(cidade.nome);
-                      setMostrarSugestoesCidade(false);
-                    },
-                    children: cidade.nome
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: statusFiltro,
+                onChange: (e) => setStatusFiltro(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor mínimo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: valorMin,
+                onChange: (e) => setValorMin(e.target.value),
+                placeholder: "0,00"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor máximo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: valorMax,
+                onChange: (e) => setValorMax(e.target.value),
+                placeholder: "0,00"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", style: { marginTop: 8 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: clienteBusca,
+                onChange: (e) => {
+                  setClienteBusca(e.target.value);
+                  setClienteSelecionado(null);
+                },
+                placeholder: "Nome ou CPF..."
+              }
+            ),
+            clienteBusca && !clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base", style: { marginTop: 4, maxHeight: 180, overflowY: "auto" }, children: [
+              clientesFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.85rem" }, children: "Nenhum cliente encontrado." }),
+              clientesFiltrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  style: { padding: "4px 6px", cursor: "pointer" },
+                  onClick: () => {
+                    setClienteSelecionado(c);
+                    setClienteBusca(c.nome);
                   },
-                  cidade.id
-                ))
-              ]
-            }
-          )
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: c.nome }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.8rem", opacity: 0.7 }, children: c.cpf || "Sem CPF" })
+                  ]
+                },
+                c.id
+              ))
+            ] }),
+            clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.8rem", marginTop: 4 }, children: [
+              "Selecionado: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: clienteSelecionado.nome })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group relative", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Digite a cidade",
+                value: cidadeNomeInput,
+                onChange: (e) => {
+                  const value = e.target.value;
+                  setCidadeNomeInput(value);
+                  setCidadeFiltro("");
+                  if (value.trim().length > 0) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                },
+                onFocus: () => {
+                  if (cidadeNomeInput.trim().length >= 2) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                },
+                onBlur: () => {
+                  setTimeout(() => setMostrarSugestoesCidade(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidades.find(
+                    (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }
+              }
+            ),
+            mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "card-base card-config",
+                style: {
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 180,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0"
+                },
+                children: [
+                  buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                  !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn btn-ghost w-full text-left",
+                      style: { padding: "6px 12px" },
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        setCidadeFiltro(cidade.id);
+                        setCidadeNomeInput(cidade.nome);
+                        setMostrarSugestoesCidade(false);
+                      },
+                      children: cidade.nome
+                    },
+                    cidade.id
+                  ))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: tipoSelecionadoId,
+                onChange: (e) => setTipoSelecionadoId(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
+                  tiposProdutos.map((tipo) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: tipo.id, children: tipo.nome || tipo.tipo || `(ID: ${tipo.id})` }, tipo.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: destinoBusca,
+                onChange: (e) => setDestinoBusca(e.target.value),
+                placeholder: "Nome do produto..."
+              }
+            )
+          ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo Produto" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-select",
-              value: tipoSelecionadoId,
-              onChange: (e) => setTipoSelecionadoId(e.target.value),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
-                tiposProdutos.map((tipo) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: tipo.id, children: tipo.nome || tipo.tipo || `(ID: ${tipo.id})` }, tipo.id))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "form-input",
-              value: destinoBusca,
-              onChange: (e) => setDestinoBusca(e.target.value),
-              placeholder: "Nome do produto..."
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("hoje"),
-            children: "Hoje"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("7"),
-            children: "Últimos 7 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("30"),
-            children: "Últimos 30 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_atual"),
-            children: "Este mês"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_anterior"),
-            children: "Mês anterior"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("limpar"),
-            children: "Limpar datas"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-primary",
-            onClick: carregarVendas,
-            children: "Aplicar filtros"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "btn btn-purple",
-              onClick: exportarCSV,
-              children: "Exportar CSV"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              className: "btn btn-primary",
-              onClick: exportarExcel,
-              disabled: !exportFlags.excel,
-              title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
-              children: "Exportar Excel"
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("hoje"),
+              children: "Hoje"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -1191,15 +1151,462 @@ function RelatorioVendasIsland() {
             {
               type: "button",
               className: "btn btn-light",
-              onClick: exportarPDF,
-              disabled: !exportFlags.pdf,
-              title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
-              children: "Exportar PDF"
+              onClick: () => aplicarPeriodoPreset("7"),
+              children: "Últimos 7 dias"
             }
-          )
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("30"),
+              children: "Últimos 30 dias"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_atual"),
+              children: "Este mês"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_anterior"),
+              children: "Mês anterior"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("limpar"),
+              children: "Limpar datas"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              onClick: carregarVendas,
+              children: "Aplicar filtros"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-purple",
+                onClick: exportarCSV,
+                children: "Exportar CSV"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-primary",
+                onClick: exportarExcel,
+                disabled: !exportFlags.excel,
+                title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+                children: "Exportar Excel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: exportarPDF,
+                disabled: !exportFlags.pdf,
+                title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+                children: "Exportar PDF"
+              }
+            )
+          ] })
         ] })
       ] })
     ] }),
+    showFilters && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowFilters(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Filtros" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowFilters(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: statusFiltro,
+                onChange: (e) => setStatusFiltro(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor mínimo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: valorMin,
+                onChange: (e) => setValorMin(e.target.value),
+                placeholder: "0,00"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Valor máximo" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: valorMax,
+                onChange: (e) => setValorMax(e.target.value),
+                placeholder: "0,00"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cliente" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: clienteBusca,
+                onChange: (e) => {
+                  setClienteBusca(e.target.value);
+                  setClienteSelecionado(null);
+                },
+                placeholder: "Nome ou CPF..."
+              }
+            ),
+            clienteBusca && !clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "card-base",
+                style: { marginTop: 4, maxHeight: 180, overflowY: "auto" },
+                children: [
+                  clientesFiltrados.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.85rem" }, children: "Nenhum cliente encontrado." }),
+                  clientesFiltrados.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      style: { padding: "4px 6px", cursor: "pointer" },
+                      onClick: () => {
+                        setClienteSelecionado(c);
+                        setClienteBusca(c.nome);
+                      },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontWeight: 600 }, children: c.nome }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "0.8rem", opacity: 0.7 }, children: c.cpf || "Sem CPF" })
+                      ]
+                    },
+                    c.id
+                  ))
+                ]
+              }
+            ),
+            clienteSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "0.8rem", marginTop: 4 }, children: [
+              "Selecionado: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: clienteSelecionado.nome })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { position: "relative" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Cidade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                placeholder: "Digite a cidade",
+                value: cidadeNomeInput,
+                onChange: (e) => {
+                  const value = e.target.value;
+                  setCidadeNomeInput(value);
+                  setCidadeFiltro("");
+                  if (value.trim().length > 0) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                },
+                onFocus: () => {
+                  if (cidadeNomeInput.trim().length >= 2) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                },
+                onBlur: () => {
+                  setTimeout(() => setMostrarSugestoesCidade(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidades.find(
+                    (cidade) => normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }
+              }
+            ),
+            mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "card-base card-config",
+                style: {
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 180,
+                  overflowY: "auto",
+                  zIndex: 20,
+                  padding: "4px 0"
+                },
+                children: [
+                  buscandoCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#64748b" }, children: "Buscando cidades..." }),
+                  !buscandoCidade && erroCidade && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#dc2626" }, children: erroCidade }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "6px 12px", color: "#94a3b8" }, children: "Nenhuma cidade encontrada." }),
+                  !buscandoCidade && !erroCidade && cidadeSugestoes.map((cidade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn btn-ghost w-full text-left",
+                      style: { padding: "6px 12px" },
+                      onMouseDown: (e) => {
+                        e.preventDefault();
+                        setCidadeFiltro(cidade.id);
+                        setCidadeNomeInput(cidade.nome);
+                        setMostrarSugestoesCidade(false);
+                      },
+                      children: cidade.nome
+                    },
+                    cidade.id
+                  ))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Tipo Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: tipoSelecionadoId,
+                onChange: (e) => setTipoSelecionadoId(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Todos os tipos" }),
+                  tiposProdutos.map((tipo) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: tipo.id, children: tipo.nome || tipo.tipo || `(ID: ${tipo.id})` }, tipo.id))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Produto" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "form-input",
+                value: destinoBusca,
+                onChange: (e) => setDestinoBusca(e.target.value),
+                placeholder: "Nome do produto..."
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("hoje"),
+                children: "Hoje"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("7"),
+                children: "Últimos 7 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("30"),
+                children: "Últimos 30 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_atual"),
+                children: "Este mês"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_anterior"),
+                children: "Mês anterior"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("limpar"),
+                children: "Limpar datas"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                carregarVendas();
+                setShowFilters(false);
+              },
+              children: "Aplicar filtros"
+            }
+          )
+        ]
+      }
+    ) }),
+    showExport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowExport(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Exportar" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowExport(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Formato" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("csv"),
+                  children: "CSV"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("excel"),
+                  disabled: !exportFlags.excel,
+                  title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+                  children: "Excel"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("pdf"),
+                  disabled: !exportFlags.pdf,
+                  title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+                  children: "PDF"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                exportarSelecionado();
+                setShowExport(false);
+              },
+              disabled: exportDisabled,
+              children: "Exportar"
+            }
+          )
+        ]
+      }
+    ) }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: erro }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "form-group", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontSize: "0.9rem" }, children: [
@@ -1223,7 +1630,7 @@ function RelatorioVendasIsland() {
         }) })
       ] }) })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[1100px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple table-mobile-cards min-w-[1100px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Data lançamento" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Nº Recibo" }),
@@ -1244,18 +1651,18 @@ function RelatorioVendasIsland() {
         !loading && recibosFiltrados.map((r) => {
           const comissao = comissaoPorRecibo.get(r.id) ?? 0;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.data_lancamento ? new Date(r.data_lancamento).toLocaleDateString("pt-BR") : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.numero_recibo || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.cliente_nome }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.cliente_cpf }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.produto_tipo }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.cidade_nome || "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.produto_nome }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.data_embarque ? new Date(r.data_embarque).toLocaleDateString("pt-BR") : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.valor_total != null ? formatCurrency(r.valor_total) : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.valor_taxas != null ? formatCurrency(r.valor_taxas) : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.valor_total != null ? formatCurrency(r.valor_total - (r.valor_taxas ?? 0)) : "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: formatCurrency(comissao) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Data lançamento", children: r.data_lancamento ? new Date(r.data_lancamento).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Nº Recibo", children: r.numero_recibo || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cliente", children: r.cliente_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "CPF", children: r.cliente_cpf }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Tipo produto", children: r.produto_tipo }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Cidade", children: r.cidade_nome || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Produto", children: r.produto_nome }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Data embarque", children: r.data_embarque ? new Date(r.data_embarque).toLocaleDateString("pt-BR") : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Valor total", children: r.valor_total != null ? formatCurrency(r.valor_total) : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Taxas", children: r.valor_taxas != null ? formatCurrency(r.valor_taxas) : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Valor líquido", children: r.valor_total != null ? formatCurrency(r.valor_total - (r.valor_taxas ?? 0)) : "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Comissão", children: formatCurrency(comissao) })
           ] }, r.id);
         })
       ] }),

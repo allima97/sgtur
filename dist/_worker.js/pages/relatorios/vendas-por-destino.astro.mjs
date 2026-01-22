@@ -1,12 +1,12 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
-import { $ as $$HeaderPage } from '../../chunks/HeaderPage_pW02Hlay.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
+import { $ as $$HeaderPage } from '../../chunks/HeaderPage_Ck_yWTiO.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 import { u as utils, w as writeFileSync } from '../../chunks/xlsx_DyslCs8o.mjs';
-import { e as exportTableToPDF } from '../../chunks/pdf_DMFev1hn.mjs';
+import { e as exportTableToPDF } from '../../chunks/pdf_C-2SP29-.mjs';
 import { f as formatarDataParaExibicao } from '../../chunks/formatDate_DIYZa49I.mjs';
 
 function hojeISO() {
@@ -47,8 +47,20 @@ function RelatorioAgrupadoDestinoIsland() {
   const [userCtx, setUserCtx] = reactExports.useState(null);
   const [loadingUser, setLoadingUser] = reactExports.useState(true);
   const [exportFlags, setExportFlags] = reactExports.useState({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = reactExports.useState(false);
+  const [showExport, setShowExport] = reactExports.useState(false);
+  const [exportTipo, setExportTipo] = reactExports.useState("csv");
   const [ordenacao, setOrdenacao] = reactExports.useState("total");
   const [ordemDesc, setOrdemDesc] = reactExports.useState(true);
+  reactExports.useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
   reactExports.useEffect(() => {
     async function carregarBase() {
       try {
@@ -153,6 +165,11 @@ function RelatorioAgrupadoDestinoIsland() {
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
   function aplicarPeriodoPreset(tipo) {
     const hoje = /* @__PURE__ */ new Date();
+    if (tipo === "hoje") {
+      setDataInicio(hojeISO());
+      setDataFim(hojeISO());
+      return;
+    }
     if (tipo === "7") {
       const inicio = addDays(hoje, -7);
       setDataInicio(formatISO(inicio));
@@ -179,6 +196,10 @@ function RelatorioAgrupadoDestinoIsland() {
       setDataInicio(formatISO(inicio));
       setDataFim(formatISO(fim));
       return;
+    }
+    if (tipo === "limpar") {
+      setDataInicio("");
+      setDataFim("");
     }
   }
   async function carregar() {
@@ -319,100 +340,87 @@ function RelatorioAgrupadoDestinoIsland() {
       orientation: "landscape"
     });
   }
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+  const exportDisabled = exportTipo === "excel" && !exportFlags.excel || exportTipo === "pdf" && !exportFlags.pdf;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relatorio-vendas-destino-page", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple mb-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataInicio,
-              onChange: (e) => setDataInicio(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "date",
-              className: "form-input",
-              value: dataFim,
-              onChange: (e) => setDataFim(e.target.value)
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              className: "form-select",
-              value: statusFiltro,
-              onChange: (e) => setStatusFiltro(e.target.value),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
-              ]
-            }
-          )
-        ] })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-purple form-card mb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-2 sm:hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowFilters(true), children: "Filtros" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-light", onClick: () => setShowExport(true), children: "Exportar" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("7"),
-            children: "Últimos 7 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("30"),
-            children: "Últimos 30 dias"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_atual"),
-            children: "Este mês"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "btn btn-light",
-            onClick: () => aplicarPeriodoPreset("mes_anterior"),
-            children: "Mês anterior"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden sm:block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: statusFiltro,
+                onChange: (e) => setStatusFiltro(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
+                ]
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              className: "btn btn-primary",
-              onClick: exportarExcel,
-              disabled: !exportFlags.excel,
-              title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
-              children: "Exportar Excel"
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("hoje"),
+              children: "Hoje"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -420,15 +428,276 @@ function RelatorioAgrupadoDestinoIsland() {
             {
               type: "button",
               className: "btn btn-light",
-              onClick: exportarPDF,
-              disabled: !exportFlags.pdf,
-              title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
-              children: "Exportar PDF"
+              onClick: () => aplicarPeriodoPreset("7"),
+              children: "Últimos 7 dias"
             }
-          )
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("30"),
+              children: "Últimos 30 dias"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_atual"),
+              children: "Este mês"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("mes_anterior"),
+              children: "Mês anterior"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-light",
+              onClick: () => aplicarPeriodoPreset("limpar"),
+              children: "Limpar datas"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-primary", onClick: carregar, children: "Aplicar filtros" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn btn-purple", onClick: exportarCSV, children: "Exportar CSV" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-primary",
+                onClick: exportarExcel,
+                disabled: !exportFlags.excel,
+                title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+                children: "Exportar Excel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: exportarPDF,
+                disabled: !exportFlags.pdf,
+                title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+                children: "Exportar PDF"
+              }
+            )
+          ] })
         ] })
       ] })
     ] }),
+    showFilters && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowFilters(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Filtros" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowFilters(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data início" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataInicio,
+                onChange: (e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Data fim" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                className: "form-input",
+                value: dataFim,
+                min: dataInicio || void 0,
+                onChange: (e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "form-select",
+                value: statusFiltro,
+                onChange: (e) => setStatusFiltro(e.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "todos", children: "Todos" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aberto", children: "Aberto" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "confirmado", children: "Confirmado" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cancelado", children: "Cancelado" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("hoje"),
+                children: "Hoje"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("7"),
+                children: "Últimos 7 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("30"),
+                children: "Últimos 30 dias"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_atual"),
+                children: "Este mês"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("mes_anterior"),
+                children: "Mês anterior"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "btn btn-light",
+                onClick: () => aplicarPeriodoPreset("limpar"),
+                children: "Limpar datas"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                carregar();
+                setShowFilters(false);
+              },
+              children: "Aplicar filtros"
+            }
+          )
+        ]
+      }
+    ) }),
+    showExport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mobile-drawer-backdrop", onClick: () => setShowExport(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mobile-drawer-panel",
+        role: "dialog",
+        "aria-modal": "true",
+        onClick: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Exportar" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "btn-ghost", onClick: () => setShowExport(false), children: "✕" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", style: { marginTop: 12 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Formato" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("csv"),
+                  children: "CSV"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("excel"),
+                  disabled: !exportFlags.excel,
+                  title: !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : "",
+                  children: "Excel"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: `btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`,
+                  onClick: () => setExportTipo("pdf"),
+                  disabled: !exportFlags.pdf,
+                  title: !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : "",
+                  children: "PDF"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "btn btn-primary",
+              style: { marginTop: 12, width: "100%" },
+              onClick: () => {
+                exportarSelecionado();
+                setShowExport(false);
+              },
+              disabled: exportDisabled,
+              children: "Exportar"
+            }
+          )
+        ]
+      }
+    ) }),
     loadingUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: "Carregando contexto do usuário..." }),
     userCtx && userCtx.papel !== "ADMIN" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-config mb-3", style: { color: "#334155" }, children: [
       "Relatório limitado a ",
@@ -458,7 +727,7 @@ function RelatorioAgrupadoDestinoIsland() {
         }) })
       ] }) })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple min-w-[620px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-purple table-mobile-cards min-w-[620px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Destino" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -499,13 +768,13 @@ function RelatorioAgrupadoDestinoIsland() {
         loading && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Carregando..." }) }),
         !loading && linhas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, children: "Nenhum destino encontrado com os filtros atuais." }) }),
         !loading && linhas.map((l) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.destino_nome }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.quantidade }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.total.toLocaleString("pt-BR", {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Destino", children: l.destino_nome }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Qtde", children: l.quantidade }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Faturamento", children: l.total.toLocaleString("pt-BR", {
             style: "currency",
             currency: "BRL"
           }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: l.ticketMedio.toLocaleString("pt-BR", {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": "Ticket médio", children: l.ticketMedio.toLocaleString("pt-BR", {
             style: "currency",
             currency: "BRL"
           }) })

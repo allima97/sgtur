@@ -1115,42 +1115,46 @@ export default function CircuitosIsland() {
 
   return (
     <div className="circuitos-page">
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-      {sucesso && (
-        <div className="card-base card-green mb-3">
-          <strong>{sucesso}</strong>
-        </div>
-      )}
-
-      <div className="card-base card-blue mb-3 list-toolbar-sticky">
-        <div className="form-row mobile-stack">
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Buscar circuito</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Busque por nome, codigo, operador ou cidade"
-            />
-          </div>
-          {permissao !== "view" && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormulario}
-                disabled={mostrarFormulario}
-              >
-                Novo circuito
-              </button>
+      {!mostrarFormulario && (
+        <>
+          {erro && (
+            <div className="card-base card-config mb-3">
+              <strong>{erro}</strong>
             </div>
           )}
-        </div>
-      </div>
+          {sucesso && (
+            <div className="card-base card-green mb-3">
+              <strong>{sucesso}</strong>
+            </div>
+          )}
+
+          <div className="card-base card-blue mb-3 list-toolbar-sticky">
+            <div className="form-row mobile-stack">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Buscar circuito</label>
+                <input
+                  className="form-input"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Busque por nome, codigo, operador ou cidade"
+                />
+              </div>
+              {permissao !== "view" && (
+                <div className="form-group" style={{ alignItems: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full sm:w-auto"
+                    onClick={abrirFormulario}
+                    disabled={mostrarFormulario}
+                  >
+                    Novo circuito
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {mostrarFormulario && (
         <div className="card-base card-blue mb-3">
@@ -1618,72 +1622,74 @@ export default function CircuitosIsland() {
         </div>
       )}
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[840px]">
-          <thead>
-            <tr>
-              <th>Circuito</th>
-              <th>Codigo</th>
-              <th>Operador</th>
-              <th>Status</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+      {!mostrarFormulario && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-header-blue table-mobile-cards min-w-[840px]">
+            <thead>
               <tr>
-                <td colSpan={5}>Carregando...</td>
+                <th>Circuito</th>
+                <th>Codigo</th>
+                <th>Operador</th>
+                <th>Status</th>
+                <th className="th-actions">Ações</th>
               </tr>
-            )}
-            {!loading && circuitosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={5}>Nenhum circuito encontrado.</td>
-              </tr>
-            )}
-            {!loading &&
-              circuitosFiltrados.map((circuito) => (
-                <tr key={circuito.id}>
-                  <td data-label="Circuito">{circuito.nome}</td>
-                  <td data-label="Codigo">{circuito.codigo || "-"}</td>
-                  <td data-label="Operador">{circuito.operador || "-"}</td>
-                  <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => iniciarEdicao(circuito.id)}
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => abrirPreview(circuito.id)}
-                        title="Visualizar"
-                      >
-                        👁️
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-icon btn-danger"
-                        onClick={() => excluir(circuito.id)}
-                        disabled={excluindoId === circuito.id}
-                        title="Excluir"
-                      >
-                        {excluindoId === circuito.id ? "..." : "🗑️"}
-                      </button>
-                    </div>
-                  </td>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={5}>Carregando...</td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+              {!loading && circuitosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={5}>Nenhum circuito encontrado.</td>
+                </tr>
+              )}
+              {!loading &&
+                circuitosFiltrados.map((circuito) => (
+                  <tr key={circuito.id}>
+                    <td data-label="Circuito">{circuito.nome}</td>
+                    <td data-label="Codigo">{circuito.codigo || "-"}</td>
+                    <td data-label="Operador">{circuito.operador || "-"}</td>
+                    <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          onClick={() => iniciarEdicao(circuito.id)}
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          onClick={() => abrirPreview(circuito.id)}
+                          title="Visualizar"
+                        >
+                          👁️
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon btn-danger"
+                          onClick={() => excluir(circuito.id)}
+                          disabled={excluindoId === circuito.id}
+                          title="Excluir"
+                        >
+                          {excluindoId === circuito.id ? "..." : "🗑️"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {previewOpen && (
         <div className="modal-backdrop">

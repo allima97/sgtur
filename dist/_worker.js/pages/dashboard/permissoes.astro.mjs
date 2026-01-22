@@ -1,6 +1,6 @@
 globalThis.process ??= {}; globalThis.process.env ??= {};
 import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../../chunks/astro/server_C9jQHs-i.mjs';
-import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_B2E7go2h.mjs';
+import { $ as $$DashboardLayout } from '../../chunks/DashboardLayout_1RrlcxID.mjs';
 import { j as jsxRuntimeExports, s as supabase } from '../../chunks/systemName_CRmQfwE6.mjs';
 import { a as reactExports } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
 export { r as renderers } from '../../chunks/_@astro-renderers_MjSq-9QN.mjs';
@@ -35,6 +35,7 @@ function PermissoesAdminIsland() {
   const [permissoes, setPermissoes] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [erro, setErro] = reactExports.useState(null);
+  const [usuarioSelecionadoId, setUsuarioSelecionadoId] = reactExports.useState("");
   const [isAdmin, setIsAdmin] = reactExports.useState(false);
   reactExports.useEffect(() => {
     async function loadType() {
@@ -73,6 +74,11 @@ function PermissoesAdminIsland() {
     }
     load();
   }, []);
+  reactExports.useEffect(() => {
+    if (!usuarioSelecionadoId && usuarios.length > 0) {
+      setUsuarioSelecionadoId(usuarios[0].id);
+    }
+  }, [usuarioSelecionadoId, usuarios]);
   function getPermissao(usuarioId, modulo) {
     const item = permissaoEncontrada(usuarioId, modulo);
     if (item) return item;
@@ -90,6 +96,7 @@ function PermissoesAdminIsland() {
     );
   }
   const permissaoList = permissao ? permissoes : [];
+  const usuarioSelecionado = usuarios.find((u) => u.id === usuarioSelecionadoId) || null;
   async function salvar(per) {
     try {
       if (!per.id) {
@@ -121,15 +128,87 @@ function PermissoesAdminIsland() {
     ] }),
     erro && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-config mb-3", children: erro }),
     loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Carregando..." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:hidden", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card-base card-red mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "form-group", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "form-label", children: "Usuário" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            className: "form-select",
+            value: usuarioSelecionadoId,
+            onChange: (e) => setUsuarioSelecionadoId(e.target.value),
+            children: usuarios.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u.id, children: u.nome_completo }, u.id))
+          }
+        )
+      ] }) }),
+      usuarioSelecionado && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "mb-3 font-semibold", children: [
+          "Permissões de ",
+          usuarioSelecionado.nome_completo
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-2", children: MODULOS.map((m) => {
+          const per = getPermissao(usuarioSelecionado.id, m);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              style: {
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: 12,
+                background: "#fff"
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", gap: 12 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: m }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { fontSize: 12 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: per.ativo,
+                        onChange: (e) => salvar({
+                          ...per,
+                          ativo: e.target.checked
+                        })
+                      }
+                    ),
+                    " ",
+                    "ativo"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    className: "form-select",
+                    disabled: !per.ativo,
+                    value: per.permissao,
+                    onChange: (e) => salvar({
+                      ...per,
+                      permissao: e.target.value
+                    }),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "view", children: "View" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "edit", children: "Edit" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "admin", children: "Admin" })
+                    ]
+                  }
+                ) })
+              ]
+            },
+            m
+          );
+        }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "hidden sm:block", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card-base card-red", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-3 font-semibold", children: "Usuários" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red min-w-[900px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "table-container overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "table-default table-header-red table-mobile-cards min-w-[900px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[180px]", children: "Usuário" }),
           MODULOS.map((m) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: m }, m))
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: usuarios.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { "data-label": "Usuário", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: u.nome_completo }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
             /* @__PURE__ */ jsxRuntimeExports.jsx("small", { children: u.email }),
@@ -141,7 +220,7 @@ function PermissoesAdminIsland() {
           ] }),
           MODULOS.map((m) => {
             const per = getPermissao(u.id, m);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { "data-label": m, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -178,7 +257,7 @@ function PermissoesAdminIsland() {
           })
         ] }, u.id)) })
       ] }) })
-    ] })
+    ] }) })
   ] });
 }
 
