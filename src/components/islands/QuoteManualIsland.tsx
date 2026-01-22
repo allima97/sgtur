@@ -1015,17 +1015,17 @@ export default function QuoteManualIsland() {
           </datalist>
         </div>
 
-        <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
-          <button type="button" className="btn btn-light" onClick={adicionarItem} disabled={saving}>
+        <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
+          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={adicionarItem} disabled={saving}>
             Adicionar produto
           </button>
-          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={handleSave} disabled={saving}>
             {saving ? "Salvando..." : "Salvar orcamento"}
           </button>
-          <button type="button" className="btn btn-light" onClick={handleCancel} disabled={saving}>
+          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={handleCancel} disabled={saving}>
             Cancelar
           </button>
-          <button type="button" className="btn btn-light" onClick={limparItens} disabled={saving}>
+          <button type="button" className="btn btn-light w-full sm:w-auto" onClick={limparItens} disabled={saving}>
             Limpar itens
           </button>
         </div>

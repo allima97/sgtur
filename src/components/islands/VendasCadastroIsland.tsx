@@ -1369,11 +1369,11 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           </div>
 
           {/* RECIBOS */}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <h4 className="font-semibold text-lg">Recibos da Venda</h4>
             <button
               type="button"
-              className="btn btn-light"
+              className="btn btn-light w-full sm:w-auto"
               style={{ marginLeft: "auto" }}
               onClick={() => setShowCalculator(true)}
             >
@@ -1527,24 +1527,24 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
               </div>
             );
           })}
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 mobile-stack-buttons">
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               onClick={addRecibo}
             >
               ➕ Adicionar recibo
             </button>
             <button
               type="submit"
-              className="btn btn-success"
+              className="btn btn-primary w-full sm:w-auto"
               disabled={salvando}
             >
               {salvando ? "Salvando..." : "Salvar venda"}
             </button>
             <button
               type="button"
-              className="btn btn-outline bg-slate-100 text-slate-800"
+              className="btn btn-light w-full sm:w-auto"
               onClick={cancelarCadastro}
             >
               Cancelar

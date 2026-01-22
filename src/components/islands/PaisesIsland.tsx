@@ -205,34 +205,36 @@ export default function PaisesIsland() {
 
   return (
     <div className="paises-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar país</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Digite parte do nome..."
-            />
-          </div>
-          {permissao !== "view" && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormulario}
-                disabled={mostrarFormulario}
-              >
-                Adicionar país
-              </button>
+      {!mostrarFormulario && (
+        <div className="card-base mb-3 list-toolbar-sticky">
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div className="form-group" style={{ flex: "1 1 320px" }}>
+              <label className="form-label">Buscar país</label>
+              <input
+                className="form-input"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Digite parte do nome..."
+              />
             </div>
-          )}
+            {permissao !== "view" && (
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormulario}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar país
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {mostrarFormulario && (
         <div className="card-base card-blue form-card mb-3">
@@ -274,11 +276,7 @@ export default function PaisesIsland() {
                 className="btn btn-primary"
                 disabled={salvando || permissao === "view"}
               >
-                {salvando
-                  ? "Salvando..."
-                  : editandoId
-                  ? "Salvar alterações"
-                  : "Adicionar país"}
+                {salvando ? "Salvando..." : "Salvar país"}
               </button>
               <button
                 type="button"
@@ -293,84 +291,86 @@ export default function PaisesIsland() {
         </div>
       )}
 
-      {!carregouTodos && (
+      {!mostrarFormulario && !carregouTodos && (
         <div className="card-base card-config mb-3">
           Últimos Países Cadastrados (10). Digite na busca para consultar todos.
         </div>
       )}
 
-      {erro && (
+      {!mostrarFormulario && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
         </div>
       )}
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[520px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Código ISO</th>
-              <th>Continente</th>
-              <th>Criado em</th>
-              <th className="th-actions">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+      {!mostrarFormulario && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-header-blue table-mobile-cards min-w-[520px]">
+            <thead>
               <tr>
-                <td colSpan={5}>Carregando países...</td>
+                <th>Nome</th>
+                <th>Código ISO</th>
+                <th>Continente</th>
+                <th>Criado em</th>
+                <th className="th-actions">Ações</th>
               </tr>
-            )}
-
-            {!loading && paisesFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={5}>Nenhum país encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              paisesFiltrados.map((p) => (
-                <tr key={p.id}>
-                  <td data-label="Nome">{p.nome}</td>
-                  <td data-label="Codigo ISO">{p.codigo_iso || "-"}</td>
-                  <td data-label="Continente">{p.continente || "-"}</td>
-                  <td data-label="Criado em">
-                    {p.created_at
-                      ? new Date(p.created_at).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td className="th-actions" data-label="Acoes">
-                    {permissao !== "view" && (
-                      <div className="action-buttons">
-                        <button
-                          className="btn-icon"
-                          title="Editar"
-                          onClick={() => iniciarEdicao(p)}
-                        >
-                          ✏️
-                        </button>
-                        {permissao === "admin" && (
-                          <button
-                            className="btn-icon btn-danger"
-                            title="Excluir"
-                            onClick={() => excluir(p.id)}
-                            disabled={excluindoId === p.id}
-                          >
-                            {excluindoId === p.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={5}>Carregando países...</td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+
+              {!loading && paisesFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={5}>Nenhum país encontrado.</td>
+                </tr>
+              )}
+
+              {!loading &&
+                paisesFiltrados.map((p) => (
+                  <tr key={p.id}>
+                    <td data-label="Nome">{p.nome}</td>
+                    <td data-label="Codigo ISO">{p.codigo_iso || "-"}</td>
+                    <td data-label="Continente">{p.continente || "-"}</td>
+                    <td data-label="Criado em">
+                      {p.created_at
+                        ? new Date(p.created_at).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
+                    <td className="th-actions" data-label="Acoes">
+                      {permissao !== "view" && (
+                        <div className="action-buttons">
+                          <button
+                            className="btn-icon"
+                            title="Editar"
+                            onClick={() => iniciarEdicao(p)}
+                          >
+                            ✏️
+                          </button>
+                          {permissao === "admin" && (
+                            <button
+                              className="btn-icon btn-danger"
+                              title="Excluir"
+                              onClick={() => excluir(p.id)}
+                              disabled={excluindoId === p.id}
+                            >
+                              {excluindoId === p.id ? "..." : "🗑️"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

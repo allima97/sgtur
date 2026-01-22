@@ -210,34 +210,36 @@ export default function SubdivisoesIsland() {
 
   return (
     <div className="paises-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar subdivisão</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Nome, país ou código..."
-            />
-          </div>
-          {permissao !== "view" && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormulario}
-                disabled={mostrarFormulario}
-              >
-                Adicionar Estado/Província
-              </button>
+      {!mostrarFormulario && (
+        <div className="card-base mb-3 list-toolbar-sticky">
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div className="form-group" style={{ flex: "1 1 320px" }}>
+              <label className="form-label">Buscar subdivisão</label>
+              <input
+                className="form-input"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome, país ou código..."
+              />
             </div>
-          )}
+            {permissao !== "view" && (
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormulario}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar Estado/Província
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {mostrarFormulario && (
         <div className="card-base card-blue form-card mb-3">
@@ -295,7 +297,7 @@ export default function SubdivisoesIsland() {
 
             <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
               <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
-                {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Adicionar Estado/Província"}
+                {salvando ? "Salvando..." : "Salvar estado/província"}
               </button>
               <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
                 Cancelar
@@ -305,80 +307,82 @@ export default function SubdivisoesIsland() {
         </div>
       )}
 
-      {!carregouTodos && (
+      {!mostrarFormulario && !carregouTodos && (
         <div className="card-base card-config mb-3">
           Ultimas Subdivisoes Cadastradas (10). Digite na busca para consultar todas.
         </div>
       )}
 
-      {erro && (
+      {!mostrarFormulario && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
         </div>
       )}
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-          <thead>
-            <tr>
-              <th>Subdivisao</th>
-              <th>Codigo</th>
-              <th>Pais</th>
-              <th>Tipo</th>
-              <th>Criado em</th>
-              <th className="th-actions">Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+      {!mostrarFormulario && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
+            <thead>
               <tr>
-                <td colSpan={6}>Carregando subdivisoes...</td>
+                <th>Subdivisao</th>
+                <th>Codigo</th>
+                <th>Pais</th>
+                <th>Tipo</th>
+                <th>Criado em</th>
+                <th className="th-actions">Acoes</th>
               </tr>
-            )}
-
-            {!loading && filtrados.length === 0 && (
-              <tr>
-                <td colSpan={6}>Nenhuma subdivisao encontrada.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              filtrados.map((s) => (
-                <tr key={s.id}>
-                  <td data-label="Subdivisao">{s.nome}</td>
-                  <td data-label="Codigo">{s.codigo_admin1}</td>
-                  <td data-label="Pais">{(s as any).pais_nome || "-"}</td>
-                  <td data-label="Tipo">{s.tipo || "-"}</td>
-                  <td data-label="Criado em">
-                    {s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}
-                  </td>
-                  <td className="th-actions" data-label="Acoes">
-                    {permissao !== "view" && (
-                      <div className="action-buttons">
-                        <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
-                          ✏️
-                        </button>
-                        {permissao === "admin" && (
-                          <button
-                            className="btn-icon btn-danger"
-                            title="Excluir"
-                            onClick={() => excluir(s.id)}
-                            disabled={excluindoId === s.id}
-                          >
-                            {excluindoId === s.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={6}>Carregando subdivisoes...</td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+
+              {!loading && filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={6}>Nenhuma subdivisao encontrada.</td>
+                </tr>
+              )}
+
+              {!loading &&
+                filtrados.map((s) => (
+                  <tr key={s.id}>
+                    <td data-label="Subdivisao">{s.nome}</td>
+                    <td data-label="Codigo">{s.codigo_admin1}</td>
+                    <td data-label="Pais">{(s as any).pais_nome || "-"}</td>
+                    <td data-label="Tipo">{s.tipo || "-"}</td>
+                    <td data-label="Criado em">
+                      {s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}
+                    </td>
+                    <td className="th-actions" data-label="Acoes">
+                      {permissao !== "view" && (
+                        <div className="action-buttons">
+                          <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
+                            ✏️
+                          </button>
+                          {permissao === "admin" && (
+                            <button
+                              className="btn-icon btn-danger"
+                              title="Excluir"
+                              onClick={() => excluir(s.id)}
+                              disabled={excluindoId === s.id}
+                            >
+                              {excluindoId === s.id ? "..." : "🗑️"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

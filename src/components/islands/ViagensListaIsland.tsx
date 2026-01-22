@@ -625,20 +625,17 @@ export default function ViagensListaIsland() {
                   </select>
                 </div>
               </div>
-              <div
-                className="form-row"
-                style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-start" }}
-              >
+              <div className="mobile-stack-buttons" style={{ marginTop: 12 }}>
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary w-full sm:w-auto"
                   type="button"
                   onClick={criarViagem}
                   disabled={savingViagem}
                 >
-                  {savingViagem ? "Salvando..." : "Salvar"}
+                  {savingViagem ? "Salvando..." : "Salvar viagem"}
                 </button>
                 <button
-                  className="btn btn-light"
+                  className="btn btn-light w-full sm:w-auto"
                   type="button"
                   onClick={fecharFormularioViagem}
                   disabled={savingViagem}
@@ -650,6 +647,7 @@ export default function ViagensListaIsland() {
             </div>
           )}
 
+          {!showForm && (
           <div className="form-row mobile-stack" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
               <label className="form-label">Buscar</label>
@@ -719,14 +717,16 @@ export default function ViagensListaIsland() {
               )}
             </div>
           </div>
+          )}
 
-        {erro && <div style={{ color: "red" }}>{erro}</div>}
-        {sucesso && (
+        {!showForm && erro && <div style={{ color: "red" }}>{erro}</div>}
+        {!showForm && sucesso && (
           <div className="auth-success" style={{ color: "#0f172a", fontWeight: 700 }}>
             {sucesso}
           </div>
         )}
 
+        {!showForm && (
         <div
           className="table-container overflow-x-auto"
           style={{ maxHeight: "65vh", overflowY: "auto" }}
@@ -822,6 +822,7 @@ export default function ViagensListaIsland() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );

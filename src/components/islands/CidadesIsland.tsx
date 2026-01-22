@@ -546,34 +546,36 @@ export default function CidadesIsland() {
 
   return (
     <div className="cidades-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div
-          className="form-row mobile-stack"
-          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
-        >
-          <div className="form-group" style={{ flex: "1 1 320px" }}>
-            <label className="form-label">Buscar cidade</label>
-            <input
-              className="form-input"
-              placeholder="Nome, subdivisao ou pais..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          </div>
-          {podeCriar && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormulario}
-                disabled={mostrarFormulario}
-              >
-                Adicionar cidade
-              </button>
+      {!mostrarFormulario && (
+        <div className="card-base mb-3 list-toolbar-sticky">
+          <div
+            className="form-row mobile-stack"
+            style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+          >
+            <div className="form-group" style={{ flex: "1 1 320px" }}>
+              <label className="form-label">Buscar cidade</label>
+              <input
+                className="form-input"
+                placeholder="Nome, subdivisao ou pais..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
             </div>
-          )}
+            {podeCriar && (
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormulario}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar cidade
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {(podeCriar || podeEditar) && mostrarFormulario && (
         <div className="card-base card-blue form-card mb-3">
@@ -664,7 +666,7 @@ export default function CidadesIsland() {
 
             <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
               <button className="btn btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade"}
+                {salvando ? "Salvando..." : "Salvar cidade"}
               </button>
 
               <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
@@ -675,76 +677,78 @@ export default function CidadesIsland() {
         </div>
       )}
 
-      {carregando && <LoadingUsuarioContext className="mb-3" />}
-      {!carregando && erro && (
+      {!mostrarFormulario && carregando && <LoadingUsuarioContext className="mb-3" />}
+      {!mostrarFormulario && !carregando && erro && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
         </div>
       )}
-      {!carregouTodos && !erro && (
+      {!mostrarFormulario && !carregouTodos && !erro && (
         <div className="card-base card-config mb-3">
           Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas.
         </div>
       )}
 
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-          <thead>
-            <tr>
-              <th>Cidade</th>
-              <th>Subdivisao</th>
-              <th>Pais</th>
-              <th>Criada em</th>
-              {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+      {!mostrarFormulario && (
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
+            <thead>
               <tr>
-                <td colSpan={5}>Carregando...</td>
+                <th>Cidade</th>
+                <th>Subdivisao</th>
+                <th>Pais</th>
+                <th>Criada em</th>
+                {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
               </tr>
-            )}
-            {!loading && filtradas.length === 0 && (
-              <tr>
-                <td colSpan={5}>Nenhuma cidade encontrada.</td>
-              </tr>
-            )}
-            {!loading &&
-              filtradas.map((c) => (
-                <tr key={c.id}>
-                  <td data-label="Cidade">{c.nome}</td>
-                  <td data-label="Subdivisao">{(c as any).subdivisao_nome || "-"}</td>
-                  <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
-                  <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
-                  {(podeEditar || podeExcluir) && (
-                    <td className="th-actions" data-label="Acoes">
-                      <div className="action-buttons">
-                        {podeEditar && (
-                          <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
-                            ✏️
-                          </button>
-                        )}
-                        {podeExcluir && (
-                          <button
-                            className="btn-icon btn-danger"
-                            onClick={() => excluir(c.id)}
-                            disabled={excluindoId === c.id}
-                            title="Excluir"
-                          >
-                            {excluindoId === c.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={5}>Carregando...</td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+              {!loading && filtradas.length === 0 && (
+                <tr>
+                  <td colSpan={5}>Nenhuma cidade encontrada.</td>
+                </tr>
+              )}
+              {!loading &&
+                filtradas.map((c) => (
+                  <tr key={c.id}>
+                    <td data-label="Cidade">{c.nome}</td>
+                    <td data-label="Subdivisao">{(c as any).subdivisao_nome || "-"}</td>
+                    <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
+                    <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
+                    {(podeEditar || podeExcluir) && (
+                      <td className="th-actions" data-label="Acoes">
+                        <div className="action-buttons">
+                          {podeEditar && (
+                            <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
+                              ✏️
+                            </button>
+                          )}
+                          {podeExcluir && (
+                            <button
+                              className="btn-icon btn-danger"
+                              onClick={() => excluir(c.id)}
+                              disabled={excluindoId === c.id}
+                              title="Excluir"
+                            >
+                              {excluindoId === c.id ? "..." : "🗑️"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

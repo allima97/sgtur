@@ -1457,9 +1457,9 @@ export default function ClientesIsland() {
               </div>
             </div>
 
-            <div className="mt-2" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div className="mt-2 mobile-stack-buttons">
               <button
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 disabled={salvando}
                 type="submit"
               >
@@ -1468,7 +1468,7 @@ export default function ClientesIsland() {
 
                   <button
                 type="button"
-                className="btn btn-light"
+                className="btn btn-light w-full sm:w-auto"
                 onClick={fecharFormularioCliente}
                 disabled={salvando}
               >
@@ -1491,20 +1491,137 @@ export default function ClientesIsland() {
         </div>
       )}
 
-      {/* BUSCA */}
-      <div className="card-base mb-3 list-toolbar-sticky">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="form-group flex-1 min-w-0">
-            <label className="form-label">Buscar cliente</label>
-            <input
-              className="form-input"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Nome, CPF ou e-mail"
-            />
+      {!mostrarFormCliente && (
+        <>
+          {/* BUSCA */}
+          <div className="card-base mb-3 list-toolbar-sticky">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="form-group flex-1 min-w-0">
+                <label className="form-label">Buscar cliente</label>
+                <input
+                  className="form-input"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Nome, CPF ou e-mail"
+                />
+              </div>
+              {podeCriar && (
+                <div className="hidden sm:flex sm:items-end sm:ml-auto">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={iniciarNovoCliente}
+                    disabled={mostrarFormCliente}
+                  >
+                    Adicionar cliente
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ERRO */}
+          {erro && (
+            <div className="card-base card-config mb-3">
+              <strong>{erro}</strong>
+            </div>
+          )}
+
+          {/* LISTA */}
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          >
+            <table className="table-default table-header-blue clientes-table table-mobile-cards min-w-[820px]">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF</th>
+                  <th>Telefone</th>
+                  <th>E-mail</th>
+                  {exibeColunaAcoes && (
+                    <th className="th-actions" style={{ textAlign: "center" }}>
+                      Ações
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={6}>Carregando...</td>
+                  </tr>
+                )}
+
+                {!loading && filtrados.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>Nenhum cliente encontrado.</td>
+                  </tr>
+                )}
+
+                {!loading &&
+                  filtrados.map((c) => (
+                    <tr key={c.id}>
+                      <td data-label="Nome">{c.nome}</td>
+                      <td data-label="CPF">{c.cpf}</td>
+                      <td data-label="Telefone">{c.telefone}</td>
+                      <td data-label="E-mail">{c.email || "-"}</td>
+
+                      {exibeColunaAcoes && (
+                        <td className="th-actions" data-label="Ações">
+                          <div className="action-buttons">
+                            {(() => {
+                              const whatsappLink = construirLinkWhatsApp(c.whatsapp);
+                              if (!whatsappLink) return null;
+                              return (
+                                <a
+                                  className="btn-icon"
+                                  href={whatsappLink}
+                                  title="Abrir WhatsApp"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  💬
+                                </a>
+                              );
+                            })()}
+                            <button
+                              className="btn-icon"
+                              onClick={() => abrirHistorico(c)}
+                              title="Histórico"
+                            >
+                              🗂️
+                            </button>
+                            {podeEditar && (
+                              <button
+                                className="btn-icon"
+                                onClick={() => iniciarEdicao(c)}
+                                title="Editar"
+                              >
+                                ✏️
+                              </button>
+                            )}
+
+                            {podeExcluir && (
+                              <button
+                                className="btn-icon btn-danger"
+                                onClick={() => excluir(c.id)}
+                                disabled={excluindoId === c.id}
+                                title="Excluir"
+                              >
+                                {excluindoId === c.id ? "..." : "🗑️"}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
           {podeCriar && (
-            <div className="hidden sm:flex sm:items-end sm:ml-auto">
+            <div className="mobile-actionbar sm:hidden">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -1515,120 +1632,7 @@ export default function ClientesIsland() {
               </button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ERRO */}
-      {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
-        </div>
-      )}
-
-      {/* LISTA */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
-      >
-        <table className="table-default table-header-blue clientes-table table-mobile-cards min-w-[820px]">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>CPF</th>
-              <th>Telefone</th>
-              <th>E-mail</th>
-              {exibeColunaAcoes && (
-                <th className="th-actions" style={{ textAlign: "center" }}>
-                  Ações
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={6}>Carregando...</td>
-              </tr>
-            )}
-
-            {!loading && filtrados.length === 0 && (
-              <tr>
-                <td colSpan={6}>Nenhum cliente encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              filtrados.map((c) => (
-                <tr key={c.id}>
-                  <td data-label="Nome">{c.nome}</td>
-                  <td data-label="CPF">{c.cpf}</td>
-                  <td data-label="Telefone">{c.telefone}</td>
-                  <td data-label="E-mail">{c.email || "-"}</td>
-
-                  {exibeColunaAcoes && (
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {(() => {
-                          const whatsappLink = construirLinkWhatsApp(c.whatsapp);
-                          if (!whatsappLink) return null;
-                          return (
-                            <a
-                              className="btn-icon"
-                              href={whatsappLink}
-                              title="Abrir WhatsApp"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              💬
-                            </a>
-                          );
-                        })()}
-                        <button
-                          className="btn-icon"
-                          onClick={() => abrirHistorico(c)}
-                          title="Histórico"
-                        >
-                          🗂️
-                        </button>
-                        {podeEditar && (
-                          <button
-                            className="btn-icon"
-                            onClick={() => iniciarEdicao(c)}
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                        )}
-
-                        {podeExcluir && (
-                          <button
-                            className="btn-icon btn-danger"
-                            onClick={() => excluir(c.id)}
-                            disabled={excluindoId === c.id}
-                            title="Excluir"
-                          >
-                            {excluindoId === c.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-      {podeCriar && (
-        <div className="mobile-actionbar sm:hidden">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={iniciarNovoCliente}
-            disabled={mostrarFormCliente}
-          >
-            Adicionar cliente
-          </button>
-        </div>
+        </>
       )}
     </div>
     {historicoCliente && (

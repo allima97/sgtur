@@ -519,9 +519,10 @@ body {
 
 .quote-items-table .order-controls {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 6px;
 }
 
 .clientes-table {
