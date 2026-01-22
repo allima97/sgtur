@@ -1207,3 +1207,20 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Orçamentos (criar) - no mobile: label em uma linha e campo abaixo (padronizado) */
+@media (max-width: 640px) {
+  .quote-items-table.table-mobile-cards td {
+    grid-template-columns: 1fr !important;
+  }
+
+  .quote-items-table.table-mobile-cards td::before {
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .quote-items-table.table-mobile-cards td > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
