@@ -134,7 +134,9 @@ export default function ClientesConsultaIsland() {
           </div>
           {podeCriar && (
             <div className="hidden sm:flex sm:items-end sm:ml-auto">
-              <button type="button" className="btn btn-primary">Adicionar cliente</button>
+              <a href="/clientes/cadastro" className="btn btn-primary">
+                Adicionar cliente
+              </a>
             </div>
           )}
         </div>
@@ -197,7 +199,9 @@ export default function ClientesConsultaIsland() {
 
       {podeCriar && (
         <div className="mobile-actionbar sm:hidden">
-          <button type="button" className="btn btn-primary">Adicionar cliente</button>
+          <a href="/clientes/cadastro" className="btn btn-primary">
+            Adicionar cliente
+          </a>
         </div>
       )}
     </div>

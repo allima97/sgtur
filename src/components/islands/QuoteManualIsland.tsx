@@ -800,7 +800,7 @@ export default function QuoteManualIsland() {
         <p className="page-subtitle">
           Preencha os itens manualmente e confirme para salvar o orcamento.
         </p>
-        <div className="form-row" style={{ marginTop: 12 }}>
+        <div className="form-row quote-manual-client-row mobile-stack" style={{ marginTop: 12 }}>
           <div className="form-group" style={{ flex: 2, minWidth: 220 }}>
             <label className="form-label">Cliente *</label>
             <input

@@ -357,6 +357,14 @@ body {
   color: var(--color-form-label);
 }
 
+.quote-manual-client-row .form-label {
+  display: block;
+}
+
+.quote-manual-client-row .form-input {
+  width: 100%;
+}
+
 .form-input,
 .form-select {
   padding: 8px 10px;

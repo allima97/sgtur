@@ -1,0 +1,19 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import HeaderPage from "../../components/ui/HeaderPage.astro";
+import ClientesIsland from "../../components/islands/ClientesIsland.tsx";
+
+const activePage = "clientes";
+---
+
+<DashboardLayout title="Cadastro de Clientes" {activePage}>
+  <div class="page-content-wrap">
+    <HeaderPage
+      title="Cadastro de Clientes"
+      subtitle="Adicione ou edite clientes diretamente."
+      color="blue"
+    />
+
+    <ClientesIsland client:load />
+  </div>
+</DashboardLayout>
