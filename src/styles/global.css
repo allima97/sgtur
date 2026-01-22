@@ -594,6 +594,34 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  .clientes-page {
+    overflow-x: hidden;
+  }
+
+  .clientes-page .table-mobile-cards td {
+    grid-template-columns: 100px 1fr;
+  }
+
+  .clientes-page .table-mobile-cards td > * {
+    min-width: 0;
+  }
+
+  .clientes-page .table-mobile-cards .th-actions .action-buttons {
+    flex-wrap: wrap;
+    overflow-x: hidden;
+    justify-content: flex-start;
+  }
+
+  .clientes-page .table-mobile-cards .th-actions .action-buttons .btn-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+    font-size: 14px;
+    line-height: 1;
+  }
+
   .page-header.page-header-stack {
     flex-direction: column;
     align-items: flex-start;
