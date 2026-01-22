@@ -1120,8 +1120,8 @@ export default function CircuitosIsland() {
         </div>
       )}
 
-      <div className="card-base card-blue mb-3">
-        <div className="form-row">
+      <div className="card-base card-blue mb-3 list-toolbar-sticky">
+        <div className="form-row mobile-stack">
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Buscar circuito</label>
             <input
@@ -1149,7 +1149,7 @@ export default function CircuitosIsland() {
       {mostrarFormulario && (
         <div className="card-base card-blue mb-3">
           <form onSubmit={salvar}>
-            <div className="form-row">
+            <div className="form-row mobile-stack">
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Importar roteiro (PDF)</label>
                 <input
@@ -1175,7 +1175,7 @@ export default function CircuitosIsland() {
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="form-row mobile-stack">
               <div className="form-group" style={{ flex: "1 1 320px", minWidth: 240 }}>
                 <label className="form-label">Circuito *</label>
                 <input
@@ -1210,7 +1210,7 @@ export default function CircuitosIsland() {
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="form-row mobile-stack">
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Resumo</label>
                 <textarea
@@ -1244,7 +1244,7 @@ export default function CircuitosIsland() {
             </div>
 
             <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-              <table className="table-default min-w-[760px]">
+              <table className="table-default table-mobile-cards min-w-[760px]">
                 <thead>
                   <tr>
                     <th>Data de inicio</th>
@@ -1262,7 +1262,7 @@ export default function CircuitosIsland() {
                   )}
                   {datas.map((item) => (
                     <tr key={item.tempId}>
-                      <td>
+                      <td data-label="Data de inicio">
                         <input
                           type="date"
                           className="form-input"
@@ -1271,7 +1271,7 @@ export default function CircuitosIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td style={{ minWidth: 220 }}>
+                      <td data-label="Cidade de inicio" style={{ minWidth: 220 }}>
                         <input
                           className="form-input"
                           placeholder="Buscar cidade"
@@ -1332,7 +1332,7 @@ export default function CircuitosIsland() {
                           </>
                         )}
                       </td>
-                      <td style={{ maxWidth: 120 }}>
+                      <td data-label="Dias antes" style={{ maxWidth: 120 }}>
                         <input
                           className="form-input"
                           type="number"
@@ -1342,7 +1342,7 @@ export default function CircuitosIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td style={{ maxWidth: 120 }}>
+                      <td data-label="Dias depois" style={{ maxWidth: 120 }}>
                         <input
                           className="form-input"
                           type="number"
@@ -1352,7 +1352,7 @@ export default function CircuitosIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td>
+                      <td data-label="Acoes">
                         <button
                           type="button"
                           className="btn btn-light"
@@ -1402,7 +1402,7 @@ export default function CircuitosIsland() {
                     if (isDragOver) setDragOverDiaId(null);
                   }}
                 >
-                  <div className="form-row" style={{ marginTop: 12 }}>
+                  <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                     <div className="form-group" style={{ alignItems: "flex-end" }}>
                       <button
                         type="button"

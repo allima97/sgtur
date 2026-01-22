@@ -1255,7 +1255,7 @@ export default function ClientesIsland() {
           <form onSubmit={salvar}>
 
             <div
-              className="form-row"
+              className="form-row mobile-stack"
               style={{
                 marginTop: 12,
                 display: "grid",
@@ -1323,7 +1323,7 @@ export default function ClientesIsland() {
             </div>
 
             <div
-              className="form-row"
+              className="form-row mobile-stack"
               style={{
                 marginTop: 12,
                 display: "grid",
@@ -1373,7 +1373,7 @@ export default function ClientesIsland() {
             </div>
 
             <div
-              className="form-row"
+              className="form-row mobile-stack"
               style={{
                 marginTop: 12,
                 display: "grid",

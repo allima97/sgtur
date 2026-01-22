@@ -869,7 +869,7 @@ export default function ProdutosIsland() {
 
   return (
     <div className="destinos-page">
-      <div className="card-base mb-3">
+      <div className="card-base mb-3 list-toolbar-sticky">
         <div
           className="form-row"
           style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
@@ -900,7 +900,7 @@ export default function ProdutosIsland() {
 
       {mostrarFormulario && formLayout === "selection" && (
         <div className="card-base card-blue mb-3">
-          <div className="form-row">
+          <div className="form-row mobile-stack">
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Todas as cidades</label>
               <div className="flex gap-2">
@@ -930,7 +930,7 @@ export default function ProdutosIsland() {
 
           <form onSubmit={salvar}>
 
-            <div className="form-row" style={{ marginTop: 12, gap: 12, flexWrap: "wrap" }}>
+            <div className="form-row mobile-stack" style={{ marginTop: 12, gap: 12, flexWrap: "wrap" }}>
               <div className="form-group" style={{ flex: "0 1 220px", minWidth: 180 }}>
                 <label className="form-label">Tipo *</label>
                 <select
@@ -1057,7 +1057,7 @@ export default function ProdutosIsland() {
               </div>
             </div>
             {!isGlobalMode && form.todas_as_cidades && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group" style={{ width: 220 }}>
                   <label className="form-label">Todas as cidades</label>
                   <select
@@ -1076,7 +1076,7 @@ export default function ProdutosIsland() {
               </div>
             )}
             {isHospedagem && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Atracao principal</label>
                   <input
@@ -1132,7 +1132,7 @@ export default function ProdutosIsland() {
             )}
 
             {isHospedagem && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Duracao sugerida</label>
                   <select

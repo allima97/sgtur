@@ -205,7 +205,7 @@ export default function PaisesIsland() {
 
   return (
     <div className="paises-page">
-      <div className="card-base mb-3">
+      <div className="card-base mb-3 list-toolbar-sticky">
         <div
           className="form-row"
           style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}

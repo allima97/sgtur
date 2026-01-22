@@ -335,6 +335,10 @@ body {
   gap: 16px;
 }
 
+.form-row.mobile-stack {
+  display: grid;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -579,6 +583,11 @@ body {
 }
 
 @media (max-width: 640px) {
+  .form-row.mobile-stack {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
   .table-mobile-cards thead {
     display: none;
   }
@@ -720,6 +729,15 @@ body {
     --table-card-border: var(--color-red-border);
     --table-card-divider: var(--color-red-border);
     --table-card-gap: var(--color-red-bg);
+  }
+
+  .table-mobile-cards.quote-items-table th,
+  .table-mobile-cards.quote-items-table td {
+    min-width: 0 !important;
+  }
+
+  .table-mobile-cards.quote-items-table input[type="date"] {
+    min-width: 0 !important;
   }
 
   .table-mobile-cards .th-actions .action-buttons::-webkit-scrollbar {

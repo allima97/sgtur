@@ -473,7 +473,7 @@ export default function ProdutosLoteIsland() {
 
       <div className="card-base card-blue mb-3">
         <form onSubmit={salvarProdutos}>
-          <div className="form-row">
+          <div className="form-row mobile-stack">
             <div className="form-group">
               <label className="form-label">Cidade *</label>
               <input
@@ -557,7 +557,7 @@ export default function ProdutosLoteIsland() {
 
           </div>
 
-          <div className="form-row">
+          <div className="form-row mobile-stack">
             <div className="form-group">
               <label className="form-label">Atracao principal</label>
               <input
