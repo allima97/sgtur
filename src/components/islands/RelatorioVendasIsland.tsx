@@ -107,6 +107,14 @@ type ReciboEnriquecido = {
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
+type MobileFiltroTipo = "cliente" | "cidade" | "tipo_produto" | "produto" | "data";
+type MobilePeriodoPreset =
+  | "hoje"
+  | "7"
+  | "30"
+  | "mes_atual"
+  | "mes_anterior"
+  | "personalizado";
 
 type Papel = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -246,6 +254,10 @@ export default function RelatorioVendasIsland() {
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [mobileFiltroTipo, setMobileFiltroTipo] =
+    useState<MobileFiltroTipo>("data");
+  const [mobilePeriodoPreset, setMobilePeriodoPreset] =
+    useState<MobilePeriodoPreset>("7");
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const [parametrosComissao, setParametrosComissao] =
     useState<ParametrosComissao | null>(null);
@@ -1547,261 +1559,249 @@ export default function RelatorioVendasIsland() {
             </div>
 
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Data início</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataInicio}
-                onChange={(e) => {
-                  const nextInicio = e.target.value;
-                  setDataInicio(nextInicio);
-                  if (dataFim && nextInicio && dataFim < nextInicio) {
-                    setDataFim(nextInicio);
-                  }
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Data fim</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataFim}
-                min={dataInicio || undefined}
-                onChange={(e) => {
-                  const nextFim = e.target.value;
-                  const boundedFim =
-                    dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                  setDataFim(boundedFim);
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
+              <label className="form-label">Filtrar por</label>
               <select
                 className="form-select"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+                value={mobileFiltroTipo}
+                onChange={(e) => setMobileFiltroTipo(e.target.value as MobileFiltroTipo)}
+                style={{ width: "100%" }}
               >
-                <option value="todos">Todos</option>
-                <option value="aberto">Aberto</option>
-                <option value="confirmado">Confirmado</option>
-                <option value="cancelado">Cancelado</option>
+                <option value="cliente">Por Cliente</option>
+                <option value="cidade">Por Cidade</option>
+                <option value="tipo_produto">Por Tipo Produto</option>
+                <option value="produto">Por Produto</option>
+                <option value="data">Por Data</option>
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Valor mínimo</label>
-              <input
-                className="form-input"
-                value={valorMin}
-                onChange={(e) => setValorMin(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Valor máximo</label>
-              <input
-                className="form-input"
-                value={valorMax}
-                onChange={(e) => setValorMax(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Cliente</label>
-              <input
-                className="form-input"
-                value={clienteBusca}
-                onChange={(e) => {
-                  setClienteBusca(e.target.value);
-                  setClienteSelecionado(null);
-                }}
-                placeholder="Nome ou CPF..."
-              />
-              {clienteBusca && !clienteSelecionado && (
-                <div
-                  className="card-base"
-                  style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}
-                >
-                  {clientesFiltrados.length === 0 && (
-                    <div style={{ fontSize: "0.85rem" }}>Nenhum cliente encontrado.</div>
-                  )}
-                  {clientesFiltrados.map((c) => (
-                    <div
-                      key={c.id}
-                      style={{ padding: "4px 6px", cursor: "pointer" }}
-                      onClick={() => {
-                        setClienteSelecionado(c);
-                        setClienteBusca(c.nome);
-                      }}
-                    >
-                      <div style={{ fontWeight: 600 }}>{c.nome}</div>
-                      <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
-                        {c.cpf || "Sem CPF"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {clienteSelecionado && (
-                <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                  Selecionado: <strong>{clienteSelecionado.nome}</strong>
-                </div>
-              )}
-            </div>
-            <div className="form-group" style={{ position: "relative" }}>
-              <label className="form-label">Cidade</label>
-              <input
-                className="form-input"
-                placeholder="Digite a cidade"
-                value={cidadeNomeInput}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setCidadeNomeInput(value);
-                  setCidadeFiltro("");
-                  if (value.trim().length > 0) {
-                    setMostrarSugestoesCidade(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (cidadeNomeInput.trim().length >= 2) {
-                    setMostrarSugestoesCidade(true);
-                  }
-                }}
-                onBlur={() => {
-                  setTimeout(() => setMostrarSugestoesCidade(false), 150);
-                  if (!cidadeNomeInput.trim()) {
-                    setCidadeFiltro("");
-                    return;
-                  }
-                  const match = cidades.find((cidade) =>
-                    normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                  );
-                  if (match) {
-                    setCidadeFiltro(match.id);
-                    setCidadeNomeInput(match.nome);
-                  }
-                }}
-              />
-              {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
-                <div
-                  className="card-base card-config"
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    zIndex: 20,
-                    padding: "4px 0",
-                  }}
-                >
-                  {buscandoCidade && (
-                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                      Buscando cidades...
-                    </div>
-                  )}
-                  {!buscandoCidade && erroCidade && (
-                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>
-                      {erroCidade}
-                    </div>
-                  )}
-                  {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
-                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                      Nenhuma cidade encontrada.
-                    </div>
-                  )}
-                  {!buscandoCidade &&
-                    !erroCidade &&
-                    cidadeSugestoes.map((cidade) => (
-                      <button
-                        key={cidade.id}
-                        type="button"
-                        className="btn btn-ghost w-full text-left"
-                        style={{ padding: "6px 12px" }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setCidadeFiltro(cidade.id);
-                          setCidadeNomeInput(cidade.nome);
-                          setMostrarSugestoesCidade(false);
-                        }}
-                      >
-                        {cidade.nome}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tipo Produto</label>
-              <select
-                className="form-select"
-                value={tipoSelecionadoId}
-                onChange={(e) => setTipoSelecionadoId(e.target.value)}
-              >
-                <option value="">Todos os tipos</option>
-                {tiposProdutos.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>
-                    {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Produto</label>
-              <input
-                className="form-input"
-                value={destinoBusca}
-                onChange={(e) => setDestinoBusca(e.target.value)}
-                placeholder="Nome do produto..."
-              />
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("hoje")}
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("7")}
-              >
-                Últimos 7 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("30")}
-              >
-                Últimos 30 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_atual")}
-              >
-                Este mês
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_anterior")}
-              >
-                Mês anterior
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("limpar")}
-              >
-                Limpar datas
-              </button>
-            </div>
+            {mobileFiltroTipo === "cliente" && (
+              <div className="form-group">
+                <label className="form-label">Cliente</label>
+                <input
+                  className="form-input"
+                  value={clienteBusca}
+                  onChange={(e) => {
+                    setClienteBusca(e.target.value);
+                    setClienteSelecionado(null);
+                  }}
+                  placeholder="Nome ou CPF..."
+                />
+                {clienteBusca && !clienteSelecionado && (
+                  <div
+                    className="card-base"
+                    style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}
+                  >
+                    {clientesFiltrados.length === 0 && (
+                      <div style={{ fontSize: "0.85rem" }}>Nenhum cliente encontrado.</div>
+                    )}
+                    {clientesFiltrados.map((c) => (
+                      <div
+                        key={c.id}
+                        style={{ padding: "4px 6px", cursor: "pointer" }}
+                        onClick={() => {
+                          setClienteSelecionado(c);
+                          setClienteBusca(c.nome);
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{c.nome}</div>
+                        <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                          {c.cpf || "Sem CPF"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {clienteSelecionado && (
+                  <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                    Selecionado: <strong>{clienteSelecionado.nome}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mobileFiltroTipo === "cidade" && (
+              <div className="form-group" style={{ position: "relative" }}>
+                <label className="form-label">Cidade</label>
+                <input
+                  className="form-input"
+                  placeholder="Digite a cidade"
+                  value={cidadeNomeInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCidadeNomeInput(value);
+                    setCidadeFiltro("");
+                    if (value.trim().length > 0) {
+                      setMostrarSugestoesCidade(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (cidadeNomeInput.trim().length >= 2) {
+                      setMostrarSugestoesCidade(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setMostrarSugestoesCidade(false), 150);
+                    if (!cidadeNomeInput.trim()) {
+                      setCidadeFiltro("");
+                      return;
+                    }
+                    const match = cidades.find((cidade) =>
+                      normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                    );
+                    if (match) {
+                      setCidadeFiltro(match.id);
+                      setCidadeNomeInput(match.nome);
+                    }
+                  }}
+                />
+                {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
+                  <div
+                    className="card-base card-config"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      maxHeight: 180,
+                      overflowY: "auto",
+                      zIndex: 20,
+                      padding: "4px 0",
+                    }}
+                  >
+                    {buscandoCidade && (
+                      <div style={{ padding: "6px 12px", color: "#64748b" }}>
+                        Buscando cidades...
+                      </div>
+                    )}
+                    {!buscandoCidade && erroCidade && (
+                      <div style={{ padding: "6px 12px", color: "#dc2626" }}>
+                        {erroCidade}
+                      </div>
+                    )}
+                    {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
+                      <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
+                        Nenhuma cidade encontrada.
+                      </div>
+                    )}
+                    {!buscandoCidade &&
+                      !erroCidade &&
+                      cidadeSugestoes.map((cidade) => (
+                        <button
+                          key={cidade.id}
+                          type="button"
+                          className="btn btn-ghost w-full text-left"
+                          style={{ padding: "6px 12px" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setCidadeFiltro(cidade.id);
+                            setCidadeNomeInput(cidade.nome);
+                            setMostrarSugestoesCidade(false);
+                          }}
+                        >
+                          {cidade.nome}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mobileFiltroTipo === "tipo_produto" && (
+              <div className="form-group">
+                <label className="form-label">Tipo Produto</label>
+                <select
+                  className="form-select"
+                  value={tipoSelecionadoId}
+                  onChange={(e) => setTipoSelecionadoId(e.target.value)}
+                  style={{ width: "100%" }}
+                >
+                  <option value="">Todos os tipos</option>
+                  {tiposProdutos.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {mobileFiltroTipo === "produto" && (
+              <div className="form-group">
+                <label className="form-label">Produto</label>
+                <input
+                  className="form-input"
+                  value={destinoBusca}
+                  onChange={(e) => setDestinoBusca(e.target.value)}
+                  placeholder="Nome do produto..."
+                />
+              </div>
+            )}
+
+            {mobileFiltroTipo === "data" && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Período</label>
+                  <select
+                    className="form-select"
+                    value={mobilePeriodoPreset}
+                    onChange={(e) => {
+                      const nextPreset = e.target.value as MobilePeriodoPreset;
+                      setMobilePeriodoPreset(nextPreset);
+                      if (nextPreset !== "personalizado") {
+                        aplicarPeriodoPreset(nextPreset);
+                      }
+                    }}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="hoje">Hoje</option>
+                    <option value="7">Últimos 7 dias</option>
+                    <option value="30">Últimos 30 dias</option>
+                    <option value="mes_atual">Este mês</option>
+                    <option value="mes_anterior">Mês anterior</option>
+                    <option value="personalizado">Personalizado</option>
+                  </select>
+                </div>
+
+                {mobilePeriodoPreset === "personalizado" && (
+                  <>
+                    <div className="form-group" style={{ marginTop: 12 }}>
+                      <label className="form-label">Data início</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ width: "100%" }}
+                        value={dataInicio}
+                        onChange={(e) => {
+                          const nextInicio = e.target.value;
+                          setMobilePeriodoPreset("personalizado");
+                          setDataInicio(nextInicio);
+                          if (dataFim && nextInicio && dataFim < nextInicio) {
+                            setDataFim(nextInicio);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data fim</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ width: "100%" }}
+                        value={dataFim}
+                        min={dataInicio || undefined}
+                        onChange={(e) => {
+                          setMobilePeriodoPreset("personalizado");
+                          const nextFim = e.target.value;
+                          const boundedFim =
+                            dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                          setDataFim(boundedFim);
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+              </>
+            )}
 
             <button
               type="button"
