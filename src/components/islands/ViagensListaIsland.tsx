@@ -740,7 +740,10 @@ export default function ViagensListaIsland() {
           </div>
         )}
 
-        <div className="table-container overflow-x-auto">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
           <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
             <thead>
               <tr>
