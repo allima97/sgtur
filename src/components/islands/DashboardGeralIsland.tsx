@@ -1913,73 +1913,57 @@ const DashboardGeralIsland: React.FC = () => {
               </button>
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn btn-light"
-                style={{
-                  backgroundColor: presetPeriodo === "mes_atual" ? "#4f46e5" : undefined,
-                  color: presetPeriodo === "mes_atual" ? "#e5e7eb" : undefined,
-                }}
-                onClick={() => aplicarPreset("mes_atual")}
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Período</label>
+              <select
+                className="form-select"
+                value={presetPeriodo}
+                onChange={(e) => aplicarPreset(e.target.value as PresetPeriodo)}
+                style={{ width: "100%" }}
               >
-                Mês atual
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                style={{
-                  backgroundColor: presetPeriodo === "ultimos_30" ? "#4f46e5" : undefined,
-                  color: presetPeriodo === "ultimos_30" ? "#e5e7eb" : undefined,
-                }}
-                onClick={() => aplicarPreset("ultimos_30")}
-              >
-                Últimos 30 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                style={{
-                  backgroundColor: presetPeriodo === "personalizado" ? "#4f46e5" : undefined,
-                  color: presetPeriodo === "personalizado" ? "#e5e7eb" : undefined,
-                }}
-                onClick={() => setPresetPeriodo("personalizado")}
-              >
-                Personalizado
-              </button>
+                <option value="mes_atual">Mês atual</option>
+                <option value="ultimos_30">Últimos 30 dias</option>
+                <option value="personalizado">Personalizado</option>
+              </select>
             </div>
 
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Data início</label>
-              <input
-                type="date"
-                className="form-input"
-                value={inicio}
-                onChange={(e) => {
-                  const nextInicio = e.target.value;
-                  setPresetPeriodo("personalizado");
-                  setInicio(nextInicio);
-                  if (fim && nextInicio && fim < nextInicio) {
-                    setFim(nextInicio);
-                  }
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Data fim</label>
-              <input
-                type="date"
-                className="form-input"
-                value={fim}
-                min={inicio || undefined}
-                onChange={(e) => {
-                  setPresetPeriodo("personalizado");
-                  const nextFim = e.target.value;
-                  const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
-                  setFim(boundedFim);
-                }}
-              />
-            </div>
+            {presetPeriodo === "personalizado" && (
+              <>
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label">Data início</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ width: "100%" }}
+                    value={inicio}
+                    onChange={(e) => {
+                      const nextInicio = e.target.value;
+                      setPresetPeriodo("personalizado");
+                      setInicio(nextInicio);
+                      if (fim && nextInicio && fim < nextInicio) {
+                        setFim(nextInicio);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data fim</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ width: "100%" }}
+                    value={fim}
+                    min={inicio || undefined}
+                    onChange={(e) => {
+                      setPresetPeriodo("personalizado");
+                      const nextFim = e.target.value;
+                      const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                      setFim(boundedFim);
+                    }}
+                  />
+                </div>
+              </>
+            )}
 
             <button
               type="button"
