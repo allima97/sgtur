@@ -415,7 +415,6 @@ export default function QuoteListIsland() {
                               ? `Ultima interacao: ${formatDateTime(quote.last_interaction_at)}`
                               : "Registrar ultima interacao"
                           }
-                          style={{ padding: "4px 6px" }}
                           onClick={() => abrirInteracaoModal(quote)}
                         >
                           🕒
@@ -423,7 +422,6 @@ export default function QuoteListIsland() {
                         <button
                           className="btn-icon"
                           title="Converter em venda"
-                          style={{ padding: "4px 6px" }}
                           onClick={() => converterParaVenda(quote.id)}
                           disabled={isFechado}
                         >
@@ -432,7 +430,6 @@ export default function QuoteListIsland() {
                         <button
                           className="btn-icon"
                           title="Visualizar orçamento"
-                          style={{ padding: "4px 6px" }}
                           onClick={() => setVisualizandoQuote(quote)}
                         >
                           👁️
@@ -440,7 +437,6 @@ export default function QuoteListIsland() {
                         <button
                           className="btn-icon"
                           title="Visualizar PDF"
-                          style={{ padding: "4px 6px" }}
                           onClick={() => handleExportPdf(quote.id)}
                           disabled={exportingQuoteId === quote.id}
                         >
@@ -471,7 +467,6 @@ export default function QuoteListIsland() {
                             className="btn-icon"
                             href={`/orcamentos/${quote.id}`}
                             title="Editar orcamento"
-                            style={{ padding: "4px 6px" }}
                           >
                             ✏️
                           </a>
@@ -481,7 +476,6 @@ export default function QuoteListIsland() {
                           title="Excluir orcamento"
                           onClick={() => excluirQuote(quote.id)}
                           disabled={deletandoId === quote.id}
-                          style={{ padding: "4px 6px" }}
                         >
                           {deletandoId === quote.id ? "..." : "🗑️"}
                         </button>

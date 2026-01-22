@@ -236,6 +236,12 @@ body {
   margin-bottom: 24px;
 }
 
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .page-header h1 {
   font-size: 1.5rem;
   margin: 0 0 4px;
@@ -588,6 +594,17 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  .page-header.page-header-stack {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header.page-header-stack .page-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+
   .table-mobile-cards thead {
     display: none;
   }
@@ -679,6 +696,24 @@ body {
     max-width: 100%;
     align-items: center;
     gap: 6px;
+  }
+
+  .table-mobile-cards .th-actions .action-buttons.action-buttons-quote {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    justify-items: center;
+  }
+
+  .table-mobile-cards .th-actions .action-buttons.action-buttons-quote .btn-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .table-mobile-cards .th-actions {
