@@ -1,7 +1,7 @@
 ---
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import HeaderPage from "../../components/ui/HeaderPage.astro";
-import ClientesIsland from "../../components/islands/ClientesIsland.tsx";
+import ClientesConsultaIsland from "../../components/islands/ClientesConsultaIsland.tsx";
 
 const activePage = "clientes";
 ---
@@ -13,5 +13,5 @@ const activePage = "clientes";
     color="blue"
   />
 
-  <ClientesIsland client:load />
+  <ClientesConsultaIsland client:load />
 </DashboardLayout>

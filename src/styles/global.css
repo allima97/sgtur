@@ -596,11 +596,13 @@ body {
 
   .clientes-page {
     overflow-x: hidden;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
   .clientes-page .card-base {
-    margin-left: 6px;
-    margin-right: 6px;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .clientes-page .mobile-actionbar {
@@ -815,6 +817,68 @@ body {
 
   .table-mobile-cards .th-actions .action-buttons::-webkit-scrollbar {
     height: 4px;
+  }
+}
+
+/* Fixes for very narrow mobile viewports (ex: 412x914) to avoid horizontal overflow
+   primarily targeting clientes/carteira layout */
+@media (max-width: 420px) {
+  .clientes-page {
+    padding-left: 6px;
+    padding-right: 6px;
+    overflow-x: hidden;
+  }
+
+  .clientes-page .card-base {
+    padding-left: 12px;
+    padding-right: 12px;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  .clientes-page .table-container {
+    overflow-x: hidden !important;
+  }
+
+  .clientes-page .table-mobile-cards,
+  .clientes-page .table-mobile-cards table,
+  .clientes-page .table-mobile-cards tbody,
+  .clientes-page .table-mobile-cards tr,
+  .clientes-page .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-page .mobile-actionbar {
+    left: 6px;
+    right: 6px;
+  }
+
+  .clientes-page .form-row.mobile-stack {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .clientes-page .form-input,
+  .clientes-page .form-select,
+  .clientes-page .form-textarea {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  /* Fallback: garantir que o app shell não gere overflow horizontal
+     para viewports muito estreitas (ex: 412x914) */
+  html, body, .app-shell, .app-main {
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+
+  .mobile-actionbar {
+    box-sizing: border-box !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 }
 
