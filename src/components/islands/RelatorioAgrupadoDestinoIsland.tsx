@@ -22,7 +22,6 @@ type Venda = {
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
-type MobileFiltroTipo = "status" | "data";
 type MobilePeriodoPreset =
   | "hoje"
   | "7"
@@ -101,8 +100,6 @@ export default function RelatorioAgrupadoDestinoIsland() {
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [mobileFiltroTipo, setMobileFiltroTipo] =
-    useState<MobileFiltroTipo>("data");
   const [mobilePeriodoPreset, setMobilePeriodoPreset] =
     useState<MobilePeriodoPreset>("30");
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
@@ -637,98 +634,64 @@ export default function RelatorioAgrupadoDestinoIsland() {
               </button>
             </div>
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Filtrar por</label>
+              <label className="form-label">Período</label>
               <select
                 className="form-select"
-                value={mobileFiltroTipo}
-                onChange={(e) => setMobileFiltroTipo(e.target.value as MobileFiltroTipo)}
+                value={mobilePeriodoPreset}
+                onChange={(e) => {
+                  const nextPreset = e.target.value as MobilePeriodoPreset;
+                  setMobilePeriodoPreset(nextPreset);
+                  if (nextPreset !== "personalizado") {
+                    aplicarPeriodoPreset(nextPreset);
+                  }
+                }}
                 style={{ width: "100%" }}
               >
-                <option value="status">Por Status</option>
-                <option value="data">Por Data</option>
+                <option value="hoje">Hoje</option>
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="mes_atual">Este mês</option>
+                <option value="mes_anterior">Mês anterior</option>
+                <option value="personalizado">Personalizado</option>
               </select>
             </div>
 
-            {mobileFiltroTipo === "status" && (
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select
-                  className="form-select"
-                  value={statusFiltro}
-                  onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
-                  style={{ width: "100%" }}
-                >
-                  <option value="todos">Todos</option>
-                  <option value="aberto">Aberto</option>
-                  <option value="confirmado">Confirmado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </div>
-            )}
-
-            {mobileFiltroTipo === "data" && (
+            {mobilePeriodoPreset === "personalizado" && (
               <>
-                <div className="form-group">
-                  <label className="form-label">Período</label>
-                  <select
-                    className="form-select"
-                    value={mobilePeriodoPreset}
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label">Data início</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ width: "100%" }}
+                    value={dataInicio}
                     onChange={(e) => {
-                      const nextPreset = e.target.value as MobilePeriodoPreset;
-                      setMobilePeriodoPreset(nextPreset);
-                      if (nextPreset !== "personalizado") {
-                        aplicarPeriodoPreset(nextPreset);
+                      const nextInicio = e.target.value;
+                      setMobilePeriodoPreset("personalizado");
+                      setDataInicio(nextInicio);
+                      if (dataFim && nextInicio && dataFim < nextInicio) {
+                        setDataFim(nextInicio);
                       }
                     }}
-                    style={{ width: "100%" }}
-                  >
-                    <option value="hoje">Hoje</option>
-                    <option value="7">Últimos 7 dias</option>
-                    <option value="30">Últimos 30 dias</option>
-                    <option value="mes_atual">Este mês</option>
-                    <option value="mes_anterior">Mês anterior</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
+                  />
                 </div>
-
-                {mobilePeriodoPreset === "personalizado" && (
-                  <>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Data início</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataInicio}
-                        onChange={(e) => {
-                          const nextInicio = e.target.value;
-                          setMobilePeriodoPreset("personalizado");
-                          setDataInicio(nextInicio);
-                          if (dataFim && nextInicio && dataFim < nextInicio) {
-                            setDataFim(nextInicio);
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Data fim</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ width: "100%" }}
-                        value={dataFim}
-                        min={dataInicio || undefined}
-                        onChange={(e) => {
-                          setMobilePeriodoPreset("personalizado");
-                          const nextFim = e.target.value;
-                          const boundedFim =
-                            dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                          setDataFim(boundedFim);
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="form-group">
+                  <label className="form-label">Data fim</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ width: "100%" }}
+                    value={dataFim}
+                    min={dataInicio || undefined}
+                    onChange={(e) => {
+                      setMobilePeriodoPreset("personalizado");
+                      const nextFim = e.target.value;
+                      const boundedFim =
+                        dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                      setDataFim(boundedFim);
+                    }}
+                  />
+                </div>
               </>
             )}
 

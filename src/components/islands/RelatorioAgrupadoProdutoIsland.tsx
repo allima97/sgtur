@@ -53,7 +53,8 @@ type ReciboDetalhe = {
 };
 
 type Ordenacao = "total" | "quantidade" | "ticket";
-type MobileFiltroTipo = "cidade" | "tipo_produto" | "produto" | "data";
+type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
+type MobileFiltroTipo = "status" | "produto" | "cidade" | "data";
 type MobilePeriodoPreset =
   | "hoje"
   | "7"
@@ -123,6 +124,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     return formatISO(inicio);
   });
   const [dataFim, setDataFim] = useState<string>(hojeISO());
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaProduto, setBuscaProduto] = useState("");
   const [produtosCadastro, setProdutosCadastro] = useState<
     { tipo_produto: string | null; nome: string | null }[]
@@ -159,11 +161,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
     { id: "agrupado", label: "Resumo por tipo" },
   ];
 
-  useEffect(() => {
-    if (activeTab !== "recibos" && mobileFiltroTipo === "tipo_produto") {
-      setMobileFiltroTipo("data");
-    }
-  }, [activeTab, mobileFiltroTipo]);
 
   useEffect(() => {
     if (exportTipo === "excel" && !exportFlags.excel) {
@@ -424,6 +421,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
     };
 
     vendas.forEach((v) => {
+      if (statusFiltro !== "todos" && v.status !== statusFiltro) {
+        return;
+      }
       const destinoNome = v.destinos?.nome || "";
       const destinoId = v.destino_cidade_id || v.destinos?.cidade_id || null;
       const recibos = v.vendas_recibos || [];
@@ -456,13 +456,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
 
     return arr;
-  }, [vendas, produtos, ordenacao, ordemDesc]);
+  }, [vendas, produtos, ordenacao, ordemDesc, statusFiltro]);
 
   const recibosDetalhados = useMemo(() => {
     const rows: ReciboDetalhe[] = [];
     const nomeFallback = (tipoId?: string | null) =>
       tipoProdutosNomeMap.get(tipoId || "") || "(sem produto)";
     vendas.forEach((v) => {
+      if (statusFiltro !== "todos" && v.status !== statusFiltro) {
+        return;
+      }
       const cidadeId =
         v.destino_cidade_id || v.destinos?.cidade_id || null;
       const cidadeNome =
@@ -508,7 +511,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
       }
     });
     return rows;
-  }, [vendas, tipoProdutosNomeMap, cidadesMap]);
+  }, [vendas, tipoProdutosNomeMap, cidadesMap, statusFiltro]);
 
   const recibosFiltrados = useMemo(() => {
     const hasTerm = buscaProduto.trim().length > 0;
@@ -1126,14 +1129,29 @@ export default function RelatorioAgrupadoProdutoIsland() {
                 onChange={(e) => setMobileFiltroTipo(e.target.value as MobileFiltroTipo)}
                 style={{ width: "100%" }}
               >
-                <option value="cidade">Por Cidade</option>
-                {activeTab === "recibos" && (
-                  <option value="tipo_produto">Por Tipo Produto</option>
-                )}
+                <option value="status">Por Status</option>
                 <option value="produto">Por Produto</option>
+                <option value="cidade">Por Cidade</option>
                 <option value="data">Por Data</option>
               </select>
             </div>
+
+            {mobileFiltroTipo === "status" && (
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+                  style={{ width: "100%" }}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="aberto">Aberto</option>
+                  <option value="confirmado">Confirmado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+            )}
 
             {mobileFiltroTipo === "cidade" && (
               <div className="form-group" style={{ position: "relative" }}>
@@ -1216,25 +1234,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
                       ))}
                   </div>
                 )}
-              </div>
-            )}
-
-            {mobileFiltroTipo === "tipo_produto" && activeTab === "recibos" && (
-              <div className="form-group">
-                <label className="form-label">Tipo de Produto</label>
-                <select
-                  className="form-select"
-                  value={tipoReciboSelecionado}
-                  onChange={(e) => setTipoReciboSelecionado(e.target.value)}
-                  style={{ width: "100%" }}
-                >
-                  <option value="">Todos os tipos</option>
-                  {produtos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome || p.tipo || p.id}
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
 
