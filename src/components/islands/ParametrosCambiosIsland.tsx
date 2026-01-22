@@ -320,7 +320,10 @@ export default function ParametrosCambiosIsland() {
         )}
       </form>
 
-      <div className="table-container overflow-x-auto mt-6">
+      <div
+        className="table-container overflow-x-auto mt-6"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <div className="flex items-center justify-between mb-2">
           <strong>{tituloTabela}</strong>
           <button

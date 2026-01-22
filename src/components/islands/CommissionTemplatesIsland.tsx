@@ -585,7 +585,10 @@ export default function CommissionTemplatesIsland() {
       </div>
 
       {/* TABELA */}
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-blue min-w-[820px]">
           <thead>
             <tr>

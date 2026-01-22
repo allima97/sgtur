@@ -214,7 +214,10 @@ export default function LogsIsland() {
       {/* TABELA */}
       <div className="card-base card-red">
         <h3 className="mb-3 font-semibold">Registros ({logsFiltrados.length})</h3>
-        <div className="table-container overflow-x-auto">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
           <table className="table-default table-header-red table-mobile-cards min-w-[820px]">
             <thead>
               <tr>

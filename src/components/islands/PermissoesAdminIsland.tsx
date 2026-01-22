@@ -50,6 +50,7 @@ export default function PermissoesAdminIsland() {
   const [permissoes, setPermissoes] = useState<Permissao[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState("");
 
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -125,6 +126,12 @@ export default function PermissoesAdminIsland() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!usuarioSelecionadoId && usuarios.length > 0) {
+      setUsuarioSelecionadoId(usuarios[0].id);
+    }
+  }, [usuarioSelecionadoId, usuarios]);
+
   // -----------------------
   // Helpers
   // -----------------------
@@ -150,6 +157,7 @@ export default function PermissoesAdminIsland() {
   }
 
   const permissaoList = permissao ? permissoes : [];
+  const usuarioSelecionado = usuarios.find((u) => u.id === usuarioSelecionadoId) || null;
 
   // -----------------------
   // Salvar alterações
@@ -205,71 +213,148 @@ export default function PermissoesAdminIsland() {
       {loading && <div>Carregando...</div>}
 
       {/* LISTAGEM */}
-      <div className="card-base card-red">
-        <h3 className="mb-3 font-semibold">Usuários</h3>
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-header-red table-mobile-cards min-w-[900px]">
-            <thead>
-              <tr>
-                <th className="min-w-[180px]">Usuário</th>
-                {MODULOS.map((m) => (
-                  <th key={m}>{m}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+      <div className="sm:hidden">
+        <div className="card-base card-red mb-3">
+          <div className="form-group">
+            <label className="form-label">Usuário</label>
+            <select
+              className="form-select"
+              value={usuarioSelecionadoId}
+              onChange={(e) => setUsuarioSelecionadoId(e.target.value)}
+            >
               {usuarios.map((u) => (
-                <tr key={u.id}>
-                  <td data-label="Usuário">
-                    <strong>{u.nome_completo}</strong>
-                    <br />
-                    <small>{u.email}</small>
-                    <br />
-                    <small>Tipo: {u.tipo}</small>
-                  </td>
-                  {MODULOS.map((m) => {
-                    const per = getPermissao(u.id, m);
-                    return (
-                      <td key={m} data-label={m}>
-                        <div className="flex flex-col gap-1">
-                          {/* Toggle ATIVO */}
-                          <label className="text-xs">
-                            <input
-                              type="checkbox"
-                              checked={per.ativo}
+                <option key={u.id} value={u.id}>
+                  {u.nome_completo}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {usuarioSelecionado && (
+          <div className="card-base card-red">
+            <h3 className="mb-3 font-semibold">Permissões de {usuarioSelecionado.nome_completo}</h3>
+            <div className="flex flex-col gap-2">
+              {MODULOS.map((m) => {
+                const per = getPermissao(usuarioSelecionado.id, m);
+                return (
+                  <div
+                    key={m}
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 10,
+                      padding: 12,
+                      background: "#fff",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <strong>{m}</strong>
+                      <label style={{ fontSize: 12 }}>
+                        <input
+                          type="checkbox"
+                          checked={per.ativo}
+                          onChange={(e) =>
+                            salvar({
+                              ...per,
+                              ativo: e.target.checked,
+                            })
+                          }
+                        />{" "}
+                        ativo
+                      </label>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <select
+                        className="form-select"
+                        disabled={!per.ativo}
+                        value={per.permissao}
+                        onChange={(e) =>
+                          salvar({
+                            ...per,
+                            permissao: e.target.value as any,
+                          })
+                        }
+                      >
+                        <option value="view">View</option>
+                        <option value="edit">Edit</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden sm:block">
+        <div className="card-base card-red">
+          <h3 className="mb-3 font-semibold">Usuários</h3>
+          <div className="table-container overflow-x-auto">
+            <table className="table-default table-header-red table-mobile-cards min-w-[900px]">
+              <thead>
+                <tr>
+                  <th className="min-w-[180px]">Usuário</th>
+                  {MODULOS.map((m) => (
+                    <th key={m}>{m}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.id}>
+                    <td data-label="Usuário">
+                      <strong>{u.nome_completo}</strong>
+                      <br />
+                      <small>{u.email}</small>
+                      <br />
+                      <small>Tipo: {u.tipo}</small>
+                    </td>
+                    {MODULOS.map((m) => {
+                      const per = getPermissao(u.id, m);
+                      return (
+                        <td key={m} data-label={m}>
+                          <div className="flex flex-col gap-1">
+                            {/* Toggle ATIVO */}
+                            <label className="text-xs">
+                              <input
+                                type="checkbox"
+                                checked={per.ativo}
+                                onChange={(e) =>
+                                  salvar({
+                                    ...per,
+                                    ativo: e.target.checked,
+                                  })
+                                }
+                              />{" "}
+                              ativo
+                            </label>
+                            {/* SELECT PERMISSÃO */}
+                            <select
+                              disabled={!per.ativo}
+                              value={per.permissao}
                               onChange={(e) =>
                                 salvar({
                                   ...per,
-                                  ativo: e.target.checked,
+                                  permissao: e.target.value as any,
                                 })
                               }
-                            />{' '}
-                            ativo
-                          </label>
-                          {/* SELECT PERMISSÃO */}
-                          <select
-                            disabled={!per.ativo}
-                            value={per.permissao}
-                            onChange={(e) =>
-                              salvar({
-                                ...per,
-                                permissao: e.target.value as any,
-                              })
-                            }
-                            className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
-                          >
-                            <option value="view">View</option>
-                            <option value="edit">Edit</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                              className="text-xs bg-indigo-950 text-indigo-100 border border-indigo-900 rounded px-1 py-0.5"
+                            >
+                              <option value="view">View</option>
+                              <option value="edit">Edit</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

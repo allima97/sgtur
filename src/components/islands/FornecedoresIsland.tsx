@@ -462,7 +462,10 @@ export default function FornecedoresIsland() {
       <div className="card-base" style={{ marginTop: 16 }}>
         <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>
         {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
-        <div className="table-container overflow-x-auto">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
           <table className="table-default table-header-teal table-mobile-cards min-w-[720px]">
             <thead>
               <tr>

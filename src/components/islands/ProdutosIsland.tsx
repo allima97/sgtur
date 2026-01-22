@@ -196,6 +196,7 @@ export default function ProdutosIsland() {
         { data: subdivisaoData, error: subErr },
         tipoResp,
         produtosResp,
+        { data: destinosData, error: destinosErr },
         { data: destinosProdutosData, error: destinosProdutosErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
@@ -221,6 +222,10 @@ export default function ProdutosIsland() {
           )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
+        supabase
+          .from("destinos")
+          .select("id, nome, atracao_principal, melhor_epoca")
+          .order("nome", { ascending: true }),
         supabase
           .from("produtos")
           .select("destino, atracao_principal, melhor_epoca")
@@ -320,6 +325,16 @@ export default function ProdutosIsland() {
       const destinosNomes: string[] = [];
       const atracoesNomes: string[] = [];
       const melhoresEpocasNomes: string[] = [];
+      if (!destinosErr && destinosData) {
+        destinosData.forEach((destino: any) => {
+          const nome = (destino?.nome || "").trim();
+          if (nome) destinosNomes.push(nome);
+          const atracao = (destino?.atracao_principal || "").trim();
+          if (atracao) atracoesNomes.push(atracao);
+          const melhorEpoca = (destino?.melhor_epoca || "").trim();
+          if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
+        });
+      }
       if (!destinosProdutosErr && destinosProdutosData) {
         destinosProdutosData.forEach((destino: any) => {
           const nome = (destino?.destino || "").trim();
@@ -347,8 +362,9 @@ export default function ProdutosIsland() {
         setMelhoresEpocasCadastro([]);
       }
 
-      if (destinosProdutosErr) {
+      if (destinosErr && destinosProdutosErr) {
         erros.push("destinos");
+        if (destinosErr.message) detalhesErro.push(`destinos: ${destinosErr.message}`);
         if (destinosProdutosErr.message) {
           detalhesErro.push(`produtos.destino: ${destinosProdutosErr.message}`);
         }
@@ -853,7 +869,7 @@ export default function ProdutosIsland() {
 
   return (
     <div className="destinos-page">
-      <div className="card-base mb-3">
+      <div className="card-base mb-3 list-toolbar-sticky">
         <div
           className="form-row"
           style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
@@ -883,8 +899,8 @@ export default function ProdutosIsland() {
       </div>
 
       {mostrarFormulario && formLayout === "selection" && (
-        <div className="card-base card-blue form-card mb-3">
-          <div className="form-row">
+        <div className="card-base card-blue mb-3">
+          <div className="form-row mobile-stack">
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Todas as cidades</label>
               <div className="flex gap-2">
@@ -910,11 +926,11 @@ export default function ProdutosIsland() {
 
       {mostrarFormulario && formLayout !== "selection" && (
 
-        <div className="card-base card-blue form-card mb-3">
+        <div className="card-base card-blue mb-3">
 
           <form onSubmit={salvar}>
 
-            <div className="form-row" style={{ marginTop: 12, gap: 12, flexWrap: "wrap" }}>
+            <div className="form-row mobile-stack" style={{ marginTop: 12, gap: 12, flexWrap: "wrap" }}>
               <div className="form-group" style={{ flex: "0 1 220px", minWidth: 180 }}>
                 <label className="form-label">Tipo *</label>
                 <select
@@ -1041,7 +1057,7 @@ export default function ProdutosIsland() {
               </div>
             </div>
             {!isGlobalMode && form.todas_as_cidades && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group" style={{ width: 220 }}>
                   <label className="form-label">Todas as cidades</label>
                   <select
@@ -1060,7 +1076,7 @@ export default function ProdutosIsland() {
               </div>
             )}
             {isHospedagem && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Atracao principal</label>
                   <input
@@ -1116,7 +1132,7 @@ export default function ProdutosIsland() {
             )}
 
             {isHospedagem && (
-              <div className="form-row" style={{ marginTop: 12 }}>
+              <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Duracao sugerida</label>
                   <select
@@ -1233,7 +1249,10 @@ export default function ProdutosIsland() {
       )}
 
       {/* Tabela */}
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
           <thead>
             <tr>

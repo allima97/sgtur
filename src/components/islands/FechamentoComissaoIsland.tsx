@@ -847,7 +847,10 @@ export default function FechamentoComissaoIsland() {
         </div>
       </div>
 
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-green min-w-[720px]">
           <thead>
             <tr>

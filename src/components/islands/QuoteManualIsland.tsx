@@ -835,8 +835,11 @@ export default function QuoteManualIsland() {
         <div style={{ marginBottom: 12, fontSize: 14 }}>
           Total estimado: R$ {formatCurrency(total)}
         </div>
-        <div className="table-container overflow-x-auto">
-          <table className="table-default table-compact quote-items-table">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <table className="table-default table-compact table-mobile-cards quote-items-table">
             <thead>
               <tr>
                 <th className="order-cell">Ordem</th>
@@ -858,7 +861,7 @@ export default function QuoteManualIsland() {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr>
-                      <td className="order-cell">
+                      <td className="order-cell" data-label="Ordem">
                         <div className="order-controls">
                           <button
                             type="button"
@@ -882,7 +885,7 @@ export default function QuoteManualIsland() {
                           </button>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Tipo">
                         <input
                           className="form-input"
                           list={TIPO_DATALIST_ID}
@@ -891,7 +894,7 @@ export default function QuoteManualIsland() {
                           onChange={(e) => updateItem(index, { item_type: e.target.value })}
                         />
                       </td>
-                      <td>
+                      <td data-label="Cidade">
                         <input
                           className="form-input"
                           list={`quote-manual-cidades-${rowKey}`}
@@ -901,7 +904,7 @@ export default function QuoteManualIsland() {
                           onFocus={() => scheduleCidadeFetch(rowKey, getCidadeInputValue(item, rowKey))}
                         />
                       </td>
-                      <td>
+                      <td data-label="Destino">
                         <input
                           className="form-input"
                           list={DESTINO_DATALIST_ID}
@@ -909,7 +912,7 @@ export default function QuoteManualIsland() {
                           onChange={(e) => updateItem(index, { city_name: e.target.value })}
                         />
                       </td>
-                      <td>
+                      <td data-label="Produto">
                         <input
                           className="form-input"
                           list={`quote-manual-produtos-${rowKey}`}
@@ -922,7 +925,7 @@ export default function QuoteManualIsland() {
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Inicio">
                         <input
                           className="form-input"
                           type="date"
@@ -942,7 +945,7 @@ export default function QuoteManualIsland() {
                           }}
                         />
                       </td>
-                      <td>
+                      <td data-label="Fim">
                         <input
                           className="form-input"
                           type="date"
@@ -960,7 +963,7 @@ export default function QuoteManualIsland() {
                           }}
                         />
                       </td>
-                      <td>
+                      <td data-label="Qtd">
                         <input
                           className="form-input"
                           type="number"
@@ -969,14 +972,14 @@ export default function QuoteManualIsland() {
                           onChange={(e) => updateItem(index, { quantity: Number(e.target.value) || 1 })}
                         />
                       </td>
-                      <td>
+                      <td data-label="Total">
                         <input
                           className="form-input"
                           value={formatCurrency(item.total_amount)}
                           onChange={(e) => updateItem(index, { total_amount: normalizeNumber(e.target.value) })}
                         />
                       </td>
-                      <td>
+                      <td data-label="Taxas">
                         <input
                           className="form-input"
                           value={formatCurrency(item.taxes_amount || 0)}

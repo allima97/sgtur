@@ -544,7 +544,7 @@ export default function ViagensListaIsland() {
                   <small style={{ color: "red" }}>{clientesErro}</small>
                 )}
               </div>
-              <div className="form-row">
+              <div className="form-row mobile-stack">
                 <div className="form-group">
                   <label className="form-label">Origem</label>
                   <input
@@ -650,7 +650,7 @@ export default function ViagensListaIsland() {
             </div>
           )}
 
-          <div className="form-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div className="form-row mobile-stack" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
               <label className="form-label">Buscar</label>
               <input
@@ -727,7 +727,10 @@ export default function ViagensListaIsland() {
           </div>
         )}
 
-        <div className="table-container overflow-x-auto">
+        <div
+          className="table-container overflow-x-auto"
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
           <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
             <thead>
               <tr>

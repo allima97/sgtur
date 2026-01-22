@@ -546,7 +546,7 @@ export default function CidadesIsland() {
 
   return (
     <div className="cidades-page">
-      <div className="card-base mb-3">
+      <div className="card-base mb-3 list-toolbar-sticky">
         <div
           className="form-row"
           style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
@@ -687,7 +687,10 @@ export default function CidadesIsland() {
         </div>
       )}
 
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>

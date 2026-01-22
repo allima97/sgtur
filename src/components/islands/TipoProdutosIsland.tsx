@@ -552,7 +552,10 @@ export default function TipoProdutosIsland() {
       {erro && <div className="card-base card-config mb-3">{erro}</div>}
 
       {/* TABELA */}
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
         <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>

@@ -498,7 +498,10 @@ export default function CommissionRulesIsland() {
           </form>
       )}
 
-      <div className="table-container overflow-x-auto">
+      <div
+        className="table-container overflow-x-auto"
+        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      >
           <table className="table-default table-header-blue table-mobile-cards min-w-[900px]">
             <thead>
               <tr>
