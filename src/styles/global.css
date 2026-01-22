@@ -598,6 +598,11 @@ body {
     overflow-x: hidden;
   }
 
+  .clientes-page .mobile-actionbar {
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+
   .clientes-page .table-mobile-cards td {
     grid-template-columns: 100px 1fr;
   }
