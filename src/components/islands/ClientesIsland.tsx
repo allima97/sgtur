@@ -99,6 +99,7 @@ export default function ClientesIsland() {
   const podeExcluir =
     permissao === "delete" || permissao === "admin";
   const exibeColunaAcoes = podeVer;
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   // =====================================
   // STATES
@@ -1006,6 +1007,28 @@ export default function ClientesIsland() {
     }
   }
 
+  const iniciarNovoCliente = () => {
+    setForm(initialForm);
+    setEditId(null);
+    setAcompanhantes([]);
+    setAcompErro(null);
+    resetAcompForm(true);
+    setAbaFormCliente("dados");
+    setMsg(null);
+    setMostrarFormCliente(true);
+  };
+
+  useEffect(() => {
+    if (loadPerm || modoSomenteLeitura) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("novo") !== "1") return;
+    iniciarNovoCliente();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("novo");
+    window.history.replaceState({}, "", url.toString());
+  }, [loadPerm, modoSomenteLeitura]);
+
   // =====================================
   // RESTRIÇÃO TOTAL DE MÓDULO
   // =====================================
@@ -1021,10 +1044,6 @@ export default function ClientesIsland() {
     );
   }
 
-  // =====================================
-  // PERMISSÃO APENAS PARA VER (não mostra form)
-  // =====================================
-  const modoSomenteLeitura = !podeCriar && !podeEditar;
   const acompanhantesCard = (
     <div className="card-base card-blue mb-2">
       <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
@@ -1210,28 +1229,6 @@ export default function ClientesIsland() {
       )}
     </div>
   );
-
-  const iniciarNovoCliente = () => {
-    setForm(initialForm);
-    setEditId(null);
-    setAcompanhantes([]);
-    setAcompErro(null);
-    resetAcompForm(true);
-    setAbaFormCliente("dados");
-    setMsg(null);
-    setMostrarFormCliente(true);
-  };
-
-  useEffect(() => {
-    if (loadPerm || modoSomenteLeitura) return;
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("novo") !== "1") return;
-    iniciarNovoCliente();
-    const url = new URL(window.location.href);
-    url.searchParams.delete("novo");
-    window.history.replaceState({}, "", url.toString());
-  }, [loadPerm, modoSomenteLeitura]);
 
   // =====================================
   // UI

@@ -125,6 +125,7 @@ export default function ViagensListaIsland() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [savingViagem, setSavingViagem] = useState(false);
@@ -508,7 +509,9 @@ export default function ViagensListaIsland() {
   }
 
   return (
-      <div className="card-base card-purple viagens-page">
+      <div
+        className={`card-base card-purple viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {showForm && (
             <div className="card-base card-blue form-card viagens-form" style={{ padding: 16 }}>
@@ -648,75 +651,168 @@ export default function ViagensListaIsland() {
           )}
 
           {!showForm && (
-          <div className="form-row mobile-stack" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
-              <label className="form-label">Buscar</label>
-              <input
-                className="form-input"
-                placeholder="Cliente ou produto..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: "1 1 180px" }}>
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-              >
-                {STATUS_OPCOES.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={compactDateFieldStyle}>
-              <label className="form-label">Inicio</label>
-              <input
-                type="date"
-                className="form-input"
-                value={inicio}
-                onChange={(e) => {
-                  const nextInicio = e.target.value;
-                  setInicio(nextInicio);
-                  if (fim && nextInicio && fim < nextInicio) {
-                    setFim(nextInicio);
-                  }
-                }}
-              />
-            </div>
-            <div className="form-group" style={compactDateFieldStyle}>
-              <label className="form-label">Final</label>
-              <input
-                type="date"
-                className="form-input"
-                value={fim}
-                min={inicio || undefined}
-                onChange={(e) => {
-                  const nextFim = e.target.value;
-                  const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
-                  setFim(boundedFim);
-                }}
-              />
-            </div>
-            <div className="form-group viagens-actions">
-              <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
-                {loading ? "Atualizando..." : "Atualizar"}
-              </button>
-              {podeCriar && (
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={abrirFormularioViagem}
-                  disabled={showForm}
-                >
-                  Nova viagem
+            <>
+              <div className="flex flex-col gap-2 sm:hidden">
+                <div className="form-group">
+                  <label className="form-label">Buscar</label>
+                  <input
+                    className="form-input"
+                    placeholder="Cliente ou produto..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                  />
+                </div>
+                <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+                  Filtros
                 </button>
-              )}
+              </div>
+              <div className="hidden sm:block">
+                <div
+                  className="form-row mobile-stack"
+                  style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}
+                >
+                  <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
+                    <label className="form-label">Buscar</label>
+                    <input
+                      className="form-input"
+                      placeholder="Cliente ou produto..."
+                      value={busca}
+                      onChange={(e) => setBusca(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ flex: "1 1 180px" }}>
+                    <label className="form-label">Status</label>
+                    <select
+                      className="form-select"
+                      value={statusFiltro}
+                      onChange={(e) => setStatusFiltro(e.target.value)}
+                    >
+                      {STATUS_OPCOES.map((op) => (
+                        <option key={op.value} value={op.value}>
+                          {op.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={compactDateFieldStyle}>
+                    <label className="form-label">Inicio</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={inicio}
+                      onChange={(e) => {
+                        const nextInicio = e.target.value;
+                        setInicio(nextInicio);
+                        if (fim && nextInicio && fim < nextInicio) {
+                          setFim(nextInicio);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="form-group" style={compactDateFieldStyle}>
+                    <label className="form-label">Final</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={fim}
+                      min={inicio || undefined}
+                      onChange={(e) => {
+                        const nextFim = e.target.value;
+                        const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                        setFim(boundedFim);
+                      }}
+                    />
+                  </div>
+                  <div className="form-group viagens-actions">
+                    <button className="btn btn-strong" type="button" onClick={buscar} disabled={loading}>
+                      {loading ? "Atualizando..." : "Atualizar"}
+                    </button>
+                    {podeCriar && (
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        onClick={abrirFormularioViagem}
+                        disabled={showForm}
+                      >
+                        Nova viagem
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!showForm && showFilters && (
+            <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+              <div
+                className="mobile-drawer-panel"
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <strong>Filtros</strong>
+                  <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                    ✕
+                  </button>
+                </div>
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label">Status</label>
+                  <select
+                    className="form-select"
+                    value={statusFiltro}
+                    onChange={(e) => setStatusFiltro(e.target.value)}
+                  >
+                    {STATUS_OPCOES.map((op) => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Inicio</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={inicio}
+                    onChange={(e) => {
+                      const nextInicio = e.target.value;
+                      setInicio(nextInicio);
+                      if (fim && nextInicio && fim < nextInicio) {
+                        setFim(nextInicio);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Final</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={fim}
+                    min={inicio || undefined}
+                    onChange={(e) => {
+                      const nextFim = e.target.value;
+                      const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                      setFim(boundedFim);
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ marginTop: 12, width: "100%" }}
+                  onClick={() => {
+                    buscar();
+                    setShowFilters(false);
+                  }}
+                >
+                  Aplicar filtros
+                </button>
+              </div>
             </div>
-          </div>
           )}
 
         {!showForm && erro && <div style={{ color: "red" }}>{erro}</div>}
@@ -727,101 +823,109 @@ export default function ViagensListaIsland() {
         )}
 
         {!showForm && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
-        >
-          <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Início</th>
-                <th>Fim</th>
-                <th>Status</th>
-                <th>Produto</th>
-                <th>Valor</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
+          <div
+            className="table-container overflow-x-auto"
+            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          >
+            <table className="table-default table-header-teal table-mobile-cards min-w-[760px]">
+              <thead>
                 <tr>
-                  <td colSpan={totalColunasTabela}>Carregando viagens...</td>
+                  <th>Cliente</th>
+                  <th>Início</th>
+                  <th>Fim</th>
+                  <th>Status</th>
+                  <th>Produto</th>
+                  <th>Valor</th>
+                  <th className="th-actions">Ações</th>
                 </tr>
-              )}
-              {!loading && viagensFiltradas.length === 0 && (
-                <tr>
-                  <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
-                </tr>
-              )}
-              {viagensFiltradas.map((v) => {
-                const statusLabel = obterStatusExibicao(v);
-                const recibos = v.recibos || [];
-                const produtoLabel =
-                  recibos.length > 1
-                    ? `Múltiplos (${recibos.length})`
-                    : recibos[0]?.tipo_produtos?.nome ||
-                      recibos[0]?.tipo_produtos?.tipo ||
-                      recibos[0]?.produto_id ||
-                      "-";
-                const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
-                const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
-                const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
-                return (
-                  <tr key={v.id}>
-                    <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
-                    <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
-                    <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
-                    <td data-label="Status">{statusLabel}</td>
-                    <td data-label="Produto">{produtoLabel}</td>
-                    <td data-label="Valor">{valorLabel}</td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons viagens-action-buttons">
-                        <a
-                          className="btn-icon"
-                          href={`/operacao/viagens/${v.id}`}
-                          title="Ver viagem"
-                        >
-                          👁️
-                        </a>
-                        {whatsappLink && (
-                          <a
-                            className="btn-icon"
-                            href={whatsappLink}
-                            title="Enviar WhatsApp"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            💬
-                          </a>
-                        )}
-                        {podeEditar && (
-                          <a
-                            className="btn-icon"
-                            href={`/operacao/viagens/${v.id}?modo=editar`}
-                            title="Editar viagem"
-                          >
-                            ✏️
-                          </a>
-                        )}
-                        {podeExcluir && (
-                          <button
-                            className="btn-icon btn-danger"
-                            title="Excluir viagem"
-                            onClick={() => excluirViagem(v)}
-                            disabled={deletandoViagemId === v.id}
-                          >
-                            {deletandoViagemId === v.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={totalColunasTabela}>Carregando viagens...</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                )}
+                {!loading && viagensFiltradas.length === 0 && (
+                  <tr>
+                    <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
+                  </tr>
+                )}
+                {viagensFiltradas.map((v) => {
+                  const statusLabel = obterStatusExibicao(v);
+                  const recibos = v.recibos || [];
+                  const produtoLabel =
+                    recibos.length > 1
+                      ? `Múltiplos (${recibos.length})`
+                      : recibos[0]?.tipo_produtos?.nome ||
+                        recibos[0]?.tipo_produtos?.tipo ||
+                        recibos[0]?.produto_id ||
+                        "-";
+                  const valorTotal = recibos.reduce((total, r) => total + (r.valor_total || 0), 0);
+                  const valorLabel = recibos.length > 0 ? formatarMoeda(valorTotal) : "-";
+                  const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp || null);
+                  return (
+                    <tr key={v.id}>
+                      <td data-label="Cliente">{v.clientes?.nome || "-"}</td>
+                      <td data-label="Início">{formatarDataParaExibicao(v.data_inicio)}</td>
+                      <td data-label="Fim">{formatarDataParaExibicao(v.data_fim)}</td>
+                      <td data-label="Status">{statusLabel}</td>
+                      <td data-label="Produto">{produtoLabel}</td>
+                      <td data-label="Valor">{valorLabel}</td>
+                      <td className="th-actions" data-label="Ações">
+                        <div className="action-buttons viagens-action-buttons">
+                          <a
+                            className="btn-icon"
+                            href={`/operacao/viagens/${v.id}`}
+                            title="Ver viagem"
+                          >
+                            👁️
+                          </a>
+                          {whatsappLink && (
+                            <a
+                              className="btn-icon"
+                              href={whatsappLink}
+                              title="Enviar WhatsApp"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              💬
+                            </a>
+                          )}
+                          {podeEditar && (
+                            <a
+                              className="btn-icon"
+                              href={`/operacao/viagens/${v.id}?modo=editar`}
+                              title="Editar viagem"
+                            >
+                              ✏️
+                            </a>
+                          )}
+                          {podeExcluir && (
+                            <button
+                              className="btn-icon btn-danger"
+                              title="Excluir viagem"
+                              onClick={() => excluirViagem(v)}
+                              disabled={deletandoViagemId === v.id}
+                            >
+                              {deletandoViagemId === v.id ? "..." : "🗑️"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!showForm && podeCriar && (
+          <div className="mobile-actionbar sm:hidden">
+            <button type="button" className="btn btn-primary" onClick={abrirFormularioViagem}>
+              Nova viagem
+            </button>
+          </div>
         )}
       </div>
     </div>
