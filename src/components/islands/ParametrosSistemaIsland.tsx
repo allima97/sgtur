@@ -331,7 +331,7 @@ export default function ParametrosSistemaIsland() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button
           className="btn btn-primary"
           onClick={salvar}

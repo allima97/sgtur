@@ -423,12 +423,12 @@ export default function MetasVendedorIsland() {
       )}
 
       <div className={`card-base card-blue mb-2${mostrarFormularioMeta ? " form-card" : ""}`}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
           <h3>Metas cadastradas</h3>
           {usuarioPodeEditar && (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               onClick={abrirFormularioMeta}
               disabled={mostrarFormularioMeta}
             >
@@ -583,7 +583,7 @@ export default function MetasVendedorIsland() {
           )}
 
           {usuarioPodeEditar && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
               <button
                 type="submit"
                 className="btn btn-primary"

@@ -515,7 +515,7 @@ export default function TipoProdutosIsland() {
   {/* BUSCA */}
   <div className="card-base mb-3">
     <div
-      className="form-row"
+      className="form-row mobile-stack"
       style={{
         marginTop: 8,
         gap: 8,
@@ -537,7 +537,7 @@ export default function TipoProdutosIsland() {
         <div className="form-group" style={{ alignItems: "flex-end" }}>
           <span style={{ visibility: "hidden" }}>botão</span>
           <button
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             type="button"
             onClick={abrirFormularioTipo}
             disabled={mostrarFormulario}

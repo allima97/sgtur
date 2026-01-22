@@ -288,14 +288,14 @@ export default function CommissionRulesIsland() {
 
   return (
       <div className="card-base card-blue form-card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
           <div>
             <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>
           </div>
           {podeEditar && (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               onClick={abrirFormularioRegra}
               disabled={mostrarFormulario}
             >
@@ -482,7 +482,7 @@ export default function CommissionRulesIsland() {
           </div>
         )}
 
-        <div className="flex gap-2 flex-wrap mt-2">
+        <div className="mobile-stack-buttons mt-2">
           <button className="btn btn-primary" type="submit" disabled={!podeEditar || salvando}>
             {salvando ? "Salvando..." : editId ? "Salvar alterações" : "Salvar regra"}
           </button>

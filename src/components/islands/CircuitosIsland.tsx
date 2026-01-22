@@ -254,8 +254,10 @@ export default function CircuitosIsland() {
   const [previewData, setPreviewData] = useState<CircuitoPreview | null>(null);
   const [importandoPdf, setImportandoPdf] = useState(false);
   const [erroImportacao, setErroImportacao] = useState<string | null>(null);
+  const [pdfSelecionado, setPdfSelecionado] = useState("");
   const [draggingDiaId, setDraggingDiaId] = useState<string | null>(null);
   const [dragOverDiaId, setDragOverDiaId] = useState<string | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
   const cidadesCacheRef = useRef<Map<string, CidadeSelecionada | null>>(new Map());
 
   const circuitosFiltrados = useMemo(() => {
@@ -395,6 +397,10 @@ export default function CircuitosIsland() {
     setCidadeContexto(null);
     setMostrarSugestoesCidade(false);
     setErroImportacao(null);
+    setPdfSelecionado("");
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = "";
+    }
   }
 
   function abrirFormulario() {
@@ -1135,7 +1141,7 @@ export default function CircuitosIsland() {
             <div className="form-group" style={{ alignItems: "flex-end" }}>
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={abrirFormulario}
                 disabled={mostrarFormulario}
               >
@@ -1153,18 +1159,36 @@ export default function CircuitosIsland() {
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Importar roteiro (PDF)</label>
                 <input
-                  className="form-input"
+                  ref={pdfInputRef}
+                  className="sr-only"
                   type="file"
                   accept="application/pdf"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      setPdfSelecionado(file.name);
                       importarPdf(file);
+                    }
+                    if (!file) {
+                      setPdfSelecionado("");
                     }
                     e.currentTarget.value = "";
                   }}
                   disabled={permissao === "view" || importandoPdf}
                 />
+                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
+                  <button
+                    type="button"
+                    className="btn btn-light w-full sm:w-auto"
+                    onClick={() => pdfInputRef.current?.click()}
+                    disabled={permissao === "view" || importandoPdf}
+                  >
+                    Escolher arquivo
+                  </button>
+                </div>
+                <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
+                  {pdfSelecionado || "Nenhum arquivo escolhido"}
+                </div>
                 <small style={{ color: "#64748b" }}>
                   Importa Operador, Codigo, Circuito e o roteiro dia a dia (datas finais sao ignoradas).
                 </small>
@@ -1236,9 +1260,14 @@ export default function CircuitosIsland() {
               </div>
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "space-between" }}>
+            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "space-between" }}>
               <div style={{ color: "#64748b" }}>Datas de inicio</div>
-              <button type="button" className="btn btn-light" onClick={adicionarData} disabled={permissao === "view"}>
+              <button
+                type="button"
+                className="btn btn-light w-full sm:w-auto"
+                onClick={adicionarData}
+                disabled={permissao === "view"}
+              >
                 Adicionar data
               </button>
             </div>
@@ -1251,7 +1280,7 @@ export default function CircuitosIsland() {
                     <th>Cidade de inicio</th>
                     <th>Dias antes</th>
                     <th>Dias depois</th>
-                    <th></th>
+                    <th className="th-actions">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1352,7 +1381,7 @@ export default function CircuitosIsland() {
                           disabled={permissao === "view"}
                         />
                       </td>
-                      <td data-label="Acoes">
+                      <td data-label="Ações">
                         <button
                           type="button"
                           className="btn btn-light"
@@ -1368,9 +1397,14 @@ export default function CircuitosIsland() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2" style={{ justifyContent: "space-between" }}>
+            <div className="mt-4 mobile-stack-buttons" style={{ justifyContent: "space-between" }}>
               <div style={{ color: "#64748b" }}>Roteiro dia a dia</div>
-              <button type="button" className="btn btn-light" onClick={adicionarDia} disabled={permissao === "view"}>
+              <button
+                type="button"
+                className="btn btn-light w-full sm:w-auto"
+                onClick={adicionarDia}
+                disabled={permissao === "view"}
+              >
                 Adicionar dia
               </button>
             </div>
@@ -1572,7 +1606,7 @@ export default function CircuitosIsland() {
               </div>
             )}
 
-            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
               <button type="submit" className="btn btn-primary" disabled={salvando}>
                 {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar circuito"}
               </button>
@@ -1595,7 +1629,7 @@ export default function CircuitosIsland() {
               <th>Codigo</th>
               <th>Operador</th>
               <th>Status</th>
-              <th></th>
+              <th className="th-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -1616,21 +1650,32 @@ export default function CircuitosIsland() {
                   <td data-label="Codigo">{circuito.codigo || "-"}</td>
                   <td data-label="Operador">{circuito.operador || "-"}</td>
                   <td data-label="Status">{circuito.ativo ? "Ativo" : "Inativo"}</td>
-                  <td className="th-actions" data-label="Acoes">
+                  <td className="th-actions" data-label="Ações">
                     <div className="action-buttons">
-                      <button type="button" className="btn btn-light" onClick={() => iniciarEdicao(circuito.id)}>
-                        Editar
-                      </button>
-                      <button type="button" className="btn btn-light" onClick={() => abrirPreview(circuito.id)}>
-                        Visualizar
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => iniciarEdicao(circuito.id)}
+                        title="Editar"
+                      >
+                        ✏️
                       </button>
                       <button
                         type="button"
-                        className="btn btn-light"
+                        className="btn-icon"
+                        onClick={() => abrirPreview(circuito.id)}
+                        title="Visualizar"
+                      >
+                        👁️
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-icon btn-danger"
                         onClick={() => excluir(circuito.id)}
                         disabled={excluindoId === circuito.id}
+                        title="Excluir"
                       >
-                        {excluindoId === circuito.id ? "Excluindo..." : "Excluir"}
+                        {excluindoId === circuito.id ? "..." : "🗑️"}
                       </button>
                     </div>
                   </td>

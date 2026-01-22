@@ -286,7 +286,7 @@ export default function ParametrosCambiosIsland() {
             />
           </div>
 
-            <div className="form-group" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+            <div className="form-group mobile-stack-buttons" style={{ alignItems: "flex-end", gap: 8 }}>
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -324,11 +324,11 @@ export default function ParametrosCambiosIsland() {
         className="table-container overflow-x-auto mt-6"
         style={{ maxHeight: "65vh", overflowY: "auto" }}
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
           <strong>{tituloTabela}</strong>
           <button
             type="button"
-            className="btn btn-light"
+            className="btn btn-light w-full sm:w-auto"
             onClick={carregar}
             disabled={loading}
           >

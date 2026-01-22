@@ -548,8 +548,8 @@ export default function CidadesIsland() {
     <div className="cidades-page">
       <div className="card-base mb-3 list-toolbar-sticky">
         <div
-          className="form-row"
-          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+          className="form-row mobile-stack"
+          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
         >
           <div className="form-group" style={{ flex: "1 1 320px" }}>
             <label className="form-label">Buscar cidade</label>
@@ -564,7 +564,7 @@ export default function CidadesIsland() {
             <div className="form-group" style={{ alignItems: "flex-end" }}>
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={abrirFormulario}
                 disabled={mostrarFormulario}
               >
@@ -662,7 +662,7 @@ export default function CidadesIsland() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
               <button className="btn btn-primary" disabled={salvando}>
                 {salvando ? "Salvando..." : editId ? "Salvar alteracoes" : "Adicionar cidade"}
               </button>

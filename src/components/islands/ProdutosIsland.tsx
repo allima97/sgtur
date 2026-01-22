@@ -871,8 +871,8 @@ export default function ProdutosIsland() {
     <div className="destinos-page">
       <div className="card-base mb-3 list-toolbar-sticky">
         <div
-          className="form-row"
-          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+          className="form-row mobile-stack"
+          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
         >
           <div className="form-group" style={{ flex: "1 1 320px" }}>
             <label className="form-label">Buscar produto</label>
@@ -887,7 +887,7 @@ export default function ProdutosIsland() {
             <div className="form-group" style={{ alignItems: "flex-end" }}>
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={abrirFormularioProduto}
                 disabled={mostrarFormulario}
               >
@@ -903,7 +903,7 @@ export default function ProdutosIsland() {
           <div className="form-row mobile-stack">
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Todas as cidades</label>
-              <div className="flex gap-2">
+              <div className="mobile-stack-buttons">
                 <button type="button" className="btn btn-light" onClick={() => selecionarAbrangencia(false)}>
                   Nao
                 </button>
@@ -916,7 +916,7 @@ export default function ProdutosIsland() {
               </small>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+          <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="btn btn-light" onClick={fecharFormularioProduto}>
               Cancelar
             </button>
@@ -1226,7 +1226,7 @@ export default function ProdutosIsland() {
 
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+            <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
               <button type="submit" className="btn btn-primary" disabled={salvando}>
                 {salvando ? "Salvando..." : editandoId ? "Salvar alteracoes" : "Salvar produto"}
               </button>

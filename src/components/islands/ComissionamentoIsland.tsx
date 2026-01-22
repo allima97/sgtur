@@ -192,6 +192,7 @@ export default function ComissionamentoIsland() {
   const [preset, setPreset] = useState<string>("mes_atual");
   const [periodo, setPeriodo] = useState(() => calcPeriodo("mes_atual"));
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (loadingPerm || !ativo) return;
@@ -681,17 +682,78 @@ export default function ComissionamentoIsland() {
   return (
     <div className="card-base bg-transparent shadow-none p-0">
       <div className="card-base mb-3">
-        <div className="form-row mb-0">
-          <div className="form-group">
-            <label className="form-label">Período</label>
-            <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
-              {PERIODO_OPCOES.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+        <div className="mobile-stack-buttons sm:hidden">
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+          <button type="button" className="btn btn-light" onClick={() => setShowCalculator(true)}>
+            Calculadora
+          </button>
+        </div>
+        <div className="hidden sm:block">
+          <div className="form-row mb-0">
+            <div className="form-group">
+              <label className="form-label">Período</label>
+              <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                {PERIODO_OPCOES.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+              <div className="form-group">
+                <label className="form-label">Início</label>
+                <input className="form-input" value={formatPeriodoLabel(periodo.inicio)} readOnly />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Fim</label>
+                <input className="form-input" value={formatPeriodoLabel(periodo.fim)} readOnly />
+              </div>
+              <div
+                className="form-group"
+                style={{ justifyContent: "flex-end", alignItems: "flex-end" }}
+              >
+                <label className="form-label" style={{ visibility: "hidden" }}>
+                  Calculadora
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-light"
+                  onClick={() => setShowCalculator(true)}
+                >
+                  Calculadora
+                </button>
+              </div>
           </div>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Período</label>
+              <select className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                {PERIODO_OPCOES.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="form-group">
               <label className="form-label">Início</label>
               <input className="form-input" value={formatPeriodoLabel(periodo.inicio)} readOnly />
@@ -700,23 +762,17 @@ export default function ComissionamentoIsland() {
               <label className="form-label">Fim</label>
               <input className="form-input" value={formatPeriodoLabel(periodo.fim)} readOnly />
             </div>
-            <div
-              className="form-group"
-              style={{ justifyContent: "flex-end", alignItems: "flex-end" }}
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => setShowFilters(false)}
             >
-              <label className="form-label" style={{ visibility: "hidden" }}>
-                Calculadora
-              </label>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => setShowCalculator(true)}
-              >
-                Calculadora
-              </button>
-            </div>
+              Aplicar filtros
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">

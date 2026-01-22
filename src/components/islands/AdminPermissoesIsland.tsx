@@ -378,7 +378,7 @@ export default function AdminPermissoesIsland() {
               </tbody>
             </table>
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 mobile-stack-buttons">
             <button
               className="btn btn-primary"
               onClick={salvarPermissoes}

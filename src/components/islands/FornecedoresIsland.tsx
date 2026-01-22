@@ -241,8 +241,8 @@ export default function FornecedoresIsland() {
           </div>
         </div>
         <div
-          className="form-row"
-          style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}
+          className="form-row mobile-stack"
+          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
         >
           <div className="form-group" style={{ flex: "1 1 320px" }}>
             <label className="form-label">Buscar fornecedor</label>
@@ -254,15 +254,27 @@ export default function FornecedoresIsland() {
             />
           </div>
           {podeSalvar && (
-            <div className="form-group" style={{ alignItems: "flex-end" }}>
+            <div
+              className="form-group mobile-stack-buttons"
+              style={{ alignItems: "flex-end", justifyContent: "flex-end" }}
+            >
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={abrirFormularioFornecedor}
                 disabled={mostrarFormulario}
               >
                 Adicionar fornecedor
               </button>
+              {mostrarFormulario && (
+                <button
+                  type="button"
+                  className="btn btn-light w-full sm:w-auto"
+                  onClick={fecharFormularioFornecedor}
+                >
+                  Cancelar
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -429,14 +441,7 @@ export default function FornecedoresIsland() {
           />
         </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
             <button
               type="button"
               className="btn btn-primary"

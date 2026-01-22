@@ -470,7 +470,7 @@ export default function QuotePrintSettingsIsland() {
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+      <div className="mobile-stack-buttons" style={{ display: "flex", gap: 12, marginTop: 12 }}>
         <button className="btn btn-primary" type="button" onClick={salvar} disabled={salvando || bloqueado}>
           {salvando ? "Salvando..." : "Salvar parametros"}
         </button>

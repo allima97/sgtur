@@ -619,7 +619,7 @@ export default function ProdutosLoteIsland() {
           </datalist>
 
           <div className="table-container overflow-x-auto" style={{ marginTop: 12 }}>
-            <table className="table-default table-header-blue table-mobile-cards min-w-[1400px]">
+            <table className="table-default table-header-blue table-mobile-cards table-mobile-plain stack-labels min-w-[1400px]">
               <thead>
                 <tr>
                   <th>Tipo *</th>
@@ -743,7 +743,7 @@ export default function ProdutosLoteIsland() {
             </table>
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-2" style={{ justifyContent: "flex-end" }}>
+          <div className="mt-2 mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
             <button
               type="button"
               className="btn btn-light"

@@ -244,6 +244,9 @@ export default function RelatorioVendasIsland() {
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const [parametrosComissao, setParametrosComissao] =
     useState<ParametrosComissao | null>(null);
   const [regrasCommission, setRegrasCommission] = useState<Record<string, Regra>>(
@@ -259,6 +262,16 @@ export default function RelatorioVendasIsland() {
   const [, setCommissionLoading] = useState(false);
   const [, setCommissionErro] = useState<string | null>(null);
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
+
+  useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
 
   useEffect(() => {
     async function carregarUserCtx() {
@@ -1183,6 +1196,22 @@ export default function RelatorioVendasIsland() {
     });
   }
 
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+
+  const exportDisabled =
+    (exportTipo === "excel" && !exportFlags.excel) ||
+    (exportTipo === "pdf" && !exportFlags.pdf);
+
   return (
     <div className="relatorio-vendas-page">
       {loadingUser && (
@@ -1194,6 +1223,15 @@ export default function RelatorioVendasIsland() {
         </div>
       )}
       <div className="card-base card-purple form-card mb-3">
+        <div className="flex flex-col gap-2 sm:hidden">
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
+            Exportar
+          </button>
+        </div>
+        <div className="hidden sm:block">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>
@@ -1490,7 +1528,361 @@ export default function RelatorioVendasIsland() {
             </button>
           </div>
         </div>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Data início</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataInicio}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data fim</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataFim}
+                min={dataInicio || undefined}
+                onChange={(e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim =
+                    dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+              >
+                <option value="todos">Todos</option>
+                <option value="aberto">Aberto</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Valor mínimo</label>
+              <input
+                className="form-input"
+                value={valorMin}
+                onChange={(e) => setValorMin(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Valor máximo</label>
+              <input
+                className="form-input"
+                value={valorMax}
+                onChange={(e) => setValorMax(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Cliente</label>
+              <input
+                className="form-input"
+                value={clienteBusca}
+                onChange={(e) => {
+                  setClienteBusca(e.target.value);
+                  setClienteSelecionado(null);
+                }}
+                placeholder="Nome ou CPF..."
+              />
+              {clienteBusca && !clienteSelecionado && (
+                <div
+                  className="card-base"
+                  style={{ marginTop: 4, maxHeight: 180, overflowY: "auto" }}
+                >
+                  {clientesFiltrados.length === 0 && (
+                    <div style={{ fontSize: "0.85rem" }}>Nenhum cliente encontrado.</div>
+                  )}
+                  {clientesFiltrados.map((c) => (
+                    <div
+                      key={c.id}
+                      style={{ padding: "4px 6px", cursor: "pointer" }}
+                      onClick={() => {
+                        setClienteSelecionado(c);
+                        setClienteBusca(c.nome);
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{c.nome}</div>
+                      <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                        {c.cpf || "Sem CPF"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {clienteSelecionado && (
+                <div style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                  Selecionado: <strong>{clienteSelecionado.nome}</strong>
+                </div>
+              )}
+            </div>
+            <div className="form-group" style={{ position: "relative" }}>
+              <label className="form-label">Cidade</label>
+              <input
+                className="form-input"
+                placeholder="Digite a cidade"
+                value={cidadeNomeInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCidadeNomeInput(value);
+                  setCidadeFiltro("");
+                  if (value.trim().length > 0) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (cidadeNomeInput.trim().length >= 2) {
+                    setMostrarSugestoesCidade(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setMostrarSugestoesCidade(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidades.find((cidade) =>
+                    normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }}
+              />
+              {mostrarSugestoesCidade && cidadeNomeInput.trim().length >= 1 && (
+                <div
+                  className="card-base card-config"
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    zIndex: 20,
+                    padding: "4px 0",
+                  }}
+                >
+                  {buscandoCidade && (
+                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
+                      Buscando cidades...
+                    </div>
+                  )}
+                  {!buscandoCidade && erroCidade && (
+                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>
+                      {erroCidade}
+                    </div>
+                  )}
+                  {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
+                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
+                      Nenhuma cidade encontrada.
+                    </div>
+                  )}
+                  {!buscandoCidade &&
+                    !erroCidade &&
+                    cidadeSugestoes.map((cidade) => (
+                      <button
+                        key={cidade.id}
+                        type="button"
+                        className="btn btn-ghost w-full text-left"
+                        style={{ padding: "6px 12px" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setCidadeFiltro(cidade.id);
+                          setCidadeNomeInput(cidade.nome);
+                          setMostrarSugestoesCidade(false);
+                        }}
+                      >
+                        {cidade.nome}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Tipo Produto</label>
+              <select
+                className="form-select"
+                value={tipoSelecionadoId}
+                onChange={(e) => setTipoSelecionadoId(e.target.value)}
+              >
+                <option value="">Todos os tipos</option>
+                {tiposProdutos.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.nome || tipo.tipo || `(ID: ${tipo.id})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Produto</label>
+              <input
+                className="form-input"
+                value={destinoBusca}
+                onChange={(e) => setDestinoBusca(e.target.value)}
+                placeholder="Nome do produto..."
+              />
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("hoje")}
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("7")}
+              >
+                Últimos 7 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("30")}
+              >
+                Últimos 30 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_atual")}
+              >
+                Este mês
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_anterior")}
+              >
+                Mês anterior
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("limpar")}
+              >
+                Limpar datas
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                carregarVendas();
+                setShowFilters(false);
+              }}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showExport && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Exportar</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Formato</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("csv")}
+                >
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("excel")}
+                  disabled={!exportFlags.excel}
+                  title={
+                    !exportFlags.excel
+                      ? "Exportação Excel desabilitada nos parâmetros"
+                      : ""
+                  }
+                >
+                  Excel
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("pdf")}
+                  disabled={!exportFlags.pdf}
+                  title={
+                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
+                  }
+                >
+                  PDF
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                exportarSelecionado();
+                setShowExport(false);
+              }}
+              disabled={exportDisabled}
+            >
+              Exportar
+            </button>
+          </div>
+        </div>
+      )}
 
       {erro && (
         <div className="card-base card-config mb-3">

@@ -252,6 +252,7 @@ const DashboardGeralIsland: React.FC = () => {
   const widgetIds = useMemo(() => ALL_WIDGETS.map((w) => w.id), []);
   const [showCustomize, setShowCustomize] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [kpiOrder, setKpiOrder] = useState<KpiId[]>(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = useState<Record<KpiId, boolean>>(() =>
     BASE_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {} as Record<KpiId, boolean>)
@@ -1773,6 +1774,18 @@ const DashboardGeralIsland: React.FC = () => {
     <div className="dashboard-geral-page">
       {/* CONTROLES DE PERÍODO */}
       <div className="card-base card-purple mb-3">
+        <div className="flex flex-col gap-2 sm:hidden">
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setShowCustomize(true)}>
+            Personalizar dashboard
+          </button>
+          <button type="button" className="btn btn-light" onClick={() => setShowCalculator(true)}>
+            Calculadora
+          </button>
+        </div>
+        <div className="hidden sm:block">
         <div
           style={{
             display: "flex",
@@ -1882,7 +1895,103 @@ const DashboardGeralIsland: React.FC = () => {
             />
           </div>
         </div>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-light"
+                style={{
+                  backgroundColor: presetPeriodo === "mes_atual" ? "#4f46e5" : undefined,
+                  color: presetPeriodo === "mes_atual" ? "#e5e7eb" : undefined,
+                }}
+                onClick={() => aplicarPreset("mes_atual")}
+              >
+                Mês atual
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                style={{
+                  backgroundColor: presetPeriodo === "ultimos_30" ? "#4f46e5" : undefined,
+                  color: presetPeriodo === "ultimos_30" ? "#e5e7eb" : undefined,
+                }}
+                onClick={() => aplicarPreset("ultimos_30")}
+              >
+                Últimos 30 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                style={{
+                  backgroundColor: presetPeriodo === "personalizado" ? "#4f46e5" : undefined,
+                  color: presetPeriodo === "personalizado" ? "#e5e7eb" : undefined,
+                }}
+                onClick={() => setPresetPeriodo("personalizado")}
+              >
+                Personalizado
+              </button>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Data início</label>
+              <input
+                type="date"
+                className="form-input"
+                value={inicio}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setPresetPeriodo("personalizado");
+                  setInicio(nextInicio);
+                  if (fim && nextInicio && fim < nextInicio) {
+                    setFim(nextInicio);
+                  }
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data fim</label>
+              <input
+                type="date"
+                className="form-input"
+                value={fim}
+                min={inicio || undefined}
+                onChange={(e) => {
+                  setPresetPeriodo("personalizado");
+                  const nextFim = e.target.value;
+                  const boundedFim = inicio && nextFim && nextFim < inicio ? inicio : nextFim;
+                  setFim(boundedFim);
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => setShowFilters(false)}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPIs em largura total */}
       {widgetAtivo("kpis") && <div>{renderWidget("kpis")}</div>}

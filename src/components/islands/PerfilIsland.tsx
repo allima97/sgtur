@@ -541,7 +541,7 @@ function formatCep(value: string) {
               />
             </div>
           </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }}>
+          <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
             <button className="btn btn-primary" onClick={salvarPerfil} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar dados"}
             </button>
@@ -551,7 +551,7 @@ function formatCep(value: string) {
         <div className="grid md:grid-cols-2 gap-3">
           <div className="card-base card-config" style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
             <h3>🔐 Dados de acesso</h3>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="form-group" style={{ flex: 1 }}>
                 <label>E-mail de login</label>
                 <input
@@ -562,8 +562,8 @@ function formatCep(value: string) {
                 />
                 <small>Será necessário confirmar o novo e-mail.</small>
               </div>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                <button className="btn btn-secondary" onClick={alterarEmail} disabled={salvando}>
+              <div className="mobile-stack-buttons">
+                <button className="btn btn-secondary w-full sm:w-auto" onClick={alterarEmail} disabled={salvando}>
                   Atualizar e-mail
                 </button>
               </div>
@@ -589,7 +589,7 @@ function formatCep(value: string) {
                 onChange={(e) => setConfirmaSenha(e.target.value)}
               />
             </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16, alignItems: "center" }}>
+            <div className="mobile-stack-buttons" style={{ marginTop: 16 }}>
               <button className="btn btn-primary" onClick={alterarSenha} disabled={salvando}>
                 Alterar senha
               </button>
@@ -618,7 +618,7 @@ function formatCep(value: string) {
                 placeholder="00.000.000/0000-00"
               />
             </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: "auto", alignItems: "center" }}>
+            <div className="mobile-stack-buttons" style={{ marginTop: "auto" }}>
               <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando}>
                 Trocar empresa
               </button>

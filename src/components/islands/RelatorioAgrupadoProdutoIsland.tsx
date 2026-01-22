@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 
@@ -134,6 +135,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
   const [ordemDesc, setOrdemDesc] = useState<boolean>(true);
@@ -142,6 +146,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
     { id: "recibos", label: "Produtos por recibo" },
     { id: "agrupado", label: "Resumo por tipo" },
   ];
+
+  useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
 
   useEffect(() => {
     async function carregarBase() {
@@ -522,8 +536,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const totalRecibosValor = recibosFiltrados.reduce((acc, r) => acc + r.valorTotal, 0);
   const totalRecibosTaxas = recibosFiltrados.reduce((acc, r) => acc + r.valorTaxas, 0);
 
-  function aplicarPeriodoPreset(tipo: "7" | "30" | "mes_atual" | "mes_anterior") {
+  function aplicarPeriodoPreset(
+    tipo: "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar"
+  ) {
     const hoje = new Date();
+    if (tipo === "hoje") {
+      setDataInicio(hojeISO());
+      setDataFim(hojeISO());
+      return;
+    }
     if (tipo === "7") {
       const inicio = addDays(hoje, -7);
       setDataInicio(formatISO(inicio));
@@ -550,6 +571,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
       setDataInicio(formatISO(inicio));
       setDataFim(formatISO(fim));
       return;
+    }
+    if (tipo === "limpar") {
+      setDataInicio("");
+      setDataFim("");
     }
   }
 
@@ -623,19 +648,41 @@ export default function RelatorioAgrupadoProdutoIsland() {
   }, [userCtx]);
 
   function exportarCSV() {
-    if (linhasFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
-      return;
+    let header: string[] = [];
+    let rows: string[][] = [];
+    let fileBase = "relatorio-vendas-por-produto";
+
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+
+      header = ["produto", "quantidade", "total", "ticket_medio"];
+      rows = linhasFiltradas.map((l) => [
+        l.produto_nome,
+        l.quantidade.toString(),
+        l.total.toFixed(2).replace(".", ","),
+        l.ticketMedio.toFixed(2).replace(".", ","),
+      ]);
+    } else {
+      if (recibosFiltrados.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+
+      header = ["recibo", "produto", "cidade", "destino", "data", "valor_total", "taxas"];
+      rows = recibosFiltrados.map((recibo) => [
+        recibo.numeroRecibo || "",
+        recibo.produtoNome,
+        recibo.cidadeNome || "",
+        recibo.destinoNome || "",
+        recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "",
+        recibo.valorTotal.toFixed(2).replace(".", ","),
+        recibo.valorTaxas.toFixed(2).replace(".", ","),
+      ]);
+      fileBase = "relatorio-produtos-por-recibo";
     }
-
-    const header = ["produto", "quantidade", "total", "ticket_medio"];
-
-    const rows = linhasFiltradas.map((l) => [
-      l.produto_nome,
-      l.quantidade.toString(),
-      l.total.toFixed(2).replace(".", ","),
-      l.ticketMedio.toFixed(2).replace(".", ","),
-    ]);
 
     const all = [header, ...rows]
       .map((cols) => cols.map((c) => csvEscape(c)).join(";"))
@@ -652,11 +699,62 @@ export default function RelatorioAgrupadoProdutoIsland() {
     ).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `relatorio-vendas-por-produto-${ts}.csv`);
+    link.setAttribute("download", `${fileBase}-${ts}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  function exportarExcel() {
+    if (!exportFlags.excel) {
+      alert("Exportação Excel desabilitada nos parâmetros.");
+      return;
+    }
+
+    if (activeTab === "agrupado") {
+      if (linhasFiltradas.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+      }
+
+      const data = linhasFiltradas.map((l) => ({
+        "Tipo de Produto": l.produto_nome,
+        Quantidade: l.quantidade,
+        "Faturamento (R$)": l.total,
+        "Ticket médio (R$)": l.ticketMedio,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Resumo por Produto");
+
+      const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+      XLSX.writeFile(wb, `relatorio-produtos-${ts}.xlsx`);
+      return;
+    }
+
+    if (recibosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const data = recibosFiltrados.map((recibo) => ({
+      Recibo: recibo.numeroRecibo || "-",
+      Produto: recibo.produtoNome,
+      Cidade: recibo.cidadeNome || "-",
+      Destino: recibo.destinoNome || "-",
+      Data: recibo.dataLancamento ? recibo.dataLancamento.split("T")[0] : "-",
+      "Valor total (R$)": recibo.valorTotal,
+      "Taxas (R$)": recibo.valorTaxas,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Produtos por Recibo");
+
+    const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+    XLSX.writeFile(wb, `relatorio-produtos-recibos-${ts}.xlsx`);
   }
 
   function exportarPDF() {
@@ -735,9 +833,34 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
   }
 
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+
+  const exportDisabled =
+    (exportTipo === "excel" && !exportFlags.excel) ||
+    (exportTipo === "pdf" && !exportFlags.pdf);
+
   return (
     <div className="relatorio-vendas-produto-page">
       <div className="card-base card-purple form-card mb-3">
+        <div className="flex flex-col gap-2 sm:hidden">
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
+            Exportar
+          </button>
+        </div>
+        <div className="hidden sm:block">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>
@@ -878,6 +1001,13 @@ export default function RelatorioAgrupadoProdutoIsland() {
           <button
             type="button"
             className="btn btn-light"
+            onClick={() => aplicarPeriodoPreset("hoje")}
+          >
+            Hoje
+          </button>
+          <button
+            type="button"
+            className="btn btn-light"
             onClick={() => aplicarPeriodoPreset("7")}
           >
             Últimos 7 dias
@@ -903,6 +1033,13 @@ export default function RelatorioAgrupadoProdutoIsland() {
           >
             Mês anterior
           </button>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => aplicarPeriodoPreset("limpar")}
+          >
+            Limpar datas
+          </button>
 
           <button type="button" className="btn btn-primary" onClick={carregar}>
             Aplicar filtros
@@ -910,6 +1047,15 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
           <button type="button" className="btn btn-purple" onClick={exportarCSV}>
             Exportar CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={exportarExcel}
+            disabled={!exportFlags.excel}
+            title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
+          >
+            Exportar Excel
           </button>
           <button
             type="button"
@@ -923,7 +1069,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
             Exportar PDF
           </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        </div>
+        <div className="mt-4 mobile-stack-buttons">
           {tabOptions.map((tab) => (
             <button
               key={tab.id}
@@ -938,6 +1085,283 @@ export default function RelatorioAgrupadoProdutoIsland() {
           ))}
         </div>
       </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Data início</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataInicio}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data fim</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataFim}
+                min={dataInicio || undefined}
+                onChange={(e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim =
+                    dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }}
+              />
+            </div>
+            <div className="form-group" style={{ position: "relative" }}>
+              <label className="form-label">Cidade</label>
+              <input
+                className="form-input"
+                placeholder="Digite a cidade"
+                value={cidadeNomeInput}
+                onChange={(e) => {
+                  setCidadeNomeInput(e.target.value);
+                  setCidadeFiltro("");
+                  setMostrarSugestoesCidadeFiltro(true);
+                }}
+                onFocus={() => {
+                  if (cidadeNomeInput.trim().length > 0) {
+                    setMostrarSugestoesCidadeFiltro(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
+                  if (!cidadeNomeInput.trim()) {
+                    setCidadeFiltro("");
+                    return;
+                  }
+                  const match = cidadesLista.find((cidade) =>
+                    normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
+                  );
+                  if (match) {
+                    setCidadeFiltro(match.id);
+                    setCidadeNomeInput(match.nome);
+                  }
+                }}
+              />
+              {mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && (
+                <div
+                  className="card-base card-config"
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    maxHeight: 160,
+                    overflowY: "auto",
+                    zIndex: 20,
+                    padding: "4px 0",
+                  }}
+                >
+                  {buscandoCidade && (
+                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
+                      Buscando cidades...
+                    </div>
+                  )}
+                  {!buscandoCidade && erroCidade && (
+                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
+                  )}
+                  {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
+                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
+                      Nenhuma cidade encontrada.
+                    </div>
+                  )}
+                  {!buscandoCidade &&
+                    !erroCidade &&
+                    cidadeSugestoes.map((cidade) => (
+                      <button
+                        key={cidade.id}
+                        type="button"
+                        className="btn btn-ghost w-full text-left"
+                        style={{ padding: "6px 12px" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setCidadeFiltro(cidade.id);
+                          setCidadeNomeInput(cidade.nome);
+                          setMostrarSugestoesCidadeFiltro(false);
+                        }}
+                      >
+                        {cidade.nome}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            {activeTab === "recibos" && (
+              <div className="form-group">
+                <label className="form-label">Tipo de Produto</label>
+                <select
+                  className="form-select"
+                  value={tipoReciboSelecionado}
+                  onChange={(e) => setTipoReciboSelecionado(e.target.value)}
+                >
+                  <option value="">Todos os tipos</option>
+                  {produtos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome || p.tipo || p.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">Buscar produto</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nome do produto"
+                value={buscaProduto}
+                onChange={(e) => setBuscaProduto(e.target.value)}
+              />
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("hoje")}
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("7")}
+              >
+                Últimos 7 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("30")}
+              >
+                Últimos 30 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_atual")}
+              >
+                Este mês
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_anterior")}
+              >
+                Mês anterior
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("limpar")}
+              >
+                Limpar datas
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                carregar();
+                setShowFilters(false);
+              }}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showExport && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Exportar</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Formato</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("csv")}
+                >
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("excel")}
+                  disabled={!exportFlags.excel}
+                  title={
+                    !exportFlags.excel
+                      ? "Exportação Excel desabilitada nos parâmetros"
+                      : ""
+                  }
+                >
+                  Excel
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("pdf")}
+                  disabled={!exportFlags.pdf}
+                  title={
+                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
+                  }
+                >
+                  PDF
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                exportarSelecionado();
+                setShowExport(false);
+              }}
+              disabled={exportDisabled}
+            >
+              Exportar
+            </button>
+          </div>
+        </div>
+      )}
 
       {loadingUser && (
         <div className="card-base card-config mb-3">Carregando contexto do usuário...</div>

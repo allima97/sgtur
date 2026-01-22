@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 
@@ -92,9 +93,22 @@ export default function RelatorioAgrupadoClienteIsland() {
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
+  const [showFilters, setShowFilters] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
   const [ordemDesc, setOrdemDesc] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (exportTipo === "excel" && !exportFlags.excel) {
+      setExportTipo("csv");
+      return;
+    }
+    if (exportTipo === "pdf" && !exportFlags.pdf) {
+      setExportTipo("csv");
+    }
+  }, [exportFlags, exportTipo]);
 
   useEffect(() => {
     async function carregarBase() {
@@ -241,8 +255,15 @@ export default function RelatorioAgrupadoClienteIsland() {
   const totalQtd = linhas.reduce((acc, l) => acc + l.quantidade, 0);
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
 
-  function aplicarPeriodoPreset(tipo: "7" | "30" | "mes_atual" | "mes_anterior") {
+  function aplicarPeriodoPreset(
+    tipo: "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar"
+  ) {
     const hoje = new Date();
+    if (tipo === "hoje") {
+      setDataInicio(hojeISO());
+      setDataFim(hojeISO());
+      return;
+    }
     if (tipo === "7") {
       const inicio = addDays(hoje, -7);
       setDataInicio(formatISO(inicio));
@@ -269,6 +290,10 @@ export default function RelatorioAgrupadoClienteIsland() {
       setDataInicio(formatISO(inicio));
       setDataFim(formatISO(fim));
       return;
+    }
+    if (tipo === "limpar") {
+      setDataInicio("");
+      setDataFim("");
     }
   }
 
@@ -374,6 +399,32 @@ export default function RelatorioAgrupadoClienteIsland() {
     URL.revokeObjectURL(url);
   }
 
+  function exportarExcel() {
+    if (!exportFlags.excel) {
+      alert("Exportação Excel desabilitada nos parâmetros.");
+      return;
+    }
+    if (linhas.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const data = linhas.map((l) => ({
+      Cliente: l.cliente_nome,
+      CPF: l.cliente_cpf,
+      Quantidade: l.quantidade,
+      "Faturamento (R$)": l.total,
+      "Ticket médio (R$)": l.ticketMedio,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Vendas por Cliente");
+
+    const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+    XLSX.writeFile(wb, `relatorio-clientes-${ts}.xlsx`);
+  }
+
   function exportarPDF() {
     if (!exportFlags.pdf) {
       alert("Exportação PDF desabilitada nos parâmetros.");
@@ -420,9 +471,34 @@ export default function RelatorioAgrupadoClienteIsland() {
     });
   }
 
+  function exportarSelecionado() {
+    if (exportTipo === "csv") {
+      exportarCSV();
+      return;
+    }
+    if (exportTipo === "excel") {
+      exportarExcel();
+      return;
+    }
+    exportarPDF();
+  }
+
+  const exportDisabled =
+    (exportTipo === "excel" && !exportFlags.excel) ||
+    (exportTipo === "pdf" && !exportFlags.pdf);
+
   return (
     <div className="relatorio-vendas-cliente-page">
       <div className="card-base card-purple form-card mb-3">
+        <div className="flex flex-col gap-2 sm:hidden">
+          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
+            Filtros
+          </button>
+          <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
+            Exportar
+          </button>
+        </div>
+        <div className="hidden sm:block">
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Data início</label>
@@ -472,6 +548,13 @@ export default function RelatorioAgrupadoClienteIsland() {
           <button
             type="button"
             className="btn btn-light"
+            onClick={() => aplicarPeriodoPreset("hoje")}
+          >
+            Hoje
+          </button>
+          <button
+            type="button"
+            className="btn btn-light"
             onClick={() => aplicarPeriodoPreset("7")}
           >
             Últimos 7 dias
@@ -497,6 +580,13 @@ export default function RelatorioAgrupadoClienteIsland() {
           >
             Mês anterior
           </button>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => aplicarPeriodoPreset("limpar")}
+          >
+            Limpar datas
+          </button>
 
           <button type="button" className="btn btn-primary" onClick={carregar}>
             Aplicar filtros
@@ -504,6 +594,15 @@ export default function RelatorioAgrupadoClienteIsland() {
 
           <button type="button" className="btn btn-purple" onClick={exportarCSV}>
             Exportar CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={exportarExcel}
+            disabled={!exportFlags.excel}
+            title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
+          >
+            Exportar Excel
           </button>
           <button
             type="button"
@@ -517,7 +616,192 @@ export default function RelatorioAgrupadoClienteIsland() {
             Exportar PDF
           </button>
         </div>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Filtros</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Data início</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataInicio}
+                onChange={(e) => {
+                  const nextInicio = e.target.value;
+                  setDataInicio(nextInicio);
+                  if (dataFim && nextInicio && dataFim < nextInicio) {
+                    setDataFim(nextInicio);
+                  }
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data fim</label>
+              <input
+                type="date"
+                className="form-input"
+                value={dataFim}
+                min={dataInicio || undefined}
+                onChange={(e) => {
+                  const nextFim = e.target.value;
+                  const boundedFim =
+                    dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
+                  setDataFim(boundedFim);
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+              >
+                <option value="todos">Todos</option>
+                <option value="aberto">Aberto</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("hoje")}
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("7")}
+              >
+                Últimos 7 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("30")}
+              >
+                Últimos 30 dias
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_atual")}
+              >
+                Este mês
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("mes_anterior")}
+              >
+                Mês anterior
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => aplicarPeriodoPreset("limpar")}
+              >
+                Limpar datas
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                carregar();
+                setShowFilters(false);
+              }}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showExport && (
+        <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
+          <div
+            className="mobile-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <strong>Exportar</strong>
+              <button type="button" className="btn-ghost" onClick={() => setShowExport(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Formato</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "csv" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("csv")}
+                >
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "excel" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("excel")}
+                  disabled={!exportFlags.excel}
+                  title={
+                    !exportFlags.excel
+                      ? "Exportação Excel desabilitada nos parâmetros"
+                      : ""
+                  }
+                >
+                  Excel
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
+                  onClick={() => setExportTipo("pdf")}
+                  disabled={!exportFlags.pdf}
+                  title={
+                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
+                  }
+                >
+                  PDF
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 12, width: "100%" }}
+              onClick={() => {
+                exportarSelecionado();
+                setShowExport(false);
+              }}
+              disabled={exportDisabled}
+            >
+              Exportar
+            </button>
+          </div>
+        </div>
+      )}
 
       {loadingUser && (
         <div className="card-base card-config mb-3">Carregando contexto do usuário...</div>
