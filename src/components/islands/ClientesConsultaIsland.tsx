@@ -24,6 +24,28 @@ export default function ClientesConsultaIsland() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [historicoVendas, setHistoricoVendas] = useState<
+    {
+      id: string;
+      data_lancamento: string | null;
+      data_embarque: string | null;
+      destino_nome: string;
+      destino_cidade_nome?: string;
+      valor_total: number;
+      valor_taxas: number;
+    }[]
+  >([]);
+  const [historicoOrcamentos, setHistoricoOrcamentos] = useState<
+    {
+      id: string;
+      data_orcamento: string | null;
+      status: string | null;
+      valor: number | null;
+      produto_nome?: string | null;
+    }[]
+  >([]);
 
   useEffect(() => {
     let mounted = true;
@@ -134,13 +156,107 @@ export default function ClientesConsultaIsland() {
   }
 
   function abrirHistorico(id: string, nome?: string) {
-    window.alert(`Abrir histórico do cliente: ${nome || id}`);
+    const cliente = clientes.find((c) => c.id === id);
+    if (!cliente) return;
+    setHistoricoCliente(cliente);
+    setHistoricoVendas([]);
+    setHistoricoOrcamentos([]);
+    setLoadingHistorico(true);
+    (async () => {
+      try {
+        const { data: vendasData } = await supabase
+          .from("vendas")
+          .select("id, data_lancamento, data_embarque, destino_cidade_id, destinos:produtos!destino_id (nome, cidade_id)")
+          .eq("cliente_id", id)
+          .order("data_lancamento", { ascending: false });
+
+        let vendasFmt: {
+          id: string;
+          data_lancamento: string | null;
+          data_embarque: string | null;
+          destino_nome: string;
+          destino_cidade_nome?: string;
+          valor_total: number;
+          valor_taxas: number;
+        }[] = [];
+
+        if (vendasData && vendasData.length > 0) {
+          const vendaIds = vendasData.map((v: any) => v.id);
+          const cidadeIds = Array.from(
+            new Set(
+              vendasData
+                .map((v: any) => v.destino_cidade_id || v.destinos?.cidade_id)
+                .filter((cid: string | null | undefined): cid is string => Boolean(cid))
+            )
+          );
+          const { data: recibosData } = await supabase
+            .from("vendas_recibos")
+            .select("venda_id, valor_total, valor_taxas")
+            .in("venda_id", vendaIds);
+
+          let cidadesMap: Record<string, string> = {};
+          if (cidadeIds.length > 0) {
+            const { data: cidadesData } = await supabase
+              .from("cidades")
+              .select("id, nome")
+              .in("id", cidadeIds);
+            cidadesMap = Object.fromEntries((cidadesData || []).map((c: any) => [c.id, c.nome || ""]));
+          }
+
+          vendasFmt = vendasData.map((v: any) => {
+            const recs = (recibosData || []).filter((r: any) => r.venda_id === v.id);
+            const total = recs.reduce((acc: number, r: any) => acc + (r.valor_total || 0), 0);
+            const taxas = recs.reduce((acc: number, r: any) => acc + (r.valor_taxas || 0), 0);
+            const cidadeId = v.destino_cidade_id || v.destinos?.cidade_id || null;
+            return {
+              id: v.id,
+              data_lancamento: v.data_lancamento || null,
+              data_embarque: v.data_embarque || null,
+              destino_nome: v.destinos?.nome || "",
+              destino_cidade_nome: cidadeId ? cidadesMap[cidadeId] || "" : "",
+              valor_total: total,
+              valor_taxas: taxas,
+            };
+          });
+        }
+
+        const { data: quotesData } = await supabase
+          .from("quote")
+          .select("id, created_at, status, status_negociacao, total, client_id, quote_item (title, item_type)")
+          .eq("client_id", id)
+          .order("created_at", { ascending: false });
+
+        const orcFmt =
+          quotesData?.map((q: any) => ({
+            id: q.id,
+            data_orcamento: q.created_at || null,
+            status: q.status_negociacao || q.status || null,
+            valor: q.total ?? null,
+            produto_nome: q.quote_item?.[0]?.title || q.quote_item?.[0]?.item_type || null,
+          })) || [];
+
+        setHistoricoVendas(vendasFmt);
+        setHistoricoOrcamentos(orcFmt);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingHistorico(false);
+      }
+    })();
+  }
+
+  function fecharHistorico() {
+    setHistoricoCliente(null);
+    setHistoricoVendas([]);
+    setHistoricoOrcamentos([]);
+    setLoadingHistorico(false);
   }
 
   if (loadingPerm) return <div className="clientes-page"><div className="card-base card-config">Carregando contexto...</div></div>;
   if (!ativo) return <div className="clientes-page">Você não possui acesso ao módulo de Clientes.</div>;
 
   return (
+    <>
     <div className={`clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
       <div className="card-base mb-3 list-toolbar-sticky">
         <div className="form-row" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -221,5 +337,125 @@ export default function ClientesConsultaIsland() {
         </div>
       )}
     </div>
+    {historicoCliente && (
+      <div className="modal-backdrop">
+        <div className="modal-panel" style={{ maxWidth: 1000, width: "95vw" }}>
+          <div className="modal-header">
+            <div>
+              <div
+                className="modal-title"
+                style={{ color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 }}
+              >
+                Histórico de {historicoCliente.nome}
+              </div>
+              <small style={{ color: "#64748b" }}>Vendas e orçamentos do cliente</small>
+            </div>
+            <button className="btn-ghost" onClick={fecharHistorico}>✕</button>
+          </div>
+
+          <div className="modal-body">
+            {loadingHistorico && <p>Carregando histórico...</p>}
+
+            {!loadingHistorico && (
+              <>
+                <div className="card-base mb-2">
+                  <h4 style={{ marginBottom: 8 }}>Vendas</h4>
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-header-blue min-w-[720px]">
+                      <thead>
+                        <tr>
+                          <th>Data Lançamento</th>
+                          <th>Destino</th>
+                          <th>Embarque</th>
+                          <th>Valor</th>
+                          <th>Taxas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historicoVendas.length === 0 && (
+                          <tr>
+                            <td colSpan={5}>Nenhuma venda encontrada.</td>
+                          </tr>
+                        )}
+                        {historicoVendas.map((v) => (
+                          <tr key={v.id}>
+                            <td>
+                              {v.data_lancamento
+                                ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
+                                : "-"}
+                            </td>
+                            <td>{v.destino_nome || "-"}</td>
+                            <td>
+                              {v.data_embarque
+                                ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
+                                : "-"}
+                            </td>
+                            <td>
+                              {v.valor_total.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
+                            </td>
+                            <td>
+                              {v.valor_taxas.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="card-base">
+                  <h4 style={{ marginBottom: 8 }}>Orçamentos</h4>
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-header-blue min-w-[720px]">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Status</th>
+                          <th>Produto</th>
+                          <th>Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historicoOrcamentos.length === 0 && (
+                          <tr>
+                            <td colSpan={4}>Nenhum orçamento encontrado.</td>
+                          </tr>
+                        )}
+                        {historicoOrcamentos.map((o) => (
+                          <tr key={o.id}>
+                            <td>
+                              {o.data_orcamento
+                                ? new Date(o.data_orcamento).toLocaleDateString("pt-BR")
+                                : "-"}
+                            </td>
+                            <td>{o.status || "-"}</td>
+                            <td>{o.produto_nome || "-"}</td>
+                            <td>
+                              {o.valor !== null && o.valor !== undefined
+                                ? o.valor.toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

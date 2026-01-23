@@ -686,13 +686,18 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   }
 
   return (
-    <div className="card-base card-purple">
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <a className="btn btn-light" href="/operacao/viagens">
+    <div className="page-content-wrap dossie-viagem-page">
+      <div className="card-base mb-3 list-toolbar-sticky">
+        <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
+          <a className="btn btn-light w-full sm:w-auto" href="/operacao/viagens">
             Voltar
           </a>
-          <button className="btn btn-primary" type="button" onClick={carregar} disabled={loading}>
+          <button
+            className="btn btn-primary w-full sm:w-auto"
+            type="button"
+            onClick={carregar}
+            disabled={loading}
+          >
             {loading ? "Atualizando..." : "Atualizar"}
           </button>
         </div>
@@ -701,36 +706,38 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       {erro && <div style={{ color: "red", marginTop: 10 }}>{erro}</div>}
 
       {!erro && viagem && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={`btn ${abaAtiva === "dados" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setAbaAtiva("dados")}
-            >
-              Dados da viagem
-            </button>
-            <button
-              type="button"
-              className={`btn ${abaAtiva === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setAbaAtiva("acompanhantes")}
-            >
-              Acompanhantes
-            </button>
-            <button
-              type="button"
-              className={`btn ${abaAtiva === "servicos" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setAbaAtiva("servicos")}
-            >
-              Serviços da viagem
-            </button>
-            <button
-              type="button"
-              className={`btn ${abaAtiva === "documentos" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setAbaAtiva("documentos")}
-            >
-              Documentos / vouchers
-            </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="card-base">
+            <div className="mobile-stack-buttons">
+              <button
+                type="button"
+                className={`btn w-full sm:w-auto ${abaAtiva === "dados" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaAtiva("dados")}
+              >
+                Dados da viagem
+              </button>
+              <button
+                type="button"
+                className={`btn w-full sm:w-auto ${abaAtiva === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaAtiva("acompanhantes")}
+              >
+                Acompanhantes
+              </button>
+              <button
+                type="button"
+                className={`btn w-full sm:w-auto ${abaAtiva === "servicos" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaAtiva("servicos")}
+              >
+                Serviços da viagem
+              </button>
+              <button
+                type="button"
+                className={`btn w-full sm:w-auto ${abaAtiva === "documentos" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAbaAtiva("documentos")}
+              >
+                Documentos / vouchers
+              </button>
+            </div>
           </div>
 
           {abaAtiva === "dados" && (
