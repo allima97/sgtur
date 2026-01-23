@@ -1195,7 +1195,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#ca8a04" }}
                       >
                         <div className="kpi-label">Vendas no período</div>
                         <div className="kpi-value">{formatCurrency(totalVendas)}</div>
@@ -1207,7 +1207,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
                       >
                         <div className="kpi-label">Qtd. vendas</div>
                         <div className="kpi-value">{qtdVendas}</div>
@@ -1219,7 +1219,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
                       >
                         <div className="kpi-label">Ticket médio</div>
                         <div className="kpi-value">{formatCurrency(ticketMedio)}</div>
@@ -1231,7 +1231,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#16a34a" }}
                       >
                         <div className="kpi-label">Orçamentos</div>
                         <div className="kpi-value">{totalOrcamentos}</div>
@@ -1243,7 +1243,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#c2410c" }}
                       >
                         <div className="kpi-label">Conv. Orç → Vendas</div>
                         <div className="kpi-value">{conversao.toFixed(1)}%</div>
@@ -1255,9 +1255,9 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#16a34a" }}
                       >
-                        <div className="kpi-label">Meta somada</div>
+                        <div className="kpi-label">Meta do mÃªs</div>
                         <div className="kpi-value">{formatCurrency(metaSomada)}</div>
                       </div>
                     );
@@ -1267,7 +1267,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#0ea5e9" }}
                       >
                         <div className="kpi-label">Meta diária</div>
                         <div className="kpi-value">{formatCurrency(metaDiaria)}</div>
@@ -1279,7 +1279,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#c2410c" }}
                       >
                         <div className="kpi-label">Atingimento meta</div>
                         <div className="kpi-value">{atingimentoMeta.toFixed(1)}%</div>
@@ -1291,7 +1291,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{ display: "flex", flexDirection: "column", gap: 4, color: "#2563eb" }}
                       >
                         <div className="kpi-label">Dias restantes</div>
                         <div className="kpi-value">{diasRestantes}</div>
@@ -1301,13 +1301,20 @@ const DashboardGeralIsland: React.FC = () => {
                   if (id.startsWith("kpi_prod_")) {
                     const prod = kpiProdutos.find((k) => k.id === id);
                     const valor = prod ? valorPorProduto[prod.produtoId] || 0 : 0;
+                    const titulo = prod?.titulo || "Produto";
+                    const isSeguroViagem = titulo.toLowerCase().includes("seguro viagem");
                     return (
                       <div
                         className="kpi-card"
                         key={id}
-                        style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
+                          ...(isSeguroViagem ? { color: "#6d28d9" } : {}),
+                        }}
                       >
-                        <div className="kpi-label">{prod?.titulo || "Produto"}</div>
+                        <div className="kpi-label">{titulo}</div>
                         <div className="kpi-value">{formatCurrency(valor)}</div>
                       </div>
                     );
