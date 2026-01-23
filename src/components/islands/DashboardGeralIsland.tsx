@@ -2058,7 +2058,10 @@ const DashboardGeralIsland: React.FC = () => {
 
       {showCustomize && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
+          <div
+            className="modal-panel"
+            style={{ maxWidth: 520, width: "95vw", background: "#f8fafc" }}
+          >
             <div className="modal-header">
               <div
                 className="modal-title"
@@ -2198,7 +2201,10 @@ const DashboardGeralIsland: React.FC = () => {
       {/* MODAL ORÇAMENTO */}
       {orcamentoSelecionado && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 820, width: "95vw" }}>
+          <div
+            className="modal-panel"
+            style={{ maxWidth: 820, width: "95vw", background: "#f8fafc" }}
+          >
             <div className="modal-header">
               <div>
                 <div
@@ -2280,7 +2286,10 @@ const DashboardGeralIsland: React.FC = () => {
       {/* MODAL CLIENTE */}
       {clienteSelecionado && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 600, width: "95vw" }}>
+          <div
+            className="modal-panel"
+            style={{ maxWidth: 600, width: "95vw", background: "#f8fafc" }}
+          >
             <div className="modal-header">
               <div
                 className="modal-title"
