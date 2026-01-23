@@ -1067,13 +1067,13 @@ export default function ClientesIsland() {
   }
 
   const acompanhantesCard = (
-    <div className="card-base card-blue mb-2">
+    <div className="card-base mb-2">
       <h4 style={{ marginBottom: 8 }}>Acompanhantes do cliente</h4>
       {acompErro && (
         <div style={{ color: "red", marginBottom: 8 }}>{acompErro}</div>
       )}
       <div className="table-container overflow-x-auto">
-        <table className="table-default table-header-blue min-w-[720px]">
+        <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
           <thead>
             <tr>
               <th>Nome</th>
@@ -1082,7 +1082,7 @@ export default function ClientesIsland() {
               <th>Parentesco</th>
               <th>Ativo</th>
               {(podeEditar || podeExcluir) && (
-                <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
+                <th className="th-actions">Ações</th>
               )}
             </tr>
           </thead>
@@ -1100,29 +1100,31 @@ export default function ClientesIsland() {
             {!acompLoading &&
               acompanhantes.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.nome_completo}</td>
-                  <td>{a.cpf || "-"}</td>
-                  <td>{a.telefone || "-"}</td>
-                  <td>{a.grau_parentesco || "-"}</td>
-                  <td>{a.ativo ? "Sim" : "Não"}</td>
+                  <td data-label="Nome">{a.nome_completo}</td>
+                  <td data-label="CPF">{a.cpf || "-"}</td>
+                  <td data-label="Telefone">{a.telefone || "-"}</td>
+                  <td data-label="Parentesco">{a.grau_parentesco || "-"}</td>
+                  <td data-label="Ativo">{a.ativo ? "Sim" : "Não"}</td>
                   {(podeEditar || podeExcluir) && (
-                    <td className="th-actions" style={{ textAlign: "center", display: "flex", gap: 6, justifyContent: "center" }}>
-                      {podeEditar && (
-                        <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
-                          ✏️
-                        </button>
-                      )}
-                      {podeExcluir && (
-                        <button
-                          className="btn-icon btn-danger"
-                          type="button"
-                          onClick={() => excluirAcompanhante(a.id)}
-                          disabled={acompExcluindo === a.id}
-                          title="Excluir"
-                        >
-                          {acompExcluindo === a.id ? "..." : "🗑️"}
-                        </button>
-                      )}
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {podeEditar && (
+                          <button className="btn-icon" type="button" onClick={() => iniciarEdicaoAcomp(a)} title="Editar">
+                            ✏️
+                          </button>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            className="btn-icon btn-danger"
+                            type="button"
+                            onClick={() => excluirAcompanhante(a.id)}
+                            disabled={acompExcluindo === a.id}
+                            title="Excluir"
+                          >
+                            {acompExcluindo === a.id ? "..." : "🗑️"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -1667,7 +1669,7 @@ export default function ClientesIsland() {
     </div>
     {historicoCliente && (
       <div className="modal-backdrop">
-        <div className="modal-panel" style={{ maxWidth: 1100, width: "95vw" }}>
+        <div className="modal-panel historico-viagens-modal" style={{ maxWidth: 1100, width: "95vw" }}>
           <div className="modal-header">
             <div>
               <div
@@ -1752,7 +1754,7 @@ export default function ClientesIsland() {
                   </div>
                 </div>
 
-                <div className="card-base card-blue mb-2">
+                <div className="card-base mb-2">
                   <h4 style={{ marginBottom: 8 }}>Orçamentos do cliente</h4>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">

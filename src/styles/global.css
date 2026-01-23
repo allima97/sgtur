@@ -907,6 +907,24 @@ body {
   .table-mobile-cards .th-actions .action-buttons::-webkit-scrollbar {
     height: 4px;
   }
+
+  .historico-viagens-modal .table-mobile-cards {
+    --table-card-gap: transparent !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .historico-viagens-modal .table-mobile-cards.table-header-blue {
+    --table-card-border: var(--color-border) !important;
+    --table-card-divider: var(--color-border) !important;
+    --table-card-gap: transparent !important;
+  }
+
+  .historico-viagens-modal .table-container::before,
+  .historico-viagens-modal .table-container::after {
+    display: none !important;
+  }
 }
 
 /* Fixes for very narrow mobile viewports (ex: 412x914) to avoid horizontal overflow

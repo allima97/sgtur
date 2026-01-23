@@ -339,7 +339,7 @@ export default function ClientesConsultaIsland() {
     </div>
     {historicoCliente && (
       <div className="modal-backdrop">
-        <div className="modal-panel" style={{ maxWidth: 1000, width: "95vw" }}>
+        <div className="modal-panel historico-viagens-modal" style={{ maxWidth: 1000, width: "95vw" }}>
           <div className="modal-header">
             <div>
               <div
