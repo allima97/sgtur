@@ -2057,44 +2057,21 @@ const DashboardGeralIsland: React.FC = () => {
       </div>
 
       {showCustomize && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.75)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 60,
-          }}
-        >
-          <div
-            style={{
-              width: "95%",
-              maxWidth: 520,
-              background: "#0f172a",
-              border: "1px solid #1f2937",
-              borderRadius: 10,
-              padding: 16,
-              color: "#e5e7eb",
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 12,
-                alignItems: "center",
-              }}
-            >
-              <h3>Personalizar dashboard</h3>
-              <button className="btn btn-light" onClick={() => setShowCustomize(false)}>
-                Fechar
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 520, width: "95vw" }}>
+            <div className="modal-header">
+              <div
+                className="modal-title"
+                style={{ color: "#6d28d9", fontSize: "1.1rem", fontWeight: 800 }}
+              >
+                Personalizar dashboard
+              </div>
+              <button className="btn-ghost" onClick={() => setShowCustomize(false)}>
+                ✖
               </button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="modal-body">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {widgetOrder.map((id, idx) => {
                 const meta = ALL_WIDGETS.find((w) => w.id === id);
                 if (!meta) return null;
@@ -2102,13 +2079,14 @@ const DashboardGeralIsland: React.FC = () => {
                   <div
                     key={id}
                     style={{
-                      border: "1px solid #1f2937",
+                      border: "1px solid #e2e8f0",
                       borderRadius: 8,
                       padding: 10,
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
                       flexDirection: "column",
+                      background: "#fff",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 8 }}>
@@ -2142,7 +2120,7 @@ const DashboardGeralIsland: React.FC = () => {
                       <div
                         style={{
                           width: "100%",
-                          borderTop: "1px solid #1f2937",
+                          borderTop: "1px solid #e2e8f0",
                           paddingTop: 8,
                           marginTop: 8,
                           display: "flex",
@@ -2198,6 +2176,16 @@ const DashboardGeralIsland: React.FC = () => {
                 );
               })}
             </div>
+            </div>
+            <div className="modal-footer mobile-stack-buttons">
+              <button
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
+                onClick={() => setShowCustomize(false)}
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2209,97 +2197,81 @@ const DashboardGeralIsland: React.FC = () => {
 
       {/* MODAL ORÇAMENTO */}
       {orcamentoSelecionado && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.75)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              width: "95%",
-              maxWidth: 700,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#020617",
-              borderRadius: 10,
-              border: "1px solid #1f2937",
-              padding: 18,
-              color: "#e5e7eb",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}
-            >
-              <h3>Detalhes do orçamento</h3>
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 820, width: "95vw" }}>
+            <div className="modal-header">
+              <div>
+                <div
+                  className="modal-title"
+                  style={{ color: "#6d28d9", fontSize: "1.15rem", fontWeight: 800 }}
+                >
+                  Detalhes do orçamento
+                </div>
+                <small style={{ color: "#64748b" }}>
+                  Cliente: {orcamentoSelecionado.cliente?.nome || "-"}
+                </small>
+              </div>
+              <button className="btn-ghost" onClick={() => setOrcamentoSelecionado(null)}>
+                ✖
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
+                <div>
+                  <strong>Destino:</strong> {getOrcamentoDestino(orcamentoSelecionado)}
+                </div>
+                <div>
+                  <strong>Criado em:</strong>{" "}
+                  {formatarDataParaExibicao(orcamentoSelecionado.created_at)}
+                </div>
+                <div>
+                  <strong>Status:</strong>{" "}
+                  {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
+                </div>
+                <div>
+                  <strong>Valor:</strong>{" "}
+                  {formatCurrency(Number(orcamentoSelecionado.total || 0))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <h4 style={{ marginBottom: 8, textAlign: "center" }}>Itens do orçamento</h4>
+                {(orcamentoSelecionado.quote_item || []).length === 0 ? (
+                  <div style={{ color: "#64748b" }}>Nenhum item encontrado.</div>
+                ) : (
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-compact table-mobile-cards table-header-purple">
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th>Tipo</th>
+                          <th>Cidade</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
+                          <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
+                            <td data-label="Item">{item.title || item.product_name || "-"}</td>
+                            <td data-label="Tipo">{item.item_type || "-"}</td>
+                            <td data-label="Cidade">{item.city_name || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer mobile-stack-buttons">
               <button
-                className="btn btn-light"
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={() => setOrcamentoSelecionado(null)}
               >
                 Fechar
               </button>
-            </div>
-
-            <p>
-              <strong>Cliente:</strong>{" "}
-              {orcamentoSelecionado.cliente?.nome || "-"}
-            </p>
-            <p>
-              <strong>Destino:</strong>{" "}
-              {getOrcamentoDestino(orcamentoSelecionado)}
-            </p>
-            <p>
-              <strong>Criado em:</strong>{" "}
-              {formatarDataParaExibicao(orcamentoSelecionado.created_at)}
-            </p>
-            <p>
-              <strong>Status:</strong>{" "}
-              {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
-            </p>
-            <p>
-              <strong>Valor:</strong>{" "}
-              {formatCurrency(
-                Number(orcamentoSelecionado.total || 0)
-              )}
-            </p>
-
-            <div style={{ marginTop: 12 }}>
-              <strong>Itens do orçamento</strong>
-              {(orcamentoSelecionado.quote_item || []).length === 0 ? (
-                <div style={{ marginTop: 6, color: "#94a3b8" }}>Nenhum item encontrado.</div>
-              ) : (
-                <div className="table-container overflow-x-auto" style={{ marginTop: 8 }}>
-                  <table className="table-default table-compact table-mobile-cards table-header-purple">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Tipo</th>
-                        <th>Cidade</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
-                        <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
-                          <td data-label="Item">
-                            {item.title || item.product_name || "-"}
-                          </td>
-                          <td data-label="Tipo">{item.item_type || "-"}</td>
-                          <td data-label="Cidade">{item.city_name || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -2307,62 +2279,48 @@ const DashboardGeralIsland: React.FC = () => {
 
       {/* MODAL CLIENTE */}
       {clienteSelecionado && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.75)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              width: "95%",
-              maxWidth: 600,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              background: "#020617",
-              borderRadius: 10,
-              border: "1px solid #1f2937",
-              padding: 18,
-              color: "#e5e7eb",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}
-            >
-              <h3>Dados do cliente</h3>
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 600, width: "95vw" }}>
+            <div className="modal-header">
+              <div
+                className="modal-title"
+                style={{ color: "#1d4ed8", fontSize: "1.15rem", fontWeight: 800 }}
+              >
+                Dados do cliente
+              </div>
+              <button className="btn-ghost" onClick={() => setClienteSelecionado(null)}>
+                ✖
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
+                <div>
+                  <strong>Nome:</strong> {clienteSelecionado.nome}
+                </div>
+                <div>
+                  <strong>Nascimento:</strong>{" "}
+                  {formatarDataParaExibicao(clienteSelecionado.nascimento)}
+                </div>
+                <div>
+                  <strong>Idade:</strong>{" "}
+                  {calcularIdade(clienteSelecionado.nascimento) ?? "-"}
+                </div>
+                <div>
+                  <strong>Telefone:</strong> {clienteSelecionado.telefone || "-"}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer mobile-stack-buttons">
               <button
-                className="btn btn-light"
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={() => setClienteSelecionado(null)}
               >
                 Fechar
               </button>
             </div>
-
-            <p>
-              <strong>Nome:</strong> {clienteSelecionado.nome}
-            </p>
-            <p>
-              <strong>Nascimento:</strong>{" "}
-              {formatarDataParaExibicao(clienteSelecionado.nascimento)}
-            </p>
-            <p>
-              <strong>Idade:</strong>{" "}
-              {calcularIdade(clienteSelecionado.nascimento) ??
-                "-"}
-            </p>
-            <p>
-              <strong>Telefone:</strong>{" "}
-              {clienteSelecionado.telefone || "-"}
-            </p>
           </div>
         </div>
       )}
