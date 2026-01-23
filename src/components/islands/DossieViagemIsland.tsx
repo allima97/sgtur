@@ -7,6 +7,7 @@ import { parentescoOptions } from "../../lib/parentescoOptions";
 
 type ViagemAcompanhante = {
   id: string;
+  acompanhante_id?: string | null;
   papel: string | null;
   documento_url: string | null;
   observacoes: string | null;
@@ -177,6 +178,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const [abaAtiva, setAbaAtiva] = useState<"dados" | "acompanhantes" | "servicos" | "documentos">("dados");
   const [mostrarCadastroAcomp, setMostrarCadastroAcomp] = useState(false);
   const [mostrarVinculoAcomp, setMostrarVinculoAcomp] = useState(false);
+  const [editAcompId, setEditAcompId] = useState<string | null>(null);
   const [mostrarServicoForm, setMostrarServicoForm] = useState(false);
   const [mostrarDocumentoForm, setMostrarDocumentoForm] = useState(false);
   const [salvandoCadastroAcomp, setSalvandoCadastroAcomp] = useState(false);
@@ -236,6 +238,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     setErroCadastroAcomp(null);
     if (hideForm) {
       setMostrarCadastroAcomp(false);
+    }
+  }
+
+  function resetVinculoAcompanhante(hideForm = false) {
+    setNovoAcomp({ acompanhante_id: "", papel: "passageiro", documento_url: "", observacoes: "" });
+    setEditAcompId(null);
+    if (hideForm) {
+      setMostrarVinculoAcomp(false);
     }
   }
 
@@ -299,6 +309,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           ),
           viagem_acompanhantes (
             id,
+            acompanhante_id,
             papel,
             documento_url,
             observacoes,
@@ -399,6 +410,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     return <div>Nenhuma viagem selecionada.</div>;
   }
 
+  function iniciarEdicaoAcompanhante(acomp: ViagemAcompanhante) {
+    setEditAcompId(acomp.id);
+    setNovoAcomp({
+      acompanhante_id: acomp.acompanhante_id || "",
+      papel: acomp.papel || "passageiro",
+      documento_url: acomp.documento_url || "",
+      observacoes: acomp.observacoes || "",
+    });
+    setMostrarVinculoAcomp(true);
+  }
+
   async function adicionarAcompanhante() {
     if (!viagem || !podeCriar) return;
     if (!novoAcomp.acompanhante_id) {
@@ -416,15 +438,20 @@ export default function DossieViagemIsland({ viagemId }: Props) {
         documento_url: novoAcomp.documento_url || null,
         observacoes: novoAcomp.observacoes || null,
       };
-      const { error } = await supabase.from("viagem_acompanhantes").insert(payload);
+      const { error } = editAcompId
+        ? await supabase
+            .from("viagem_acompanhantes")
+            .update(payload)
+            .eq("id", editAcompId)
+            .eq("viagem_id", viagem.id)
+        : await supabase.from("viagem_acompanhantes").insert(payload);
       if (error) throw error;
       // reload
-      setNovoAcomp({ acompanhante_id: "", papel: "passageiro", documento_url: "", observacoes: "" });
-      setMostrarVinculoAcomp(false);
+      resetVinculoAcompanhante(true);
       await carregar();
     } catch (e) {
       console.error(e);
-      setErro("Erro ao adicionar acompanhante.");
+      setErro(editAcompId ? "Erro ao atualizar acompanhante." : "Erro ao adicionar acompanhante.");
     } finally {
       setSavingAcomp(false);
     }
@@ -441,6 +468,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
         .eq("id", id)
         .eq("viagem_id", viagemId);
       if (error) throw error;
+      if (editAcompId === id) {
+        resetVinculoAcompanhante(true);
+      }
       await carregar();
     } catch (e) {
       console.error(e);
@@ -692,7 +722,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
   return (
     <div className="page-content-wrap dossie-viagem-page">
-      <div className="card-base mb-3 list-toolbar-sticky">
+      <div className="card-base card-purple mb-3 list-toolbar-sticky">
         <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
           <a className="btn btn-light w-full sm:w-auto" href="/operacao/viagens">
             Voltar
@@ -819,13 +849,22 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     <button
                       type="button"
                       className="btn btn-primary w-full sm:w-auto"
-                      onClick={() => setMostrarVinculoAcomp((prev) => !prev)}
+                      onClick={() =>
+                        setMostrarVinculoAcomp((prev) => {
+                          if (prev) {
+                            resetVinculoAcompanhante();
+                          }
+                          return !prev;
+                        })
+                      }
                     >
                       {mostrarVinculoAcomp ? "Fechar vínculo" : "Vincular acompanhante"}
                     </button>
                   </div>
                   <div className="mobile-collapsible" data-open={mostrarVinculoAcomp ? "true" : "false"}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>Vincular acompanhante existente</div>
+                    <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {editAcompId ? "Editar acompanhante" : "Vincular acompanhante existente"}
+                    </div>
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label">Acompanhante</label>
@@ -874,7 +913,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       />
                     </div>
                     <button className="btn btn-primary" type="button" onClick={adicionarAcompanhante} disabled={savingAcomp}>
-                      {savingAcomp ? "Salvando..." : "Vincular acompanhante"}
+                      {savingAcomp
+                        ? "Salvando..."
+                        : editAcompId
+                        ? "Salvar alterações"
+                        : "Vincular acompanhante"}
                     </button>
                   </div>
                 </div>
@@ -1072,12 +1115,22 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           <td className="th-actions" data-label="Ações">
                             <div className="action-buttons">
                               <button
-                                className="btn btn-light"
+                                className="btn-icon"
                                 type="button"
+                                title="Editar acompanhante"
+                                onClick={() => iniciarEdicaoAcompanhante(a)}
+                                disabled={savingAcomp}
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn-icon btn-danger"
+                                type="button"
+                                title="Excluir acompanhante"
                                 onClick={() => removerAcompanhante(a.id)}
                                 disabled={savingAcomp}
                               >
-                                Remover
+                                🗑️
                               </button>
                             </div>
                           </td>
