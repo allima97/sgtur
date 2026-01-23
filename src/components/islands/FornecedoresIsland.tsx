@@ -225,22 +225,9 @@ export default function FornecedoresIsland() {
   }
 
   return (
-    <div className="card-base card-purple fornecedores-page">
+    <div className="page-content-wrap fornecedores-page">
       {!mostrarFormulario && (
-        <div className="card-base mb-3">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 600 }}>Fornecedores</div>
-              <small style={{ color: "#94a3b8" }}>Cadastre parceiros nacionais e internacionais.</small>
-            </div>
-          </div>
+        <div className="card-base mb-3 list-toolbar-sticky">
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
@@ -458,8 +445,7 @@ export default function FornecedoresIsland() {
       )}
 
       {!mostrarFormulario && (
-        <div className="card-base" style={{ marginTop: 16 }}>
-          <h3 style={{ marginBottom: 8 }}>Fornecedores cadastrados</h3>
+        <>
           {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
           <div
             className="table-container overflow-x-auto"
@@ -516,7 +502,7 @@ export default function FornecedoresIsland() {
               </tbody>
             </table>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -287,12 +287,13 @@ export default function CommissionRulesIsland() {
   }
 
   return (
-      <div className="card-base card-blue form-card regras-comissao-page">
-        {!mostrarFormulario && (
+    <div className="page-content-wrap regras-comissao-page">
+      {!mostrarFormulario && (
+        <div className="card-base mb-4 list-toolbar-sticky">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-            <div>
-              <h3 className="card-title" style={{ marginBottom: 6 }}>Regras cadastradas</h3>
-            </div>
+            <h3 className="card-title text-center sm:text-left" style={{ marginBottom: 6 }}>
+              Regras cadastradas
+            </h3>
             {podeEditar && (
               <button
                 type="button"
@@ -304,21 +305,23 @@ export default function CommissionRulesIsland() {
               </button>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {!mostrarFormulario && erro && (
-          <div className="card-base card-config mb-2">
-            <strong>{erro}</strong>
-          </div>
-        )}
-        {mostrarFormulario && erroValidacao && (
-          <div className="card-base card-config mb-2">
-            <strong>{erroValidacao}</strong>
-          </div>
-        )}
+      {!mostrarFormulario && erro && (
+        <div className="card-base card-config mb-3">
+          <strong>{erro}</strong>
+        </div>
+      )}
+      {mostrarFormulario && erroValidacao && (
+        <div className="card-base card-config mb-3">
+          <strong>{erroValidacao}</strong>
+        </div>
+      )}
 
       {mostrarFormulario && (
-        <form onSubmit={salvar}>
+        <div className="card-base form-card">
+          <form onSubmit={salvar}>
             <div className="form-row" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Nome *</label>
@@ -498,6 +501,7 @@ export default function CommissionRulesIsland() {
           </button>
         </div>
           </form>
+        </div>
       )}
 
       {!mostrarFormulario && (

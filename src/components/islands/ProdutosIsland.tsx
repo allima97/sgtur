@@ -196,7 +196,6 @@ export default function ProdutosIsland() {
         { data: subdivisaoData, error: subErr },
         tipoResp,
         produtosResp,
-        { data: destinosData, error: destinosErr },
         { data: destinosProdutosData, error: destinosProdutosErr },
       ] = await Promise.all([
         supabase.from("paises").select("id, nome").order("nome"),
@@ -222,10 +221,6 @@ export default function ProdutosIsland() {
           )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
           .limit(todos ? undefined : 10),
-        supabase
-          .from("destinos")
-          .select("id, nome, atracao_principal, melhor_epoca")
-          .order("nome", { ascending: true }),
         supabase
           .from("produtos")
           .select("destino, atracao_principal, melhor_epoca")
@@ -325,16 +320,6 @@ export default function ProdutosIsland() {
       const destinosNomes: string[] = [];
       const atracoesNomes: string[] = [];
       const melhoresEpocasNomes: string[] = [];
-      if (!destinosErr && destinosData) {
-        destinosData.forEach((destino: any) => {
-          const nome = (destino?.nome || "").trim();
-          if (nome) destinosNomes.push(nome);
-          const atracao = (destino?.atracao_principal || "").trim();
-          if (atracao) atracoesNomes.push(atracao);
-          const melhorEpoca = (destino?.melhor_epoca || "").trim();
-          if (melhorEpoca) melhoresEpocasNomes.push(melhorEpoca);
-        });
-      }
       if (!destinosProdutosErr && destinosProdutosData) {
         destinosProdutosData.forEach((destino: any) => {
           const nome = (destino?.destino || "").trim();
@@ -362,9 +347,8 @@ export default function ProdutosIsland() {
         setMelhoresEpocasCadastro([]);
       }
 
-      if (destinosErr && destinosProdutosErr) {
+      if (destinosProdutosErr) {
         erros.push("destinos");
-        if (destinosErr.message) detalhesErro.push(`destinos: ${destinosErr.message}`);
         if (destinosProdutosErr.message) {
           detalhesErro.push(`produtos.destino: ${destinosProdutosErr.message}`);
         }

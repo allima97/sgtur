@@ -391,6 +391,25 @@ body {
   font-size: 0.95rem;
 }
 
+.file-input-stack {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-input-name {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .file-input-stack {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* Tables */
 .table-container {
   width: 100%;

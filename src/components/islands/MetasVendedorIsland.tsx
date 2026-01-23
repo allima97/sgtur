@@ -425,7 +425,7 @@ export default function MetasVendedorIsland() {
       <div className={`card-base card-blue mb-2${mostrarFormularioMeta ? " form-card" : ""}`}>
         {!mostrarFormularioMeta && (
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
-            <h3>Metas cadastradas</h3>
+            <h3 className="text-center sm:text-left">Metas cadastradas</h3>
             {usuarioPodeEditar && (
               <button
                 type="button"

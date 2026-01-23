@@ -510,7 +510,7 @@ export default function ViagensListaIsland() {
 
   return (
       <div
-        className={`card-base card-purple viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
+        className={`page-content-wrap viagens-page${podeCriar && !showForm ? " has-mobile-actionbar" : ""}`}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {showForm && (
@@ -651,10 +651,10 @@ export default function ViagensListaIsland() {
           )}
 
           {!showForm && (
-            <>
+            <div className="card-base mb-3 list-toolbar-sticky">
               <div className="flex flex-col gap-2 sm:hidden">
                 <div className="form-group">
-                  <label className="form-label">Buscar</label>
+                  <label className="form-label">Buscar cliente</label>
                   <input
                     className="form-input"
                     placeholder="Cliente ou produto..."
@@ -672,7 +672,7 @@ export default function ViagensListaIsland() {
                   style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}
                 >
                   <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
-                    <label className="form-label">Buscar</label>
+                    <label className="form-label">Buscar cliente</label>
                     <input
                       className="form-input"
                       placeholder="Cliente ou produto..."
@@ -740,7 +740,7 @@ export default function ViagensListaIsland() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {!showForm && showFilters && (

@@ -333,13 +333,25 @@ export default function QuotePrintSettingsIsland() {
       <div className="form-row">
         <div className="form-group">
           <label className="form-label">Logo</label>
-          <input
-            className="form-input"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-            disabled={bloqueado}
-          />
+          <div className="file-input-stack">
+            <input
+              id="logo-file-input"
+              className="sr-only"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+              disabled={bloqueado}
+            />
+            <label
+              htmlFor="logo-file-input"
+              className="btn btn-light w-full sm:w-auto"
+              style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
+              aria-disabled={bloqueado}
+            >
+              Escolher arquivo
+            </label>
+            <span className="file-input-name">{logoFile?.name || "Nenhum arquivo escolhido"}</span>
+          </div>
           {logoPreview && (
             <img
               src={logoPreview}
@@ -454,13 +466,27 @@ export default function QuotePrintSettingsIsland() {
 
       <div className="form-group">
         <label className="form-label">Imagem complementar (apos informacoes importantes)</label>
-        <input
-          className="form-input"
-          type="file"
-          accept="image/*"
-          onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
-          disabled={bloqueado}
-        />
+        <div className="file-input-stack">
+          <input
+            id="complement-file-input"
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setComplementImageFile(e.target.files?.[0] || null)}
+            disabled={bloqueado}
+          />
+          <label
+            htmlFor="complement-file-input"
+            className="btn btn-light w-full sm:w-auto"
+            style={{ opacity: bloqueado ? 0.6 : 1, pointerEvents: bloqueado ? "none" : "auto" }}
+            aria-disabled={bloqueado}
+          >
+            Escolher arquivo
+          </label>
+          <span className="file-input-name">
+            {complementImageFile?.name || "Nenhum arquivo escolhido"}
+          </span>
+        </div>
         {complementImagePreview && (
           <img
             src={complementImagePreview}
