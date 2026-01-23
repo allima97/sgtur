@@ -2075,7 +2075,7 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
             <div className="modal-body">
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {widgetOrder.map((id, idx) => {
+                {widgetOrder.map((id, idx) => {
                 const meta = ALL_WIDGETS.find((w) => w.id === id);
                 if (!meta) return null;
                 return (
@@ -2177,8 +2177,8 @@ const DashboardGeralIsland: React.FC = () => {
                     )}
                   </div>
                 );
-              })}
-            </div>
+                })}
+              </div>
             </div>
             <div className="modal-footer mobile-stack-buttons">
               <button
@@ -2223,7 +2223,8 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
 
             <div className="modal-body">
-              <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
+              <div className="card-base" style={{ marginBottom: 12 }}>
+                <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
                 <div>
                   <strong>Destino:</strong> {getOrcamentoDestino(orcamentoSelecionado)}
                 </div>
@@ -2240,8 +2241,9 @@ const DashboardGeralIsland: React.FC = () => {
                   {formatCurrency(Number(orcamentoSelecionado.total || 0))}
                 </div>
               </div>
+              </div>
 
-              <div style={{ marginTop: 14 }}>
+              <div className="card-base">
                 <h4 style={{ marginBottom: 8, textAlign: "center" }}>Itens do orçamento</h4>
                 {(orcamentoSelecionado.quote_item || []).length === 0 ? (
                   <div style={{ color: "#64748b" }}>Nenhum item encontrado.</div>
