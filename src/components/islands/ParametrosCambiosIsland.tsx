@@ -390,7 +390,7 @@ export default function ParametrosCambiosIsland() {
               <label className="form-label">Data</label>
               <input
                 type="date"
-                className="form-input"
+                className="form-input w-full"
                 value={form.data}
                 onChange={(event) => handleFormChange("data", event.target.value)}
                 disabled={!podeEscrever}

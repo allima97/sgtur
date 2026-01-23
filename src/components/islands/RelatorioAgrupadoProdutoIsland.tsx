@@ -517,8 +517,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
   }, [recibosDetalhados, buscaProduto, tipoReciboSelecionado, cidadeFiltro]);
   const recibosExibidos = useMemo(() => {
-    return buscaProduto.trim() ? recibosFiltrados : recibosFiltrados.slice(0, 5);
-  }, [recibosFiltrados, buscaProduto]);
+    return recibosFiltrados;
+  }, [recibosFiltrados]);
 
   const linhasFiltradas = useMemo(() => {
     const term = normalizeText(buscaProduto);
@@ -540,7 +540,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
   }, [linhas, buscaProduto, nomeProdutosPorTipo, cidadeFiltro]);
   const linhasExibidas = useMemo(() => {
-    return linhasFiltradas.slice(0, 5);
+    return linhasFiltradas;
   }, [linhasFiltradas]);
 
   const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);

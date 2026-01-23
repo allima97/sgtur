@@ -682,7 +682,7 @@ export default function RelatorioVendasIsland() {
     });
   }, [recibosEnriquecidos, destinoBusca, tipoSelecionadoId, cidadeFiltro, cidadeNomeInput]);
   const recibosExibidos = useMemo(() => {
-    return recibosFiltrados.slice(0, 5);
+    return recibosFiltrados;
   }, [recibosFiltrados]);
 
   const totalRecibos = recibosFiltrados.length;

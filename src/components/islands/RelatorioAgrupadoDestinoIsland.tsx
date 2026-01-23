@@ -297,7 +297,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
     });
   }, [linhas, buscaDestino]);
   const linhasExibidas = useMemo(() => {
-    return linhasFiltradas.slice(0, 5);
+    return linhasFiltradas;
   }, [linhasFiltradas]);
 
   const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);

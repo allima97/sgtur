@@ -584,7 +584,7 @@ export default function ViagensListaIsland() {
                   <label className="form-label">Data início</label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="form-input w-full"
                     value={cadastroForm.data_inicio}
                     onChange={(e) =>
                       setCadastroForm((prev) => {
@@ -602,7 +602,7 @@ export default function ViagensListaIsland() {
                   <label className="form-label">Data fim</label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="form-input w-full"
                     value={cadastroForm.data_fim}
                     min={cadastroForm.data_inicio || undefined}
                     onChange={(e) =>
@@ -702,7 +702,7 @@ export default function ViagensListaIsland() {
                     <label className="form-label">Inicio</label>
                     <input
                       type="date"
-                      className="form-input"
+                      className="form-input w-full"
                       value={inicio}
                       onChange={(e) => {
                         const nextInicio = e.target.value;
@@ -717,7 +717,7 @@ export default function ViagensListaIsland() {
                     <label className="form-label">Final</label>
                     <input
                       type="date"
-                      className="form-input"
+                      className="form-input w-full"
                       value={fim}
                       min={inicio || undefined}
                       onChange={(e) => {
@@ -779,7 +779,7 @@ export default function ViagensListaIsland() {
                   <label className="form-label">Inicio</label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="form-input w-full"
                     value={inicio}
                     onChange={(e) => {
                       const nextInicio = e.target.value;
@@ -794,7 +794,7 @@ export default function ViagensListaIsland() {
                   <label className="form-label">Final</label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="form-input w-full"
                     value={fim}
                     min={inicio || undefined}
                     onChange={(e) => {
