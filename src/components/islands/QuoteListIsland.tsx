@@ -623,8 +623,8 @@ export default function QuoteListIsland() {
                 </table>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary" onClick={() => setVisualizandoQuote(null)}>
+            <div className="modal-footer mobile-stack-buttons">
+              <button className="btn btn-primary w-full sm:w-auto" onClick={() => setVisualizandoQuote(null)}>
                 Fechar
               </button>
             </div>
