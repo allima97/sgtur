@@ -225,7 +225,7 @@ export default function FornecedoresIsland() {
   }
 
   return (
-    <div className="card-base card-purple">
+    <div className="card-base card-purple fornecedores-page">
       {!mostrarFormulario && (
         <div className="card-base mb-3">
           <div

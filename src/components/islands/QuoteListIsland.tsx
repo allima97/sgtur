@@ -232,7 +232,7 @@ export default function QuoteListIsland() {
   }
 
   return (
-    <div className="page-content-wrap">
+    <div className="page-content-wrap orcamentos-consulta-page">
       <div className="card-base mb-3 list-toolbar-sticky">
         <div className="flex flex-col gap-2 sm:hidden">
           <div className="form-group">

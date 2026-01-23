@@ -868,7 +868,7 @@ export default function ProdutosIsland() {
   if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
-    <div className="destinos-page">
+    <div className="destinos-page produtos-page">
       {!mostrarFormulario && (
         <div className="card-base mb-3 list-toolbar-sticky">
           <div

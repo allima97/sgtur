@@ -821,13 +821,6 @@ export default function QuoteImportIsland() {
                           )}
                         </td>
                       </tr>
-                      <datalist id={`quote-import-cidades-${rowKey}`}>
-                        {(cidadeSuggestions[rowKey] || []).map((cidade) => {
-                          const label = formatCidadeLabel(cidade);
-                          return <option key={cidade.id} value={label} />;
-                        })}
-                      </datalist>
-
                       {isCircuitItem(item) && (
                         <tr>
                           <td colSpan={11}>
@@ -1053,6 +1046,17 @@ export default function QuoteImportIsland() {
                 })}
               </tbody>
             </table>
+            {draft.items.map((item, index) => {
+              const rowKey = item.temp_id || `row-${index}`;
+              return (
+                <datalist key={rowKey} id={`quote-import-cidades-${rowKey}`}>
+                  {(cidadeSuggestions[rowKey] || []).map((cidade) => {
+                    const label = formatCidadeLabel(cidade);
+                    return <option key={cidade.id} value={label} />;
+                  })}
+                </datalist>
+              );
+            })}
             <datalist id={IMPORT_TIPO_DATALIST_ID}>
               {tipoOptions.map((tipo) => (
                 <option key={tipo.id} value={tipo.label} />

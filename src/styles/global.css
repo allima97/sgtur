@@ -1076,6 +1076,16 @@ body {
     --table-card-gap: transparent;
   }
 
+  .clientes-page .table-mobile-cards,
+  .clientes-page .table-mobile-cards table,
+  .clientes-page .table-mobile-cards tbody,
+  .clientes-page .table-mobile-cards tr,
+  .clientes-page .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
   .clientes-page .table-mobile-cards {
     padding: 0;
     background: transparent;
@@ -1091,6 +1101,10 @@ body {
     margin-bottom: 12px;
   }
 
+  .clientes-page .table-mobile-cards td {
+    background: #fff;
+  }
+
   .clientes-page .table-mobile-cards tbody tr:nth-child(even),
   .clientes-page .table-mobile-cards tbody tr:hover {
     background: #fff;
@@ -1101,6 +1115,409 @@ body {
   }
 
   .clientes-page .table-mobile-cards tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .vendas-consulta-page .table-mobile-cards.table-header-green {
+    --table-card-border: var(--color-border);
+    --table-card-divider: var(--color-border);
+    --table-card-gap: transparent;
+  }
+
+  .vendas-consulta-page .table-mobile-cards,
+  .vendas-consulta-page .table-mobile-cards table,
+  .vendas-consulta-page .table-mobile-cards tbody,
+  .vendas-consulta-page .table-mobile-cards tr,
+  .vendas-consulta-page .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .vendas-consulta-page .table-mobile-cards {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .vendas-consulta-page .table-mobile-cards tr {
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    background: #fff;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .vendas-consulta-page .table-mobile-cards td {
+    background: #fff;
+  }
+
+  .vendas-consulta-page .table-mobile-cards tbody tr:nth-child(even),
+  .vendas-consulta-page .table-mobile-cards tbody tr:hover {
+    background: #fff;
+  }
+
+  .vendas-consulta-page .table-mobile-cards td:last-child {
+    border-bottom: 0;
+  }
+
+  .vendas-consulta-page .table-mobile-cards tr:last-child {
+    margin-bottom: 0;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards.table-header-blue,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards.table-header-green,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards.table-header-teal,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards.table-header-purple {
+    --table-card-border: var(--color-border);
+    --table-card-divider: var(--color-border);
+    --table-card-gap: transparent;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards table,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tbody,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tr,
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards td {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tr {
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    background: #fff;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards td {
+    background: #fff;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tbody tr:nth-child(even),
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tbody tr:hover {
+    background: #fff;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards td:last-child {
+    border-bottom: 0;
+  }
+
+  :is(
+    .clientes-page,
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .cidades-page,
+    .circuitos-page,
+    .produtos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  )
+  .table-mobile-cards tr:last-child {
     margin-bottom: 0;
   }
 }

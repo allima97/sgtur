@@ -794,7 +794,7 @@ export default function QuoteManualIsland() {
   }
 
   return (
-    <div className="page-content-wrap">
+    <div className="page-content-wrap orcamentos-criar-page">
       <div className="card-base" style={{ marginBottom: 16 }}>
         <h2 className="page-title">Criar orcamento</h2>
         <p className="page-subtitle">
@@ -987,22 +987,30 @@ export default function QuoteManualIsland() {
                         />
                       </td>
                     </tr>
-                    <datalist id={`quote-manual-cidades-${rowKey}`}>
-                      {(cidadeSuggestions[rowKey] || []).map((cidade) => {
-                        const label = formatCidadeLabel(cidade);
-                        return <option key={cidade.id} value={label} />;
-                      })}
-                    </datalist>
-                    <datalist id={`quote-manual-produtos-${rowKey}`}>
-                      {produtoOptions.map((produto) => (
-                        <option key={`${rowKey}-${produto}`} value={produto} />
-                      ))}
-                    </datalist>
                   </React.Fragment>
                 );
               })}
             </tbody>
           </table>
+          {items.map((item, index) => {
+            const rowKey = item.temp_id || `row-${index}`;
+            const produtoOptions = buildProdutoSuggestions(item);
+            return (
+              <React.Fragment key={rowKey}>
+                <datalist id={`quote-manual-cidades-${rowKey}`}>
+                  {(cidadeSuggestions[rowKey] || []).map((cidade) => {
+                    const label = formatCidadeLabel(cidade);
+                    return <option key={cidade.id} value={label} />;
+                  })}
+                </datalist>
+                <datalist id={`quote-manual-produtos-${rowKey}`}>
+                  {produtoOptions.map((produto) => (
+                    <option key={`${rowKey}-${produto}`} value={produto} />
+                  ))}
+                </datalist>
+              </React.Fragment>
+            );
+          })}
           <datalist id={TIPO_DATALIST_ID}>
             {tipoOptions.map((tipo) => (
               <option key={tipo.id} value={tipo.label} />

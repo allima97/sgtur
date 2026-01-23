@@ -253,7 +253,7 @@ export default function ParametrosCambiosIsland() {
   }
 
   return (
-    <div className="card-base">
+    <div className="card-base cambios-page">
       <h2 className="card-title">Câmbios</h2>
       <p className="card-subtitle">Cadastre o valor de câmbio aplicado em cada dia.</p>
 

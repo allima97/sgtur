@@ -287,7 +287,7 @@ export default function CommissionRulesIsland() {
   }
 
   return (
-      <div className="card-base card-blue form-card">
+      <div className="card-base card-blue form-card regras-comissao-page">
         {!mostrarFormulario && (
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div>

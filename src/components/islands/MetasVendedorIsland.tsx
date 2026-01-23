@@ -415,7 +415,7 @@ export default function MetasVendedorIsland() {
   if (!ativo) return <div>Acesso ao módulo de Metas bloqueado.</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
       {erro && !mostrarFormularioMeta && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
