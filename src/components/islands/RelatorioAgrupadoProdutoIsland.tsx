@@ -53,6 +53,7 @@ type ReciboDetalhe = {
 };
 
 type Ordenacao = "total" | "quantidade" | "ticket";
+type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
 
 type Papel = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
@@ -115,6 +116,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     return formatISO(inicio);
   });
   const [dataFim, setDataFim] = useState<string>(hojeISO());
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaProduto, setBuscaProduto] = useState("");
   const [produtosCadastro, setProdutosCadastro] = useState<
     { tipo_produto: string | null; nome: string | null }[]
@@ -135,7 +137,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
-  const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
 
@@ -146,6 +147,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     { id: "recibos", label: "Produtos por recibo" },
     { id: "agrupado", label: "Resumo por tipo" },
   ];
+
 
   useEffect(() => {
     if (exportTipo === "excel" && !exportFlags.excel) {
@@ -406,6 +408,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
     };
 
     vendas.forEach((v) => {
+      if (statusFiltro !== "todos" && v.status !== statusFiltro) {
+        return;
+      }
       const destinoNome = v.destinos?.nome || "";
       const destinoId = v.destino_cidade_id || v.destinos?.cidade_id || null;
       const recibos = v.vendas_recibos || [];
@@ -438,13 +443,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
 
     return arr;
-  }, [vendas, produtos, ordenacao, ordemDesc]);
+  }, [vendas, produtos, ordenacao, ordemDesc, statusFiltro]);
 
   const recibosDetalhados = useMemo(() => {
     const rows: ReciboDetalhe[] = [];
     const nomeFallback = (tipoId?: string | null) =>
       tipoProdutosNomeMap.get(tipoId || "") || "(sem produto)";
     vendas.forEach((v) => {
+      if (statusFiltro !== "todos" && v.status !== statusFiltro) {
+        return;
+      }
       const cidadeId =
         v.destino_cidade_id || v.destinos?.cidade_id || null;
       const cidadeNome =
@@ -490,7 +498,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
       }
     });
     return rows;
-  }, [vendas, tipoProdutosNomeMap, cidadesMap]);
+  }, [vendas, tipoProdutosNomeMap, cidadesMap, statusFiltro]);
 
   const recibosFiltrados = useMemo(() => {
     const hasTerm = buscaProduto.trim().length > 0;
@@ -853,9 +861,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
     <div className="relatorio-vendas-produto-page">
       <div className="card-base card-purple form-card mb-3">
         <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
+          <div className="form-group">
+            <label className="form-label">Buscar produto</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Nome do produto"
+              value={buscaProduto}
+              onChange={(e) => setBuscaProduto(e.target.value)}
+            />
+          </div>
           <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
             Exportar
           </button>
@@ -1086,216 +1101,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
         </div>
       </div>
 
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Data início</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataInicio}
-                onChange={(e) => {
-                  const nextInicio = e.target.value;
-                  setDataInicio(nextInicio);
-                  if (dataFim && nextInicio && dataFim < nextInicio) {
-                    setDataFim(nextInicio);
-                  }
-                }}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Data fim</label>
-              <input
-                type="date"
-                className="form-input"
-                value={dataFim}
-                min={dataInicio || undefined}
-                onChange={(e) => {
-                  const nextFim = e.target.value;
-                  const boundedFim =
-                    dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                  setDataFim(boundedFim);
-                }}
-              />
-            </div>
-            <div className="form-group" style={{ position: "relative" }}>
-              <label className="form-label">Cidade</label>
-              <input
-                className="form-input"
-                placeholder="Digite a cidade"
-                value={cidadeNomeInput}
-                onChange={(e) => {
-                  setCidadeNomeInput(e.target.value);
-                  setCidadeFiltro("");
-                  setMostrarSugestoesCidadeFiltro(true);
-                }}
-                onFocus={() => {
-                  if (cidadeNomeInput.trim().length > 0) {
-                    setMostrarSugestoesCidadeFiltro(true);
-                  }
-                }}
-                onBlur={() => {
-                  setTimeout(() => setMostrarSugestoesCidadeFiltro(false), 150);
-                  if (!cidadeNomeInput.trim()) {
-                    setCidadeFiltro("");
-                    return;
-                  }
-                  const match = cidadesLista.find((cidade) =>
-                    normalizeText(cidade.nome) === normalizeText(cidadeNomeInput)
-                  );
-                  if (match) {
-                    setCidadeFiltro(match.id);
-                    setCidadeNomeInput(match.nome);
-                  }
-                }}
-              />
-              {mostrarSugestoesCidadeFiltro && cidadeNomeInput.trim().length > 0 && (
-                <div
-                  className="card-base card-config"
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    maxHeight: 160,
-                    overflowY: "auto",
-                    zIndex: 20,
-                    padding: "4px 0",
-                  }}
-                >
-                  {buscandoCidade && (
-                    <div style={{ padding: "6px 12px", color: "#64748b" }}>
-                      Buscando cidades...
-                    </div>
-                  )}
-                  {!buscandoCidade && erroCidade && (
-                    <div style={{ padding: "6px 12px", color: "#dc2626" }}>{erroCidade}</div>
-                  )}
-                  {!buscandoCidade && !erroCidade && cidadeSugestoes.length === 0 && (
-                    <div style={{ padding: "6px 12px", color: "#94a3b8" }}>
-                      Nenhuma cidade encontrada.
-                    </div>
-                  )}
-                  {!buscandoCidade &&
-                    !erroCidade &&
-                    cidadeSugestoes.map((cidade) => (
-                      <button
-                        key={cidade.id}
-                        type="button"
-                        className="btn btn-ghost w-full text-left"
-                        style={{ padding: "6px 12px" }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setCidadeFiltro(cidade.id);
-                          setCidadeNomeInput(cidade.nome);
-                          setMostrarSugestoesCidadeFiltro(false);
-                        }}
-                      >
-                        {cidade.nome}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-            {activeTab === "recibos" && (
-              <div className="form-group">
-                <label className="form-label">Tipo de Produto</label>
-                <select
-                  className="form-select"
-                  value={tipoReciboSelecionado}
-                  onChange={(e) => setTipoReciboSelecionado(e.target.value)}
-                >
-                  <option value="">Todos os tipos</option>
-                  {produtos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome || p.tipo || p.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="form-group">
-              <label className="form-label">Buscar produto</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Nome do produto"
-                value={buscaProduto}
-                onChange={(e) => setBuscaProduto(e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("hoje")}
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("7")}
-              >
-                Últimos 7 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("30")}
-              >
-                Últimos 30 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_atual")}
-              >
-                Este mês
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_anterior")}
-              >
-                Mês anterior
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("limpar")}
-              >
-                Limpar datas
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                carregar();
-                setShowFilters(false);
-              }}
-            >
-              Aplicar filtros
-            </button>
-          </div>
-        </div>
-      )}
 
       {showExport && (
         <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>

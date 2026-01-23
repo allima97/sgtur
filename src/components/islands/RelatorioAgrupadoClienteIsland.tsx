@@ -12,6 +12,7 @@ type Cliente = {
 
 type Venda = {
   id: string;
+  vendedor_id: string;
   cliente_id: string;
   destino_id: string;
   produto_id: string | null;
@@ -62,6 +63,10 @@ function formatISO(date: Date) {
   return date.toISOString().substring(0, 10);
 }
 
+function normalizeText(value: string) {
+  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -86,14 +91,17 @@ export default function RelatorioAgrupadoClienteIsland() {
   });
   const [dataFim, setDataFim] = useState<string>(hojeISO());
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
+  const [buscaCliente, setBuscaCliente] = useState("");
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
-  const [showFilters, setShowFilters] = useState(false);
+  const [exportFlags, setExportFlags] = useState<ExportFlags>({
+    pdf: true,
+    excel: true,
+  });
   const [showExport, setShowExport] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
 
@@ -144,7 +152,7 @@ export default function RelatorioAgrupadoClienteIsland() {
 
         const { data: usuarioDb } = await supabase
           .from("users")
-          .select("id, user_types(name)")
+          .select("id, user_types(name), company_id")
           .eq("id", userId)
           .maybeSingle();
 
@@ -221,6 +229,7 @@ export default function RelatorioAgrupadoClienteIsland() {
           total: 0,
           ticketMedio: 0,
         };
+
       const valRecibos = (v.vendas_recibos || []).reduce(
         (acc, r) => acc + Number(r.valor_total || 0),
         0
@@ -251,8 +260,24 @@ export default function RelatorioAgrupadoClienteIsland() {
     return arr;
   }, [vendas, clientes, ordenacao, ordemDesc]);
 
-  const totalGeral = linhas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhas.reduce((acc, l) => acc + l.quantidade, 0);
+  const linhasFiltradas = useMemo(() => {
+    const term = normalizeText(buscaCliente.trim());
+    if (!term) return linhas;
+    const termDigits = term.replace(/\D/g, "");
+    return linhas.filter((l) => {
+      if (normalizeText(l.cliente_nome).includes(term)) return true;
+      const cpfRaw = l.cliente_cpf || "";
+      if (normalizeText(cpfRaw).includes(term)) return true;
+      if (termDigits) {
+        const cpfDigits = cpfRaw.replace(/\D/g, "");
+        return cpfDigits.includes(termDigits);
+      }
+      return false;
+    });
+  }, [linhas, buscaCliente]);
+
+  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
+  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
 
   function aplicarPeriodoPreset(
@@ -362,27 +387,26 @@ export default function RelatorioAgrupadoClienteIsland() {
   }, [userCtx]);
 
   function exportarCSV() {
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
     const header = ["cliente", "cpf", "quantidade", "total", "ticket_medio"];
-
-    const rows = linhas.map((l) => [
+    const rows = linhasFiltradas.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade.toString(),
       l.total.toFixed(2).replace(".", ","),
       l.ticketMedio.toFixed(2).replace(".", ","),
     ]);
-
     const all = [header, ...rows]
       .map((cols) => cols.map((c) => csvEscape(c)).join(";"))
       .join("\n");
 
     const blob = new Blob([all], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
+
     const now = new Date();
     const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
       2,
@@ -390,6 +414,7 @@ export default function RelatorioAgrupadoClienteIsland() {
     )}${String(now.getDate()).padStart(2, "0")}-${String(
       now.getHours()
     ).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", `relatorio-vendas-por-cliente-${ts}.csv`);
@@ -404,12 +429,12 @@ export default function RelatorioAgrupadoClienteIsland() {
       alert("Exportação Excel desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const data = linhas.map((l) => ({
+    const data = linhasFiltradas.map((l) => ({
       Cliente: l.cliente_nome,
       CPF: l.cliente_cpf,
       Quantidade: l.quantidade,
@@ -430,35 +455,32 @@ export default function RelatorioAgrupadoClienteIsland() {
       alert("Exportação PDF desabilitada nos parâmetros.");
       return;
     }
-    if (linhas.length === 0) {
+    if (linhasFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
     const subtitle =
       dataInicio && dataFim
-        ? `Período: ${formatarDataParaExibicao(
-            dataInicio
-          )} até ${formatarDataParaExibicao(dataFim)}`
+        ? `Período: ${formatarDataParaExibicao(dataInicio)} até ${formatarDataParaExibicao(
+            dataFim
+          )}`
         : dataInicio
         ? `A partir de ${formatarDataParaExibicao(dataInicio)}`
         : dataFim
         ? `Até ${formatarDataParaExibicao(dataFim)}`
         : undefined;
 
-    const headers = [
-      "Cliente",
-      "CPF",
-      "Qtde",
-      "Faturamento",
-      "Ticket médio",
-    ];
-    const rows = linhas.map((l) => [
+    const headers = ["Cliente", "CPF", "Qtde", "Faturamento", "Ticket médio"];
+    const rows = linhasFiltradas.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade,
       l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-      l.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      l.ticketMedio.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }),
     ]);
 
     exportTableToPDF({
@@ -491,149 +513,22 @@ export default function RelatorioAgrupadoClienteIsland() {
     <div className="relatorio-vendas-cliente-page">
       <div className="card-base card-purple form-card mb-3">
         <div className="flex flex-col gap-2 sm:hidden">
-          <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>
-            Filtros
-          </button>
+          <div className="form-group">
+            <label className="form-label">Buscar cliente ou CPF</label>
+            <input
+              className="form-input"
+              value={buscaCliente}
+              onChange={(e) => setBuscaCliente(e.target.value)}
+              placeholder="Nome do cliente ou CPF..."
+            />
+          </div>
           <button type="button" className="btn btn-light" onClick={() => setShowExport(true)}>
             Exportar
           </button>
         </div>
         <div className="hidden sm:block">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Data início</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataInicio}
-              onChange={(e) => {
-                const nextInicio = e.target.value;
-                setDataInicio(nextInicio);
-                if (dataFim && nextInicio && dataFim < nextInicio) {
-                  setDataFim(nextInicio);
-                }
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Data fim</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dataFim}
-              min={dataInicio || undefined}
-              onChange={(e) => {
-                const nextFim = e.target.value;
-                const boundedFim = dataInicio && nextFim && nextFim < dataInicio ? dataInicio : nextFim;
-                setDataFim(boundedFim);
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
-            >
-              <option value="todos">Todos</option>
-              <option value="aberto">Aberto</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("hoje")}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("7")}
-          >
-            Últimos 7 dias
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("30")}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("mes_atual")}
-          >
-            Este mês
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("mes_anterior")}
-          >
-            Mês anterior
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={() => aplicarPeriodoPreset("limpar")}
-          >
-            Limpar datas
-          </button>
-
-          <button type="button" className="btn btn-primary" onClick={carregar}>
-            Aplicar filtros
-          </button>
-
-          <button type="button" className="btn btn-purple" onClick={exportarCSV}>
-            Exportar CSV
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={exportarExcel}
-            disabled={!exportFlags.excel}
-            title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
-          >
-            Exportar Excel
-          </button>
-          <button
-            type="button"
-            className="btn btn-light"
-            onClick={exportarPDF}
-            disabled={!exportFlags.pdf}
-            title={
-              !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
-            }
-          >
-            Exportar PDF
-          </button>
-        </div>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="mobile-drawer-backdrop" onClick={() => setShowFilters(false)}>
-          <div
-            className="mobile-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <strong>Filtros</strong>
-              <button type="button" className="btn-ghost" onClick={() => setShowFilters(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="form-group" style={{ marginTop: 12 }}>
+          <div className="form-row">
+            <div className="form-group">
               <label className="form-label">Data início</label>
               <input
                 type="date"
@@ -676,66 +571,81 @@ export default function RelatorioAgrupadoClienteIsland() {
                 <option value="cancelado">Cancelado</option>
               </select>
             </div>
+          </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("hoje")}
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("7")}
-              >
-                Últimos 7 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("30")}
-              >
-                Últimos 30 dias
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_atual")}
-              >
-                Este mês
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("mes_anterior")}
-              >
-                Mês anterior
-              </button>
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => aplicarPeriodoPreset("limpar")}
-              >
-                Limpar datas
-              </button>
-            </div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("hoje")}
+            >
+              Hoje
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("7")}
+            >
+              Últimos 7 dias
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("30")}
+            >
+              Últimos 30 dias
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("mes_atual")}
+            >
+              Este mês
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("mes_anterior")}
+            >
+              Mês anterior
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => aplicarPeriodoPreset("limpar")}
+            >
+              Limpar datas
+            </button>
 
+            <button type="button" className="btn btn-primary" onClick={carregar}>
+              Aplicar filtros
+            </button>
+
+            <button type="button" className="btn btn-purple" onClick={exportarCSV}>
+              Exportar CSV
+            </button>
             <button
               type="button"
               className="btn btn-primary"
-              style={{ marginTop: 12, width: "100%" }}
-              onClick={() => {
-                carregar();
-                setShowFilters(false);
-              }}
+              onClick={exportarExcel}
+              disabled={!exportFlags.excel}
+              title={!exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""}
             >
-              Aplicar filtros
+              Exportar Excel
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={exportarPDF}
+              disabled={!exportFlags.pdf}
+              title={!exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""}
+            >
+              Exportar PDF
             </button>
           </div>
         </div>
-      )}
+      </div>
+
 
       {showExport && (
         <div className="mobile-drawer-backdrop" onClick={() => setShowExport(false)}>
@@ -767,9 +677,7 @@ export default function RelatorioAgrupadoClienteIsland() {
                   onClick={() => setExportTipo("excel")}
                   disabled={!exportFlags.excel}
                   title={
-                    !exportFlags.excel
-                      ? "Exportação Excel desabilitada nos parâmetros"
-                      : ""
+                    !exportFlags.excel ? "Exportação Excel desabilitada nos parâmetros" : ""
                   }
                 >
                   Excel
@@ -779,9 +687,7 @@ export default function RelatorioAgrupadoClienteIsland() {
                   className={`btn ${exportTipo === "pdf" ? "btn-primary" : "btn-light"}`}
                   onClick={() => setExportTipo("pdf")}
                   disabled={!exportFlags.pdf}
-                  title={
-                    !exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""
-                  }
+                  title={!exportFlags.pdf ? "Exportação PDF desabilitada nos parâmetros" : ""}
                 >
                   PDF
                 </button>
@@ -822,17 +728,14 @@ export default function RelatorioAgrupadoClienteIsland() {
         <div className="form-row">
           <div className="form-group">
             <span>
-              Clientes: <strong>{linhas.length}</strong>
+              Clientes: <strong>{linhasFiltradas.length}</strong>
             </span>
           </div>
           <div className="form-group">
             <span>
               Faturamento total:{" "}
               <strong>
-                {totalGeral.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </strong>
             </span>
           </div>
@@ -840,10 +743,7 @@ export default function RelatorioAgrupadoClienteIsland() {
             <span>
               Ticket médio geral:{" "}
               <strong>
-                {ticketGeral.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                {ticketGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </strong>
             </span>
           </div>
@@ -856,22 +756,13 @@ export default function RelatorioAgrupadoClienteIsland() {
             <tr>
               <th>Cliente</th>
               <th>CPF</th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("quantidade")}
-              >
+              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("quantidade")}>
                 Qtde {ordenacao === "quantidade" ? (ordemDesc ? "↓" : "↑") : ""}
               </th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("total")}
-              >
+              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("total")}>
                 Faturamento {ordenacao === "total" ? (ordemDesc ? "↓" : "↑") : ""}
               </th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => mudarOrdenacao("ticket")}
-              >
+              <th style={{ cursor: "pointer" }} onClick={() => mudarOrdenacao("ticket")}>
                 Ticket médio {ordenacao === "ticket" ? (ordemDesc ? "↓" : "↑") : ""}
               </th>
             </tr>
@@ -882,24 +773,19 @@ export default function RelatorioAgrupadoClienteIsland() {
                 <td colSpan={5}>Carregando...</td>
               </tr>
             )}
-            {!loading && linhas.length === 0 && (
+            {!loading && linhasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={5}>
-                  Nenhum cliente encontrado com os filtros atuais.
-                </td>
+                <td colSpan={5}>Nenhum cliente encontrado com os filtros atuais.</td>
               </tr>
             )}
             {!loading &&
-              linhas.map((l) => (
+              linhasFiltradas.map((l) => (
                 <tr key={l.cliente_id}>
                   <td data-label="Cliente">{l.cliente_nome}</td>
                   <td data-label="CPF">{l.cliente_cpf}</td>
                   <td data-label="Qtde">{l.quantidade}</td>
                   <td data-label="Faturamento">
-                    {l.total.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
+                    {l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </td>
                   <td data-label="Ticket médio">
                     {l.ticketMedio.toLocaleString("pt-BR", {

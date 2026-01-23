@@ -144,7 +144,7 @@ export default function ClientesConsultaIsland() {
 
       {erro && (<div className="card-base card-config mb-3"><strong>{erro}</strong></div>)}
 
-      <div className="table-container overflow-x-auto">
+      <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
         <table className="table-default table-header-blue clientes-table table-mobile-cards">
           <thead>
             <tr>
