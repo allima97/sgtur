@@ -736,7 +736,7 @@ export default function QuoteDetailIsland(props: {
       <div className="card-base">
         <h3 className="card-title">Itens</h3>
         <div className="table-container overflow-x-auto">
-          <table className="table-default table-compact quote-items-table table-mobile-cards table-mobile-plain">
+          <table className="table-default table-compact quote-items-table table-mobile-cards table-header-purple">
             <thead>
               <tr>
                 <th className="order-cell">Ordem</th>
@@ -1179,16 +1179,14 @@ export default function QuoteDetailIsland(props: {
           >
             {saving ? "Salvando..." : "Salvar ajustes"}
           </button>
-          {isEditing && (
-            <button
-              type="button"
-              className="btn btn-light w-full sm:w-auto"
-              onClick={handleCancelEdit}
-              disabled={saving}
-            >
-              Cancelar
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn btn-light w-full sm:w-auto"
+            onClick={handleCancelEdit}
+            disabled={saving}
+          >
+            Cancelar
+          </button>
           {!isEditing && !isFechado && (
             <button
               type="button"

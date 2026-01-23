@@ -601,7 +601,7 @@ export default function QuoteListIsland() {
                 {formatCurrency(Number(visualizandoQuote.total || 0))}
               </div>
               <div className="table-container overflow-x-auto">
-                <table className="table-default table-compact quote-items-table table-mobile-cards">
+                <table className="table-default table-header-purple table-mobile-cards">
                   <thead>
                     <tr>
                       <th>Item</th>
