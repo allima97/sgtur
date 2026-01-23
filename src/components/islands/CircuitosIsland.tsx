@@ -1250,7 +1250,7 @@ export default function CircuitosIsland() {
                   disabled={permissao === "view"}
                 />
               </div>
-              <div className="form-group" style={{ maxWidth: 160 }}>
+              <div className="form-group sm:max-w-[160px]">
                 <label className="form-label">Ativo</label>
                 <select
                   className="form-select"
@@ -1290,7 +1290,9 @@ export default function CircuitosIsland() {
                 <tbody>
                   {datas.length === 0 && (
                     <tr>
-                      <td colSpan={5}>Nenhuma data informada.</td>
+                      <td colSpan={5} className="empty-mobile-center">
+                        Nenhuma data informada.
+                      </td>
                     </tr>
                   )}
                   {datas.map((item) => (
@@ -1605,7 +1607,7 @@ export default function CircuitosIsland() {
             })}
 
             {dias.length === 0 && (
-              <div className="card-base" style={{ marginTop: 12 }}>
+              <div className="card-base empty-mobile-center" style={{ marginTop: 12 }}>
                 Nenhum dia cadastrado.
               </div>
             )}

@@ -624,6 +624,10 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  .circuitos-page .empty-mobile-center {
+    text-align: center;
+  }
+
   .clientes-page {
     padding-left: 6px;
     padding-right: 6px;
