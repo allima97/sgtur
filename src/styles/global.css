@@ -1092,6 +1092,92 @@ body {
     border-radius: 0;
   }
 
+  /* Garantia adicional: remover qualquer 'gap' colorido visível atrás dos primeiros
+     cards na lista mobile. Usamos regras específicas e com !important para evitar
+     conflitos com outras páginas e não alterar comportamento desktop. */
+  .clientes-page .table-mobile-cards {
+    --table-card-gap: transparent !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* Remover gradientes laterais que podem criar faixas claras visíveis nas
+     primeiras linhas no mobile (apenas para clientes). */
+  .clientes-page .table-container::before,
+  .clientes-page .table-container::after {
+    display: none !important;
+  }
+
+  /* Aplicar o mesmo comportamento em outras páginas que usam o layout
+     de cards mobile para evitar faixas claras / fundos extras. */
+  :is(
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .estados-page,
+    .cidades-page,
+    .produtos-page,
+    .circuitos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .parametros-tipo-produtos-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  ) .table-mobile-cards {
+    --table-card-gap: transparent !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  :is(
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .estados-page,
+    .cidades-page,
+    .produtos-page,
+    .circuitos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .parametros-tipo-produtos-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  ) .table-container::before,
+  :is(
+    .vendas-consulta-page,
+    .orcamentos-consulta-page,
+    .orcamentos-criar-page,
+    .paises-page,
+    .estados-page,
+    .cidades-page,
+    .produtos-page,
+    .circuitos-page,
+    .fornecedores-page,
+    .relatorio-vendas-page,
+    .relatorio-vendas-destino-page,
+    .relatorio-vendas-produto-page,
+    .relatorio-vendas-cliente-page,
+    .parametros-tipo-produtos-page,
+    .metas-page,
+    .cambios-page,
+    .regras-comissao-page,
+    .viagens-page
+  ) .table-container::after {
+    display: none !important;
+  }
+
   .clientes-page .table-mobile-cards tr {
     border: 1px solid var(--color-border);
     box-shadow: none;
