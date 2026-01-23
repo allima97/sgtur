@@ -1211,7 +1211,7 @@ export default function VendasConsultaIsland() {
               {podeEditar && (
                 <button
                   className="btn btn-outline w-full sm:w-auto"
-                  style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}
+                  style={{ backgroundColor: "#dcfce7", color: "#166534", borderColor: "#86efac" }}
                   onClick={() => {
                     const url = `/vendas/cadastro?id=${modalVenda.id}${
                       modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
@@ -1240,6 +1240,7 @@ export default function VendasConsultaIsland() {
               <button
                 type="button"
                 className="btn btn-light w-full sm:w-auto"
+                style={{ backgroundColor: "#e5e7eb", color: "#111827" }}
                 onClick={() => setModalVenda(null)}
               >
                 Fechar
