@@ -1328,7 +1328,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Data de embarque</label>
               <input
-                className="form-input"
+                className="form-input w-full"
                 type="date"
                 value={formVenda.data_embarque}
                 onChange={(e) =>
@@ -1351,7 +1351,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             <div className="form-group flex-1 min-w-[180px]">
               <label className="form-label">Data final</label>
               <input
-                className="form-input"
+                className="form-input w-full"
                 type="date"
                 value={formVenda.data_final}
                 min={formVenda.data_embarque || undefined}
@@ -1463,7 +1463,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   <div className="form-group flex-1 min-w-[160px]">
                     <label className="form-label">Início *</label>
                     <input
-                      className="form-input"
+                      className="form-input w-full"
                       type="date"
                       value={r.data_inicio}
                       onChange={(e) => updateRecibo(i, "data_inicio", e.target.value)}
@@ -1475,7 +1475,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
                   <div className="form-group flex-1 min-w-[160px]">
                     <label className="form-label">Fim *</label>
                     <input
-                      className="form-input"
+                      className="form-input w-full"
                       type="date"
                       value={r.data_fim}
                       min={r.data_inicio || undefined}
