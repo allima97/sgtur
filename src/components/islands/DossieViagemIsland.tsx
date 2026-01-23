@@ -176,6 +176,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const [viagensVenda, setViagensVenda] = useState<ViagemResumo[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<"dados" | "acompanhantes" | "servicos" | "documentos">("dados");
   const [mostrarCadastroAcomp, setMostrarCadastroAcomp] = useState(false);
+  const [mostrarVinculoAcomp, setMostrarVinculoAcomp] = useState(false);
+  const [mostrarServicoForm, setMostrarServicoForm] = useState(false);
+  const [mostrarDocumentoForm, setMostrarDocumentoForm] = useState(false);
   const [salvandoCadastroAcomp, setSalvandoCadastroAcomp] = useState(false);
   const [erroCadastroAcomp, setErroCadastroAcomp] = useState<string | null>(null);
   const [cadastroAcompForm, setCadastroAcompForm] = useState({
@@ -417,6 +420,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       if (error) throw error;
       // reload
       setNovoAcomp({ acompanhante_id: "", papel: "passageiro", documento_url: "", observacoes: "" });
+      setMostrarVinculoAcomp(false);
       await carregar();
     } catch (e) {
       console.error(e);
@@ -495,6 +499,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   }
 
   function iniciarEdicaoServico(servico: ViagemServico) {
+    setMostrarServicoForm(true);
     setEditServicoId(servico.id);
     setServicoForm({
       tipo: servico.tipo || "aereo",
@@ -754,7 +759,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   <div>-</div>
                 ) : (
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default min-w-[720px]">
+                    <table className="table-default table-mobile-cards min-w-[720px]">
                       <thead>
                         <tr>
                           <th>Recibo</th>
@@ -779,15 +784,15 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                               : "-";
                           return (
                             <tr key={r.id}>
-                              <td>
+                              <td data-label="Recibo">
                                 {r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo"}
                                 {isPrincipal ? " (Principal)" : ""}
                               </td>
-                              <td>{tipoLabel || "-"}</td>
-                              <td>{produtoNome || "-"}</td>
-                              <td>{formatarDataParaExibicao(r.data_inicio)}</td>
-                              <td>{formatarDataParaExibicao(r.data_fim)}</td>
-                              <td>{valorTotal}</td>
+                              <td data-label="Tipo Produto">{tipoLabel || "-"}</td>
+                              <td data-label="Produto">{produtoNome || "-"}</td>
+                              <td data-label="De">{formatarDataParaExibicao(r.data_inicio)}</td>
+                              <td data-label="Até">{formatarDataParaExibicao(r.data_fim)}</td>
+                              <td data-label="Valor">{valorTotal}</td>
                             </tr>
                           );
                         })}
@@ -810,57 +815,68 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   className="card-base"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Vincular acompanhante existente</div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Acompanhante</label>
-                      <select
-                        className="form-select"
-                        value={novoAcomp.acompanhante_id}
-                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, acompanhante_id: e.target.value }))}
-                      >
-                        <option value="">Selecione</option>
-                        {acompanhantesCliente.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.nome_completo}
-                            {a.cpf ? ` • ${a.cpf}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                  <div className="mobile-only" style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full sm:w-auto"
+                      onClick={() => setMostrarVinculoAcomp((prev) => !prev)}
+                    >
+                      {mostrarVinculoAcomp ? "Fechar vínculo" : "Vincular acompanhante"}
+                    </button>
+                  </div>
+                  <div className="mobile-collapsible" data-open={mostrarVinculoAcomp ? "true" : "false"}>
+                    <div style={{ fontWeight: 600, marginBottom: 8 }}>Vincular acompanhante existente</div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Acompanhante</label>
+                        <select
+                          className="form-select"
+                          value={novoAcomp.acompanhante_id}
+                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, acompanhante_id: e.target.value }))}
+                        >
+                          <option value="">Selecione</option>
+                          {acompanhantesCliente.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.nome_completo}
+                              {a.cpf ? ` • ${a.cpf}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Papel</label>
+                        <select
+                          className="form-select"
+                          value={novoAcomp.papel}
+                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, papel: e.target.value }))}
+                        >
+                          <option value="passageiro">Passageiro</option>
+                          <option value="responsavel">Responsável</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Documento URL</label>
+                        <input
+                          type="url"
+                          className="form-input"
+                          value={novoAcomp.documento_url}
+                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, documento_url: e.target.value }))}
+                          placeholder="https://"
+                        />
+                      </div>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Papel</label>
-                      <select
-                        className="form-select"
-                        value={novoAcomp.papel}
-                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, papel: e.target.value }))}
-                      >
-                        <option value="passageiro">Passageiro</option>
-                        <option value="responsavel">Responsável</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Documento URL</label>
-                      <input
-                        type="url"
-                        className="form-input"
-                        value={novoAcomp.documento_url}
-                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, documento_url: e.target.value }))}
-                        placeholder="https://"
+                      <label className="form-label">Observações</label>
+                      <textarea
+                        className="form-textarea"
+                        value={novoAcomp.observacoes}
+                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
                       />
                     </div>
+                    <button className="btn btn-primary" type="button" onClick={adicionarAcompanhante} disabled={savingAcomp}>
+                      {savingAcomp ? "Salvando..." : "Vincular acompanhante"}
+                    </button>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Observações</label>
-                    <textarea
-                      className="form-textarea"
-                      value={novoAcomp.observacoes}
-                      onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
-                    />
-                  </div>
-                  <button className="btn btn-primary" type="button" onClick={adicionarAcompanhante} disabled={savingAcomp}>
-                    {savingAcomp ? "Salvando..." : "Vincular acompanhante"}
-                  </button>
                 </div>
               )}
 
@@ -869,14 +885,14 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   className="card-base"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Cadastrar acompanhante</div>
+                  <div className="desktop-only" style={{ fontWeight: 600, marginBottom: 8 }}>Cadastrar acompanhante</div>
                   {erroCadastroAcomp && (
                     <div style={{ color: "red", marginBottom: 8 }}>{erroCadastroAcomp}</div>
                   )}
                   {!mostrarCadastroAcomp && (
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn btn-primary w-full sm:w-auto"
                       onClick={() => {
                         resetCadastroAcompanhante();
                         setMostrarCadastroAcomp(true);
@@ -1018,7 +1034,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               )}
 
               <div className="table-container overflow-x-auto">
-                <table className="table-default min-w-[620px]">
+                <table className="table-default table-mobile-cards min-w-[620px]">
                   <thead>
                     <tr>
                       <th>Nome</th>
@@ -1027,7 +1043,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       <th>Parentesco</th>
                       <th>Papel</th>
                       <th>Documento</th>
-                      {podeExcluir && <th>Ações</th>}
+                      {podeExcluir && <th className="th-actions">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1038,12 +1054,12 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     )}
                     {(viagem.viagem_acompanhantes || []).map((a) => (
                       <tr key={a.id}>
-                        <td>{a.cliente_acompanhantes?.nome_completo || "-"}</td>
-                        <td>{a.cliente_acompanhantes?.cpf || "-"}</td>
-                        <td>{a.cliente_acompanhantes?.telefone || "-"}</td>
-                        <td>{a.cliente_acompanhantes?.grau_parentesco || "-"}</td>
-                        <td>{a.papel || "-"}</td>
-                        <td>
+                        <td data-label="Nome">{a.cliente_acompanhantes?.nome_completo || "-"}</td>
+                        <td data-label="CPF">{a.cliente_acompanhantes?.cpf || "-"}</td>
+                        <td data-label="Telefone">{a.cliente_acompanhantes?.telefone || "-"}</td>
+                        <td data-label="Parentesco">{a.cliente_acompanhantes?.grau_parentesco || "-"}</td>
+                        <td data-label="Papel">{a.papel || "-"}</td>
+                        <td data-label="Documento">
                           {a.documento_url ? (
                             <a className="btn btn-light" href={a.documento_url} target="_blank" rel="noreferrer">
                               Abrir
@@ -1053,15 +1069,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           )}
                         </td>
                         {podeExcluir && (
-                          <td>
-                            <button
-                              className="btn btn-light"
-                              type="button"
-                              onClick={() => removerAcompanhante(a.id)}
-                              disabled={savingAcomp}
-                            >
-                              Remover
-                            </button>
+                          <td className="th-actions" data-label="Ações">
+                            <div className="action-buttons">
+                              <button
+                                className="btn btn-light"
+                                type="button"
+                                onClick={() => removerAcompanhante(a.id)}
+                                disabled={savingAcomp}
+                              >
+                                Remover
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -1081,148 +1099,164 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   className="card-base"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                    {editServicoId ? "Editar serviço" : "Adicionar serviço"}
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Tipo</label>
-                      <select
-                        className="form-select"
-                        value={servicoForm.tipo}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, tipo: e.target.value }))}
-                      >
-                        <option value="aereo">Aéreo</option>
-                        <option value="hotel">Hotel</option>
-                        <option value="terrestre">Terrestre</option>
-                        <option value="seguro">Seguro</option>
-                        <option value="passeio">Passeio</option>
-                        <option value="outro">Outro</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Fornecedor</label>
-                      <input
-                        className="form-input"
-                        value={servicoForm.fornecedor}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, fornecedor: e.target.value }))}
-                        placeholder="Nome do fornecedor"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Status</label>
-                      <select
-                        className="form-select"
-                        value={servicoForm.status}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, status: e.target.value }))}
-                      >
-                        <option value="ativo">Ativo</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="cancelado">Cancelado</option>
-                        <option value="concluido">Concluído</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Voucher URL</label>
-                      <input
-                        className="form-input"
-                        value={servicoForm.voucher_url}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, voucher_url: e.target.value }))}
-                        placeholder="https://"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Data início</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        value={servicoForm.data_inicio}
-                        onChange={(e) =>
-                          setServicoForm((prev) => {
-                            const nextInicio = e.target.value;
-                            const nextFim =
-                              prev.data_fim && nextInicio && prev.data_fim < nextInicio
-                                ? nextInicio
-                                : prev.data_fim;
-                            return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Data fim</label>
-                      <input
-                        type="date"
-                        className="form-input"
-                        value={servicoForm.data_fim}
-                        min={servicoForm.data_inicio || undefined}
-                        onChange={(e) =>
-                          setServicoForm((prev) => {
-                            const nextFim = e.target.value;
-                            const boundedFim =
-                              prev.data_inicio && nextFim && nextFim < prev.data_inicio
-                                ? prev.data_inicio
-                                : nextFim;
-                            return { ...prev, data_fim: boundedFim };
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Valor</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="form-input"
-                        value={servicoForm.valor}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, valor: e.target.value }))}
-                        placeholder="0,00"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Moeda</label>
-                      <input
-                        className="form-input"
-                        value={servicoForm.moeda}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, moeda: e.target.value }))}
-                        placeholder="BRL"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Descrição</label>
-                    <input
-                      className="form-input"
-                      value={servicoForm.descricao}
-                      onChange={(e) => setServicoForm((prev) => ({ ...prev, descricao: e.target.value }))}
-                      placeholder="Descrição resumida do serviço"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Observações</label>
-                    <textarea
-                      className="form-textarea"
-                      value={servicoForm.observacoes}
-                      onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn btn-primary" type="button" onClick={salvarServico} disabled={savingServico}>
-                      {savingServico ? "Salvando..." : editServicoId ? "Salvar alterações" : "Adicionar serviço"}
+                  <div className="mobile-only" style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full sm:w-auto"
+                      onClick={() =>
+                        setMostrarServicoForm((prev) => {
+                          if (prev) resetServico();
+                          return !prev;
+                        })
+                      }
+                    >
+                      {mostrarServicoForm ? "Fechar formulário" : "Adicionar serviço"}
                     </button>
-                    {editServicoId && (
-                      <button className="btn btn-light" type="button" onClick={resetServico} disabled={savingServico}>
-                        Cancelar edição
+                  </div>
+                  <div className="mobile-collapsible" data-open={mostrarServicoForm ? "true" : "false"}>
+                    <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {editServicoId ? "Editar serviço" : "Adicionar serviço"}
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Tipo</label>
+                        <select
+                          className="form-select"
+                          value={servicoForm.tipo}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, tipo: e.target.value }))}
+                        >
+                          <option value="aereo">Aéreo</option>
+                          <option value="hotel">Hotel</option>
+                          <option value="terrestre">Terrestre</option>
+                          <option value="seguro">Seguro</option>
+                          <option value="passeio">Passeio</option>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Fornecedor</label>
+                        <input
+                          className="form-input"
+                          value={servicoForm.fornecedor}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, fornecedor: e.target.value }))}
+                          placeholder="Nome do fornecedor"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Status</label>
+                        <select
+                          className="form-select"
+                          value={servicoForm.status}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, status: e.target.value }))}
+                        >
+                          <option value="ativo">Ativo</option>
+                          <option value="pendente">Pendente</option>
+                          <option value="cancelado">Cancelado</option>
+                          <option value="concluido">Concluído</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Voucher URL</label>
+                        <input
+                          className="form-input"
+                          value={servicoForm.voucher_url}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, voucher_url: e.target.value }))}
+                          placeholder="https://"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Data início</label>
+                        <input
+                          type="date"
+                          className="form-input"
+                          value={servicoForm.data_inicio}
+                          onChange={(e) =>
+                            setServicoForm((prev) => {
+                              const nextInicio = e.target.value;
+                              const nextFim =
+                                prev.data_fim && nextInicio && prev.data_fim < nextInicio
+                                  ? nextInicio
+                                  : prev.data_fim;
+                              return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Data fim</label>
+                        <input
+                          type="date"
+                          className="form-input"
+                          value={servicoForm.data_fim}
+                          min={servicoForm.data_inicio || undefined}
+                          onChange={(e) =>
+                            setServicoForm((prev) => {
+                              const nextFim = e.target.value;
+                              const boundedFim =
+                                prev.data_inicio && nextFim && nextFim < prev.data_inicio
+                                  ? prev.data_inicio
+                                  : nextFim;
+                              return { ...prev, data_fim: boundedFim };
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Valor</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="form-input"
+                          value={servicoForm.valor}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, valor: e.target.value }))}
+                          placeholder="0,00"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Moeda</label>
+                        <input
+                          className="form-input"
+                          value={servicoForm.moeda}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, moeda: e.target.value }))}
+                          placeholder="BRL"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Descrição</label>
+                      <input
+                        className="form-input"
+                        value={servicoForm.descricao}
+                        onChange={(e) => setServicoForm((prev) => ({ ...prev, descricao: e.target.value }))}
+                        placeholder="Descrição resumida do serviço"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Observações</label>
+                      <textarea
+                        className="form-textarea"
+                        value={servicoForm.observacoes}
+                        onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn btn-primary" type="button" onClick={salvarServico} disabled={savingServico}>
+                        {savingServico ? "Salvando..." : editServicoId ? "Salvar alterações" : "Adicionar serviço"}
                       </button>
-                    )}
+                      {editServicoId && (
+                        <button className="btn btn-light" type="button" onClick={resetServico} disabled={savingServico}>
+                          Cancelar edição
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
               <div className="table-container overflow-x-auto">
-                <table className="table-default min-w-[720px]">
+                <table className="table-default table-mobile-cards min-w-[720px]">
                   <thead>
                     <tr>
                       <th>Tipo</th>
@@ -1232,7 +1266,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       <th>Valor</th>
                       <th>Status</th>
                       <th>Voucher</th>
-                      {podeExcluir && <th>Ações</th>}
+                      {podeExcluir && <th className="th-actions">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1243,21 +1277,21 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     )}
                     {servicos.map((s) => (
                       <tr key={s.id}>
-                        <td>{s.tipo || "-"}</td>
-                        <td>{s.fornecedor || "-"}</td>
-                        <td>{s.descricao || "-"}</td>
-                        <td>
+                        <td data-label="Tipo">{s.tipo || "-"}</td>
+                        <td data-label="Fornecedor">{s.fornecedor || "-"}</td>
+                        <td data-label="Descrição">{s.descricao || "-"}</td>
+                        <td data-label="Período">
                           {`${formatarDataParaExibicao(s.data_inicio)} / ${formatarDataParaExibicao(
                             s.data_fim
                           )}`}
                         </td>
-                        <td>
+                        <td data-label="Valor">
                           {s.valor !== null && s.valor !== undefined
                             ? Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: s.moeda || "BRL" })
                             : "-"}
                         </td>
-                        <td>{s.status || "-"}</td>
-                        <td>
+                        <td data-label="Status">{s.status || "-"}</td>
+                        <td data-label="Voucher">
                           {s.voucher_url ? (
                             <a className="btn btn-light" href={s.voucher_url} target="_blank" rel="noreferrer">
                               Abrir
@@ -1267,18 +1301,20 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           )}
                         </td>
                         {podeExcluir && (
-                          <td style={{ display: "flex", gap: 6 }}>
-                            <button className="btn btn-light" type="button" onClick={() => iniciarEdicaoServico(s)}>
-                              Editar
-                            </button>
-                            <button
-                              className="btn btn-light"
-                              type="button"
-                              onClick={() => removerServico(s.id)}
-                              disabled={removendoServicoId === s.id}
-                            >
-                              {removendoServicoId === s.id ? "Removendo..." : "Remover"}
-                            </button>
+                          <td className="th-actions" data-label="Ações">
+                            <div className="action-buttons">
+                              <button className="btn btn-light" type="button" onClick={() => iniciarEdicaoServico(s)}>
+                                Editar
+                              </button>
+                              <button
+                                className="btn btn-light"
+                                type="button"
+                                onClick={() => removerServico(s.id)}
+                                disabled={removendoServicoId === s.id}
+                              >
+                                {removendoServicoId === s.id ? "Removendo..." : "Remover"}
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -1294,55 +1330,75 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               <h3 className="mb-2">Documentos / vouchers ({documentos.length})</h3>
               {podeCriar && (
                 <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
-                  <div className="font-semibold mb-2">Enviar documento</div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Título</label>
-                      <input
-                        className="form-input"
-                        value={docTitulo}
-                        onChange={(e) => setDocTitulo(e.target.value)}
-                        placeholder="Ex: Voucher do hotel"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Tipo</label>
-                      <select
-                        className="form-select"
-                        value={docTipo}
-                        onChange={(e) => setDocTipo(e.target.value)}
-                      >
-                        <option value="voucher">Voucher</option>
-                        <option value="bilhete">Bilhete</option>
-                        <option value="roteiro">Roteiro</option>
-                        <option value="seguro">Seguro</option>
-                        <option value="passaporte">Passaporte</option>
-                        <option value="cpf">CPF</option>
-                        <option value="rg">RG</option>
-                        <option value="cnh">CNH</option>
-                        <option value="outro">Outro</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Arquivo</label>
-                      <input
-                        type="file"
-                        className="form-input"
-                        onChange={(e) => setDocFile(e.target.files?.[0] || null)}
-                      />
-                    </div>
+                  <div className="mobile-only" style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full sm:w-auto"
+                      onClick={() =>
+                        setMostrarDocumentoForm((prev) => {
+                          if (prev) {
+                            setDocTitulo("");
+                            setDocTipo("voucher");
+                            setDocFile(null);
+                          }
+                          return !prev;
+                        })
+                      }
+                    >
+                      {mostrarDocumentoForm ? "Fechar formulário" : "Enviar documento"}
+                    </button>
                   </div>
-                  <button className="btn btn-primary" type="button" onClick={salvarDocumento} disabled={savingDoc}>
-                    {savingDoc ? "Enviando..." : "Enviar documento"}
-                  </button>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
+                  <div className="mobile-collapsible" data-open={mostrarDocumentoForm ? "true" : "false"}>
+                    <div className="font-semibold mb-2">Enviar documento</div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Título</label>
+                        <input
+                          className="form-input"
+                          value={docTitulo}
+                          onChange={(e) => setDocTitulo(e.target.value)}
+                          placeholder="Ex: Voucher do hotel"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Tipo</label>
+                        <select
+                          className="form-select"
+                          value={docTipo}
+                          onChange={(e) => setDocTipo(e.target.value)}
+                        >
+                          <option value="voucher">Voucher</option>
+                          <option value="bilhete">Bilhete</option>
+                          <option value="roteiro">Roteiro</option>
+                          <option value="seguro">Seguro</option>
+                          <option value="passaporte">Passaporte</option>
+                          <option value="cpf">CPF</option>
+                          <option value="rg">RG</option>
+                          <option value="cnh">CNH</option>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Arquivo</label>
+                        <input
+                          type="file"
+                          className="form-input"
+                          onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                        />
+                      </div>
+                    </div>
+                    <button className="btn btn-primary" type="button" onClick={salvarDocumento} disabled={savingDoc}>
+                      {savingDoc ? "Enviando..." : "Enviar documento"}
+                    </button>
+                    <div className="text-xs text-slate-500 mt-2">
+                      Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
+                    </div>
                   </div>
                 </div>
               )}
 
               <div className="table-container overflow-x-auto">
-                <table className="table-default min-w-[640px]">
+                <table className="table-default table-mobile-cards min-w-[640px]">
                   <thead>
                     <tr>
                       <th>Título</th>
@@ -1350,7 +1406,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       <th>Arquivo</th>
                       <th>Tamanho</th>
                       <th>Criado em</th>
-                      {podeExcluir && <th>Ações</th>}
+                      {podeExcluir && <th className="th-actions">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1361,9 +1417,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                     )}
                     {documentos.map((d) => (
                       <tr key={d.id}>
-                        <td>{d.titulo || "-"}</td>
-                        <td>{d.tipo || "-"}</td>
-                        <td>
+                        <td data-label="Título">{d.titulo || "-"}</td>
+                        <td data-label="Tipo">{d.tipo || "-"}</td>
+                        <td data-label="Arquivo">
                           {d.url ? (
                             <button
                               className="btn btn-light"
@@ -1377,22 +1433,24 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                             "-"
                           )}
                         </td>
-                        <td>
+                        <td data-label="Tamanho">
                           {d.size_bytes
                             ? `${(Number(d.size_bytes) / 1024).toFixed(1)} KB`
                             : "-"}
                         </td>
-                        <td>{formatarDataParaExibicao(d.created_at)}</td>
+                        <td data-label="Criado em">{formatarDataParaExibicao(d.created_at)}</td>
                         {podeExcluir && (
-                          <td>
-                            <button
-                              className="btn btn-light"
-                              type="button"
-                              onClick={() => removerDocumento(d.id)}
-                              disabled={removendoDocId === d.id}
-                            >
-                              {removendoDocId === d.id ? "Removendo..." : "Remover"}
-                            </button>
+                          <td className="th-actions" data-label="Ações">
+                            <div className="action-buttons">
+                              <button
+                                className="btn btn-light"
+                                type="button"
+                                onClick={() => removerDocumento(d.id)}
+                                disabled={removendoDocId === d.id}
+                              >
+                                {removendoDocId === d.id ? "Removendo..." : "Remover"}
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
