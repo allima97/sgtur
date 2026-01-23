@@ -1690,7 +1690,7 @@ export default function ClientesIsland() {
               <>
                 {acompanhantesCard}
 
-                <div className="card-base mb-2">
+                <div className="mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
@@ -1754,7 +1754,7 @@ export default function ClientesIsland() {
                   </div>
                 </div>
 
-                <div className="card-base mb-2">
+                <div className="mb-2">
                   <h4 style={{ marginBottom: 8 }}>Orçamentos do cliente</h4>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">

@@ -358,7 +358,7 @@ export default function ClientesConsultaIsland() {
 
             {!loadingHistorico && (
               <>
-                <div className="card-base mb-2">
+                <div className="mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
@@ -409,7 +409,7 @@ export default function ClientesConsultaIsland() {
                   </div>
                 </div>
 
-                <div className="card-base">
+                <div className="mb-2">
                   <h4 style={{ marginBottom: 8 }}>Orçamentos</h4>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
