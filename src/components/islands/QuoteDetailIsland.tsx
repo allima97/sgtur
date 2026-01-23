@@ -671,20 +671,10 @@ export default function QuoteDetailIsland(props: {
         <div style={{ fontSize: 14 }}>
           Status: {props.quote.status_negociacao || "Enviado"} | Total: R$ {formatCurrency(totalAtual)}
         </div>
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <label className="form-label" style={{ marginBottom: 0 }}>
-            Cliente
-          </label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="form-label sm:mb-0">Cliente</label>
           <input
-            className="form-input"
+            className="form-input w-full sm:w-auto"
             list={QUOTE_CLIENTES_DATALIST_ID}
             value={clienteBusca}
             onChange={(e) => handleClienteInputChange(e.target.value)}
@@ -698,10 +688,10 @@ export default function QuoteDetailIsland(props: {
             <option key={cliente.id} value={cliente.nome} />
           ))}
         </datalist>
-        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             onClick={() => handleExport(true)}
             disabled={exporting}
           >
@@ -709,13 +699,13 @@ export default function QuoteDetailIsland(props: {
           </button>
           <button
             type="button"
-            className="btn btn-light"
+            className="btn btn-light w-full sm:w-auto"
             onClick={() => handleExport(false)}
             disabled={exporting}
           >
             Exportar PDF (somente total)
           </button>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+          <label className="flex items-center gap-2 w-full sm:w-auto sm:ml-2">
             <input
               type="checkbox"
               checked={showSummary}
@@ -723,22 +713,18 @@ export default function QuoteDetailIsland(props: {
             />
             Mostrar resumo de servicos
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label className="form-label" style={{ marginBottom: 0 }}>
-              Desconto
-            </label>
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+            <label className="form-label sm:mb-0">Desconto</label>
             <input
-              className="form-input"
+              className="form-input w-full sm:w-[120px]"
               value={exportDiscount}
               onChange={(e) => setExportDiscount(e.target.value)}
               placeholder="0,00"
-              style={{ width: 120 }}
             />
           </div>
           <button
             type="button"
-            className="btn btn-light"
-            style={{ marginLeft: "auto" }}
+            className="btn btn-light w-full sm:w-auto sm:ml-auto"
             onClick={() => setShowCalculator(true)}
           >
             Calculadora
@@ -750,7 +736,7 @@ export default function QuoteDetailIsland(props: {
       <div className="card-base">
         <h3 className="card-title">Itens</h3>
         <div className="table-container overflow-x-auto">
-          <table className="table-default table-compact quote-items-table">
+          <table className="table-default table-compact quote-items-table table-mobile-cards">
             <thead>
               <tr>
                 <th className="order-cell">Ordem</th>
@@ -778,7 +764,7 @@ export default function QuoteDetailIsland(props: {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr>
-                      <td className="order-cell">
+                      <td className="order-cell" data-label="Ordem">
                         <div className="order-controls">
                           <button
                             type="button"
@@ -802,7 +788,7 @@ export default function QuoteDetailIsland(props: {
                           </button>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Tipo">
                         <input
                           className="form-input"
                           list={TIPO_DATALIST_ID}
@@ -812,7 +798,7 @@ export default function QuoteDetailIsland(props: {
                           placeholder="Selecione um tipo"
                         />
                       </td>
-                      <td>
+                      <td data-label="Produto">
                         <input
                           className="form-input"
                           value={item.title || ""}
@@ -822,7 +808,7 @@ export default function QuoteDetailIsland(props: {
                           disabled={!isEditing}
                         />
                       </td>
-                      <td>
+                      <td data-label="Cidade">
                         <input
                           className="form-input"
                           list={`quote-item-cidades-${rowKey}`}
@@ -835,7 +821,7 @@ export default function QuoteDetailIsland(props: {
                           disabled={!isEditing}
                         />
                       </td>
-                      <td>
+                      <td data-label="Destino">
                           <input
                             className="form-input"
                             value={item.city_name || ""}
@@ -843,7 +829,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Inicio">
                           <input
                             className="form-input"
                             type="date"
@@ -859,7 +845,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Fim">
                           <input
                             className="form-input"
                             type="date"
@@ -876,7 +862,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Qtd">
                           <input
                             className="form-input"
                             type="number"
@@ -886,7 +872,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Total">
                           <input
                             className="form-input"
                             value={formatCurrency(item.total_amount)}
@@ -896,7 +882,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Taxas">
                           <input
                             className="form-input"
                             value={formatCurrency(Number(item.taxes_amount || 0))}
@@ -906,7 +892,7 @@ export default function QuoteDetailIsland(props: {
                             disabled={!isEditing}
                           />
                       </td>
-                      <td>
+                      <td data-label="Detalhes">
                         {flightDetails ? (
                           <button
                             type="button"
@@ -925,17 +911,11 @@ export default function QuoteDetailIsland(props: {
                         )}
                       </td>
                     </tr>
-                    <datalist id={`quote-item-cidades-${rowKey}`}>
-                      {(cidadeSuggestions[rowKey] || []).map((cidade) => (
-                        <option key={cidade.id} value={cidade.nome} />
-                      ))}
-                    </datalist>
-
                     {isCircuitItem(item) && (
                       <tr>
                         <td colSpan={11}>
                           <div style={{ padding: "8px 4px 16px", borderTop: "1px solid #e2e8f0" }}>
-                                <div className="form-row">
+                                <div className="form-row mobile-stack">
                                   <div className="form-group">
                                     <label className="form-label">Codigo</label>
                                     <input
@@ -1010,7 +990,7 @@ export default function QuoteDetailIsland(props: {
                                         background: "#f8fafc",
                                       }}
                                     >
-                                      <div className="form-row">
+                                      <div className="form-row mobile-stack">
                                         <div className="form-group">
                                           <label className="form-label">Dia</label>
                                           <input
@@ -1060,12 +1040,17 @@ export default function QuoteDetailIsland(props: {
                                           />
                                         </div>
                                         <div
-                                          className="form-group"
-                                          style={{ alignSelf: "flex-end", display: "flex", gap: 6 }}
+                                          className="form-group mobile-stack-buttons"
+                                          style={{
+                                            alignSelf: "flex-end",
+                                            display: "flex",
+                                            gap: 6,
+                                            flexWrap: "wrap",
+                                          }}
                                         >
                                           <button
                                             type="button"
-                                            className="btn btn-light"
+                                            className="btn btn-light w-full sm:w-auto"
                                             onClick={() =>
                                               updateCircuitSegments(index, (segments) => {
                                                 if (!isEditing || segIndex === 0) return segments;
@@ -1081,7 +1066,7 @@ export default function QuoteDetailIsland(props: {
                                           </button>
                                           <button
                                             type="button"
-                                            className="btn btn-light"
+                                            className="btn btn-light w-full sm:w-auto"
                                             onClick={() =>
                                               updateCircuitSegments(index, (segments) => {
                                                 if (!isEditing || segIndex >= segments.length - 1) return segments;
@@ -1097,7 +1082,7 @@ export default function QuoteDetailIsland(props: {
                                           </button>
                                           <button
                                             type="button"
-                                            className="btn btn-light"
+                                            className="btn btn-light w-full sm:w-auto"
                                             onClick={() =>
                                               updateCircuitSegments(index, (segments) =>
                                                 segments.filter((_, i) => i !== segIndex)
@@ -1139,7 +1124,7 @@ export default function QuoteDetailIsland(props: {
                               </div>
                               <button
                                 type="button"
-                                className="btn btn-light"
+                                className="btn btn-light w-full sm:w-auto"
                                 style={{ marginTop: 8 }}
                                 onClick={() =>
                                   updateCircuitSegments(index, (segments) => [
@@ -1165,6 +1150,16 @@ export default function QuoteDetailIsland(props: {
               })}
           </tbody>
         </table>
+        {items.map((item, index) => {
+          const rowKey = getQuoteItemRowKey(item, index);
+          return (
+            <datalist key={rowKey} id={`quote-item-cidades-${rowKey}`}>
+              {(cidadeSuggestions[rowKey] || []).map((cidade) => (
+                <option key={cidade.id} value={cidade.nome} />
+              ))}
+            </datalist>
+          );
+        })}
         <datalist id={TIPO_DATALIST_ID}>
           {tipoOptions.map((tipo) => (
             <option key={tipo.id} value={tipo.label} />
@@ -1172,10 +1167,13 @@ export default function QuoteDetailIsland(props: {
         </datalist>
       </div>
 
-        <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
+        <div
+          className="mt-4 mobile-stack-buttons"
+          style={{ display: "flex", gap: 12, alignItems: "center" }}
+        >
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             onClick={handleSave}
             disabled={saving || !isEditing}
           >
@@ -1184,7 +1182,7 @@ export default function QuoteDetailIsland(props: {
           {isEditing && (
             <button
               type="button"
-              className="btn btn-light"
+              className="btn btn-light w-full sm:w-auto"
               onClick={handleCancelEdit}
               disabled={saving}
             >
@@ -1194,7 +1192,7 @@ export default function QuoteDetailIsland(props: {
           {!isEditing && !isFechado && (
             <button
               type="button"
-              className="btn btn-light"
+              className="btn btn-light w-full sm:w-auto"
               onClick={() => {
                 setIsEditing(true);
                 setSuccess(null);
