@@ -165,6 +165,9 @@ export default function DestinosIsland() {
       );
     });
   }, [destinosEnriquecidos, busca]);
+  const destinosExibidos = useMemo(() => {
+    return busca.trim() ? destinosFiltrados : destinosFiltrados.slice(0, 5);
+  }, [destinosFiltrados, busca]);
 
   function handleChange<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({
@@ -505,14 +508,14 @@ export default function DestinosIsland() {
               </tr>
             )}
 
-            {!loading && destinosFiltrados.length === 0 && (
+            {!loading && destinosExibidos.length === 0 && (
               <tr>
                 <td colSpan={8}>Nenhum destino encontrado.</td>
               </tr>
             )}
 
             {!loading &&
-              destinosFiltrados.map((d) => (
+              destinosExibidos.map((d) => (
                 <tr key={d.id}>
                   <td data-label="Destino">{d.nome}</td>
                   <td data-label="Cidade">{(d as any).cidade_nome || "-"}</td>

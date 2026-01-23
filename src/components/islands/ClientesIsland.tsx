@@ -109,6 +109,7 @@ export default function ClientesIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -229,24 +230,29 @@ export default function ClientesIsland() {
   // =====================================
   // CARREGAR CLIENTES
   // =====================================
-  async function carregar() {
+  async function carregar(todos = false) {
     if (!podeVer || !companyId) return;
 
     try {
       setLoading(true);
       setErro(null);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("clientes")
         .select("*, company_id")
         .eq("company_id", companyId)
-        .order("nome", { ascending: true });
+        .order(todos ? "nome" : "created_at", { ascending: todos });
+      if (!todos) {
+        query = query.limit(5);
+      }
+      const { data, error } = await query;
 
       if (error) throw error;
 
       setClientes((data || []) as Cliente[]);
       setAcompanhantes([]);
       setAcompErro(null);
+      setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar clientes.");
@@ -257,9 +263,16 @@ export default function ClientesIsland() {
 
   useEffect(() => {
     if (!loadPerm && podeVer && companyId) {
-      carregar();
+      carregar(false);
     }
   }, [loadPerm, podeVer, companyId]);
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos && podeVer && companyId) {
+      carregar(true);
+    } else if (!busca.trim() && carregouTodos && podeVer && companyId) {
+      carregar(false);
+    }
+  }, [busca, carregouTodos, podeVer, companyId]);
 
   // =====================================
   // FILTRO
@@ -274,6 +287,15 @@ export default function ClientesIsland() {
         (c.email || "").toLowerCase().includes(t)
     );
   }, [clientes, busca]);
+  const clientesExibidos = useMemo(() => {
+    if (busca.trim()) return filtrados;
+    const ordenados = [...clientes].sort((a, b) => {
+      const dataA = a.created_at || "";
+      const dataB = b.created_at || "";
+      return dataB.localeCompare(dataA);
+    });
+    return ordenados.slice(0, 5);
+  }, [filtrados, busca, clientes]);
 
   // =====================================
   // FORM HANDLER
@@ -1561,14 +1583,14 @@ export default function ClientesIsland() {
                   </tr>
                 )}
 
-                {!loading && filtrados.length === 0 && (
+                {!loading && clientesExibidos.length === 0 && (
                   <tr>
                     <td colSpan={6}>Nenhum cliente encontrado.</td>
                   </tr>
                 )}
 
                 {!loading &&
-                  filtrados.map((c) => (
+                  clientesExibidos.map((c) => (
                     <tr key={c.id}>
                       <td data-label="Nome">{c.nome}</td>
                       <td data-label="CPF">{c.cpf}</td>

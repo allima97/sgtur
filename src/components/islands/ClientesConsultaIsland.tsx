@@ -23,6 +23,7 @@ export default function ClientesConsultaIsland() {
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -47,18 +48,23 @@ export default function ClientesConsultaIsland() {
     return () => { mounted = false; };
   }, []);
 
-  async function carregar() {
+  async function carregar(todos = false) {
     if (!podeVer || !companyId) return;
     try {
       setLoading(true);
       setErro(null);
-      const { data, error } = await supabase
+      let query = supabase
         .from("clientes")
         .select("id, nome, cpf, telefone, email, whatsapp, company_id")
         .eq("company_id", companyId)
-        .order("nome", { ascending: true });
+        .order(todos ? "nome" : "created_at", { ascending: todos });
+      if (!todos) {
+        query = query.limit(5);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setClientes((data || []) as Cliente[]);
+      setCarregouTodos(todos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar clientes.");
@@ -68,8 +74,15 @@ export default function ClientesConsultaIsland() {
   }
 
   useEffect(() => {
-    if (!loadingPerm && podeVer && companyId) carregar();
+    if (!loadingPerm && podeVer && companyId) carregar(false);
   }, [loadingPerm, podeVer, companyId]);
+  useEffect(() => {
+    if (busca.trim() && !carregouTodos && podeVer && companyId) {
+      carregar(true);
+    } else if (!busca.trim() && carregouTodos && podeVer && companyId) {
+      carregar(false);
+    }
+  }, [busca, carregouTodos, podeVer, companyId]);
 
   const filtrados = useMemo(() => {
     const q = (busca || "").toLowerCase().trim();
@@ -80,6 +93,9 @@ export default function ClientesConsultaIsland() {
       (c.email || "").toLowerCase().includes(q)
     );
   }, [clientes, busca]);
+  const clientesExibidos = useMemo(() => {
+    return busca.trim() ? filtrados : filtrados.slice(0, 5);
+  }, [filtrados, busca]);
 
   const podeEditar = permissao === "edit" || permissao === "delete" || permissao === "admin";
   const podeExcluir = permissao === "delete" || permissao === "admin";
@@ -159,10 +175,10 @@ export default function ClientesConsultaIsland() {
             {loading && (
               <tr><td colSpan={4}>Carregando...</td></tr>
             )}
-            {!loading && filtrados.length === 0 && (
+            {!loading && clientesExibidos.length === 0 && (
               <tr><td colSpan={4}>Nenhum cliente encontrado.</td></tr>
             )}
-            {!loading && filtrados.map((c) => (
+            {!loading && clientesExibidos.map((c) => (
               <tr key={c.id}>
                 <td data-label="Nome">{c.nome}</td>
                 <td data-label="CPF">{c.cpf}</td>

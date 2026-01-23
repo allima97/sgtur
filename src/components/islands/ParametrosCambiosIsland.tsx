@@ -252,6 +252,8 @@ export default function ParametrosCambiosIsland() {
     return <div>Acesso ao módulo de Parâmetros bloqueado.</div>;
   }
 
+  const cambiosExibidos = cambios.slice(0, 5);
+
   return (
     <div className="card-base cambios-page">
       <h2 className="card-title">Câmbios</h2>
@@ -314,12 +316,12 @@ export default function ParametrosCambiosIsland() {
                 </tr>
               </thead>
               <tbody>
-                {cambios.length === 0 && (
+                {cambiosExibidos.length === 0 && (
                   <tr>
                     <td colSpan={podeExcluir ? 6 : 5}>Nenhum câmbio cadastrado ainda.</td>
                   </tr>
                 )}
-                {cambios.map((cambio) => (
+                {cambiosExibidos.map((cambio) => (
                   <tr key={cambio.id}>
                     <td data-label="Data">{cambio.data}</td>
                     <td data-label="Moeda">{cambio.moeda}</td>

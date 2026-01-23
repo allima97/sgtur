@@ -141,7 +141,7 @@ export default function CidadesIsland() {
             .from("cidades")
             .select(selectPadrao)
             .order("created_at", { ascending: false })
-            .limit(10);
+            .limit(5);
           if (error) throw error;
           return (data || []) as Cidade[];
         } catch (err) {
@@ -151,16 +151,16 @@ export default function CidadesIsland() {
               .from("cidades")
               .select(selectFallback)
               .order("nome")
-              .limit(10);
+              .limit(5);
             if (error) throw error;
             return (data || []) as Cidade[];
           } catch (fallbackErr) {
             console.warn("[Cidades] Fallback sem descricao/nome.", fallbackErr);
             const { data, error } = await supabase
-              .from("cidades")
-              .select("id, nome, subdivisao_id")
-              .order("nome")
-              .limit(10);
+            .from("cidades")
+            .select("id, nome, subdivisao_id")
+            .order("nome")
+            .limit(5);
             if (error) throw error;
             return (data || []) as Cidade[];
           }
@@ -685,7 +685,7 @@ export default function CidadesIsland() {
       )}
       {!mostrarFormulario && !carregouTodos && !erro && (
         <div className="card-base card-config mb-3">
-          Ultimas Cidades Cadastradas (10). Digite na busca para consultar todas.
+          Ultimas Cidades Cadastradas (5). Digite na busca para consultar todas.
         </div>
       )}
 

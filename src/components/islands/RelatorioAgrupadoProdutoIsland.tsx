@@ -516,6 +516,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
       return destino.includes(term) || produto.includes(term);
     });
   }, [recibosDetalhados, buscaProduto, tipoReciboSelecionado, cidadeFiltro]);
+  const recibosExibidos = useMemo(() => {
+    return buscaProduto.trim() ? recibosFiltrados : recibosFiltrados.slice(0, 5);
+  }, [recibosFiltrados, buscaProduto]);
 
   const linhasFiltradas = useMemo(() => {
     const term = normalizeText(buscaProduto);
@@ -536,6 +539,9 @@ export default function RelatorioAgrupadoProdutoIsland() {
       return false;
     });
   }, [linhas, buscaProduto, nomeProdutosPorTipo, cidadeFiltro]);
+  const linhasExibidas = useMemo(() => {
+    return linhasFiltradas.slice(0, 5);
+  }, [linhasFiltradas]);
 
   const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
   const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
@@ -1235,7 +1241,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                     <td colSpan={4}>Carregando...</td>
                   </tr>
                 )}
-                {!loading && linhasFiltradas.length === 0 && (
+                {!loading && linhasExibidas.length === 0 && (
                   <tr>
                     <td colSpan={4}>
                       Nenhum produto encontrado com os filtros atuais.
@@ -1243,7 +1249,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                   </tr>
                 )}
                 {!loading &&
-                  linhasFiltradas.map((l, idx) => (
+                  linhasExibidas.map((l, idx) => (
                     <tr key={l.produto_id ?? `sem-${idx}`}>
                       <td data-label="Tipo de Produto">{l.produto_nome}</td>
                       <td data-label="Qtde">{l.quantidade}</td>
@@ -1297,7 +1303,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                     <td colSpan={7}>Carregando...</td>
                   </tr>
                 )}
-                {!loading && recibosFiltrados.length === 0 && (
+                {!loading && recibosExibidos.length === 0 && (
                   <tr>
                     <td colSpan={7}>
                       Nenhum recibo encontrado com os filtros atuais.
@@ -1305,7 +1311,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
                   </tr>
                 )}
                 {!loading &&
-                  recibosFiltrados.map((recibo) => {
+                  recibosExibidos.map((recibo) => {
                     const dataLabel = recibo.dataLancamento
                       ? recibo.dataLancamento.split("T")[0]
                       : "-";

@@ -371,6 +371,9 @@ export default function TipoProdutosIsland() {
     const termo = normalizeText(busca);
     return tipos.filter((p) => normalizeText(p.nome || p.tipo || "").includes(termo));
   }, [busca, tipos]);
+  const tiposExibidos = useMemo(() => {
+    return busca.trim() ? tiposFiltrados : tiposFiltrados.slice(0, 5);
+  }, [tiposFiltrados, busca]);
 
   if (loadingPerm) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Você não possui acesso ao módulo de Parâmetros.</div>;
@@ -578,14 +581,14 @@ export default function TipoProdutosIsland() {
               </tr>
             )}
 
-            {!loading && tiposFiltrados.length === 0 && (
+            {!loading && tiposExibidos.length === 0 && (
               <tr>
                 <td colSpan={7}>Nenhum tipo encontrado.</td>
               </tr>
             )}
 
             {!loading &&
-              tiposFiltrados.map((p) => (
+              tiposExibidos.map((p) => (
                 <tr key={p.id}>
                   <td data-label="Nome">{p.nome || p.tipo}</td>
                   <td data-label="Regra">{p.regra_comissionamento}</td>

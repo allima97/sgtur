@@ -50,7 +50,7 @@ export default function PaisesIsland() {
         .from("paises")
         .select("id, nome, codigo_iso, continente, created_at")
         .order(todos ? "nome" : "created_at", { ascending: !todos })
-        .limit(todos ? undefined : 10);
+        .limit(todos ? undefined : 5);
 
       const { data, error } = await query;
 
@@ -74,6 +74,8 @@ export default function PaisesIsland() {
   useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarPaises(true);
+    } else if (!busca.trim() && carregouTodos) {
+      carregarPaises(false);
     }
   }, [busca, carregouTodos]);
 
@@ -293,7 +295,7 @@ export default function PaisesIsland() {
 
       {!mostrarFormulario && !carregouTodos && (
         <div className="card-base card-config mb-3">
-          Últimos Países Cadastrados (10). Digite na busca para consultar todos.
+          Últimos Países Cadastrados (5). Digite na busca para consultar todos.
         </div>
       )}
 

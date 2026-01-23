@@ -296,6 +296,9 @@ export default function RelatorioAgrupadoDestinoIsland() {
       );
     });
   }, [linhas, buscaDestino]);
+  const linhasExibidas = useMemo(() => {
+    return linhasFiltradas.slice(0, 5);
+  }, [linhasFiltradas]);
 
   const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
   const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
@@ -902,7 +905,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
                 <td colSpan={4}>Carregando...</td>
               </tr>
             )}
-            {!loading && linhasFiltradas.length === 0 && (
+            {!loading && linhasExibidas.length === 0 && (
               <tr>
                 <td colSpan={4}>
                   Nenhum destino encontrado com os filtros atuais.
@@ -910,7 +913,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
               </tr>
             )}
             {!loading &&
-              linhasFiltradas.map((l) => (
+              linhasExibidas.map((l) => (
                 <tr key={l.destino_id}>
                   <td data-label="Destino">{l.destino_nome}</td>
                   <td data-label="Qtde">{l.quantidade}</td>

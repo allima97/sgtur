@@ -497,6 +497,10 @@ export default function ViagensListaIsland() {
       return haystack.includes(termo);
     });
   }, [proximasViagens, busca]);
+  const viagensExibidas = useMemo(() => {
+    const mostrarTodos = Boolean(busca.trim() || statusFiltro || inicio || fim);
+    return mostrarTodos ? viagensFiltradas : viagensFiltradas.slice(0, 5);
+  }, [viagensFiltradas, busca, statusFiltro, inicio, fim]);
   const compactDateFieldStyle = { flex: "0 0 140px", minWidth: 125 };
   const totalColunasTabela = 7;
 
@@ -845,12 +849,12 @@ export default function ViagensListaIsland() {
                     <td colSpan={totalColunasTabela}>Carregando viagens...</td>
                   </tr>
                 )}
-                {!loading && viagensFiltradas.length === 0 && (
+                {!loading && viagensExibidas.length === 0 && (
                   <tr>
                     <td colSpan={totalColunasTabela}>Nenhuma viagem encontrada.</td>
                   </tr>
                 )}
-                {viagensFiltradas.map((v) => {
+                {viagensExibidas.map((v) => {
                   const statusLabel = obterStatusExibicao(v);
                   const recibos = v.recibos || [];
                   const produtoLabel =

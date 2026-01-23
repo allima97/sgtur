@@ -179,6 +179,9 @@ export default function FornecedoresIsland() {
       return normalizeSearchValue(alvo).includes(termosBusca);
     });
   }, [fornecedores, termosBusca]);
+  const fornecedoresExibidos = useMemo(() => {
+    return busca.trim() ? fornecedoresFiltrados : fornecedoresFiltrados.slice(0, 5);
+  }, [fornecedoresFiltrados, busca]);
 
   async function salvarFornecedor() {
     if (!companyId) {
@@ -467,13 +470,13 @@ export default function FornecedoresIsland() {
                     <td colSpan={5}>Carregando fornecedores...</td>
                   </tr>
                 )}
-                {!loading && fornecedoresFiltrados.length === 0 && (
+                {!loading && fornecedoresExibidos.length === 0 && (
                   <tr>
                     <td colSpan={5}>Nenhum fornecedor cadastrado.</td>
                   </tr>
                 )}
                 {!loading &&
-                  fornecedoresFiltrados.map((fornecedor) => (
+                  fornecedoresExibidos.map((fornecedor) => (
                   <tr key={fornecedor.id}>
                     <td data-label="Nome fantasia">
                       {fornecedor.nome_fantasia || fornecedor.nome_completo || "-"}

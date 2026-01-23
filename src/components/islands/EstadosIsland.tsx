@@ -62,7 +62,7 @@ export default function SubdivisoesIsland() {
           .from("subdivisoes")
           .select("id, nome, pais_id, codigo_admin1, tipo, created_at")
           .order(todos ? "nome" : "created_at", { ascending: !todos })
-          .limit(todos ? undefined : 10),
+          .limit(todos ? undefined : 5),
       ]);
 
       if (paisErr) throw paisErr;
@@ -86,6 +86,8 @@ export default function SubdivisoesIsland() {
   useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarDados(true);
+    } else if (!busca.trim() && carregouTodos) {
+      carregarDados(false);
     }
   }, [busca, carregouTodos]);
 
@@ -309,7 +311,7 @@ export default function SubdivisoesIsland() {
 
       {!mostrarFormulario && !carregouTodos && (
         <div className="card-base card-config mb-3">
-          Ultimas Subdivisoes Cadastradas (10). Digite na busca para consultar todas.
+          Ultimas Subdivisoes Cadastradas (5). Digite na busca para consultar todas.
         </div>
       )}
 

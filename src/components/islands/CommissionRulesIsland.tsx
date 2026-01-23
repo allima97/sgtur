@@ -286,6 +286,8 @@ export default function CommissionRulesIsland() {
     return <div className="card-base card-config">Acesso negado ao módulo de Parâmetros.</div>;
   }
 
+  const regrasExibidas = rules.slice(0, 5);
+
   return (
     <div className="page-content-wrap regras-comissao-page">
       {!mostrarFormulario && (
@@ -525,13 +527,13 @@ export default function CommissionRulesIsland() {
                     <td colSpan={5}>Carregando...</td>
                   </tr>
                 )}
-              {!loading && rules.length === 0 && (
-                <tr>
-                  <td colSpan={5}>Nenhuma regra cadastrada.</td>
-                </tr>
-              )}
+                {!loading && regrasExibidas.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>Nenhuma regra cadastrada.</td>
+                  </tr>
+                )}
               {!loading &&
-                rules.map((r) => (
+                regrasExibidas.map((r) => (
                   <tr key={r.id}>
                     <td data-label="Nome">{r.nome}</td>
                     <td data-label="Tipo">{r.tipo}</td>

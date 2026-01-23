@@ -275,6 +275,9 @@ export default function RelatorioAgrupadoClienteIsland() {
       return false;
     });
   }, [linhas, buscaCliente]);
+  const linhasExibidas = useMemo(() => {
+    return linhasFiltradas.slice(0, 5);
+  }, [linhasFiltradas]);
 
   const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
   const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
@@ -773,13 +776,13 @@ export default function RelatorioAgrupadoClienteIsland() {
                 <td colSpan={5}>Carregando...</td>
               </tr>
             )}
-            {!loading && linhasFiltradas.length === 0 && (
+            {!loading && linhasExibidas.length === 0 && (
               <tr>
                 <td colSpan={5}>Nenhum cliente encontrado com os filtros atuais.</td>
               </tr>
             )}
             {!loading &&
-              linhasFiltradas.map((l) => (
+              linhasExibidas.map((l) => (
                 <tr key={l.cliente_id}>
                   <td data-label="Cliente">{l.cliente_nome}</td>
                   <td data-label="CPF">{l.cliente_cpf}</td>

@@ -277,6 +277,9 @@ export default function CircuitosIsland() {
       );
     });
   }, [circuitos, busca]);
+  const circuitosExibidos = useMemo(() => {
+    return busca.trim() ? circuitosFiltrados : circuitosFiltrados.slice(0, 5);
+  }, [circuitosFiltrados, busca]);
 
   useEffect(() => {
     carregarCircuitos();
@@ -1645,13 +1648,13 @@ export default function CircuitosIsland() {
                   <td colSpan={5}>Carregando...</td>
                 </tr>
               )}
-              {!loading && circuitosFiltrados.length === 0 && (
+              {!loading && circuitosExibidos.length === 0 && (
                 <tr>
                   <td colSpan={5}>Nenhum circuito encontrado.</td>
                 </tr>
               )}
               {!loading &&
-                circuitosFiltrados.map((circuito) => (
+                circuitosExibidos.map((circuito) => (
                   <tr key={circuito.id}>
                     <td data-label="Circuito">{circuito.nome}</td>
                     <td data-label="Codigo">{circuito.codigo || "-"}</td>

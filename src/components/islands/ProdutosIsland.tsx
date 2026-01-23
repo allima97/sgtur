@@ -220,7 +220,7 @@ export default function ProdutosIsland() {
             "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades"
           )
           .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
-          .limit(todos ? undefined : 10),
+        .limit(todos ? undefined : 5),
         supabase
           .from("produtos")
           .select("destino, atracao_principal, melhor_epoca")
@@ -437,6 +437,8 @@ export default function ProdutosIsland() {
   useEffect(() => {
     if (busca.trim() && !carregouTodos) {
       carregarDados(true);
+    } else if (!busca.trim() && carregouTodos) {
+      carregarDados(false);
     }
   }, [busca, carregouTodos]);
 
@@ -1234,7 +1236,7 @@ export default function ProdutosIsland() {
           )}
           {!carregouTodos && !erro && (
             <div className="card-base card-config mb-3">
-              Ultimos Produtos Cadastrados (10). Digite na busca para consultar todos.
+              Ultimos Produtos Cadastrados (5). Digite na busca para consultar todos.
             </div>
           )}
 

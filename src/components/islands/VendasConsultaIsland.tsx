@@ -439,6 +439,9 @@ export default function VendasConsultaIsland() {
         normalizeText(v.id).includes(t)
     );
   }, [vendas, busca]);
+  const vendasExibidas = useMemo(() => {
+    return busca.trim() ? vendasFiltradas : vendasFiltradas.slice(0, 5);
+  }, [vendasFiltradas, busca]);
 
   const vendasPorId = useMemo(() => {
     return Object.fromEntries(vendas.map((v) => [v.id, v]));
@@ -889,14 +892,14 @@ export default function VendasConsultaIsland() {
               </tr>
             )}
 
-            {!loading && vendasFiltradas.length === 0 && (
+            {!loading && vendasExibidas.length === 0 && (
               <tr>
                 <td colSpan={7}>Nenhuma venda encontrada.</td>
               </tr>
             )}
 
             {!loading &&
-              vendasFiltradas.map((v) => {
+              vendasExibidas.map((v) => {
                 const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
                 const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
                 const produtosVenda = recibosDaVenda(v.id)

@@ -681,6 +681,9 @@ export default function RelatorioVendasIsland() {
       return matchTipo && matchCidade && matchProduto;
     });
   }, [recibosEnriquecidos, destinoBusca, tipoSelecionadoId, cidadeFiltro, cidadeNomeInput]);
+  const recibosExibidos = useMemo(() => {
+    return recibosFiltrados.slice(0, 5);
+  }, [recibosFiltrados]);
 
   const totalRecibos = recibosFiltrados.length;
   const somaValores = recibosFiltrados.reduce((acc, v) => {
@@ -1947,14 +1950,14 @@ export default function RelatorioVendasIsland() {
               </tr>
             )}
 
-            {!loading && recibosFiltrados.length === 0 && (
+            {!loading && recibosExibidos.length === 0 && (
               <tr>
                 <td colSpan={12}>Nenhum recibo encontrado com os filtros atuais.</td>
               </tr>
             )}
 
             {!loading &&
-              recibosFiltrados.map((r) => {
+              recibosExibidos.map((r) => {
                 const comissao = comissaoPorRecibo.get(r.id) ?? 0;
                 return (
                   <tr key={r.id}>

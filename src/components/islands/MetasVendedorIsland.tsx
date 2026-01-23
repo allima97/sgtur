@@ -414,6 +414,8 @@ export default function MetasVendedorIsland() {
   if (loading || loadingMeta) return <LoadingUsuarioContext />;
   if (!ativo) return <div>Acesso ao módulo de Metas bloqueado.</div>;
 
+  const metasExibidas = listaMetas.slice(0, 5);
+
   return (
     <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
       {erro && !mostrarFormularioMeta && (
@@ -628,13 +630,13 @@ export default function MetasVendedorIsland() {
               </tr>
             </thead>
             <tbody>
-              {listaMetas.length === 0 && (
+              {metasExibidas.length === 0 && (
                 <tr>
                   <td colSpan={usuarioPodeEditar ? 6 : 5}>Nenhuma meta cadastrada.</td>
                 </tr>
               )}
 
-              {listaMetas.map((m) => (
+              {metasExibidas.map((m) => (
                 <tr key={m.id}>
                   <td data-label="Período">{m.periodo.slice(0, 7)}</td>
                   <td data-label="Meta Geral">

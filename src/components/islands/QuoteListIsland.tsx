@@ -142,6 +142,10 @@ export default function QuoteListIsland() {
       return haystack.includes(termo);
     });
   }, [quotes, busca, statusFiltro]);
+  const quotesExibidos = useMemo(() => {
+    const mostrarTodos = busca.trim().length > 0 || statusFiltro !== "all";
+    return mostrarTodos ? quotesFiltrados : quotesFiltrados.slice(0, 5);
+  }, [quotesFiltrados, busca, statusFiltro]);
 
   async function handleExportPdf(quoteId: string) {
     setExportError(null);
@@ -352,14 +356,14 @@ export default function QuoteListIsland() {
               </tr>
             )}
 
-            {!loading && quotesFiltrados.length === 0 && (
+            {!loading && quotesExibidos.length === 0 && (
               <tr>
                 <td colSpan={7}>Nenhum orcamento encontrado.</td>
               </tr>
             )}
 
             {!loading &&
-              quotesFiltrados.map((quote) => {
+              quotesExibidos.map((quote) => {
                 const itens = quote.quote_item || [];
                 const itensOrdenados = [...itens].sort(
                   (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
