@@ -601,7 +601,7 @@ export default function QuoteListIsland() {
                 {formatCurrency(Number(visualizandoQuote.total || 0))}
               </div>
               <div className="table-container overflow-x-auto">
-                <table className="table-default table-compact quote-items-table">
+                <table className="table-default table-compact quote-items-table table-mobile-cards">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -612,9 +612,11 @@ export default function QuoteListIsland() {
                   <tbody>
                     {(visualizandoQuote.quote_item || []).map((item) => (
                       <tr key={`${visualizandoQuote.id}-${item.id}`}>
-                        <td>{buildItemLabel(item)}</td>
-                        <td>{item.quantity || 1}</td>
-                        <td>{formatCurrency(Number(item.total_amount || 0))}</td>
+                        <td data-label="Item">{buildItemLabel(item)}</td>
+                        <td data-label="Qtd">{item.quantity || 1}</td>
+                        <td data-label="Total">
+                          {formatCurrency(Number(item.total_amount || 0))}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

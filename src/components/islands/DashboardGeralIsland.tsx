@@ -2271,6 +2271,36 @@ const DashboardGeralIsland: React.FC = () => {
                 Number(orcamentoSelecionado.total || 0)
               )}
             </p>
+
+            <div style={{ marginTop: 12 }}>
+              <strong>Itens do orçamento</strong>
+              {(orcamentoSelecionado.quote_item || []).length === 0 ? (
+                <div style={{ marginTop: 6, color: "#94a3b8" }}>Nenhum item encontrado.</div>
+              ) : (
+                <div className="table-container overflow-x-auto" style={{ marginTop: 8 }}>
+                  <table className="table-default table-compact table-mobile-cards table-header-purple">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Cidade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
+                        <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
+                          <td data-label="Item">
+                            {item.title || item.product_name || "-"}
+                          </td>
+                          <td data-label="Tipo">{item.item_type || "-"}</td>
+                          <td data-label="Cidade">{item.city_name || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
