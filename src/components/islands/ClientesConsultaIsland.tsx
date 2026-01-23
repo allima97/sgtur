@@ -258,10 +258,7 @@ export default function ClientesConsultaIsland() {
   return (
     <>
     <div className={`clientes-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
-      <div
-        className="card-base mb-3 list-toolbar-sticky"
-        style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}
-      >
+      <div className="card-base card-blue mb-3 list-toolbar-sticky">
         <div className="form-row" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div className="form-group flex-1 min-w-0">
             <label className="form-label">Buscar cliente</label>
