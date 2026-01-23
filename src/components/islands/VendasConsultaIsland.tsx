@@ -134,7 +134,6 @@ export default function VendasConsultaIsland() {
 
   // modal
   const [modalVenda, setModalVenda] = useState<Venda | null>(null);
-  const [salvando, setSalvando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [excluindoRecibo, setExcluindoRecibo] = useState<string | null>(null);
   const [buscaReciboComplementar, setBuscaReciboComplementar] = useState("");
@@ -752,37 +751,6 @@ export default function VendasConsultaIsland() {
   }
 
   // ================================
-  // REMARCAR (editar) VENDA
-  // ================================
-  async function remarcarData(venda: Venda, novaData: string) {
-    if (!podeEditar) return;
-
-    try {
-      setSalvando(true);
-
-      await supabase
-        .from("vendas")
-        .update({ data_embarque: novaData })
-        .eq("id", venda.id);
-
-      await registrarLog({
-        acao: "venda_remarcada",
-        modulo: "Vendas",
-        detalhes: { venda_id: venda.id, nova_data: novaData },
-      });
-
-      await carregar();
-      showToast("Data de embarque atualizada.", "success");
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao remarcar venda.");
-      showToast("Erro ao remarcar.", "error");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  // ================================
   // BLOQUEIO TOTAL DE MÓDULO
   // ================================
   if (loadingUser || loadPerm) {
@@ -1011,7 +979,7 @@ export default function VendasConsultaIsland() {
               <h4 style={{ marginBottom: 8, textAlign: "center" }}>Recibos</h4>
               <div className="table-container overflow-x-auto">
                 <table
-                  className="table-default table-header-green"
+                  className="table-default table-header-green table-mobile-cards"
                   style={{ minWidth: 520 }}
                 >
                   <thead>
@@ -1022,7 +990,11 @@ export default function VendasConsultaIsland() {
                       <th style={{ textAlign: "center" }}>Fim</th>
                       <th>Valor</th>
                       <th>Taxas</th>
-                      {podeExcluir && <th>Ações</th>}
+                      {podeExcluir && (
+                        <th className="th-actions" style={{ textAlign: "center" }}>
+                          Ações
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1045,21 +1017,27 @@ export default function VendasConsultaIsland() {
 
                       return (
                         <tr key={r.id}>
-                          <td>{r.numero_recibo || "-"}</td>
-                          <td>{r.produto_nome || "-"}</td>
-                          <td style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
-                          <td style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
-                          <td>R$ {valorFmt}</td>
-                          <td>{taxasFmt}</td>
+                          <td data-label="Número">{r.numero_recibo || "-"}</td>
+                          <td data-label="Produto">{r.produto_nome || "-"}</td>
+                          <td data-label="Início" style={{ textAlign: "center" }}>
+                            {formatarData(r.data_inicio)}
+                          </td>
+                          <td data-label="Fim" style={{ textAlign: "center" }}>
+                            {formatarData(r.data_fim)}
+                          </td>
+                          <td data-label="Valor">R$ {valorFmt}</td>
+                          <td data-label="Taxas">{taxasFmt}</td>
                           {podeExcluir && (
-                            <td>
-                              <button
-                                className="btn-icon btn-danger"
-                                disabled={excluindoRecibo === r.id}
-                                onClick={() => excluirRecibo(r.id, modalVenda.id)}
-                              >
-                                {excluindoRecibo === r.id ? "…" : "🗑️"}
-                              </button>
+                            <td className="th-actions" data-label="Ações">
+                              <div className="action-buttons">
+                                <button
+                                  className="btn-icon btn-danger"
+                                  disabled={excluindoRecibo === r.id}
+                                  onClick={() => excluirRecibo(r.id, modalVenda.id)}
+                                >
+                                  {excluindoRecibo === r.id ? "…" : "🗑️"}
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>
@@ -1229,55 +1207,44 @@ export default function VendasConsultaIsland() {
               </div>
             </div>
 
-            {(podeEditar || podeExcluir) && (
-              <div className="modal-footer">
-                {podeEditar && (
-                    <>
-                      <button
-                        className="btn btn-outline"
-                        style={{ minWidth: 130, backgroundColor: "#f3f4f6", color: "#1f2937" }}
-                        onClick={() => {
-                          const url = `/vendas/cadastro?id=${modalVenda.id}${
-                            modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
-                          }${
-                            modalVenda.destino_cidade_nome
-                              ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}`
-                              : ""
-                          }`;
-                          window.location.href = url;
-                        }}
-                      >
-                        Editar
-                      </button>
-                    <button
-                      className="btn btn-primary"
-                      style={{ minWidth: 130 }}
-                      onClick={() => {
-                        const nova = prompt(
-                          "Nova data de embarque (AAAA-MM-DD):",
-                          modalVenda.data_embarque || ""
-                        );
-                        if (nova) remarcarData(modalVenda, nova);
-                      }}
-                      disabled={salvando}
-                    >
-                      {salvando ? "Salvando..." : "Remarcar"}
-                    </button>
-                  </>
-                )}
+            <div className="modal-footer mobile-stack-buttons">
+              {podeEditar && (
+                <button
+                  className="btn btn-outline w-full sm:w-auto"
+                  style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}
+                  onClick={() => {
+                    const url = `/vendas/cadastro?id=${modalVenda.id}${
+                      modalVenda.destino_cidade_id ? `&cidadeId=${modalVenda.destino_cidade_id}` : ""
+                    }${
+                      modalVenda.destino_cidade_nome
+                        ? `&cidadeNome=${encodeURIComponent(modalVenda.destino_cidade_nome)}`
+                        : ""
+                    }`;
+                    window.location.href = url;
+                  }}
+                >
+                  Editar
+                </button>
+              )}
 
-                {podeExcluir && (
-                  <button
-                    className="btn btn-danger"
-                    style={{ minWidth: 130 }}
-                    onClick={() => cancelarVenda(modalVenda)}
-                    disabled={cancelando}
-                  >
-                    {cancelando ? "Cancelando..." : "Cancelar Venda"}
-                  </button>
-                )}
-              </div>
-            )}
+              {podeExcluir && (
+                <button
+                  className="btn btn-danger w-full sm:w-auto"
+                  onClick={() => cancelarVenda(modalVenda)}
+                  disabled={cancelando}
+                >
+                  {cancelando ? "Cancelando..." : "Cancelar Venda"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-light w-full sm:w-auto"
+                onClick={() => setModalVenda(null)}
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
