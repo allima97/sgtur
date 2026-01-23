@@ -779,7 +779,10 @@ export default function VendasConsultaIsland() {
   return (
     <div className={`vendas-consulta-page${podeCriar ? " has-mobile-actionbar" : ""}`}>
       {/* BUSCA */}
-      <div className="card-base mb-3 list-toolbar-sticky">
+      <div
+        className="card-base mb-3 list-toolbar-sticky"
+        style={{ background: "#ecfdf3", borderColor: "#bbf7d0" }}
+      >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="form-group flex-1 min-w-0">
             <label className="form-label">Buscar venda</label>
