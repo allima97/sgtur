@@ -2243,33 +2243,33 @@ const DashboardGeralIsland: React.FC = () => {
               </div>
               </div>
 
-              <div className="card-base">
-                <h4 style={{ marginBottom: 8, textAlign: "center" }}>Itens do orçamento</h4>
-                {(orcamentoSelecionado.quote_item || []).length === 0 ? (
-                  <div style={{ color: "#64748b" }}>Nenhum item encontrado.</div>
-                ) : (
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-compact table-mobile-cards table-header-purple">
-                      <thead>
-                        <tr>
-                          <th>Item</th>
-                          <th>Tipo</th>
-                          <th>Cidade</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
-                          <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
-                            <td data-label="Item">{item.title || item.product_name || "-"}</td>
-                            <td data-label="Tipo">{item.item_type || "-"}</td>
-                            <td data-label="Cidade">{item.city_name || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              <div className="card-base" style={{ marginBottom: 12 }}>
+                <h4 style={{ margin: 0, textAlign: "center" }}>Itens do orçamento</h4>
               </div>
+              {(orcamentoSelecionado.quote_item || []).length === 0 ? (
+                <div style={{ color: "#64748b" }}>Nenhum item encontrado.</div>
+              ) : (
+                <div className="table-container overflow-x-auto">
+                  <table className="table-default table-compact table-mobile-cards table-header-purple">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Cidade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(orcamentoSelecionado.quote_item || []).map((item, idx) => (
+                        <tr key={`${orcamentoSelecionado.id}-${item.id || idx}`}>
+                          <td data-label="Item">{item.title || item.product_name || "-"}</td>
+                          <td data-label="Tipo">{item.item_type || "-"}</td>
+                          <td data-label="Cidade">{item.city_name || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer mobile-stack-buttons">
