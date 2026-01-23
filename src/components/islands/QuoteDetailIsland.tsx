@@ -736,7 +736,7 @@ export default function QuoteDetailIsland(props: {
       <div className="card-base">
         <h3 className="card-title">Itens</h3>
         <div className="table-container overflow-x-auto">
-          <table className="table-default table-compact quote-items-table table-mobile-cards">
+          <table className="table-default table-compact quote-items-table table-mobile-cards table-mobile-plain">
             <thead>
               <tr>
                 <th className="order-cell">Ordem</th>
