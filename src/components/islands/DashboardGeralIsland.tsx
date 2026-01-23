@@ -1257,7 +1257,7 @@ const DashboardGeralIsland: React.FC = () => {
                         key={id}
                         style={{ display: "flex", flexDirection: "column", gap: 4, color: "#16a34a" }}
                       >
-                        <div className="kpi-label">Meta do mÃªs</div>
+                        <div className="kpi-label">Meta do mês</div>
                         <div className="kpi-value">{formatCurrency(metaSomada)}</div>
                       </div>
                     );
