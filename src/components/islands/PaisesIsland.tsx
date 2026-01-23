@@ -208,7 +208,10 @@ export default function PaisesIsland() {
   return (
     <div className="paises-page">
       {!mostrarFormulario && (
-        <div className="card-base mb-3 list-toolbar-sticky">
+        <div
+          className="card-base mb-3 list-toolbar-sticky"
+          style={{ background: "#f5f3ff", borderColor: "#ddd6fe" }}
+        >
           <div
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
