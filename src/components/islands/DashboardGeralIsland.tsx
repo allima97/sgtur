@@ -253,6 +253,9 @@ const DashboardGeralIsland: React.FC = () => {
   const [showCustomize, setShowCustomize] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [mobileWidgetOpen, setMobileWidgetOpen] = useState<Record<WidgetId, boolean>>(() =>
+    ALL_WIDGETS.reduce((acc, w) => ({ ...acc, [w.id]: false }), {} as Record<WidgetId, boolean>)
+  );
   const [kpiOrder, setKpiOrder] = useState<KpiId[]>(BASE_KPIS.map((k) => k.id));
   const [kpiVisible, setKpiVisible] = useState<Record<KpiId, boolean>>(() =>
     BASE_KPIS.reduce((acc, k) => ({ ...acc, [k.id]: true }), {} as Record<KpiId, boolean>)
@@ -338,6 +341,9 @@ const DashboardGeralIsland: React.FC = () => {
   };
 
   const widgetAtivo = (id: WidgetId) => widgetVisible[id] !== false;
+  const toggleMobileWidget = (id: WidgetId) => {
+    setMobileWidgetOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   function salvarKpiLocal(order: KpiId[], visible: Record<KpiId, boolean>, charts?: Record<WidgetId, ChartType>) {
     if (typeof window !== "undefined") {
@@ -1167,6 +1173,7 @@ const DashboardGeralIsland: React.FC = () => {
   };
 
   const tableScrollMaxHeight = 180;
+  const tableWidgetIds: WidgetId[] = ["orcamentos", "viagens", "aniversariantes", "follow_up"];
 
   const renderWidget = (id: WidgetId) => {
     switch (id) {
@@ -1553,7 +1560,7 @@ const DashboardGeralIsland: React.FC = () => {
                 overflowY: shouldScrollOrcamentos ? "auto" : "visible",
               }}
             >
-              <table className="table-default min-w-[680px]">
+              <table className="table-default table-mobile-cards min-w-[680px]">
                 <thead>
                   <tr>
                     <th>Data</th>
@@ -1561,7 +1568,7 @@ const DashboardGeralIsland: React.FC = () => {
                     <th>Destino</th>
                     <th>Status</th>
                     <th>Valor</th>
-                    <th>Ver</th>
+                    <th className="th-actions">Ver</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1572,15 +1579,17 @@ const DashboardGeralIsland: React.FC = () => {
                   )}
                   {orcamentosRecentes.map((o) => (
                     <tr key={o.id}>
-                      <td>{formatarDataParaExibicao(o.created_at)}</td>
-                      <td>{o.cliente?.nome || "-"}</td>
-                      <td>{getOrcamentoDestino(o)}</td>
-                      <td>{o.status_negociacao || o.status || "-"}</td>
-                      <td>{formatCurrency(Number(o.total || 0))}</td>
-                      <td>
-                        <button className="btn btn-light" onClick={() => setOrcamentoSelecionado(o)}>
-                          Ver
-                        </button>
+                      <td data-label="Data">{formatarDataParaExibicao(o.created_at)}</td>
+                      <td data-label="Cliente">{o.cliente?.nome || "-"}</td>
+                      <td data-label="Destino">{getOrcamentoDestino(o)}</td>
+                      <td data-label="Status">{o.status_negociacao || o.status || "-"}</td>
+                      <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
+                      <td className="th-actions" data-label="Ver">
+                        <div className="action-buttons">
+                          <button className="btn btn-light" onClick={() => setOrcamentoSelecionado(o)}>
+                            Ver
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1606,14 +1615,14 @@ const DashboardGeralIsland: React.FC = () => {
                 }}
                 ref={viagensScrollRef}
               >
-                <table className="table-default min-w-[760px]">
+                <table className="table-default table-mobile-cards min-w-[760px]">
                   <thead>
                     <tr>
                       <th>Cliente</th>
                       <th>Serviços</th>
                       <th>Embarque</th>
                       <th>Destino</th>
-                      <th>Ver</th>
+                      <th className="th-actions">Ver</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1624,8 +1633,8 @@ const DashboardGeralIsland: React.FC = () => {
                     )}
                     {proximasViagensAgrupadas.map((v) => (
                       <tr key={v.key}>
-                        <td>{v.clienteNome || "-"}</td>
-                        <td>
+                        <td data-label="Cliente">{v.clienteNome || "-"}</td>
+                        <td data-label="Serviços">
                           {v.produtos.length === 0 ? (
                             "-"
                           ) : (
@@ -1636,12 +1645,14 @@ const DashboardGeralIsland: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td>{formatarDataParaExibicao(v.dataInicio)}</td>
-                        <td>{v.destino || "-"}</td>
-                        <td>
-                          <a className="btn btn-light" href={`/operacao/viagens/${v.viagemId}`}>
-                            Abrir
-                          </a>
+                        <td data-label="Embarque">{formatarDataParaExibicao(v.dataInicio)}</td>
+                        <td data-label="Destino">{v.destino || "-"}</td>
+                        <td className="th-actions" data-label="Ver">
+                          <div className="action-buttons">
+                            <a className="btn btn-light" href={`/operacao/viagens/${v.viagemId}`}>
+                              Abrir
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1664,14 +1675,14 @@ const DashboardGeralIsland: React.FC = () => {
                 overflowY: shouldScrollAniversariantes ? "auto" : "visible",
               }}
             >
-              <table className="table-default min-w-[520px]">
+              <table className="table-default table-mobile-cards min-w-[520px]">
                 <thead>
                   <tr>
                     <th>Nome</th>
                     <th>Data nasc.</th>
                     <th>Idade</th>
                     <th>Telefone</th>
-                    <th>Ver</th>
+                    <th className="th-actions">Ver</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1684,14 +1695,16 @@ const DashboardGeralIsland: React.FC = () => {
                     const idade = calcularIdade(c.nascimento);
                     return (
                       <tr key={c.id}>
-                        <td>{c.nome}</td>
-                        <td>{formatarDataParaExibicao(c.nascimento)}</td>
-                        <td>{idade ?? "-"}</td>
-                        <td>{c.telefone || "-"}</td>
-                        <td>
-                          <button className="btn btn-light" onClick={() => setClienteSelecionado(c)}>
-                            Ver
-                          </button>
+                        <td data-label="Nome">{c.nome}</td>
+                        <td data-label="Data nasc.">{formatarDataParaExibicao(c.nascimento)}</td>
+                        <td data-label="Idade">{idade ?? "-"}</td>
+                        <td data-label="Telefone">{c.telefone || "-"}</td>
+                        <td className="th-actions" data-label="Ver">
+                          <div className="action-buttons">
+                            <button className="btn btn-light" onClick={() => setClienteSelecionado(c)}>
+                              Ver
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1714,14 +1727,14 @@ const DashboardGeralIsland: React.FC = () => {
                 overflowY: shouldScrollFollowUp ? "auto" : "visible",
               }}
             >
-              <table className="table-default min-w-[640px]">
+              <table className="table-default table-mobile-cards min-w-[640px]">
                 <thead>
                   <tr>
                     <th>Cliente</th>
                     <th>Destino</th>
                     <th>Embarque</th>
                     <th>Retorno</th>
-                    <th>Ver</th>
+                    <th className="th-actions">Ver</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1732,14 +1745,16 @@ const DashboardGeralIsland: React.FC = () => {
                   )}
                   {followUpsRecentes.map((item) => (
                     <tr key={item.id}>
-                      <td>{item.clientes?.nome || "-"}</td>
-                      <td>{item.destino_cidade?.nome || "-"}</td>
-                      <td>{formatarDataParaExibicao(item.data_embarque || "")}</td>
-                      <td>{formatarDataParaExibicao(item.data_final || "")}</td>
-                      <td>
-                        <a className="btn btn-light" href={`/vendas/cadastro?id=${item.id}`}>
-                          Abrir
-                        </a>
+                      <td data-label="Cliente">{item.clientes?.nome || "-"}</td>
+                      <td data-label="Destino">{item.destino_cidade?.nome || "-"}</td>
+                      <td data-label="Embarque">{formatarDataParaExibicao(item.data_embarque || "")}</td>
+                      <td data-label="Retorno">{formatarDataParaExibicao(item.data_final || "")}</td>
+                      <td className="th-actions" data-label="Ver">
+                        <div className="action-buttons">
+                          <a className="btn btn-light" href={`/vendas/cadastro?id=${item.id}`}>
+                            Abrir
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1755,6 +1770,10 @@ const DashboardGeralIsland: React.FC = () => {
   };
 
   // ----------------- RENDER -----------------
+
+  const tableWidgets = widgetOrder.filter(
+    (id) => tableWidgetIds.includes(id) && widgetAtivo(id as WidgetId)
+  );
 
   // Evita ficar preso no estado de carregamento caso o hook demore,
   // liberando a renderização assim que já houver contexto básico.
@@ -1996,6 +2015,27 @@ const DashboardGeralIsland: React.FC = () => {
           ))}
       </div>
 
+      {tableWidgets.length > 0 && (
+        <div className="mobile-only card-base card-purple mb-3">
+          <div className="flex flex-col gap-2">
+            {tableWidgets.map((id) => {
+              const meta = ALL_WIDGETS.find((w) => w.id === id);
+              const aberto = mobileWidgetOpen[id];
+              return (
+                <button
+                  key={`mobile-btn-${id}`}
+                  type="button"
+                  className={`btn w-full ${aberto ? "btn-primary" : "btn-light"}`}
+                  onClick={() => toggleMobileWidget(id as WidgetId)}
+                >
+                  {meta?.titulo || id}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Linha de tabelas/listas */}
       <div
         style={{
@@ -2005,11 +2045,15 @@ const DashboardGeralIsland: React.FC = () => {
           alignItems: "start",
         }}
       >
-        {widgetOrder
-          .filter((id) => ["orcamentos", "viagens", "aniversariantes", "follow_up"].includes(id) && widgetAtivo(id as WidgetId))
-          .map((id) => (
-            <div key={id}>{renderWidget(id as WidgetId)}</div>
-          ))}
+        {tableWidgets.map((id) => (
+          <div
+            key={id}
+            className="mobile-collapsible"
+            data-open={mobileWidgetOpen[id] ? "true" : "false"}
+          >
+            {renderWidget(id as WidgetId)}
+          </div>
+        ))}
       </div>
 
       {showCustomize && (
