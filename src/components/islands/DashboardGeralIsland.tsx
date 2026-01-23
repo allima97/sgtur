@@ -1586,8 +1586,8 @@ const DashboardGeralIsland: React.FC = () => {
                       <td data-label="Valor">{formatCurrency(Number(o.total || 0))}</td>
                       <td className="th-actions" data-label="Ver">
                         <div className="action-buttons">
-                          <button className="btn btn-light" onClick={() => setOrcamentoSelecionado(o)}>
-                            Ver
+                          <button className="btn-icon" onClick={() => setOrcamentoSelecionado(o)} title="Ver detalhes">
+                            👁️
                           </button>
                         </div>
                       </td>
@@ -1649,8 +1649,8 @@ const DashboardGeralIsland: React.FC = () => {
                         <td data-label="Destino">{v.destino || "-"}</td>
                         <td className="th-actions" data-label="Ver">
                           <div className="action-buttons">
-                            <a className="btn btn-light" href={`/operacao/viagens/${v.viagemId}`}>
-                              Abrir
+                            <a className="btn-icon" href={`/operacao/viagens/${v.viagemId}`} title="Ver viagem">
+                              👁️
                             </a>
                           </div>
                         </td>
@@ -1701,8 +1701,8 @@ const DashboardGeralIsland: React.FC = () => {
                         <td data-label="Telefone">{c.telefone || "-"}</td>
                         <td className="th-actions" data-label="Ver">
                           <div className="action-buttons">
-                            <button className="btn btn-light" onClick={() => setClienteSelecionado(c)}>
-                              Ver
+                            <button className="btn-icon" onClick={() => setClienteSelecionado(c)} title="Ver detalhes">
+                              👁️
                             </button>
                           </div>
                         </td>
@@ -1751,8 +1751,8 @@ const DashboardGeralIsland: React.FC = () => {
                       <td data-label="Retorno">{formatarDataParaExibicao(item.data_final || "")}</td>
                       <td className="th-actions" data-label="Ver">
                         <div className="action-buttons">
-                          <a className="btn btn-light" href={`/vendas/cadastro?id=${item.id}`}>
-                            Abrir
+                          <a className="btn-icon" href={`/vendas/cadastro?id=${item.id}`} title="Ver follow-up">
+                            👁️
                           </a>
                         </div>
                       </td>

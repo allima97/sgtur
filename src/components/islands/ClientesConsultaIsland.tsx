@@ -361,7 +361,7 @@ export default function ClientesConsultaIsland() {
                 <div className="card-base mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue min-w-[720px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                       <thead>
                         <tr>
                           <th>Data Lançamento</th>
@@ -379,24 +379,24 @@ export default function ClientesConsultaIsland() {
                         )}
                         {historicoVendas.map((v) => (
                           <tr key={v.id}>
-                            <td>
+                            <td data-label="Data Lançamento">
                               {v.data_lancamento
                                 ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>{v.destino_nome || "-"}</td>
-                            <td>
+                            <td data-label="Destino">{v.destino_nome || "-"}</td>
+                            <td data-label="Embarque">
                               {v.data_embarque
                                 ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>
+                            <td data-label="Valor">
                               {v.valor_total.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
                               })}
                             </td>
-                            <td>
+                            <td data-label="Taxas">
                               {v.valor_taxas.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
@@ -412,7 +412,7 @@ export default function ClientesConsultaIsland() {
                 <div className="card-base">
                   <h4 style={{ marginBottom: 8 }}>Orçamentos</h4>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue min-w-[720px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                       <thead>
                         <tr>
                           <th>Data</th>
@@ -429,14 +429,14 @@ export default function ClientesConsultaIsland() {
                         )}
                         {historicoOrcamentos.map((o) => (
                           <tr key={o.id}>
-                            <td>
+                            <td data-label="Data">
                               {o.data_orcamento
                                 ? new Date(o.data_orcamento).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>{o.status || "-"}</td>
-                            <td>{o.produto_nome || "-"}</td>
-                            <td>
+                            <td data-label="Status">{o.status || "-"}</td>
+                            <td data-label="Produto">{o.produto_nome || "-"}</td>
+                            <td data-label="Valor">
                               {o.valor !== null && o.valor !== undefined
                                 ? o.valor.toLocaleString("pt-BR", {
                                     style: "currency",

@@ -1691,7 +1691,7 @@ export default function ClientesIsland() {
                 <div className="card-base mb-2">
                   <h4 style={{ marginBottom: 8 }}>Vendas</h4>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue min-w-[820px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[820px]">
                       <thead>
                         <tr>
                           <th>Data Lançamento</th>
@@ -1710,38 +1710,40 @@ export default function ClientesIsland() {
                         )}
                         {historicoVendas.map((v) => (
                           <tr key={v.id}>
-                            <td>
+                            <td data-label="Data Lançamento">
                               {v.data_lancamento
                                 ? new Date(v.data_lancamento).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>{v.destino_cidade_nome || "-"}</td>
-                            <td>
+                            <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
+                            <td data-label="Embarque">
                               {v.data_embarque
                                 ? new Date(v.data_embarque).toLocaleDateString("pt-BR")
                                 : "-"}
                             </td>
-                            <td>
+                            <td data-label="Valor">
                               {v.valor_total.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
                               })}
                             </td>
-                            <td>
+                            <td data-label="Taxas">
                               {v.valor_taxas.toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
                               })}
                             </td>
-                            <td className="th-actions" style={{ textAlign: "center" }}>
-                              <button
-                                className="btn-icon"
-                                type="button"
-                                onClick={() => verDetalheVenda(v)}
-                                title="Ver detalhes"
-                              >
-                                👁️
-                              </button>
+                            <td className="th-actions" data-label="Ações">
+                              <div className="action-buttons">
+                                <button
+                                  className="btn-icon"
+                                  type="button"
+                                  onClick={() => verDetalheVenda(v)}
+                                  title="Ver detalhes"
+                                >
+                                  👁️
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1753,7 +1755,7 @@ export default function ClientesIsland() {
                 <div className="card-base card-blue mb-2">
                   <h4 style={{ marginBottom: 8 }}>Orçamentos do cliente</h4>
                   <div className="table-container overflow-x-auto">
-                    <table className="table-default table-header-blue min-w-[760px]">
+                    <table className="table-default table-header-blue table-mobile-cards min-w-[760px]">
                       <thead>
                         <tr>
                           <th>Data</th>
@@ -1773,30 +1775,32 @@ export default function ClientesIsland() {
                         )}
                         {historicoOrcamentos.map((o) => (
                           <tr key={o.id}>
-                            <td>
+                            <td data-label="Data">
                               {o.data_orcamento
                                 ? new Date(o.data_orcamento).toLocaleDateString("pt-BR").replaceAll("/", "-")
                                 : "-"}
                             </td>
-                            <td style={{ textTransform: "capitalize" }}>{o.status || "-"}</td>
-                            <td>{o.destino_cidade_nome || "-"}</td>
-                            <td>{o.produto_nome || "-"}</td>
-                            <td>
+                            <td data-label="Status" style={{ textTransform: "capitalize" }}>{o.status || "-"}</td>
+                            <td data-label="Destino">{o.destino_cidade_nome || "-"}</td>
+                            <td data-label="Produto">{o.produto_nome || "-"}</td>
+                            <td data-label="Valor">
                               {(o.valor ?? 0).toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
                               })}
                             </td>
-                            <td>{o.numero_venda || "-"}</td>
-                            <td className="th-actions" style={{ textAlign: "center" }}>
-                              <button
-                                className="btn-icon"
-                                type="button"
-                                onClick={() => verDetalheOrcamento(o)}
-                                title="Ver detalhes"
-                              >
-                                👁️
-                              </button>
+                            <td data-label="Venda">{o.numero_venda || "-"}</td>
+                            <td className="th-actions" data-label="Ações">
+                              <div className="action-buttons">
+                                <button
+                                  className="btn-icon"
+                                  type="button"
+                                  onClick={() => verDetalheOrcamento(o)}
+                                  title="Ver detalhes"
+                                >
+                                  👁️
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1885,7 +1889,7 @@ export default function ClientesIsland() {
               <p>Carregando recibos...</p>
             ) : (
               <div className="table-container overflow-x-auto">
-                <table className="table-default table-header-blue" style={{ minWidth: 520 }}>
+                <table className="table-default table-header-blue table-mobile-cards" style={{ minWidth: 520 }}>
                   <thead>
                     <tr>
                       <th>Número</th>
@@ -1909,17 +1913,17 @@ export default function ClientesIsland() {
                           : "-";
                       return (
                         <tr key={idx}>
-                          <td>{r.numero_recibo || "-"}</td>
-                          <td>{r.produto_nome || "-"}</td>
-                          <td style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
-                          <td style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
-                          <td>
+                          <td data-label="Número">{r.numero_recibo || "-"}</td>
+                          <td data-label="Produto">{r.produto_nome || "-"}</td>
+                          <td data-label="Início" style={{ textAlign: "center" }}>{formatarData(r.data_inicio)}</td>
+                          <td data-label="Fim" style={{ textAlign: "center" }}>{formatarData(r.data_fim)}</td>
+                          <td data-label="Valor">
                             {(r.valor_total || 0).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL",
                             })}
                           </td>
-                          <td>
+                          <td data-label="Taxas">
                             {(r.valor_taxas || 0).toLocaleString("pt-BR", {
                               style: "currency",
                               currency: "BRL",

@@ -518,7 +518,7 @@ export default function TipoProdutosIsland() {
       {!mostrarFormulario && (
         <>
           {/* BUSCA */}
-          <div className="card-base mb-3">
+          <div className="card-base card-blue mb-3">
             <div
               className="form-row mobile-stack"
               style={{
