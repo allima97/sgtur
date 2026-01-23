@@ -742,7 +742,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
       {!erro && viagem && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div className="card-base">
+          <div className="card-base card-purple">
             <div className="mobile-stack-buttons">
               <button
                 type="button"
