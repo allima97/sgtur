@@ -1954,24 +1954,24 @@ export default function ClientesIsland() {
     {/* Detalhe do orçamento */}
     {detalheOrcamento && (
       <div className="modal-backdrop">
-        <div className="modal-panel" style={{ maxWidth: 640 }}>
+        <div className="modal-panel orcamento-detalhe-modal" style={{ maxWidth: 640 }}>
           <div className="modal-header">
-            <div>
-              <div
-                className="modal-title"
-                style={{ color: "#1d4ed8", fontSize: "1.15rem", fontWeight: 800 }}
-              >
-                Detalhes do orçamento
+            <div className="orcamento-detalhe-header">
+              <div className="modal-title orcamento-detalhe-nome">
+                {historicoCliente?.nome || form.nome || "-"}
               </div>
-              <small style={{ color: "#64748b" }}>
-                Destino: {detalheOrcamento.destino_nome || "-"}
-              </small>
+              <div className="orcamento-detalhe-status">
+                Status: {detalheOrcamento.status || "-"}
+              </div>
             </div>
             <button className="btn-ghost" onClick={() => setDetalheOrcamento(null)}>
               ✕
             </button>
           </div>
           <div className="modal-body">
+            <div className="card-base" style={{ marginBottom: 12, textAlign: "center" }}>
+              <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
+            </div>
             <div
               style={{
                 display: "grid",

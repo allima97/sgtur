@@ -1795,6 +1795,25 @@ body {
   font-weight: 600;
 }
 
+.orcamento-detalhe-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orcamento-detalhe-nome {
+  color: #6d28d9;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.orcamento-detalhe-status,
+.orcamento-detalhe-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .mobile-only {
   display: none;
 }
@@ -1832,6 +1851,20 @@ body {
     --table-card-gap: transparent;
     background: transparent;
     padding: 0;
+  }
+
+  .orcamento-detalhe-modal .modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .orcamento-detalhe-modal .orcamento-detalhe-header {
+    text-align: center;
+  }
+
+  .orcamento-detalhe-modal .modal-header .btn-ghost {
+    align-self: flex-end;
   }
 
   .mobile-only {

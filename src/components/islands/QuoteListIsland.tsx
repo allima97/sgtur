@@ -578,24 +578,29 @@ export default function QuoteListIsland() {
 
       {visualizandoQuote && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 640, width: "90vw" }}>
+          <div
+            className="modal-panel orcamento-detalhe-modal"
+            style={{ maxWidth: 640, width: "90vw" }}
+          >
             <div className="modal-header">
-              <div>
-                <div className="modal-title">Visualizar orçamento</div>
-                <div style={{ fontSize: "0.9rem", color: "#475569" }}>
-                  Cliente:{" "}
+              <div className="orcamento-detalhe-header">
+                <div className="modal-title orcamento-detalhe-nome">
                   {visualizandoQuote.client_name ||
                     visualizandoQuote.cliente?.nome ||
-                    "—"}{" "}
-                  | Status:{" "}
-                  {visualizandoQuote.status_negociacao || "Enviado"}
+                    "—"}
                 </div>
+              <div className="orcamento-detalhe-status">
+                Status: {visualizandoQuote.status_negociacao || "Enviado"}
               </div>
-              <button className="btn-ghost" onClick={() => setVisualizandoQuote(null)}>
-                ✖
-              </button>
             </div>
+            <button className="btn-ghost" onClick={() => setVisualizandoQuote(null)}>
+              ✖
+            </button>
+          </div>
             <div className="modal-body" style={{ display: "grid", gap: 12 }}>
+              <div className="card-base" style={{ textAlign: "center" }}>
+                <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
+              </div>
               <div>
                 <strong>Total:</strong>{" "}
                 {formatCurrency(Number(visualizandoQuote.total || 0))}

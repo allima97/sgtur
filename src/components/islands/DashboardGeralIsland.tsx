@@ -2274,20 +2274,20 @@ const DashboardGeralIsland: React.FC = () => {
       {orcamentoSelecionado && (
         <div className="modal-backdrop">
           <div
-            className="modal-panel"
+            className="modal-panel orcamento-detalhe-modal"
             style={{ maxWidth: 820, width: "95vw", background: "#f8fafc" }}
           >
             <div className="modal-header">
-              <div>
+              <div className="orcamento-detalhe-header">
                 <div
-                  className="modal-title"
-                  style={{ color: "#6d28d9", fontSize: "1.15rem", fontWeight: 800 }}
+                  className="modal-title orcamento-detalhe-nome"
                 >
-                  Detalhes do orçamento
+                  {orcamentoSelecionado.cliente?.nome || "-"}
                 </div>
-                <small style={{ color: "#64748b" }}>
-                  Cliente: {orcamentoSelecionado.cliente?.nome || "-"}
-                </small>
+                <div className="orcamento-detalhe-status">
+                  Status:{" "}
+                  {orcamentoSelecionado.status_negociacao || orcamentoSelecionado.status || "-"}
+                </div>
               </div>
               <button className="btn-ghost" onClick={() => setOrcamentoSelecionado(null)}>
                 ✖
@@ -2295,6 +2295,9 @@ const DashboardGeralIsland: React.FC = () => {
             </div>
 
             <div className="modal-body">
+              <div className="card-base" style={{ marginBottom: 12, textAlign: "center" }}>
+                <div className="orcamento-detalhe-subtitle">Visualizar orçamento</div>
+              </div>
               <div className="card-base" style={{ marginBottom: 12 }}>
                 <div style={{ display: "grid", gap: 6, lineHeight: 1.4 }}>
                 <div>
