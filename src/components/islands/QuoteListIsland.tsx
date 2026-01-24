@@ -151,7 +151,7 @@ export default function QuoteListIsland() {
     setExportError(null);
     setExportingQuoteId(quoteId);
     try {
-      await exportQuotePdfById({ quoteId, showItemValues: true, showSummary: true });
+      await exportQuotePdfById({ quoteId, showItemValues: false, showSummary: false });
     } catch (err: any) {
       console.error("Erro ao exportar PDF:", err);
       setExportError(err?.message || "Nao foi possivel gerar o PDF.");

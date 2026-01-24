@@ -560,6 +560,32 @@ export default function QuoteManualIsland() {
     setItems(next);
   }
 
+  function removerItem(index: number) {
+    const current = items[index];
+    if (!current) return;
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Confirma a exclusão deste item?");
+      if (!confirmed) return;
+    }
+    const rowKey = current.temp_id || `row-${index}`;
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [criarItemManual()];
+    });
+    setCidadeInputValues((prev) => {
+      if (!prev[rowKey]) return prev;
+      const next = { ...prev };
+      delete next[rowKey];
+      return next;
+    });
+    setCidadeSuggestions((prev) => {
+      if (!prev[rowKey]) return prev;
+      const next = { ...prev };
+      delete next[rowKey];
+      return next;
+    });
+  }
+
   function adicionarItem() {
     setItems((prev) => [...prev, criarItemManual()]);
   }
@@ -830,10 +856,12 @@ export default function QuoteManualIsland() {
         {error && <div style={{ marginTop: 12, color: "#b91c1c" }}>{error}</div>}
       </div>
 
-      <div className="card-base">
-        <h3 className="card-title">Itens do orcamento</h3>
-        <div style={{ marginBottom: 12, fontSize: 14 }}>
-          Total estimado: R$ {formatCurrency(total)}
+      <div className="mb-3">
+        <div className="card-base mb-2" style={{ padding: "12px 16px" }}>
+          <h3 style={{ margin: 0 }}>Itens do orcamento</h3>
+          <div style={{ marginTop: 6, fontSize: 14 }}>
+            Total estimado: R$ {formatCurrency(total)}
+          </div>
         </div>
         <div
           className="table-container overflow-x-auto"
@@ -861,29 +889,39 @@ export default function QuoteManualIsland() {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr>
-                      <td className="order-cell" data-label="Ordem">
-                        <div className="order-controls">
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Mover para cima"
-                            onClick={() => moveItem(index, "up")}
-                            disabled={index === 0}
-                            style={{ padding: "2px 6px" }}
-                          >
-                            ⬆️
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Mover para baixo"
-                            onClick={() => moveItem(index, "down")}
-                            disabled={index === items.length - 1}
-                            style={{ padding: "2px 6px" }}
-                          >
-                            ⬇️
-                          </button>
+                      <td className="order-cell" data-label="">
+                        <div className="order-cell-head">
+                          <span className="order-label">Ordem</span>
+                          <div className="icon-action-group">
+                            <button
+                              type="button"
+                              className="icon-action-btn"
+                              title="Mover para cima"
+                              onClick={() => moveItem(index, "up")}
+                              disabled={index === 0}
+                            >
+                              ⬆️
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-action-btn"
+                              title="Mover para baixo"
+                              onClick={() => moveItem(index, "down")}
+                              disabled={index === items.length - 1}
+                            >
+                              ⬇️
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-action-btn danger"
+                              title="Remover item"
+                              onClick={() => removerItem(index)}
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
+                        <div className="order-value">#{index + 1}</div>
                       </td>
                       <td data-label="Tipo">
                         <input

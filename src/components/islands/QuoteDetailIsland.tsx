@@ -160,6 +160,7 @@ export default function QuoteDetailIsland(props: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [removedItemIds, setRemovedItemIds] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
@@ -226,6 +227,7 @@ export default function QuoteDetailIsland(props: {
       });
       return next;
     });
+    setRemovedItemIds([]);
   }, [props.items]);
 
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
@@ -535,6 +537,24 @@ export default function QuoteDetailIsland(props: {
     setItems(reindexed);
   }
 
+  function removerItem(index: number) {
+    const current = items[index];
+    if (!current) return;
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Confirma a exclusão deste item?");
+      if (!confirmed) return;
+    }
+    if (current.id) {
+      setRemovedItemIds((prev) =>
+        prev.includes(current.id) ? prev : [...prev, current.id]
+      );
+    }
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.map((item, idx) => ({ ...item, order_index: idx }));
+    });
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -564,6 +584,20 @@ export default function QuoteDetailIsland(props: {
         .upsert(payload, { onConflict: "id" });
 
       if (itemError) throw itemError;
+
+      if (removedItemIds.length) {
+        const { error: deleteRemovedSegs } = await supabaseBrowser
+          .from("quote_item_segment")
+          .delete()
+          .in("quote_item_id", removedItemIds);
+        if (deleteRemovedSegs) throw deleteRemovedSegs;
+
+        const { error: deleteRemovedItems } = await supabaseBrowser
+          .from("quote_item")
+          .delete()
+          .in("id", removedItemIds);
+        if (deleteRemovedItems) throw deleteRemovedItems;
+      }
 
       const itemIds = items.map((item) => item.id);
       if (itemIds.length) {
@@ -612,6 +646,7 @@ export default function QuoteDetailIsland(props: {
       setStatus(nextStatus);
       setSuccess("Atualizado com sucesso.");
       setIsEditing(false);
+      setRemovedItemIds([]);
       if (typeof window !== "undefined") {
         window.location.href = "/orcamentos/consulta";
       }
@@ -665,7 +700,7 @@ export default function QuoteDetailIsland(props: {
   }, [handleExport]);
 
   return (
-    <div className="page-content-wrap">
+    <div className="page-content-wrap orcamentos-detalhe-page">
       <div className="card-base" style={{ marginBottom: 16 }}>
         <h1 className="page-title">Quote</h1>
         <div style={{ fontSize: 14 }}>
@@ -733,8 +768,10 @@ export default function QuoteDetailIsland(props: {
         {exportError && <div style={{ marginTop: 8, color: "#b91c1c" }}>{exportError}</div>}
       </div>
 
-      <div className="card-base">
-        <h3 className="card-title">Itens</h3>
+      <div className="mb-3">
+        <div className="card-base mb-2" style={{ padding: "12px 16px" }}>
+          <h3 style={{ margin: 0 }}>Itens</h3>
+        </div>
         <div className="table-container overflow-x-auto">
           <table className="table-default table-compact quote-items-table table-mobile-cards table-header-purple">
             <thead>
@@ -764,29 +801,40 @@ export default function QuoteDetailIsland(props: {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr>
-                      <td className="order-cell" data-label="Ordem">
-                        <div className="order-controls">
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Mover para cima"
-                            onClick={() => moveItem(index, "up")}
-                            disabled={index === 0 || !isEditing}
-                            style={{ padding: "2px 6px" }}
-                          >
-                            ⬆️
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-icon"
-                            title="Mover para baixo"
-                            onClick={() => moveItem(index, "down")}
-                            disabled={index === items.length - 1 || !isEditing}
-                            style={{ padding: "2px 6px" }}
-                          >
-                            ⬇️
-                          </button>
+                      <td className="order-cell" data-label="">
+                        <div className="order-cell-head">
+                          <span className="order-label">Ordem</span>
+                          <div className="icon-action-group">
+                            <button
+                              type="button"
+                              className="icon-action-btn"
+                              title="Mover para cima"
+                              onClick={() => moveItem(index, "up")}
+                              disabled={index === 0 || !isEditing}
+                            >
+                              ⬆️
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-action-btn"
+                              title="Mover para baixo"
+                              onClick={() => moveItem(index, "down")}
+                              disabled={index === items.length - 1 || !isEditing}
+                            >
+                              ⬇️
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-action-btn danger"
+                              title="Remover item"
+                              onClick={() => removerItem(index)}
+                              disabled={!isEditing}
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
+                        <div className="order-value">#{index + 1}</div>
                       </td>
                       <td data-label="Tipo">
                         <input
@@ -991,8 +1039,59 @@ export default function QuoteDetailIsland(props: {
                                       }}
                                     >
                                       <div className="form-row mobile-stack">
-                                        <div className="form-group">
-                                          <label className="form-label">Dia</label>
+                                        <div className="form-group" style={{ maxWidth: 140 }}>
+                                          <div className="form-label-row">
+                                            <label className="form-label">Dia</label>
+                                            <div className="icon-action-group">
+                                              <button
+                                                type="button"
+                                                className="icon-action-btn"
+                                                title="Mover para cima"
+                                                onClick={() =>
+                                                  updateCircuitSegments(index, (segments) => {
+                                                    if (!isEditing || segIndex === 0) return segments;
+                                                    const next = [...segments];
+                                                    const [removed] = next.splice(segIndex, 1);
+                                                    next.splice(segIndex - 1, 0, removed);
+                                                    return next;
+                                                  })
+                                                }
+                                                disabled={!isEditing || segIndex === 0}
+                                              >
+                                                ⬆️
+                                              </button>
+                                              <button
+                                                type="button"
+                                                className="icon-action-btn"
+                                                title="Mover para baixo"
+                                                onClick={() =>
+                                                  updateCircuitSegments(index, (segments) => {
+                                                    if (!isEditing || segIndex >= segments.length - 1) return segments;
+                                                    const next = [...segments];
+                                                    const [removed] = next.splice(segIndex, 1);
+                                                    next.splice(segIndex + 1, 0, removed);
+                                                    return next;
+                                                  })
+                                                }
+                                                disabled={!isEditing || segIndex >= circuitDays.length - 1}
+                                              >
+                                                ⬇️
+                                              </button>
+                                              <button
+                                                type="button"
+                                                className="icon-action-btn danger"
+                                                title="Remover dia"
+                                                onClick={() =>
+                                                  updateCircuitSegments(index, (segments) =>
+                                                    segments.filter((_, i) => i !== segIndex)
+                                                  )
+                                                }
+                                                disabled={!isEditing}
+                                              >
+                                                🗑️
+                                              </button>
+                                            </div>
+                                          </div>
                                           <input
                                             className="form-input"
                                             type="number"
@@ -1038,60 +1137,6 @@ export default function QuoteDetailIsland(props: {
                                             }
                                             disabled={!isEditing}
                                           />
-                                        </div>
-                                        <div
-                                          className="form-group mobile-stack-buttons"
-                                          style={{
-                                            alignSelf: "flex-end",
-                                            display: "flex",
-                                            gap: 6,
-                                            flexWrap: "wrap",
-                                          }}
-                                        >
-                                          <button
-                                            type="button"
-                                            className="btn btn-light w-full sm:w-auto"
-                                            onClick={() =>
-                                              updateCircuitSegments(index, (segments) => {
-                                                if (!isEditing || segIndex === 0) return segments;
-                                                const next = [...segments];
-                                                const [removed] = next.splice(segIndex, 1);
-                                                next.splice(segIndex - 1, 0, removed);
-                                                return next;
-                                              })
-                                            }
-                                            disabled={!isEditing || segIndex === 0}
-                                          >
-                                            ⬆️
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn btn-light w-full sm:w-auto"
-                                            onClick={() =>
-                                              updateCircuitSegments(index, (segments) => {
-                                                if (!isEditing || segIndex >= segments.length - 1) return segments;
-                                                const next = [...segments];
-                                                const [removed] = next.splice(segIndex, 1);
-                                                next.splice(segIndex + 1, 0, removed);
-                                                return next;
-                                              })
-                                            }
-                                            disabled={!isEditing || segIndex >= circuitDays.length - 1}
-                                          >
-                                            ⬇️
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn btn-light w-full sm:w-auto"
-                                            onClick={() =>
-                                              updateCircuitSegments(index, (segments) =>
-                                                segments.filter((_, i) => i !== segIndex)
-                                              )
-                                            }
-                                            disabled={!isEditing}
-                                          >
-                                            Remover
-                                          </button>
                                         </div>
                                       </div>
                                       <div className="form-group">

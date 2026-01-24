@@ -689,29 +689,31 @@ export default function QuoteImportIsland() {
                   return (
                     <React.Fragment key={item.temp_id}>
                       <tr style={needsReview ? { background: "#fef3c7" } : undefined}>
-                        <td className="order-cell">
-                          <div className="order-controls">
-                            <button
-                              type="button"
-                              className="btn-icon"
-                              title="Mover para cima"
-                              onClick={() => moveItem(index, "up")}
-                              disabled={index === 0}
-                              style={{ padding: "2px 6px" }}
-                            >
-                              ⬆️
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-icon"
-                              title="Mover para baixo"
-                              onClick={() => moveItem(index, "down")}
-                              disabled={index === draft.items.length - 1}
-                              style={{ padding: "2px 6px" }}
-                            >
-                              ⬇️
-                            </button>
+                        <td className="order-cell" data-label="">
+                          <div className="order-cell-head">
+                            <span className="order-label">Ordem</span>
+                            <div className="icon-action-group">
+                              <button
+                                type="button"
+                                className="icon-action-btn"
+                                title="Mover para cima"
+                                onClick={() => moveItem(index, "up")}
+                                disabled={index === 0}
+                              >
+                                ⬆️
+                              </button>
+                              <button
+                                type="button"
+                                className="icon-action-btn"
+                                title="Mover para baixo"
+                                onClick={() => moveItem(index, "down")}
+                                disabled={index === draft.items.length - 1}
+                              >
+                                ⬇️
+                              </button>
+                            </div>
                           </div>
+                          <div className="order-value">#{index + 1}</div>
                         </td>
                         <td>
                           <input

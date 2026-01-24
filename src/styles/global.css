@@ -375,6 +375,48 @@ body {
   color: var(--color-form-label);
 }
 
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.icon-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.icon-action-btn:hover {
+  background: #f1f5f9;
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-action-btn.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff1f2;
+}
+
 .quote-manual-client-row .form-label {
   display: block;
 }
@@ -533,15 +575,27 @@ body {
 }
 
 .quote-items-table .order-cell {
-  text-align: center;
+  text-align: left;
 }
 
-.quote-items-table .order-controls {
+.order-cell-head {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.order-label {
+  display: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-form-label);
+}
+
+.order-value {
+  margin-top: 4px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .clientes-table {
@@ -971,6 +1025,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  .order-label {
+    display: inline;
+  }
+
   .btn,
   .btn-icon {
     min-height: 44px;
@@ -1012,6 +1070,67 @@ body {
     flex-wrap: wrap;
     text-align: center;
     white-space: normal;
+  }
+
+  .dashboard-geral-page .table-mobile-cards {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .dashboard-geral-page .table-mobile-cards tr {
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    background: #fff;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .dashboard-geral-page .table-mobile-cards td {
+    background: #fff;
+  }
+
+  .dashboard-geral-page .table-mobile-cards tbody tr:nth-child(even),
+  .dashboard-geral-page .table-mobile-cards tbody tr:hover {
+    background: #fff;
+  }
+
+  .orcamentos-detalhe-page .table-mobile-cards.table-header-purple {
+    --table-card-border: var(--color-border);
+    --table-card-divider: var(--color-border);
+    --table-card-gap: transparent;
+  }
+
+  .orcamentos-detalhe-page .table-mobile-cards {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .orcamentos-detalhe-page .table-mobile-cards tr {
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+    background: #fff;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .orcamentos-detalhe-page .table-mobile-cards td {
+    background: #fff;
+  }
+
+  .orcamentos-detalhe-page .table-mobile-cards tbody tr:nth-child(even),
+  .orcamentos-detalhe-page .table-mobile-cards tbody tr:hover {
+    background: #fff;
+  }
+
+  .comissionamento-page {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
   }
 
   .has-mobile-actionbar {
@@ -1662,6 +1781,70 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.historico-viagens-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historico-viagens-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.mobile-collapsible {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .historico-viagens-section-title {
+    text-align: center;
+  }
+
+  .historico-viagens-modal .modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .historico-viagens-modal .historico-viagens-header {
+    text-align: center;
+  }
+
+  .historico-viagens-modal .modal-header .btn-ghost {
+    align-self: flex-end;
+  }
+
+  .historico-viagens-modal .table-mobile-cards.table-header-blue {
+    --table-card-border: var(--color-border);
+    --table-card-divider: var(--color-border);
+    --table-card-gap: transparent;
+  }
+
+  .historico-viagens-modal .table-mobile-cards {
+    --table-card-gap: transparent;
+    background: transparent;
+    padding: 0;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  .mobile-collapsible {
+    display: none;
+  }
+
+  .mobile-collapsible[data-open="true"] {
+    display: block;
+  }
 }
 .mobile-stack-buttons {
   display: flex;

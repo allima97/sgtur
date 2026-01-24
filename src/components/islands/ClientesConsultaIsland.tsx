@@ -341,14 +341,16 @@ export default function ClientesConsultaIsland() {
       <div className="modal-backdrop">
         <div className="modal-panel historico-viagens-modal" style={{ maxWidth: 1000, width: "95vw" }}>
           <div className="modal-header">
-            <div>
+            <div className="historico-viagens-header">
               <div
                 className="modal-title"
                 style={{ color: "#1d4ed8", fontSize: "1.2rem", fontWeight: 800 }}
               >
-                Histórico de {historicoCliente.nome}
+                {historicoCliente.nome}
               </div>
-              <small style={{ color: "#64748b" }}>Vendas e orçamentos do cliente</small>
+              <div className="historico-viagens-subtitle">
+                Histórico de Viagens e Orçamentos
+              </div>
             </div>
             <button className="btn-ghost" onClick={fecharHistorico}>✕</button>
           </div>
@@ -359,7 +361,9 @@ export default function ClientesConsultaIsland() {
             {!loadingHistorico && (
               <>
                 <div className="mb-2">
-                  <h4 style={{ marginBottom: 8 }}>Vendas</h4>
+                  <div className="card-base mb-2 historico-viagens-section-title" style={{ padding: "12px 16px" }}>
+                    <h4 style={{ margin: 0 }}>Vendas</h4>
+                  </div>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                       <thead>
@@ -410,7 +414,9 @@ export default function ClientesConsultaIsland() {
                 </div>
 
                 <div className="mb-2">
-                  <h4 style={{ marginBottom: 8 }}>Orçamentos</h4>
+                  <div className="card-base mb-2 historico-viagens-section-title" style={{ padding: "12px 16px" }}>
+                    <h4 style={{ margin: 0 }}>Orçamentos</h4>
+                  </div>
                   <div className="table-container overflow-x-auto">
                     <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
                       <thead>
@@ -452,6 +458,12 @@ export default function ClientesConsultaIsland() {
                 </div>
               </>
             )}
+          </div>
+
+          <div className="modal-footer mobile-stack-buttons">
+            <button className="btn btn-primary" onClick={fecharHistorico}>
+              Fechar
+            </button>
           </div>
         </div>
       </div>

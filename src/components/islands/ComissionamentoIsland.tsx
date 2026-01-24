@@ -680,7 +680,7 @@ export default function ComissionamentoIsland() {
   const cardColStyle = {};
 
   return (
-    <div className="card-base bg-transparent shadow-none p-0">
+    <div className="card-base bg-transparent shadow-none p-0 comissionamento-page">
       <div className="card-base mb-3">
         <div className="mobile-stack-buttons sm:hidden">
           <button type="button" className="btn btn-light" onClick={() => setShowFilters(true)}>

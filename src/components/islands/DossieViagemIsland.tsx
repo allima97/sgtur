@@ -1630,6 +1630,12 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               )}
             </div>
           </div>
+
+          <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+            <a className="btn btn-primary w-full sm:w-auto" href="/operacao/viagens">
+              Fechar
+            </a>
+          </div>
         </div>
       )}
 

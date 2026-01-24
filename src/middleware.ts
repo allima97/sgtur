@@ -5,7 +5,7 @@ const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const { url, cookies } = context;
+  const { url } = context;
   const pathname = url.pathname;
 
   // ROTAS PUBLICAS
@@ -16,12 +16,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/auth/update-password",
     "/test-env",
     "/favicon",
+    "/_astro",
     "/assets",
     "/public",
     "/pdfs",
   ];
 
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
+
+  // Rotas públicas e assets não precisam de sessão (evita set-cookie após response).
+  if (isPublic) return next();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error(
@@ -34,6 +38,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // Criar supabase SSR
+  const { cookies } = context;
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
@@ -56,9 +61,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
       },
     }
   );
-
-  // Se for rota pública → libera
-  if (isPublic) return next();
 
   // Verifica usuário logado
   const {

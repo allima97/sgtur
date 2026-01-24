@@ -1446,31 +1446,45 @@ export default function CircuitosIsland() {
                   }}
                 >
                   <div className="form-row mobile-stack" style={{ marginTop: 12 }}>
-                    <div className="form-group" style={{ alignItems: "flex-end" }}>
-                      <button
-                        type="button"
-                        className="btn btn-light"
-                        draggable={podeArrastar}
-                        disabled={!podeArrastar}
-                        onDragStart={(e) => {
-                          if (!podeArrastar) return;
-                          e.dataTransfer.effectAllowed = "move";
-                          e.dataTransfer.setData("text/plain", dia.tempId);
-                          iniciarDragDia(dia.tempId);
-                        }}
-                        onDragEnd={finalizarDragDia}
-                        title="Arraste para reordenar"
-                        style={{
-                          cursor: podeArrastar ? "grab" : "not-allowed",
-                          padding: "6px 10px",
-                          fontSize: 12,
-                        }}
-                      >
-                        Mover
-                      </button>
-                    </div>
-                    <div className="form-group" style={{ maxWidth: 120 }}>
-                      <label className="form-label">Dia</label>
+                    <div className="form-group" style={{ maxWidth: 140 }}>
+                      <div className="form-label-row">
+                        <label className="form-label">Dia</label>
+                        <div className="icon-action-group">
+                          <button
+                            type="button"
+                            className="icon-action-btn"
+                            title="Mover para cima"
+                            onClick={() => {
+                              if (idx === 0) return;
+                              reordenarDias(dia.tempId, dias[idx - 1].tempId);
+                            }}
+                            disabled={permissao === "view" || idx === 0}
+                          >
+                            ⬆️
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-action-btn"
+                            title="Mover para baixo"
+                            onClick={() => {
+                              if (idx >= dias.length - 1) return;
+                              reordenarDias(dia.tempId, dias[idx + 1].tempId);
+                            }}
+                            disabled={permissao === "view" || idx >= dias.length - 1}
+                          >
+                            ⬇️
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-action-btn danger"
+                            title="Remover dia"
+                            onClick={() => removerDia(dia.tempId)}
+                            disabled={permissao === "view" || dias.length === 1}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
                       <input
                         className="form-input"
                         type="number"
@@ -1489,16 +1503,6 @@ export default function CircuitosIsland() {
                         placeholder="Ex: Lisboa e Fatima"
                         disabled={permissao === "view"}
                       />
-                    </div>
-                    <div className="form-group" style={{ alignItems: "flex-end" }}>
-                      <button
-                        type="button"
-                        className="btn btn-light"
-                        onClick={() => removerDia(dia.tempId)}
-                        disabled={permissao === "view" || dias.length === 1}
-                      >
-                        Remover dia
-                      </button>
                     </div>
                   </div>
 

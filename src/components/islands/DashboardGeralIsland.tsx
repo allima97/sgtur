@@ -116,6 +116,7 @@ type FollowUpVenda = {
   vendedor_id: string | null;
   clientes?: { id: string; nome: string | null } | null;
   destino_cidade?: { id: string; nome: string | null } | null;
+  viagens?: { id: string; data_fim?: string | null }[] | null;
 };
 
 type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
@@ -279,6 +280,29 @@ const DashboardGeralIsland: React.FC = () => {
     vendas_produto: "bar",
     timeline: "line",
   } as Record<WidgetId, ChartType>);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 640px)");
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleChange);
+      return () => media.removeEventListener("change", handleChange);
+    }
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, []);
+
+  const chartPrefsEffective = useMemo(() => {
+    if (!isMobile) return chartPrefs;
+    return {
+      ...chartPrefs,
+      vendas_destino: "bar",
+      vendas_produto: "bar",
+    };
+  }, [chartPrefs, isMobile]);
 
   // Garante que novos widgets entram no order/visibility mesmo com preferências antigas
   useEffect(() => {
@@ -612,7 +636,8 @@ const DashboardGeralIsland: React.FC = () => {
                 data_final,
                 vendedor_id,
                 clientes:clientes (id, nome),
-                destino_cidade:cidades!destino_cidade_id (id, nome)
+                destino_cidade:cidades!destino_cidade_id (id, nome),
+                viagens:viagens (id, data_fim)
               `
               )
               .not("data_final", "is", null)
@@ -1175,7 +1200,12 @@ const DashboardGeralIsland: React.FC = () => {
   const tableScrollMaxHeight = 180;
   const tableWidgetIds: WidgetId[] = ["orcamentos", "viagens", "aniversariantes", "follow_up"];
 
-  const renderWidget = (id: WidgetId) => {
+  const renderWidget = (
+    id: WidgetId,
+    options?: { hideTitle?: boolean; variant?: "default" | "plain" }
+  ) => {
+    const hideTitle = options?.hideTitle;
+    const isPlain = options?.variant === "plain";
     switch (id) {
       case "kpis":
         return (
@@ -1326,7 +1356,9 @@ const DashboardGeralIsland: React.FC = () => {
         );
       case "vendas_destino":
         const tituloDestino =
-          chartPrefs.vendas_destino === "bar" ? "Vendas por Destino (Visão Completa)" : "Vendas por destino (Top 5)";
+          chartPrefsEffective.vendas_destino === "bar"
+            ? "Vendas por Destino (Visão Completa)"
+            : "Vendas por destino (Top 5)";
         return (
           <div className="card-base card-purple mb-3">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1334,17 +1366,17 @@ const DashboardGeralIsland: React.FC = () => {
               <select
                 className="form-select"
                 style={{ maxWidth: 160 }}
-                value={chartPrefs.vendas_destino || "pie"}
+                value={chartPrefsEffective.vendas_destino || "bar"}
                 onChange={(e) => alterarChart("vendas_destino", e.target.value as ChartType)}
               >
-                <option value="pie">Pizza</option>
                 <option value="bar">Barras</option>
+                {!isMobile && <option value="pie">Pizza</option>}
               </select>
             </div>
             <div style={{ width: "100%", height: 280 }}>
               {vendasPorDestinoFull.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
-              ) : chartPrefs.vendas_destino === "bar" ? (
+              ) : chartPrefsEffective.vendas_destino === "bar" ? (
                 <ResponsiveContainer>
                   <BarChart data={vendasPorDestinoFull}>
                     <XAxis dataKey="name" hide />
@@ -1427,17 +1459,17 @@ const DashboardGeralIsland: React.FC = () => {
               <select
                 className="form-select"
                 style={{ maxWidth: 160 }}
-                value={chartPrefs.vendas_produto || "bar"}
+                value={chartPrefsEffective.vendas_produto || "bar"}
                 onChange={(e) => alterarChart("vendas_produto", e.target.value as ChartType)}
               >
                 <option value="bar">Barras</option>
-                <option value="pie">Pizza</option>
+                {!isMobile && <option value="pie">Pizza</option>}
               </select>
             </div>
             <div style={{ width: "100%", height: 260 }}>
               {vendasPorProduto.length === 0 ? (
                 <div style={{ fontSize: "0.9rem" }}>Sem dados para o período.</div>
-              ) : chartPrefs.vendas_produto === "pie" ? (
+              ) : chartPrefsEffective.vendas_produto === "pie" ? (
                 <div
                   style={{
                     display: "flex",
@@ -1557,9 +1589,11 @@ const DashboardGeralIsland: React.FC = () => {
         );
       case "orcamentos": {
         const shouldScrollOrcamentos = orcamentosRecentes.length > 3;
-        return (
-          <div className="card-base card-purple mb-3">
-            <h3 style={{ marginBottom: 8 }}>Orçamentos recentes ({orcamentosRecentes.length})</h3>
+        const conteudo = (
+          <>
+            {!hideTitle && (
+              <h3 style={{ marginBottom: 8 }}>Orçamentos recentes ({orcamentosRecentes.length})</h3>
+            )}
             <div
               className="table-container overflow-x-auto"
               style={{
@@ -1603,14 +1637,19 @@ const DashboardGeralIsland: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </>
         );
+        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "viagens": {
         const shouldScrollViagens = proximasViagensAgrupadas.length > 3;
-        return (
-          <div className="card-base card-purple mb-3">
-            <h3 style={{ marginBottom: 8 }}>Próximas viagens ({proximasViagensAgrupadas.length})</h3>
+        const conteudo = (
+          <>
+            {!hideTitle && (
+              <h3 style={{ marginBottom: 8 }}>
+                Próximas viagens ({proximasViagensAgrupadas.length})
+              </h3>
+            )}
             {permissaoOperacao.permissao === "none" ? (
               <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
             ) : (
@@ -1667,14 +1706,19 @@ const DashboardGeralIsland: React.FC = () => {
                 </table>
               </div>
             )}
-          </div>
+          </>
         );
+        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "aniversariantes": {
         const shouldScrollAniversariantes = aniversariantesMes.length > 3;
-        return (
-          <div className="card-base card-purple mb-3">
-            <h3 style={{ marginBottom: 8 }}>Aniversariantes do mês ({aniversariantesMes.length})</h3>
+        const conteudo = (
+          <>
+            {!hideTitle && (
+              <h3 style={{ marginBottom: 8 }}>
+                Aniversariantes do mês ({aniversariantesMes.length})
+              </h3>
+            )}
             <div
               className="table-container overflow-x-auto"
               style={{
@@ -1719,14 +1763,17 @@ const DashboardGeralIsland: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </>
         );
+        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       case "follow_up": {
         const shouldScrollFollowUp = followUpsRecentes.length > 3;
-        return (
-          <div className="card-base card-purple mb-3">
-            <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
+        const conteudo = (
+          <>
+            {!hideTitle && (
+              <h3 style={{ marginBottom: 8 }}>Follow-Up ({followUpsRecentes.length})</h3>
+            )}
             <div
               className="table-container overflow-x-auto"
               style={{
@@ -1758,9 +1805,24 @@ const DashboardGeralIsland: React.FC = () => {
                       <td data-label="Retorno">{formatarDataParaExibicao(item.data_final || "")}</td>
                       <td className="th-actions" data-label="Ver">
                         <div className="action-buttons">
-                          <a className="btn-icon" href={`/vendas/cadastro?id=${item.id}`} title="Ver follow-up">
-                            👁️
-                          </a>
+                          {(() => {
+                            const viagemId =
+                              item.viagens?.find((v) => v.data_fim && v.data_fim === item.data_final)?.id ||
+                              item.viagens?.[0]?.id ||
+                              null;
+                            if (!viagemId) {
+                              return (
+                                <span className="btn-icon" title="Dossiê indisponível">
+                                  👁️
+                                </span>
+                              );
+                            }
+                            return (
+                              <a className="btn-icon" href={`/operacao/viagens/${viagemId}`} title="Ver dossiê">
+                                👁️
+                              </a>
+                            );
+                          })()}
                         </div>
                       </td>
                     </tr>
@@ -1768,8 +1830,9 @@ const DashboardGeralIsland: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </>
         );
+        return isPlain ? <div className="mb-3">{conteudo}</div> : <div className="card-base card-purple mb-3">{conteudo}</div>;
       }
       default:
         return null;
@@ -2023,45 +2086,47 @@ const DashboardGeralIsland: React.FC = () => {
       </div>
 
       {tableWidgets.length > 0 && (
-        <div className="mobile-only card-base card-purple mb-3">
-          <div className="flex flex-col gap-2">
-            {tableWidgets.map((id) => {
-              const meta = ALL_WIDGETS.find((w) => w.id === id);
-              const aberto = mobileWidgetOpen[id];
-              return (
-                <button
-                  key={`mobile-btn-${id}`}
-                  type="button"
-                  className={`btn w-full ${aberto ? "btn-primary" : "btn-light"}`}
-                  onClick={() => toggleMobileWidget(id as WidgetId)}
-                >
-                  {meta?.titulo || id}
-                </button>
-              );
-            })}
+        <>
+          <div className="mobile-only">
+            <div style={{ display: "grid", gap: 12 }}>
+              {tableWidgets.map((id) => {
+                const meta = ALL_WIDGETS.find((w) => w.id === id);
+                const aberto = mobileWidgetOpen[id];
+                return (
+                  <div key={`mobile-widget-${id}`}>
+                    <button
+                      type="button"
+                      className={`btn w-full ${aberto ? "btn-primary" : "btn-light"}`}
+                      onClick={() => toggleMobileWidget(id as WidgetId)}
+                    >
+                      {meta?.titulo || id}
+                    </button>
+                    {aberto && (
+                      <div style={{ marginTop: 12 }}>
+                        {renderWidget(id as WidgetId, { hideTitle: true, variant: "plain" })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Linha de tabelas/listas */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-          gap: 12,
-          alignItems: "start",
-        }}
-      >
-        {tableWidgets.map((id) => (
+          {/* Linha de tabelas/listas (desktop) */}
           <div
-            key={id}
-            className="mobile-collapsible"
-            data-open={mobileWidgetOpen[id] ? "true" : "false"}
+            className="hidden sm:grid"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+              gap: 12,
+              alignItems: "start",
+            }}
           >
-            {renderWidget(id as WidgetId)}
+            {tableWidgets.map((id) => (
+              <div key={id}>{renderWidget(id as WidgetId)}</div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {showCustomize && (
         <div className="modal-backdrop">
