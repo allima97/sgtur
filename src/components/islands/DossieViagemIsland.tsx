@@ -776,69 +776,74 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           </div>
 
           {abaAtiva === "dados" && (
-            <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {clienteNome && (
-                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
-                  <span style={{ color: "#1d4ed8" }}>Cliente:</span> {clienteNome}
+                <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>
+                    <span style={{ color: "#1d4ed8" }}>Cliente:</span> {clienteNome}
+                  </div>
                 </div>
               )}
-              <h3 style={{ marginBottom: 8 }}>Dados da viagem</h3>
-              <div className="form-row"></div>
-              <div className="form-group">
-                {recibosOrdenados.length === 0 ? (
-                  <div>-</div>
-                ) : (
-                  <div className="table-container overflow-x-auto">
-                    <table className="table-default table-mobile-cards min-w-[720px]">
-                      <thead>
-                        <tr>
-                          <th>Recibo</th>
-                          <th>Tipo Produto</th>
-                          <th>Produto</th>
-                          <th>De</th>
-                          <th>Até</th>
-                          <th>Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recibosOrdenados.map((r) => {
-                          const isPrincipal = reciboPrincipal?.id === r.id;
-                          const tipoLabel = r.tipo_produtos?.nome || r.tipo_produtos?.tipo || "-";
-                          const produtoNome = r.produto_resolvido?.nome || r.produto_id || "-";
-                          const valorTotal =
-                            r.valor_total !== null && r.valor_total !== undefined
-                              ? Number(r.valor_total).toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                })
-                              : "-";
-                          return (
-                            <tr key={r.id}>
-                              <td data-label="Recibo">
-                                {r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo"}
-                                {isPrincipal ? " (Principal)" : ""}
-                              </td>
-                              <td data-label="Tipo Produto">{tipoLabel || "-"}</td>
-                              <td data-label="Produto">{produtoNome || "-"}</td>
-                              <td data-label="De">{formatarDataParaExibicao(r.data_inicio)}</td>
-                              <td data-label="Até">{formatarDataParaExibicao(r.data_fim)}</td>
-                              <td data-label="Valor">{valorTotal}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+
+              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                <h3 style={{ margin: 0 }}>Dados da viagem</h3>
               </div>
+
+              {recibosOrdenados.length === 0 ? (
+                <div>-</div>
+              ) : (
+                <div className="table-container overflow-x-auto">
+                  <table className="table-default table-mobile-cards min-w-[720px]">
+                    <thead>
+                      <tr>
+                        <th>Recibo</th>
+                        <th>Tipo Produto</th>
+                        <th>Produto</th>
+                        <th>De</th>
+                        <th>Até</th>
+                        <th>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recibosOrdenados.map((r) => {
+                        const isPrincipal = reciboPrincipal?.id === r.id;
+                        const tipoLabel = r.tipo_produtos?.nome || r.tipo_produtos?.tipo || "-";
+                        const produtoNome = r.produto_resolvido?.nome || r.produto_id || "-";
+                        const valorTotal =
+                          r.valor_total !== null && r.valor_total !== undefined
+                            ? Number(r.valor_total).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })
+                            : "-";
+                        return (
+                          <tr key={r.id}>
+                            <td data-label="Recibo">
+                              {r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo"}
+                              {isPrincipal ? " (Principal)" : ""}
+                            </td>
+                            <td data-label="Tipo Produto">{tipoLabel || "-"}</td>
+                            <td data-label="Produto">{produtoNome || "-"}</td>
+                            <td data-label="De">{formatarDataParaExibicao(r.data_inicio)}</td>
+                            <td data-label="Até">{formatarDataParaExibicao(r.data_fim)}</td>
+                            <td data-label="Valor">{valorTotal}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
           {abaAtiva === "acompanhantes" && (
-            <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-              <h3 style={{ marginBottom: 8 }}>
-                Acompanhantes ({viagem.viagem_acompanhantes?.length || 0})
-              </h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                <h3 style={{ margin: 0 }}>
+                  Acompanhantes ({viagem.viagem_acompanhantes?.length || 0})
+                </h3>
+              </div>
 
               {podeCriar && (
                 <div
@@ -1144,8 +1149,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           )}
 
           {abaAtiva === "servicos" && (
-            <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-              <h3 style={{ marginBottom: 8 }}>Serviços da viagem ({servicos.length})</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                <h3 style={{ margin: 0 }}>Serviços da viagem ({servicos.length})</h3>
+              </div>
 
               {podeCriar && (
                 <div
@@ -1379,8 +1386,10 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           )}
 
           {abaAtiva === "documentos" && (
-            <div className="card-base border border-slate-200">
-              <h3 className="mb-2">Documentos / vouchers ({documentos.length})</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                <h3 style={{ margin: 0 }}>Documentos / vouchers ({documentos.length})</h3>
+              </div>
               {podeCriar && (
                 <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
                   <div className="mobile-only" style={{ marginBottom: 8 }}>

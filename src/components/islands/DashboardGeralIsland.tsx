@@ -151,7 +151,7 @@ const BASE_KPIS: { id: KpiId; titulo: string }[] = [
   { id: "kpi_ticket_medio", titulo: "Ticket médio" },
   { id: "kpi_orcamentos", titulo: "Orçamentos" },
   { id: "kpi_conversao", titulo: "Conv. Orç → Vendas" },
-  { id: "kpi_meta", titulo: "Meta somada" },
+  { id: "kpi_meta", titulo: "Meta do mês" },
   { id: "kpi_meta_diaria", titulo: "Meta diária" },
   { id: "kpi_atingimento", titulo: "Atingimento meta" },
   { id: "kpi_dias_restantes", titulo: "Dias restantes" },
