@@ -1204,18 +1204,18 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
                   <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary w-full sm:w-auto"
-                      onClick={() =>
-                        setMostrarServicoForm((prev) => {
-                          if (prev) resetServico();
-                          return !prev;
-                        })
-                      }
-                    >
-                      {mostrarServicoForm ? "Fechar formulário" : "Adicionar serviço"}
-                    </button>
+                    {!mostrarServicoForm && (
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full sm:w-auto"
+                        onClick={() => {
+                          resetServico();
+                          setMostrarServicoForm(true);
+                        }}
+                      >
+                        Adicionar serviço
+                      </button>
+                    )}
                   </div>
                   <div className="mobile-collapsible" data-open={mostrarServicoForm ? "true" : "false"}>
                     <div style={{ fontWeight: 600, marginBottom: 8 }}>
@@ -1274,7 +1274,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         <label className="form-label">Data início</label>
                         <input
                           type="date"
-                          className="form-input"
+                          className="form-input w-full"
                           value={servicoForm.data_inicio}
                           onChange={(e) =>
                             setServicoForm((prev) => {
@@ -1292,7 +1292,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         <label className="form-label">Data fim</label>
                         <input
                           type="date"
-                          className="form-input"
+                          className="form-input w-full"
                           value={servicoForm.data_fim}
                           min={servicoForm.data_inicio || undefined}
                           onChange={(e) =>
@@ -1359,21 +1359,22 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       >
                         {savingServico ? "Salvando..." : editServicoId ? "Salvar alterações" : "Adicionar serviço"}
                       </button>
-                      {editServicoId && (
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
-                          type="button"
-                          onClick={resetServico}
-                          disabled={savingServico}
-                          style={{
-                            backgroundColor: "#fee2e2",
-                            color: "#b91c1c",
-                            borderColor: "#fecaca",
-                          }}
-                        >
-                          Cancelar edição
-                        </button>
-                      )}
+                      <button
+                        className="btn btn-light w-full sm:w-auto"
+                        type="button"
+                        onClick={() => {
+                          resetServico();
+                          setMostrarServicoForm(false);
+                        }}
+                        disabled={savingServico}
+                        style={{
+                          backgroundColor: "#fee2e2",
+                          color: "#b91c1c",
+                          borderColor: "#fecaca",
+                        }}
+                      >
+                        Cancelar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1459,22 +1460,15 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               {podeCriar && (
                 <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
                   <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary w-full sm:w-auto"
-                      onClick={() =>
-                        setMostrarDocumentoForm((prev) => {
-                          if (prev) {
-                            setDocTitulo("");
-                            setDocTipo("voucher");
-                            setDocFile(null);
-                          }
-                          return !prev;
-                        })
-                      }
-                    >
-                      {mostrarDocumentoForm ? "Fechar formulário" : "Enviar documento"}
-                    </button>
+                    {!mostrarDocumentoForm && (
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full sm:w-auto"
+                        onClick={() => setMostrarDocumentoForm(true)}
+                      >
+                        Enviar documento
+                      </button>
+                    )}
                   </div>
                   <div className="mobile-collapsible" data-open={mostrarDocumentoForm ? "true" : "false"}>
                     <div className="font-semibold mb-2">Enviar documento</div>
@@ -1515,19 +1509,39 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         />
                       </div>
                     </div>
-                    <button
-                      className="btn btn-light w-full sm:w-auto"
-                      type="button"
-                      onClick={salvarDocumento}
-                      disabled={savingDoc}
-                      style={{
-                        backgroundColor: "#dcfce7",
-                        color: "#166534",
-                        borderColor: "#86efac",
-                      }}
-                    >
-                      {savingDoc ? "Enviando..." : "Enviar documento"}
-                    </button>
+                    <div className="mobile-stack-buttons">
+                      <button
+                        className="btn btn-light w-full sm:w-auto"
+                        type="button"
+                        onClick={salvarDocumento}
+                        disabled={savingDoc}
+                        style={{
+                          backgroundColor: "#dcfce7",
+                          color: "#166534",
+                          borderColor: "#86efac",
+                        }}
+                      >
+                        {savingDoc ? "Enviando..." : "Enviar documento"}
+                      </button>
+                      <button
+                        className="btn btn-light w-full sm:w-auto"
+                        type="button"
+                        onClick={() => {
+                          setDocTitulo("");
+                          setDocTipo("voucher");
+                          setDocFile(null);
+                          setMostrarDocumentoForm(false);
+                        }}
+                        disabled={savingDoc}
+                        style={{
+                          backgroundColor: "#fee2e2",
+                          color: "#b91c1c",
+                          borderColor: "#fecaca",
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                     <div className="text-xs text-slate-500 mt-2">
                       Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
                     </div>
