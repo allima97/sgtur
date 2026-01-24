@@ -907,24 +907,6 @@ body {
   .table-mobile-cards .th-actions .action-buttons::-webkit-scrollbar {
     height: 4px;
   }
-
-  .historico-viagens-modal .table-mobile-cards {
-    --table-card-gap: transparent !important;
-    background: transparent !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-  }
-
-  .historico-viagens-modal .table-mobile-cards.table-header-blue {
-    --table-card-border: var(--color-border) !important;
-    --table-card-divider: var(--color-border) !important;
-    --table-card-gap: transparent !important;
-  }
-
-  .historico-viagens-modal .table-container::before,
-  .historico-viagens-modal .table-container::after {
-    display: none !important;
-  }
 }
 
 /* Fixes for very narrow mobile viewports (ex: 412x914) to avoid horizontal overflow
@@ -1165,8 +1147,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   ) .table-mobile-cards {
     --table-card-gap: transparent !important;
     background: transparent !important;
@@ -1191,8 +1172,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   ) .table-container::before,
   :is(
     .vendas-consulta-page,
@@ -1212,8 +1192,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   ) .table-container::after {
     display: none !important;
   }
@@ -1309,8 +1288,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards.table-header-blue,
   :is(
@@ -1330,8 +1308,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards.table-header-green,
   :is(
@@ -1351,8 +1328,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards.table-header-teal,
   :is(
@@ -1372,8 +1348,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards.table-header-purple {
     --table-card-border: var(--color-border);
@@ -1398,8 +1373,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards,
   :is(
@@ -1419,8 +1393,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards table,
   :is(
@@ -1440,8 +1413,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tbody,
   :is(
@@ -1461,8 +1433,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tr,
   :is(
@@ -1482,8 +1453,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards td {
     min-width: 0 !important;
@@ -1508,8 +1478,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards {
     padding: 0;
@@ -1534,8 +1503,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tr {
     border: 1px solid var(--color-border);
@@ -1563,8 +1531,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards td {
     background: #fff;
@@ -1587,8 +1554,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tbody tr:nth-child(even),
   :is(
@@ -1608,8 +1574,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tbody tr:hover {
     background: #fff;
@@ -1632,8 +1597,7 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards td:last-child {
     border-bottom: 0;
@@ -1656,57 +1620,9 @@ body {
     .metas-page,
     .cambios-page,
     .regras-comissao-page,
-    .viagens-page,
-    .dossie-viagem-page
+    .viagens-page
   )
   .table-mobile-cards tr:last-child {
-    margin-bottom: 0;
-  }
-
-  .dashboard-geral-page .table-mobile-cards {
-    --table-card-gap: transparent !important;
-    background: transparent !important;
-    padding: 0 !important;
-  }
-
-  .dashboard-geral-page .table-container::before,
-  .dashboard-geral-page .table-container::after {
-    display: none !important;
-  }
-
-  .dashboard-geral-page .table-mobile-cards,
-  .dashboard-geral-page .table-mobile-cards table,
-  .dashboard-geral-page .table-mobile-cards tbody,
-  .dashboard-geral-page .table-mobile-cards tr,
-  .dashboard-geral-page .table-mobile-cards td {
-    min-width: 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .dashboard-geral-page .table-mobile-cards tr {
-    border: 1px solid var(--color-border);
-    box-shadow: none;
-    background: #fff;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-
-  .dashboard-geral-page .table-mobile-cards td {
-    background: #fff;
-  }
-
-  .dashboard-geral-page .table-mobile-cards tbody tr:nth-child(even),
-  .dashboard-geral-page .table-mobile-cards tbody tr:hover {
-    background: #fff;
-  }
-
-  .dashboard-geral-page .table-mobile-cards td:last-child {
-    border-bottom: 0;
-  }
-
-  .dashboard-geral-page .table-mobile-cards tr:last-child {
     margin-bottom: 0;
   }
 }
@@ -1752,24 +1668,6 @@ body {
   flex-direction: row;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.mobile-only {
-  display: none;
-}
-
-@media (max-width: 640px) {
-  .mobile-only {
-    display: block !important;
-  }
-
-  .desktop-only {
-    display: none !important;
-  }
-
-  .mobile-collapsible[data-open="false"] {
-    display: none !important;
-  }
 }
 
 :root {

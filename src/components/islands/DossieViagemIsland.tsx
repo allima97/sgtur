@@ -419,6 +419,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       observacoes: acomp.observacoes || "",
     });
     setMostrarVinculoAcomp(true);
+    setMostrarCadastroAcomp(false);
   }
 
   async function adicionarAcompanhante() {
@@ -722,7 +723,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
   return (
     <div className="page-content-wrap dossie-viagem-page">
-      <div className="card-base card-purple mb-3 list-toolbar-sticky">
+      <div className="card-base card-purple mb-3 list-toolbar-sticky hidden sm:block">
         <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end" }}>
           <a className="btn btn-light w-full sm:w-auto" href="/operacao/viagens">
             Voltar
@@ -742,387 +743,108 @@ export default function DossieViagemIsland({ viagemId }: Props) {
 
       {!erro && viagem && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div className="card-base card-purple">
-            <div className="mobile-stack-buttons">
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaAtiva === "dados" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaAtiva("dados")}
-              >
-                Dados da viagem
-              </button>
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaAtiva === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaAtiva("acompanhantes")}
-              >
-                Acompanhantes
-              </button>
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaAtiva === "servicos" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaAtiva("servicos")}
-              >
-                Serviços da viagem
-              </button>
-              <button
-                type="button"
-                className={`btn w-full sm:w-auto ${abaAtiva === "documentos" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setAbaAtiva("documentos")}
-              >
-                Documentos / vouchers
-              </button>
-            </div>
-          </div>
-
-          {abaAtiva === "dados" && (
-            <div style={{ display: "grid", gap: 12 }}>
-              {clienteNome && (
-                <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    <span style={{ color: "#1d4ed8" }}>Cliente:</span> {clienteNome}
-                  </div>
-                </div>
-              )}
-
-              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
-                  Dados da viagem
-                </h3>
+          {clienteNome && (
+            <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>
+                <span style={{ color: "#1d4ed8" }}>Cliente:</span> {clienteNome}
               </div>
-
-              {recibosOrdenados.length === 0 ? (
-                <div>-</div>
-              ) : (
-                <div className="table-container overflow-x-auto">
-                  <table className="table-default table-mobile-cards min-w-[720px]">
-                    <thead>
-                      <tr>
-                        <th>Recibo</th>
-                        <th>Tipo Produto</th>
-                        <th>Produto</th>
-                        <th>De</th>
-                        <th>Até</th>
-                        <th>Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recibosOrdenados.map((r) => {
-                        const isPrincipal = reciboPrincipal?.id === r.id;
-                        const tipoLabel = r.tipo_produtos?.nome || r.tipo_produtos?.tipo || "-";
-                        const produtoNome = r.produto_resolvido?.nome || r.produto_id || "-";
-                        const valorTotal =
-                          r.valor_total !== null && r.valor_total !== undefined
-                            ? Number(r.valor_total).toLocaleString("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              })
-                            : "-";
-                        return (
-                          <tr key={r.id}>
-                            <td data-label="Recibo">
-                              {r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo"}
-                              {isPrincipal ? " (Principal)" : ""}
-                            </td>
-                            <td data-label="Tipo Produto">{tipoLabel || "-"}</td>
-                            <td data-label="Produto">{produtoNome || "-"}</td>
-                            <td data-label="De">{formatarDataParaExibicao(r.data_inicio)}</td>
-                            <td data-label="Até">{formatarDataParaExibicao(r.data_fim)}</td>
-                            <td data-label="Valor">{valorTotal}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
           )}
 
-          {abaAtiva === "acompanhantes" && (
+          <div style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "grid", gap: 12 }}>
-              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
+              <button
+                type="button"
+                className="card-base"
+                onClick={() => setAbaAtiva("dados")}
+                aria-pressed={abaAtiva === "dados"}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <h3
+                  className="text-center sm:text-left"
+                  style={{ margin: 0, color: abaAtiva === "dados" ? "#1d4ed8" : "#0f172a" }}
+                >
+                  Dados da viagem
+                </h3>
+              </button>
+
+              {abaAtiva === "dados" && (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {recibosOrdenados.length === 0 ? (
+                    <div>-</div>
+                  ) : (
+                    <div className="table-container overflow-x-auto">
+                      <table className="table-default table-mobile-cards min-w-[720px]">
+                        <thead>
+                          <tr>
+                            <th>Recibo</th>
+                            <th>Tipo Produto</th>
+                            <th>Produto</th>
+                            <th>De</th>
+                            <th>Até</th>
+                            <th>Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recibosOrdenados.map((r) => {
+                            const isPrincipal = reciboPrincipal?.id === r.id;
+                            const tipoLabel = r.tipo_produtos?.nome || r.tipo_produtos?.tipo || "-";
+                            const produtoNome = r.produto_resolvido?.nome || r.produto_id || "-";
+                            const valorTotal =
+                              r.valor_total !== null && r.valor_total !== undefined
+                                ? Number(r.valor_total).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })
+                                : "-";
+                            return (
+                              <tr key={r.id}>
+                                <td data-label="Recibo">
+                                  {r.numero_recibo ? `Recibo ${r.numero_recibo}` : "Recibo"}
+                                  {isPrincipal ? " (Principal)" : ""}
+                                </td>
+                                <td data-label="Tipo Produto">{tipoLabel || "-"}</td>
+                                <td data-label="Produto">{produtoNome || "-"}</td>
+                                <td data-label="De">{formatarDataParaExibicao(r.data_inicio)}</td>
+                                <td data-label="Até">{formatarDataParaExibicao(r.data_fim)}</td>
+                                <td data-label="Valor">{valorTotal}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <button
+                type="button"
+                className="card-base"
+                onClick={() => setAbaAtiva("acompanhantes")}
+                aria-pressed={abaAtiva === "acompanhantes"}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <h3
+                  className="text-center sm:text-left"
+                  style={{ margin: 0, color: abaAtiva === "acompanhantes" ? "#1d4ed8" : "#0f172a" }}
+                >
                   Acompanhantes ({viagem.viagem_acompanhantes?.length || 0})
                 </h3>
-              </div>
+              </button>
 
-              {podeCriar && (
-                <div
-                  className="card-base"
-                  style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
-                >
-                  <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    {!mostrarVinculoAcomp && (
-                      <button
-                        type="button"
-                        className="btn btn-primary w-full sm:w-auto"
-                        onClick={() =>
-                          setMostrarVinculoAcomp((prev) => {
-                            if (prev) {
-                              resetVinculoAcompanhante();
-                            }
-                            return !prev;
-                          })
-                        }
-                      >
-                        Vincular acompanhante
-                      </button>
-                    )}
-                  </div>
-                  <div className="mobile-collapsible" data-open={mostrarVinculoAcomp ? "true" : "false"}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                      {editAcompId ? "Editar acompanhante" : "Vincular acompanhante existente"}
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">Acompanhante</label>
-                        <select
-                          className="form-select"
-                          value={novoAcomp.acompanhante_id}
-                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, acompanhante_id: e.target.value }))}
-                        >
-                          <option value="">Selecione</option>
-                          {acompanhantesCliente.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.nome_completo}
-                              {a.cpf ? ` • ${a.cpf}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Papel</label>
-                        <select
-                          className="form-select"
-                          value={novoAcomp.papel}
-                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, papel: e.target.value }))}
-                        >
-                          <option value="passageiro">Passageiro</option>
-                          <option value="responsavel">Responsável</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Documento URL</label>
-                        <input
-                          type="url"
-                          className="form-input"
-                          value={novoAcomp.documento_url}
-                          onChange={(e) => setNovoAcomp((prev) => ({ ...prev, documento_url: e.target.value }))}
-                          placeholder="https://"
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Observações</label>
-                      <textarea
-                        className="form-textarea"
-                        value={novoAcomp.observacoes}
-                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
-                      />
-                    </div>
-                    <div className="mobile-stack-buttons">
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={adicionarAcompanhante}
-                        disabled={savingAcomp}
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          color: "#166534",
-                          borderColor: "#86efac",
-                        }}
-                      >
-                        {savingAcomp ? "Salvando..." : "Salvar vínculo"}
-                      </button>
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={() =>
-                          setMostrarVinculoAcomp((prev) => {
-                            if (prev) {
-                              resetVinculoAcompanhante();
-                            }
-                            return !prev;
-                          })
-                        }
-                        disabled={savingAcomp}
-                        style={{
-                          backgroundColor: "#fee2e2",
-                          color: "#b91c1c",
-                          borderColor: "#fecaca",
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {podeCriar && (
-                <div
-                  className="card-base"
-                  style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
-                >
-                  <div className="desktop-only" style={{ fontWeight: 600, marginBottom: 8 }}>Cadastrar acompanhante</div>
-                  {erroCadastroAcomp && (
-                    <div style={{ color: "red", marginBottom: 8 }}>{erroCadastroAcomp}</div>
-                  )}
-                  {!mostrarCadastroAcomp && (
-                    <button
-                      type="button"
-                      className="btn btn-primary w-full sm:w-auto"
-                      onClick={() => {
-                        resetCadastroAcompanhante();
-                        setMostrarCadastroAcomp(true);
-                      }}
-                    >
-                      Cadastrar acompanhante
-                    </button>
-                  )}
-                  {mostrarCadastroAcomp && (
-                    <>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label className="form-label">Nome completo</label>
-                          <input
-                            className="form-input"
-                            value={cadastroAcompForm.nome_completo}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({
-                                ...prev,
-                                nome_completo: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">CPF</label>
-                          <input
-                            className="form-input"
-                            value={cadastroAcompForm.cpf}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Telefone</label>
-                          <input
-                            className="form-input"
-                            value={cadastroAcompForm.telefone}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Parentesco</label>
-                          <select
-                            className="form-select"
-                            value={cadastroAcompForm.grau_parentesco}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({
-                                ...prev,
-                                grau_parentesco: e.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">Selecione</option>
-                            {parentescoOptions.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label className="form-label">RG</label>
-                          <input
-                            className="form-input"
-                            value={cadastroAcompForm.rg}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({ ...prev, rg: e.target.value }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Data nascimento</label>
-                          <input
-                            type="date"
-                            className="form-input"
-                            value={cadastroAcompForm.data_nascimento}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({
-                                ...prev,
-                                data_nascimento: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Observações</label>
-                          <input
-                            className="form-input"
-                            value={cadastroAcompForm.observacoes}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({
-                                ...prev,
-                                observacoes: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="form-group" style={{ alignSelf: "flex-end" }}>
-                          <label className="form-label">Ativo</label>
-                          <input
-                            type="checkbox"
-                            checked={cadastroAcompForm.ativo}
-                            onChange={(e) =>
-                              setCadastroAcompForm((prev) => ({
-                                ...prev,
-                                ativo: e.target.checked,
-                              }))
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="mobile-stack-buttons">
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
-                          type="button"
-                          onClick={salvarCadastroAcompanhante}
-                          disabled={salvandoCadastroAcomp}
-                          style={{
-                            backgroundColor: "#dcfce7",
-                            color: "#166534",
-                            borderColor: "#86efac",
-                          }}
-                        >
-                          {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
-                        </button>
-                        <button
-                          className="btn btn-light w-full sm:w-auto"
-                          type="button"
-                          onClick={() => resetCadastroAcompanhante(true)}
-                          disabled={salvandoCadastroAcomp}
-                          style={{
-                            backgroundColor: "#fee2e2",
-                            color: "#b91c1c",
-                            borderColor: "#fecaca",
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
+              {abaAtiva === "acompanhantes" && (
+            <div style={{ display: "grid", gap: 12 }}>
               <div className="table-container overflow-x-auto">
                 <table className="table-default table-mobile-cards min-w-[620px]">
                   <thead>
@@ -1187,27 +909,376 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
-
-          {abaAtiva === "servicos" && (
-            <div style={{ display: "grid", gap: 12 }}>
-              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
-                  Serviços da viagem ({servicos.length})
-                </h3>
-              </div>
 
               {podeCriar && (
+                <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
+                  <button
+                    type="button"
+                    className="btn btn-purple w-full sm:w-auto"
+                    onClick={() => {
+                      resetCadastroAcompanhante();
+                      setMostrarCadastroAcomp(true);
+                      setMostrarVinculoAcomp(false);
+                    }}
+                  >
+                    Cadastrar acompanhante
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-purple w-full sm:w-auto"
+                    onClick={() =>
+                      setMostrarVinculoAcomp((prev) => {
+                        if (prev) {
+                          resetVinculoAcompanhante();
+                        }
+                        setMostrarCadastroAcomp(false);
+                        return !prev;
+                      })
+                    }
+                  >
+                    Vincular acompanhante
+                  </button>
+                </div>
+              )}
+
+              {podeCriar && mostrarCadastroAcomp && (
                 <div
                   className="card-base"
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
-                  <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    {!mostrarServicoForm && (
+                  {erroCadastroAcomp && (
+                    <div style={{ color: "red", marginBottom: 8 }}>{erroCadastroAcomp}</div>
+                  )}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Nome completo</label>
+                      <input
+                        className="form-input"
+                        value={cadastroAcompForm.nome_completo}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({
+                            ...prev,
+                            nome_completo: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">CPF</label>
+                      <input
+                        className="form-input"
+                        value={cadastroAcompForm.cpf}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({ ...prev, cpf: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Telefone</label>
+                      <input
+                        className="form-input"
+                        value={cadastroAcompForm.telefone}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({ ...prev, telefone: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Parentesco</label>
+                      <select
+                        className="form-select"
+                        value={cadastroAcompForm.grau_parentesco}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({
+                            ...prev,
+                            grau_parentesco: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Selecione</option>
+                        {parentescoOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">RG</label>
+                      <input
+                        className="form-input"
+                        value={cadastroAcompForm.rg}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({ ...prev, rg: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data nascimento</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={cadastroAcompForm.data_nascimento}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({
+                            ...prev,
+                            data_nascimento: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Observações</label>
+                      <input
+                        className="form-input"
+                        value={cadastroAcompForm.observacoes}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({
+                            ...prev,
+                            observacoes: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="form-group" style={{ alignSelf: "flex-end" }}>
+                      <label className="form-label">Ativo</label>
+                      <input
+                        type="checkbox"
+                        checked={cadastroAcompForm.ativo}
+                        onChange={(e) =>
+                          setCadastroAcompForm((prev) => ({
+                            ...prev,
+                            ativo: e.target.checked,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="mobile-stack-buttons">
+                    <button
+                      className="btn btn-light w-full sm:w-auto"
+                      type="button"
+                      onClick={salvarCadastroAcompanhante}
+                      disabled={salvandoCadastroAcomp}
+                      style={{
+                        backgroundColor: "#dcfce7",
+                        color: "#166534",
+                        borderColor: "#86efac",
+                      }}
+                    >
+                      {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
+                    </button>
+                    <button
+                      className="btn btn-light w-full sm:w-auto"
+                      type="button"
+                      onClick={() => resetCadastroAcompanhante(true)}
+                      disabled={salvandoCadastroAcomp}
+                      style={{
+                        backgroundColor: "#fee2e2",
+                        color: "#b91c1c",
+                        borderColor: "#fecaca",
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {podeCriar && mostrarVinculoAcomp && (
+                <div
+                  className="card-base"
+                  style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                    {editAcompId ? "Editar acompanhante" : "Vincular acompanhante existente"}
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Acompanhante</label>
+                      <select
+                        className="form-select"
+                        value={novoAcomp.acompanhante_id}
+                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, acompanhante_id: e.target.value }))}
+                      >
+                        <option value="">Selecione</option>
+                        {acompanhantesCliente.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nome_completo}
+                            {a.cpf ? ` • ${a.cpf}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Papel</label>
+                      <select
+                        className="form-select"
+                        value={novoAcomp.papel}
+                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, papel: e.target.value }))}
+                      >
+                        <option value="passageiro">Passageiro</option>
+                        <option value="responsavel">Responsável</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Documento URL</label>
+                      <input
+                        type="url"
+                        className="form-input"
+                        value={novoAcomp.documento_url}
+                        onChange={(e) => setNovoAcomp((prev) => ({ ...prev, documento_url: e.target.value }))}
+                        placeholder="https://"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Observações</label>
+                    <textarea
+                      className="form-textarea"
+                      value={novoAcomp.observacoes}
+                      onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
+                    />
+                  </div>
+                  <div className="mobile-stack-buttons">
+                    <button
+                      className="btn btn-light w-full sm:w-auto"
+                      type="button"
+                      onClick={adicionarAcompanhante}
+                      disabled={savingAcomp}
+                      style={{
+                        backgroundColor: "#dcfce7",
+                        color: "#166534",
+                        borderColor: "#86efac",
+                      }}
+                    >
+                      {savingAcomp ? "Salvando..." : "Salvar vínculo"}
+                    </button>
+                    <button
+                      className="btn btn-light w-full sm:w-auto"
+                      type="button"
+                      onClick={() => {
+                        resetVinculoAcompanhante();
+                        setMostrarVinculoAcomp(false);
+                      }}
+                      disabled={savingAcomp}
+                      style={{
+                        backgroundColor: "#fee2e2",
+                        color: "#b91c1c",
+                        borderColor: "#fecaca",
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <button
+                type="button"
+                className="card-base"
+                onClick={() => {
+                  setAbaAtiva("servicos");
+                  setMostrarServicoForm(false);
+                  setEditServicoId(null);
+                }}
+                aria-pressed={abaAtiva === "servicos"}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <h3
+                  className="text-center sm:text-left"
+                  style={{ margin: 0, color: abaAtiva === "servicos" ? "#1d4ed8" : "#0f172a" }}
+                >
+                  Serviços da viagem ({servicos.length})
+                </h3>
+              </button>
+
+              {abaAtiva === "servicos" && (
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-mobile-cards min-w-[720px]">
+                      <thead>
+                        <tr>
+                          <th>Tipo</th>
+                          <th>Fornecedor</th>
+                          <th>Descrição</th>
+                          <th>Status</th>
+                          <th>De</th>
+                          <th>Até</th>
+                          <th>Valor</th>
+                          <th>Voucher</th>
+                          {podeExcluir && <th className="th-actions">Ações</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {servicos.length === 0 && (
+                          <tr>
+                            <td colSpan={podeExcluir ? 9 : 8}>Nenhum serviço cadastrado.</td>
+                          </tr>
+                        )}
+                        {servicos.map((s) => (
+                          <tr key={s.id}>
+                            <td data-label="Tipo">{s.tipo || "-"}</td>
+                            <td data-label="Fornecedor">{s.fornecedor || "-"}</td>
+                            <td data-label="Descrição">{s.descricao || "-"}</td>
+                            <td data-label="Status">{s.status || "-"}</td>
+                            <td data-label="De">{formatarDataParaExibicao(s.data_inicio)}</td>
+                            <td data-label="Até">{formatarDataParaExibicao(s.data_fim)}</td>
+                            <td data-label="Valor">
+                              {s.valor !== null && s.valor !== undefined
+                                ? Number(s.valor).toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: s.moeda || "BRL",
+                                  })
+                                : "-"}
+                            </td>
+                            <td data-label="Voucher">
+                              {s.voucher_url ? (
+                                <a className="btn btn-light" href={s.voucher_url} target="_blank" rel="noreferrer">
+                                  Abrir
+                                </a>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                            {podeExcluir && (
+                              <td className="th-actions" data-label="Ações">
+                                <div className="action-buttons">
+                                  <button className="btn btn-light" type="button" onClick={() => iniciarEdicaoServico(s)}>
+                                    Editar
+                                  </button>
+                                  <button
+                                    className="btn btn-light"
+                                    type="button"
+                                    onClick={() => removerServico(s.id)}
+                                    disabled={removendoServicoId === s.id}
+                                  >
+                                    {removendoServicoId === s.id ? "Removendo..." : "Remover"}
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {podeCriar && (
+                    <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
                       <button
                         type="button"
-                        className="btn btn-primary w-full sm:w-auto"
+                        className="btn btn-purple w-full sm:w-auto"
                         onClick={() => {
                           resetServico();
                           setMostrarServicoForm(true);
@@ -1215,403 +1286,350 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       >
                         Adicionar serviço
                       </button>
-                    )}
-                  </div>
-                  <div className="mobile-collapsible" data-open={mostrarServicoForm ? "true" : "false"}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                      {editServicoId ? "Editar serviço" : "Adicionar serviço"}
                     </div>
-                    <div className="form-row">
+                  )}
+
+                  {podeCriar && mostrarServicoForm && (
+                    <div
+                      className="card-base"
+                      style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                        {editServicoId ? "Editar serviço" : "Adicionar serviço"}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">Tipo</label>
+                          <select
+                            className="form-select"
+                            value={servicoForm.tipo}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, tipo: e.target.value }))}
+                          >
+                            <option value="aereo">Aéreo</option>
+                            <option value="hotel">Hotel</option>
+                            <option value="terrestre">Terrestre</option>
+                            <option value="seguro">Seguro</option>
+                            <option value="passeio">Passeio</option>
+                            <option value="outro">Outro</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Fornecedor</label>
+                          <input
+                            className="form-input"
+                            value={servicoForm.fornecedor}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, fornecedor: e.target.value }))}
+                            placeholder="Nome do fornecedor"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Status</label>
+                          <select
+                            className="form-select"
+                            value={servicoForm.status}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, status: e.target.value }))}
+                          >
+                            <option value="ativo">Ativo</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="cancelado">Cancelado</option>
+                            <option value="concluido">Concluído</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Voucher URL</label>
+                          <input
+                            className="form-input"
+                            value={servicoForm.voucher_url}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, voucher_url: e.target.value }))}
+                            placeholder="https://"
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">Data início</label>
+                          <input
+                            type="date"
+                            className="form-input w-full"
+                            value={servicoForm.data_inicio}
+                            onChange={(e) =>
+                              setServicoForm((prev) => {
+                                const nextInicio = e.target.value;
+                                const nextFim =
+                                  prev.data_fim && nextInicio && prev.data_fim < nextInicio
+                                    ? nextInicio
+                                    : prev.data_fim;
+                                return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Data fim</label>
+                          <input
+                            type="date"
+                            className="form-input"
+                            value={servicoForm.data_fim}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, data_fim: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Valor</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            value={servicoForm.valor}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, valor: e.target.value }))}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Moeda</label>
+                          <select
+                            className="form-select"
+                            value={servicoForm.moeda}
+                            onChange={(e) => setServicoForm((prev) => ({ ...prev, moeda: e.target.value }))}
+                          >
+                            <option value="BRL">BRL</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </div>
+                      </div>
                       <div className="form-group">
-                        <label className="form-label">Tipo</label>
-                        <select
-                          className="form-select"
-                          value={servicoForm.tipo}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, tipo: e.target.value }))}
+                        <label className="form-label">Descrição</label>
+                        <textarea
+                          className="form-textarea"
+                          value={servicoForm.descricao}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, descricao: e.target.value }))}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Observações</label>
+                        <textarea
+                          className="form-textarea"
+                          value={servicoForm.observacoes}
+                          onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
+                        />
+                      </div>
+                      <div className="mobile-stack-buttons">
+                        <button
+                          className="btn btn-light w-full sm:w-auto"
+                          type="button"
+                          onClick={salvarServico}
+                          disabled={savingServico}
+                          style={{
+                            backgroundColor: "#dcfce7",
+                            color: "#166534",
+                            borderColor: "#86efac",
+                          }}
                         >
-                          <option value="aereo">Aéreo</option>
-                          <option value="hotel">Hotel</option>
-                          <option value="terrestre">Terrestre</option>
-                          <option value="seguro">Seguro</option>
-                          <option value="passeio">Passeio</option>
-                          <option value="outro">Outro</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Fornecedor</label>
-                        <input
-                          className="form-input"
-                          value={servicoForm.fornecedor}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, fornecedor: e.target.value }))}
-                          placeholder="Nome do fornecedor"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Status</label>
-                        <select
-                          className="form-select"
-                          value={servicoForm.status}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, status: e.target.value }))}
+                          {savingServico ? "Salvando..." : "Salvar serviço"}
+                        </button>
+                        <button
+                          className="btn btn-light w-full sm:w-auto"
+                          type="button"
+                          onClick={() => {
+                            resetServico();
+                            setMostrarServicoForm(false);
+                            setEditServicoId(null);
+                          }}
+                          disabled={savingServico}
+                          style={{
+                            backgroundColor: "#fee2e2",
+                            color: "#b91c1c",
+                            borderColor: "#fecaca",
+                          }}
                         >
-                          <option value="ativo">Ativo</option>
-                          <option value="pendente">Pendente</option>
-                          <option value="cancelado">Cancelado</option>
-                          <option value="concluido">Concluído</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Voucher URL</label>
-                        <input
-                          className="form-input"
-                          value={servicoForm.voucher_url}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, voucher_url: e.target.value }))}
-                          placeholder="https://"
-                        />
+                          Cancelar
+                        </button>
                       </div>
                     </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">Data início</label>
-                        <input
-                          type="date"
-                          className="form-input w-full"
-                          value={servicoForm.data_inicio}
-                          onChange={(e) =>
-                            setServicoForm((prev) => {
-                              const nextInicio = e.target.value;
-                              const nextFim =
-                                prev.data_fim && nextInicio && prev.data_fim < nextInicio
-                                  ? nextInicio
-                                  : prev.data_fim;
-                              return { ...prev, data_inicio: nextInicio, data_fim: nextFim };
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Data fim</label>
-                        <input
-                          type="date"
-                          className="form-input w-full"
-                          value={servicoForm.data_fim}
-                          min={servicoForm.data_inicio || undefined}
-                          onChange={(e) =>
-                            setServicoForm((prev) => {
-                              const nextFim = e.target.value;
-                              const boundedFim =
-                                prev.data_inicio && nextFim && nextFim < prev.data_inicio
-                                  ? prev.data_inicio
-                                  : nextFim;
-                              return { ...prev, data_fim: boundedFim };
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Valor</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="form-input"
-                          value={servicoForm.valor}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, valor: e.target.value }))}
-                          placeholder="0,00"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Moeda</label>
-                        <input
-                          className="form-input"
-                          value={servicoForm.moeda}
-                          onChange={(e) => setServicoForm((prev) => ({ ...prev, moeda: e.target.value }))}
-                          placeholder="BRL"
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Descrição</label>
-                      <input
-                        className="form-input"
-                        value={servicoForm.descricao}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, descricao: e.target.value }))}
-                        placeholder="Descrição resumida do serviço"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Observações</label>
-                      <textarea
-                        className="form-textarea"
-                        value={servicoForm.observacoes}
-                        onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
-                      />
-                    </div>
-                    <div className="mobile-stack-buttons">
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={salvarServico}
-                        disabled={savingServico}
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          color: "#166534",
-                          borderColor: "#86efac",
-                        }}
-                      >
-                        {savingServico ? "Salvando..." : editServicoId ? "Salvar alterações" : "Adicionar serviço"}
-                      </button>
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={() => {
-                          resetServico();
-                          setMostrarServicoForm(false);
-                        }}
-                        disabled={savingServico}
-                        style={{
-                          backgroundColor: "#fee2e2",
-                          color: "#b91c1c",
-                          borderColor: "#fecaca",
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
-
-              <div className="table-container overflow-x-auto">
-                <table className="table-default table-mobile-cards min-w-[720px]">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Fornecedor</th>
-                      <th>Descrição</th>
-                      <th>Período</th>
-                      <th>Valor</th>
-                      <th>Status</th>
-                      <th>Voucher</th>
-                      {podeExcluir && <th className="th-actions">Ações</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {servicos.length === 0 && (
-                      <tr>
-                        <td colSpan={podeExcluir ? 8 : 7}>Nenhum serviço cadastrado.</td>
-                      </tr>
-                    )}
-                    {servicos.map((s) => (
-                      <tr key={s.id}>
-                        <td data-label="Tipo">{s.tipo || "-"}</td>
-                        <td data-label="Fornecedor">{s.fornecedor || "-"}</td>
-                        <td data-label="Descrição">{s.descricao || "-"}</td>
-                        <td data-label="Período">
-                          {`${formatarDataParaExibicao(s.data_inicio)} / ${formatarDataParaExibicao(
-                            s.data_fim
-                          )}`}
-                        </td>
-                        <td data-label="Valor">
-                          {s.valor !== null && s.valor !== undefined
-                            ? Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: s.moeda || "BRL" })
-                            : "-"}
-                        </td>
-                        <td data-label="Status">{s.status || "-"}</td>
-                        <td data-label="Voucher">
-                          {s.voucher_url ? (
-                            <a className="btn btn-light" href={s.voucher_url} target="_blank" rel="noreferrer">
-                              Abrir
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        {podeExcluir && (
-                          <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
-                              <button className="btn btn-light" type="button" onClick={() => iniciarEdicaoServico(s)}>
-                                Editar
-                              </button>
-                              <button
-                                className="btn btn-light"
-                                type="button"
-                                onClick={() => removerServico(s.id)}
-                                disabled={removendoServicoId === s.id}
-                              >
-                                {removendoServicoId === s.id ? "Removendo..." : "Remover"}
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          )}
 
-          {abaAtiva === "documentos" && (
             <div style={{ display: "grid", gap: 12 }}>
-              <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
+              <button
+                type="button"
+                className="card-base"
+                onClick={() => {
+                  setAbaAtiva("documentos");
+                  setMostrarDocumentoForm(false);
+                }}
+                aria-pressed={abaAtiva === "documentos"}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <h3
+                  className="text-center sm:text-left"
+                  style={{ margin: 0, color: abaAtiva === "documentos" ? "#1d4ed8" : "#0f172a" }}
+                >
                   Documentos / vouchers ({documentos.length})
                 </h3>
-              </div>
-              {podeCriar && (
-                <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
-                  <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    {!mostrarDocumentoForm && (
+              </button>
+
+              {abaAtiva === "documentos" && (
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div className="table-container overflow-x-auto">
+                    <table className="table-default table-mobile-cards min-w-[640px]">
+                      <thead>
+                        <tr>
+                          <th>Título</th>
+                          <th>Tipo</th>
+                          <th>Arquivo</th>
+                          <th>Tamanho</th>
+                          <th>Criado em</th>
+                          {podeExcluir && <th className="th-actions">Ações</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documentos.length === 0 && (
+                          <tr>
+                            <td colSpan={podeExcluir ? 6 : 5}>Nenhum documento.</td>
+                          </tr>
+                        )}
+                        {documentos.map((d) => (
+                          <tr key={d.id}>
+                            <td data-label="Título">{d.titulo || "-"}</td>
+                            <td data-label="Tipo">{d.tipo || "-"}</td>
+                            <td data-label="Arquivo">
+                              {d.url ? (
+                                <button
+                                  className="btn btn-light"
+                                  type="button"
+                                  onClick={() => abrirDocumento(d)}
+                                  disabled={abrindoDocId === d.id}
+                                >
+                                  {abrindoDocId === d.id ? "Abrindo..." : "Abrir"}
+                                </button>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                            <td data-label="Tamanho">
+                              {d.size_bytes
+                                ? `${(Number(d.size_bytes) / 1024).toFixed(1)} KB`
+                                : "-"}
+                            </td>
+                            <td data-label="Criado em">{formatarDataParaExibicao(d.created_at)}</td>
+                            {podeExcluir && (
+                              <td className="th-actions" data-label="Ações">
+                                <div className="action-buttons">
+                                  <button
+                                    className="btn btn-light"
+                                    type="button"
+                                    onClick={() => removerDocumento(d.id)}
+                                    disabled={removendoDocId === d.id}
+                                  >
+                                    {removendoDocId === d.id ? "Removendo..." : "Remover"}
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {podeCriar && (
+                    <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
                       <button
                         type="button"
-                        className="btn btn-primary w-full sm:w-auto"
+                        className="btn btn-purple w-full sm:w-auto"
                         onClick={() => setMostrarDocumentoForm(true)}
                       >
                         Enviar documento
                       </button>
-                    )}
-                  </div>
-                  <div className="mobile-collapsible" data-open={mostrarDocumentoForm ? "true" : "false"}>
-                    <div className="font-semibold mb-2">Enviar documento</div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">Título</label>
-                        <input
-                          className="form-input"
-                          value={docTitulo}
-                          onChange={(e) => setDocTitulo(e.target.value)}
-                          placeholder="Ex: Voucher do hotel"
-                        />
+                    </div>
+                  )}
+
+                  {podeCriar && mostrarDocumentoForm && (
+                    <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
+                      <div className="font-semibold mb-2">Enviar documento</div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">Título</label>
+                          <input
+                            className="form-input"
+                            value={docTitulo}
+                            onChange={(e) => setDocTitulo(e.target.value)}
+                            placeholder="Ex: Voucher do hotel"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Tipo</label>
+                          <select
+                            className="form-select"
+                            value={docTipo}
+                            onChange={(e) => setDocTipo(e.target.value)}
+                          >
+                            <option value="voucher">Voucher</option>
+                            <option value="bilhete">Bilhete</option>
+                            <option value="roteiro">Roteiro</option>
+                            <option value="seguro">Seguro</option>
+                            <option value="passaporte">Passaporte</option>
+                            <option value="cpf">CPF</option>
+                            <option value="rg">RG</option>
+                            <option value="cnh">CNH</option>
+                            <option value="outro">Outro</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Arquivo</label>
+                          <input
+                            type="file"
+                            className="form-input"
+                            onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                          />
+                        </div>
                       </div>
-                      <div className="form-group">
-                        <label className="form-label">Tipo</label>
-                        <select
-                          className="form-select"
-                          value={docTipo}
-                          onChange={(e) => setDocTipo(e.target.value)}
+                      <div className="mobile-stack-buttons">
+                        <button
+                          className="btn btn-light w-full sm:w-auto"
+                          type="button"
+                          onClick={salvarDocumento}
+                          disabled={savingDoc}
+                          style={{
+                            backgroundColor: "#dcfce7",
+                            color: "#166534",
+                            borderColor: "#86efac",
+                          }}
                         >
-                          <option value="voucher">Voucher</option>
-                          <option value="bilhete">Bilhete</option>
-                          <option value="roteiro">Roteiro</option>
-                          <option value="seguro">Seguro</option>
-                          <option value="passaporte">Passaporte</option>
-                          <option value="cpf">CPF</option>
-                          <option value="rg">RG</option>
-                          <option value="cnh">CNH</option>
-                          <option value="outro">Outro</option>
-                        </select>
+                          {savingDoc ? "Enviando..." : "Enviar documento"}
+                        </button>
+                        <button
+                          className="btn btn-light w-full sm:w-auto"
+                          type="button"
+                          onClick={() => {
+                            setDocTitulo("");
+                            setDocTipo("voucher");
+                            setDocFile(null);
+                            setMostrarDocumentoForm(false);
+                          }}
+                          disabled={savingDoc}
+                          style={{
+                            backgroundColor: "#fee2e2",
+                            color: "#b91c1c",
+                            borderColor: "#fecaca",
+                          }}
+                        >
+                          Cancelar
+                        </button>
                       </div>
-                      <div className="form-group">
-                        <label className="form-label">Arquivo</label>
-                        <input
-                          type="file"
-                          className="form-input"
-                          onChange={(e) => setDocFile(e.target.files?.[0] || null)}
-                        />
+                      <div className="text-xs text-slate-500 mt-2">
+                        Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
                       </div>
                     </div>
-                    <div className="mobile-stack-buttons">
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={salvarDocumento}
-                        disabled={savingDoc}
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          color: "#166534",
-                          borderColor: "#86efac",
-                        }}
-                      >
-                        {savingDoc ? "Enviando..." : "Enviar documento"}
-                      </button>
-                      <button
-                        className="btn btn-light w-full sm:w-auto"
-                        type="button"
-                        onClick={() => {
-                          setDocTitulo("");
-                          setDocTipo("voucher");
-                          setDocFile(null);
-                          setMostrarDocumentoForm(false);
-                        }}
-                        disabled={savingDoc}
-                        style={{
-                          backgroundColor: "#fee2e2",
-                          color: "#b91c1c",
-                          borderColor: "#fecaca",
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-2">
-                      Bucket sugerido: {STORAGE_BUCKET} (público ou via URL assinada).
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
-
-              <div className="table-container overflow-x-auto">
-                <table className="table-default table-mobile-cards min-w-[640px]">
-                  <thead>
-                    <tr>
-                      <th>Título</th>
-                      <th>Tipo</th>
-                      <th>Arquivo</th>
-                      <th>Tamanho</th>
-                      <th>Criado em</th>
-                      {podeExcluir && <th className="th-actions">Ações</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documentos.length === 0 && (
-                      <tr>
-                        <td colSpan={podeExcluir ? 6 : 5}>Nenhum documento.</td>
-                      </tr>
-                    )}
-                    {documentos.map((d) => (
-                      <tr key={d.id}>
-                        <td data-label="Título">{d.titulo || "-"}</td>
-                        <td data-label="Tipo">{d.tipo || "-"}</td>
-                        <td data-label="Arquivo">
-                          {d.url ? (
-                            <button
-                              className="btn btn-light"
-                              type="button"
-                              onClick={() => abrirDocumento(d)}
-                              disabled={abrindoDocId === d.id}
-                            >
-                              {abrindoDocId === d.id ? "Abrindo..." : "Abrir"}
-                            </button>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        <td data-label="Tamanho">
-                          {d.size_bytes
-                            ? `${(Number(d.size_bytes) / 1024).toFixed(1)} KB`
-                            : "-"}
-                        </td>
-                        <td data-label="Criado em">{formatarDataParaExibicao(d.created_at)}</td>
-                        {podeExcluir && (
-                          <td className="th-actions" data-label="Ações">
-                            <div className="action-buttons">
-                              <button
-                                className="btn btn-light"
-                                type="button"
-                                onClick={() => removerDocumento(d.id)}
-                                disabled={removendoDocId === d.id}
-                              >
-                                {removendoDocId === d.id ? "Removendo..." : "Remover"}
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 
