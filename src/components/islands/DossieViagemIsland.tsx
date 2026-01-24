@@ -786,7 +786,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
               )}
 
               <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 style={{ margin: 0 }}>Dados da viagem</h3>
+                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
+                  Dados da viagem
+                </h3>
               </div>
 
               {recibosOrdenados.length === 0 ? (
@@ -840,7 +842,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           {abaAtiva === "acompanhantes" && (
             <div style={{ display: "grid", gap: 12 }}>
               <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 style={{ margin: 0 }}>
+                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
                   Acompanhantes ({viagem.viagem_acompanhantes?.length || 0})
                 </h3>
               </div>
@@ -851,20 +853,22 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                   style={{ marginBottom: 12, border: "1px dashed #cbd5e1", background: "#f8fafc" }}
                 >
                   <div className="mobile-only" style={{ marginBottom: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary w-full sm:w-auto"
-                      onClick={() =>
-                        setMostrarVinculoAcomp((prev) => {
-                          if (prev) {
-                            resetVinculoAcompanhante();
-                          }
-                          return !prev;
-                        })
-                      }
-                    >
-                      {mostrarVinculoAcomp ? "Fechar vínculo" : "Vincular acompanhante"}
-                    </button>
+                    {!mostrarVinculoAcomp && (
+                      <button
+                        type="button"
+                        className="btn btn-primary w-full sm:w-auto"
+                        onClick={() =>
+                          setMostrarVinculoAcomp((prev) => {
+                            if (prev) {
+                              resetVinculoAcompanhante();
+                            }
+                            return !prev;
+                          })
+                        }
+                      >
+                        Vincular acompanhante
+                      </button>
+                    )}
                   </div>
                   <div className="mobile-collapsible" data-open={mostrarVinculoAcomp ? "true" : "false"}>
                     <div style={{ fontWeight: 600, marginBottom: 8 }}>
@@ -917,13 +921,31 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         onChange={(e) => setNovoAcomp((prev) => ({ ...prev, observacoes: e.target.value }))}
                       />
                     </div>
-                    <button className="btn btn-primary" type="button" onClick={adicionarAcompanhante} disabled={savingAcomp}>
-                      {savingAcomp
-                        ? "Salvando..."
-                        : editAcompId
-                        ? "Salvar alterações"
-                        : "Vincular acompanhante"}
-                    </button>
+                    <div className="mobile-stack-buttons">
+                      <button
+                        className="btn btn-light w-full sm:w-auto"
+                        type="button"
+                        onClick={adicionarAcompanhante}
+                        disabled={savingAcomp}
+                      >
+                        {savingAcomp ? "Salvando..." : "Salvar"}
+                      </button>
+                      <button
+                        className="btn btn-light w-full sm:w-auto mobile-only"
+                        type="button"
+                        onClick={() =>
+                          setMostrarVinculoAcomp((prev) => {
+                            if (prev) {
+                              resetVinculoAcompanhante();
+                            }
+                            return !prev;
+                          })
+                        }
+                        disabled={savingAcomp}
+                      >
+                        Fechar vínculo
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1058,9 +1080,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           />
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="mobile-stack-buttons">
                         <button
-                          className="btn btn-primary"
+                          className="btn btn-primary w-full sm:w-auto"
                           type="button"
                           onClick={salvarCadastroAcompanhante}
                           disabled={salvandoCadastroAcomp}
@@ -1068,7 +1090,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
                         </button>
                         <button
-                          className="btn btn-light"
+                          className="btn btn-light w-full sm:w-auto"
                           type="button"
                           onClick={() => resetCadastroAcompanhante(true)}
                           disabled={salvandoCadastroAcomp}
@@ -1151,7 +1173,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           {abaAtiva === "servicos" && (
             <div style={{ display: "grid", gap: 12 }}>
               <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 style={{ margin: 0 }}>Serviços da viagem ({servicos.length})</h3>
+                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
+                  Serviços da viagem ({servicos.length})
+                </h3>
               </div>
 
               {podeCriar && (
@@ -1388,7 +1412,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
           {abaAtiva === "documentos" && (
             <div style={{ display: "grid", gap: 12 }}>
               <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
-                <h3 style={{ margin: 0 }}>Documentos / vouchers ({documentos.length})</h3>
+                <h3 className="text-center sm:text-left" style={{ margin: 0 }}>
+                  Documentos / vouchers ({documentos.length})
+                </h3>
               </div>
               {podeCriar && (
                 <div className="card-base mb-3 border border-dashed border-slate-300 bg-slate-50">
