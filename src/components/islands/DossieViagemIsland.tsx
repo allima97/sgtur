@@ -927,11 +927,16 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         type="button"
                         onClick={adicionarAcompanhante}
                         disabled={savingAcomp}
+                        style={{
+                          backgroundColor: "#dcfce7",
+                          color: "#166534",
+                          borderColor: "#86efac",
+                        }}
                       >
-                        {savingAcomp ? "Salvando..." : "Salvar"}
+                        {savingAcomp ? "Salvando..." : "Salvar vínculo"}
                       </button>
                       <button
-                        className="btn btn-light w-full sm:w-auto mobile-only"
+                        className="btn btn-light w-full sm:w-auto"
                         type="button"
                         onClick={() =>
                           setMostrarVinculoAcomp((prev) => {
@@ -942,8 +947,13 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           })
                         }
                         disabled={savingAcomp}
+                        style={{
+                          backgroundColor: "#fee2e2",
+                          color: "#b91c1c",
+                          borderColor: "#fecaca",
+                        }}
                       >
-                        Fechar vínculo
+                        Cancelar
                       </button>
                     </div>
                   </div>
@@ -1082,10 +1092,15 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </div>
                       <div className="mobile-stack-buttons">
                         <button
-                          className="btn btn-primary w-full sm:w-auto"
+                          className="btn btn-light w-full sm:w-auto"
                           type="button"
                           onClick={salvarCadastroAcompanhante}
                           disabled={salvandoCadastroAcomp}
+                          style={{
+                            backgroundColor: "#dcfce7",
+                            color: "#166534",
+                            borderColor: "#86efac",
+                          }}
                         >
                           {salvandoCadastroAcomp ? "Salvando..." : "Salvar acompanhante"}
                         </button>
@@ -1094,6 +1109,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                           type="button"
                           onClick={() => resetCadastroAcompanhante(true)}
                           disabled={salvandoCadastroAcomp}
+                          style={{
+                            backgroundColor: "#fee2e2",
+                            color: "#b91c1c",
+                            borderColor: "#fecaca",
+                          }}
                         >
                           Cancelar
                         </button>
@@ -1325,12 +1345,32 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         onChange={(e) => setServicoForm((prev) => ({ ...prev, observacoes: e.target.value }))}
                       />
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="btn btn-primary" type="button" onClick={salvarServico} disabled={savingServico}>
+                    <div className="mobile-stack-buttons">
+                      <button
+                        className="btn btn-light w-full sm:w-auto"
+                        type="button"
+                        onClick={salvarServico}
+                        disabled={savingServico}
+                        style={{
+                          backgroundColor: "#dcfce7",
+                          color: "#166534",
+                          borderColor: "#86efac",
+                        }}
+                      >
                         {savingServico ? "Salvando..." : editServicoId ? "Salvar alterações" : "Adicionar serviço"}
                       </button>
                       {editServicoId && (
-                        <button className="btn btn-light" type="button" onClick={resetServico} disabled={savingServico}>
+                        <button
+                          className="btn btn-light w-full sm:w-auto"
+                          type="button"
+                          onClick={resetServico}
+                          disabled={savingServico}
+                          style={{
+                            backgroundColor: "#fee2e2",
+                            color: "#b91c1c",
+                            borderColor: "#fecaca",
+                          }}
+                        >
                           Cancelar edição
                         </button>
                       )}
@@ -1475,7 +1515,17 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                         />
                       </div>
                     </div>
-                    <button className="btn btn-primary" type="button" onClick={salvarDocumento} disabled={savingDoc}>
+                    <button
+                      className="btn btn-light w-full sm:w-auto"
+                      type="button"
+                      onClick={salvarDocumento}
+                      disabled={savingDoc}
+                      style={{
+                        backgroundColor: "#dcfce7",
+                        color: "#166534",
+                        borderColor: "#86efac",
+                      }}
+                    >
                       {savingDoc ? "Enviando..." : "Enviar documento"}
                     </button>
                     <div className="text-xs text-slate-500 mt-2">
