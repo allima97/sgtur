@@ -3,6 +3,7 @@ import "../styles/global.css";
 import "../styles/auth-extra.css";
 
 import MenuIsland from "../components/islands/MenuIsland.tsx";
+import PermissoesProvider from "../components/islands/PermissoesProvider.tsx";
 import { SYSTEM_NAME } from "../lib/systemName";
 
 const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
@@ -19,6 +20,7 @@ const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
     <div class="app-shell">
 
       <!-- MENU DINÂMICO -->
+      <PermissoesProvider client:load />
       <MenuIsland client:load {activePage} />
 
       <!-- CONTEÚDO -->

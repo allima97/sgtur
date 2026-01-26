@@ -1,42 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { supabase } from "../../lib/supabase";
 import { logoutUsuario } from "../../lib/logout";
 import { SYSTEM_NAME } from "../../lib/systemName";
-import { MAPA_MODULOS } from "../../config/modulos";
-import { ensurePermissoes, readPermissoesCache } from "../../lib/permissoesCache";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 
-
-type NivelPermissao =
-  | "none"
-  | "view"
-  | "create"
-  | "edit"
-  | "delete"
-  | "admin";
-
-// ----------------------
-// MAPA REAL DOS MÓDULOS
-// (IMPORTANTE: tem que bater com modulo_acesso.modulo)
-// ----------------------
-
-// hierarquia igual ao SQL perm_level()
-const permLevel = (p: NivelPermissao | undefined) => {
-  switch (p) {
-    case "admin":
-      return 5;
-    case "delete":
-      return 4;
-    case "edit":
-      return 3;
-    case "create":
-      return 2;
-    case "view":
-      return 1;
-    default:
-      return 0;
-  }
-};
 
 const FornecedoresIcon = () => (
   <svg
@@ -64,11 +31,8 @@ export default function MenuIsland({ activePage }) {
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
-  const [userId, setUserId] = useState<string | null>(null);
-  const [acessos, setAcessos] = useState<Record<string, NivelPermissao>>({});
-  const [cacheLoaded, setCacheLoaded] = useState(false);
+  const { userId, isAdmin, can } = usePermissoesStore();
   const [saindo, setSaindo] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>("");
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -81,8 +45,6 @@ export default function MenuIsland({ activePage }) {
   const deadlineRef = useRef(Date.now() + AUTO_LOGOUT_MS);
 
   // Admin FINAL vindo do MESMO lugar do RLS (modulo_acesso)
-  const isAdminFinal = Object.values(acessos).some((p) => p === "admin");
-
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -205,73 +167,9 @@ export default function MenuIsland({ activePage }) {
       ? `${displayMinutes}m ${displaySeconds.toString().padStart(2, "0")}s`
       : `${displaySeconds}s`;
 
-  // monta mapa {modulo: permissao} pegando SEMPRE a maior permissão se houver duplicata
-  async function carregar() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const sessionUser = sessionData?.session?.user;
-    const { data: userData } = sessionUser
-      ? { data: { user: sessionUser } }
-      : await supabase.auth.getUser();
-
-    const user = userData?.user || sessionUser || null;
-
-    const uid = user?.id || null;
-    const email = user?.email || "";
-
-    setUserId((prev) => (prev !== uid ? uid : prev));
-    setUserEmail((prev) => (prev !== email.toLowerCase() ? email.toLowerCase() : prev));
-
-    if (!uid) {
-      if (!cacheLoaded) setAcessos({});
-      setCacheLoaded(true);
-      return;
-    }
-
-    const cache = await ensurePermissoes(uid, email);
-    if (!cache) {
-      setCacheLoaded(true);
-      return;
-    }
-
-    const perms = cache.acessos || {};
-    setAcessos((prev) => {
-      const prevStr = JSON.stringify(prev);
-      const nextStr = JSON.stringify(perms);
-      return prevStr !== nextStr ? perms : prev;
-    });
-
-    setCacheLoaded(true);
-  }
-
-  useEffect(() => {
-    const cache = readPermissoesCache();
-    if (cache) {
-      setUserId(cache.userId || null);
-      setAcessos(cache.acessos || {});
-      setUserEmail(cache.userEmail || "");
-    }
-    setCacheLoaded(true);
-    carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   async function handleLogout() {
     await executarLogout(true);
   }
-
-  // verifica permissão mínima no módulo (string já do banco)
-  const pode = (moduloBD: string, min: NivelPermissao = "view") => {
-    const p = acessos[String(moduloBD || "").toLowerCase()] ?? "none";
-    return permLevel(p) >= permLevel(min);
-  };
-
-  // verifica permissão usando o "nome humano" do MAPA_MODULOS
-  const can = (mod: string, min: NivelPermissao = "view") => {
-    if (isAdminFinal) return true;
-    const modBD = MAPA_MODULOS[mod];
-    if (!modBD) return false;
-    return pode(modBD, min);
-  };
 
   const cadastrosMenu = [
     { name: "Paises", href: "/cadastros/paises", active: "paises", icon: "🌍", label: "Países" },
@@ -628,7 +526,7 @@ export default function MenuIsland({ activePage }) {
         )}
 
         {/* ADMIN */}
-        {isAdminFinal && (
+        {isAdmin && (
           <div>
             <div className="sidebar-section-title">Administração</div>
             <ul className="sidebar-nav">
