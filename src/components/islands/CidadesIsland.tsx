@@ -301,6 +301,7 @@ export default function CidadesIsland() {
           const msg = errFinal instanceof Error ? errFinal.message : "";
           setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
         }
+      }
     }
 
     buscar();
