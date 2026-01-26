@@ -1520,12 +1520,13 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                               <td className="th-actions" data-label="Ações">
                                 <div className="action-buttons">
                                   <button
-                                    className="btn btn-light"
+                                    className="btn-icon btn-danger"
                                     type="button"
                                     onClick={() => removerDocumento(d.id)}
                                     disabled={removendoDocId === d.id}
+                                    title="Remover"
                                   >
-                                    {removendoDocId === d.id ? "Removendo..." : "Remover"}
+                                    {removendoDocId === d.id ? "..." : "🗑️"}
                                   </button>
                                 </div>
                               </td>
