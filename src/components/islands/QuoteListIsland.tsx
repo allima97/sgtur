@@ -563,7 +563,7 @@ export default function QuoteListIsland() {
             </div>
             <div className="modal-footer mobile-stack-buttons">
               <button
-                className="btn btn-light"
+                className="btn btn-light w-full sm:w-auto"
                 type="button"
                 onClick={() => setInteracaoQuote(null)}
                 disabled={interactionSaving}
@@ -571,7 +571,7 @@ export default function QuoteListIsland() {
                 Cancelar
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 type="button"
                 onClick={salvarInteracao}
                 disabled={interactionSaving}

@@ -4,6 +4,8 @@ import { usePermissao } from "../../lib/usePermissao";
 import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+import AlertMessage from "../ui/AlertMessage";
 
 type Fornecedor = {
   id: string;
@@ -740,13 +742,13 @@ export default function FornecedoresIsland() {
             </button>
           </div>
 
-          {formError && <div style={{ color: "red", marginTop: 8 }}>{formError}</div>}
+          {formError && <AlertMessage variant="error">{formError}</AlertMessage>}
         </div>
       )}
 
       {!mostrarFormulario && (
         <>
-          {erro && <div style={{ color: "red", marginBottom: 8 }}>{erro}</div>}
+          {erro && <AlertMessage variant="error">{erro}</AlertMessage>}
           <div
             className="table-container overflow-x-auto"
             style={{ maxHeight: "65vh", overflowY: "auto" }}
@@ -800,27 +802,14 @@ export default function FornecedoresIsland() {
                         : "-"}
                     </td>
                     <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {podeSalvar && (
-                          <button
-                            className="btn-icon"
-                            title="Editar"
-                            onClick={() => iniciarEdicaoFornecedor(fornecedor)}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {permissao === "admin" && (
-                          <button
-                            className="btn-icon btn-danger"
-                            title="Excluir"
-                            onClick={() => solicitarExclusao(fornecedor)}
-                            disabled={excluindoId === fornecedor.id}
-                          >
-                            {excluindoId === fornecedor.id ? "..." : "🗑️"}
-                          </button>
-                        )}
-                      </div>
+                      <TableActions
+                        showEdit={podeSalvar}
+                        onEdit={() => iniciarEdicaoFornecedor(fornecedor)}
+                        showDelete={permissao === "admin"}
+                        onDelete={() => solicitarExclusao(fornecedor)}
+                        deleteDisabled={excluindoId === fornecedor.id}
+                        deleteIcon={excluindoId === fornecedor.id ? "..." : "🗑️"}
+                      />
                     </td>
                   </tr>
                 ))}
