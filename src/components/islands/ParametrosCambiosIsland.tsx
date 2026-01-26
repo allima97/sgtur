@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -43,7 +43,11 @@ function formatValorNumber(value?: number | null) {
 }
 
 export default function ParametrosCambiosIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
+  const podeEscrever = can("Parametros", "create");
+  const podeExcluir = can("Parametros", "edit");
   const {
     items: cambios,
     setItems: setCambios,
@@ -69,9 +73,6 @@ export default function ParametrosCambiosIsland() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [cambioParaExcluir, setCambioParaExcluir] = useState<CambioRecord | null>(null);
 
-  const nivel = (permissao || "").toLowerCase();
-  const podeEscrever = nivel === "admin" || nivel === "edit" || nivel === "create";
-  const podeExcluir = nivel === "admin" || nivel === "edit";
   const loading = loadingCambios || loadingAuth;
 
   const resetForm = useCallback(() => {
@@ -268,7 +269,7 @@ export default function ParametrosCambiosIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Acesso ao módulo de Parâmetros bloqueado.</div>;
   }
 

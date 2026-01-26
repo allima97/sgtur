@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { normalizeText } from "../../lib/normalizeText";
 import CalculatorModal from "../ui/CalculatorModal";
@@ -130,11 +130,12 @@ export default function VendasCadastroIsland() {
   // =======================================================
   // PERMISSÕES
   // =======================================================
-  const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
-  const podeCriar =
-    permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeEditar =
-    permissao === "edit" || permissao === "delete" || permissao === "admin";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadPerm = loadingPerms || !ready;
+  const podeVer = can("Vendas");
+  const podeCriar = can("Vendas", "create");
+  const podeEditar = can("Vendas", "edit");
+  const isAdmin = can("Vendas", "admin");
 
   // =======================================================
   // ESTADOS
@@ -482,8 +483,8 @@ export default function VendasCadastroIsland() {
   }, []);
 
   useEffect(() => {
-    if (!loadPerm && ativo) carregarDados(editId || undefined, cidadePrefill, orcamentoId);
-  }, [loadPerm, ativo, editId, cidadePrefill, orcamentoId]);
+    if (!loadPerm && podeVer) carregarDados(editId || undefined, cidadePrefill, orcamentoId);
+  }, [loadPerm, podeVer, editId, cidadePrefill, orcamentoId]);
 
   // Busca cidade (autocomplete)
   useEffect(() => {
@@ -1175,7 +1176,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   // =======================================================
   // BLOQUEIO TOTAL
   // =======================================================
-  if (!ativo) {
+  if (!podeVer) {
     return (
       <div className="card-base card-config">
         <strong>Acesso negado ao módulo de Vendas.</strong>

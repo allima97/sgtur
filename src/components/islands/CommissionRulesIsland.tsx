@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -39,8 +39,10 @@ const emptyRule = {
 };
 
 export default function CommissionRulesIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
-  const podeEditar = permissao === "admin" || permissao === "edit";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
+  const podeEditar = can("Parametros", "edit");
 
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,7 +295,7 @@ export default function CommissionRulesIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div className="card-base card-config">Acesso negado ao módulo de Parâmetros.</div>;
   }
 

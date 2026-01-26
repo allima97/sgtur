@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 
@@ -31,8 +31,10 @@ const DEFAULT_PARAMS: ParametrosSistema = {
 };
 
 export default function ParametrosSistemaIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
-  const isAdmin = permissao === "admin" || permissao === "edit";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
+  const podeAdministrar = can("Parametros", "edit");
 
   const [params, setParams] = useState<ParametrosSistema>(DEFAULT_PARAMS);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function ParametrosSistemaIsland() {
   const [origemDados, setOrigemDados] = useState<"default" | "banco">("default");
   const [ownerNome, setOwnerNome] = useState<string | null>(null);
 
-  const bloqueado = !ativo || (!isAdmin && permissao !== "edit" && permissao !== "delete");
+  const bloqueado = !podeVer || !podeAdministrar;
 
   useEffect(() => {
     carregar();
@@ -174,7 +176,7 @@ export default function ParametrosSistemaIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Acesso ao módulo de Parâmetros bloqueado.</div>;
   }
 

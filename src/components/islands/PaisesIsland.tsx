@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -49,7 +49,13 @@ export default function PaisesIsland() {
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState<FormState>(initialForm);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "admin");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [paisParaExcluir, setPaisParaExcluir] = useState<Pais | null>(null);
@@ -120,7 +126,7 @@ export default function PaisesIsland() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voc?? n??o tem permiss??o para salvar pa??ses.");
       return;
     }
@@ -153,7 +159,7 @@ export default function PaisesIsland() {
   }
 
   async function excluir(id: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       window.alert("Somente administradores podem excluir pa??ses.");
       return;
     }
@@ -171,7 +177,7 @@ export default function PaisesIsland() {
   }
 
   function solicitarExclusao(pais: Pais) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       window.alert("Somente administradores podem excluir países.");
       return;
     }
@@ -192,7 +198,7 @@ export default function PaisesIsland() {
     );
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return (
       <div className="paises-page">
         Você não possui acesso ao módulo de Cadastros.
@@ -219,7 +225,7 @@ export default function PaisesIsland() {
                 placeholder="Digite parte do nome..."
               />
             </div>
-            {permissao !== "view" && (
+            {!modoSomenteLeitura && (
               <div className="form-group" style={{ alignItems: "flex-end" }}>
                 <button
                   type="button"
@@ -273,7 +279,7 @@ export default function PaisesIsland() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={salvando || permissao === "view"}
+                disabled={salvando || modoSomenteLeitura}
               >
                 {salvando ? "Salvando..." : "Salvar país"}
               </button>
@@ -340,7 +346,7 @@ export default function PaisesIsland() {
               </td>
               <td className="th-actions" data-label="Acoes">
                 <TableActions
-                  show={permissao !== "view"}
+                  show={!modoSomenteLeitura}
                   actions={[
                     {
                       key: "edit",
@@ -348,7 +354,7 @@ export default function PaisesIsland() {
                       onClick: () => iniciarEdicao(p),
                       icon: "✏️",
                     },
-                    ...(permissao === "admin"
+                    ...(podeExcluir
                       ? [
                           {
                             key: "delete",

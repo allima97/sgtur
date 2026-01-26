@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -89,16 +89,13 @@ export default function ClientesIsland() {
   // =====================================
   // PERMISSÕES
   // =====================================
-  const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Clientes");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadPerm = loadingPerms || !ready;
 
-  const podeVer =
-    permissao !== "none";
-  const podeCriar =
-    permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeEditar =
-    permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeExcluir =
-    permissao === "delete" || permissao === "admin";
+  const podeVer = can("Clientes");
+  const podeCriar = can("Clientes", "create");
+  const podeEditar = can("Clientes", "edit");
+  const podeExcluir = can("Clientes", "delete");
   const exibeColunaAcoes = podeVer;
   const modoSomenteLeitura = !podeCriar && !podeEditar;
 
@@ -1117,7 +1114,7 @@ export default function ClientesIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return (
       <div className="card-base card-config">
         <strong>Acesso negado ao módulo de Clientes.</strong>

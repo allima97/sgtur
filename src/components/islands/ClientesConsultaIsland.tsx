@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import ConfirmDialog from "../ui/ConfirmDialog";
 
@@ -15,9 +15,10 @@ type Cliente = {
 };
 
 export default function ClientesConsultaIsland() {
-  const { permissao, loading: loadingPerm, ativo } = usePermissao("Clientes");
-  const podeVer = permissao !== "none";
-  const podeCriar = permissao === "create" || permissao === "edit" || permissao === "admin";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Clientes");
+  const podeCriar = can("Clientes", "create");
 
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -121,8 +122,8 @@ export default function ClientesConsultaIsland() {
     return busca.trim() ? filtrados : filtrados.slice(0, 5);
   }, [filtrados, busca]);
 
-  const podeEditar = permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeExcluir = permissao === "delete" || permissao === "admin";
+  const podeEditar = can("Clientes", "edit");
+  const podeExcluir = can("Clientes", "delete");
 
   async function excluirCliente(id: string) {
     if (!podeExcluir) {
@@ -259,7 +260,7 @@ export default function ClientesConsultaIsland() {
   }
 
   if (loadingPerm) return <div className="clientes-page"><div className="card-base card-config">Carregando contexto...</div></div>;
-  if (!ativo) return <div className="clientes-page">Você não possui acesso ao módulo de Clientes.</div>;
+  if (!podeVer) return <div className="clientes-page">Você não possui acesso ao módulo de Clientes.</div>;
 
   return (
     <>

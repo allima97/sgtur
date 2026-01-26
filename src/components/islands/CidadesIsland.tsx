@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText as baseNormalizeText } from "../../lib/normalizeText";
@@ -43,29 +43,13 @@ const initialForm = {
 
 export default function CidadesIsland() {
   // PERMISSOES
-  const permCidade = usePermissao("Cidades");
-  const permCadastros = usePermissao("Cadastros");
-
-  const isAdmin = permCidade.isAdmin || permCadastros.isAdmin;
-  const carregando = permCidade.loading || permCadastros.loading;
-  const permissao = isAdmin
-    ? "admin"
-    : permCidade.permissao !== "none"
-    ? permCidade.permissao
-    : permCadastros.permissao;
-  const podeVer = isAdmin || permissao !== "none";
-  const podeCriar =
-    isAdmin ||
-    permissao === "create" ||
-    permissao === "edit" ||
-    permissao === "delete" ||
-    permissao === "admin";
-  const podeEditar =
-    isAdmin ||
-    permissao === "edit" ||
-    permissao === "delete" ||
-    permissao === "admin";
-  const podeExcluir = isAdmin || permissao === "delete" || permissao === "admin";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const carregando = loadingPerms || !ready;
+  const isAdmin = can("Cidades", "admin") || can("Cadastros", "admin");
+  const podeVer = can("Cidades") || can("Cadastros");
+  const podeCriar = can("Cidades", "create") || can("Cadastros", "create");
+  const podeEditar = can("Cidades", "edit") || can("Cadastros", "edit");
+  const podeExcluir = can("Cidades", "delete") || can("Cadastros", "delete");
 
   // STATES
   const {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -154,7 +154,13 @@ const initialForm: FormState = {
 };
 
 export default function ProdutosIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "delete");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   const [paises, setPaises] = useState<Pais[]>([]);
   const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
@@ -741,7 +747,7 @@ export default function ProdutosIsland() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
 
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voce nao tem permissao para salvar produtos.");
       return;
     }
@@ -829,7 +835,7 @@ export default function ProdutosIsland() {
   }
 
   async function excluir(id: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir produtos.");
       return;
     }
@@ -851,7 +857,7 @@ export default function ProdutosIsland() {
   }
 
   function solicitarExclusao(produto: Produto) {
-    if (permissao !== "admin" && permissao !== "delete") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir produtos.");
       return;
     }
@@ -865,7 +871,7 @@ export default function ProdutosIsland() {
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="destinos-page produtos-page">
@@ -884,7 +890,7 @@ export default function ProdutosIsland() {
                 placeholder="Busque por nome, tipo, destino, cidade, estado/província ou país"
               />
             </div>
-            {permissao !== "view" && (
+            {!modoSomenteLeitura && (
               <div className="form-group" style={{ alignItems: "flex-end" }}>
                 <button
                   type="button"
@@ -939,7 +945,7 @@ export default function ProdutosIsland() {
                   className="form-select"
                   value={form.tipo_produto}
                   onChange={(e) => handleChange("tipo_produto", e.target.value)}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 >
                   <option value="">Selecione o tipo</option>
                   {tipos.map((t) => (
@@ -959,7 +965,7 @@ export default function ProdutosIsland() {
                     onChange={(e) => handleCidadeBusca(e.target.value)}
                     onFocus={() => setMostrarSugestoes(true)}
                     onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                    disabled={permissao === "view" || form.todas_as_cidades}
+                    disabled={modoSomenteLeitura || form.todas_as_cidades}
                     style={{ marginBottom: 6 }}
                     title="Cidade selecionada pode ajudar a preencher o destino automaticamente."
                   />
@@ -1020,7 +1026,7 @@ export default function ProdutosIsland() {
                   onChange={(e) => handleChange("nome", e.target.value)}
                   onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   placeholder="Ex: Passeio em Gramado, Pacote Paris..."
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group" style={{ flex: "1 1 240px", minWidth: 220 }}>
@@ -1031,7 +1037,7 @@ export default function ProdutosIsland() {
                   placeholder="Escolha um fornecedor"
                   value={form.fornecedor_label}
                   onChange={(e) => handleFornecedorInput(e.target.value)}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
                 <datalist id="fornecedores-list">
                   {fornecedoresLista.map((fornecedor) => (
@@ -1048,7 +1054,7 @@ export default function ProdutosIsland() {
                   onChange={(e) => handleChange("destino", e.target.value)}
                   onBlur={(e) => handleChange("destino", titleCaseWithExceptions(e.target.value))}
                   placeholder={isGlobalMode ? "Global" : "Ex: Disney, Porto de Galinhas"}
-                  disabled={permissao === "view" || isGlobalMode}
+                  disabled={modoSomenteLeitura || isGlobalMode}
                   title="Cidade escolhida será aplicada quando o destino estiver vazio."
                 />
                 <datalist id="destinos-list">
@@ -1066,7 +1072,7 @@ export default function ProdutosIsland() {
                     className="form-select"
                     value={form.todas_as_cidades ? "true" : "false"}
                     onChange={(e) => handleToggleTodasAsCidades(e.target.value === "true")}
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
                   >
                     <option value="false">Nao</option>
                     <option value="true">Sim</option>
@@ -1092,7 +1098,7 @@ export default function ProdutosIsland() {
 
                     placeholder="Ex: Disney, Torre Eiffel..."
 
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
 
                   />
                   <datalist id="atracoes-list">
@@ -1118,7 +1124,7 @@ export default function ProdutosIsland() {
 
                     placeholder="Ex: Dezembro a Marco"
 
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
 
                   />
                   <datalist id="melhor-epoca-list">
@@ -1141,7 +1147,7 @@ export default function ProdutosIsland() {
                     className="form-select"
                     value={form.duracao_sugerida}
                     onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
                   >
                     <option value="">Selecione</option>
                     <option value="De 1 a 3 dias">De 1 a 3 dias</option>
@@ -1157,7 +1163,7 @@ export default function ProdutosIsland() {
                     className="form-select"
                     value={form.nivel_preco}
                     onChange={(e) => handleChange("nivel_preco", e.target.value)}
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
                   >
                     <option value="">Selecione</option>
                     {nivelPrecosOptions.map((nivel) => (
@@ -1174,7 +1180,7 @@ export default function ProdutosIsland() {
                     value={form.imagem_url}
                     onChange={(e) => handleChange("imagem_url", e.target.value)}
                     placeholder="URL de uma imagem do destino"
-                    disabled={permissao === "view"}
+                    disabled={modoSomenteLeitura}
                   />
                 </div>
               </div>
@@ -1199,7 +1205,7 @@ export default function ProdutosIsland() {
                   value={form.informacoes_importantes}
                   onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
                   placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               )}
             </div>
@@ -1216,7 +1222,7 @@ export default function ProdutosIsland() {
 
                 onChange={(e) => handleChange("ativo", e.target.value === "true")}
 
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
 
               >
 
@@ -1289,9 +1295,9 @@ export default function ProdutosIsland() {
                 </td>
                 <td className="th-actions" data-label="Acoes">
                   <TableActions
-                    show={permissao !== "view"}
+                    show={!modoSomenteLeitura}
                     actions={[
-                      ...(permissao !== "view"
+                      ...(!modoSomenteLeitura
                         ? [
                             {
                               key: "edit",
@@ -1301,7 +1307,7 @@ export default function ProdutosIsland() {
                             },
                           ]
                         : []),
-                      ...(permissao === "admin" || permissao === "delete"
+                      ...(podeExcluir
                         ? [
                             {
                               key: "delete",
@@ -1335,3 +1341,4 @@ export default function ProdutosIsland() {
     </div>
   );
 }
+

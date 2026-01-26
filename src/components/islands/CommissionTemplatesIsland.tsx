@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -56,8 +56,9 @@ const initialForm: Template = {
 };
 
 export default function CommissionTemplatesIsland() {
-  const { permissao, ativo: acessoAtivo, loading: loadingPerm } =
-    usePermissao("Parametros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
 
   const [form, setForm] = useState<Template>(initialForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -258,7 +259,7 @@ export default function CommissionTemplatesIsland() {
   // ============================================================
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!acessoAtivo) return <div>Acesso bloqueado ao módulo Parâmetros.</div>;
+  if (!podeVer) return <div>Acesso bloqueado ao módulo Parâmetros.</div>;
 
   return (
     <div className="commission-templates-page">

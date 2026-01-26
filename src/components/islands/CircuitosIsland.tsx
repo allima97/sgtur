@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
@@ -226,7 +226,13 @@ const initialForm = {
 };
 
 export default function CircuitosIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "admin");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   const {
     items: circuitos,
@@ -650,7 +656,7 @@ export default function CircuitosIsland() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
 
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voce nao tem permissao para salvar circuitos.");
       return;
     }
@@ -911,7 +917,7 @@ export default function CircuitosIsland() {
   }
 
   async function excluir(circuitoId: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir circuitos.");
       return;
     }
@@ -930,7 +936,7 @@ export default function CircuitosIsland() {
   }
 
   function solicitarExclusao(circuitoId: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir circuitos.");
       return;
     }
@@ -1135,7 +1141,7 @@ export default function CircuitosIsland() {
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="circuitos-page">
@@ -1163,7 +1169,7 @@ export default function CircuitosIsland() {
                   placeholder="Busque por nome, codigo, operador ou cidade"
                 />
               </div>
-              {permissao !== "view" && (
+              {!modoSomenteLeitura && (
                 <div className="form-group" style={{ alignItems: "flex-end" }}>
                   <button
                     type="button"
@@ -1202,14 +1208,14 @@ export default function CircuitosIsland() {
                     }
                     e.currentTarget.value = "";
                   }}
-                  disabled={permissao === "view" || importandoPdf}
+                  disabled={modoSomenteLeitura || importandoPdf}
                 />
                 <div className="mobile-stack-buttons" style={{ justifyContent: "flex-start" }}>
                   <button
                     type="button"
                     className="btn btn-light w-full sm:w-auto"
                     onClick={() => pdfInputRef.current?.click()}
-                    disabled={permissao === "view" || importandoPdf}
+                    disabled={modoSomenteLeitura || importandoPdf}
                   >
                     Escolher arquivo
                   </button>
@@ -1236,7 +1242,7 @@ export default function CircuitosIsland() {
                   onChange={(e) => handleChange("nome", e.target.value)}
                   onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                   placeholder="Nome do circuito"
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group" style={{ minWidth: 180 }}>
@@ -1246,7 +1252,7 @@ export default function CircuitosIsland() {
                   value={form.codigo}
                   onChange={(e) => handleChange("codigo", e.target.value)}
                   placeholder="Ex: P25001"
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group" style={{ flex: "1 1 220px", minWidth: 200 }}>
@@ -1257,7 +1263,7 @@ export default function CircuitosIsland() {
                   onChange={(e) => handleChange("operador", e.target.value)}
                   onBlur={(e) => handleChange("operador", titleCaseWithExceptions(e.target.value))}
                   placeholder="Operador do circuito"
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
             </div>
@@ -1271,7 +1277,7 @@ export default function CircuitosIsland() {
                   value={form.resumo}
                   onChange={(e) => handleChange("resumo", e.target.value)}
                   placeholder="Resumo do circuito"
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group sm:max-w-[160px]">
@@ -1280,7 +1286,7 @@ export default function CircuitosIsland() {
                   className="form-select"
                   value={form.ativo ? "true" : "false"}
                   onChange={(e) => handleChange("ativo", e.target.value === "true")}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 >
                   <option value="true">Sim</option>
                   <option value="false">Nao</option>
@@ -1294,7 +1300,7 @@ export default function CircuitosIsland() {
                 type="button"
                 className="btn btn-light w-full sm:w-auto"
                 onClick={adicionarData}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 Adicionar data
               </button>
@@ -1327,7 +1333,7 @@ export default function CircuitosIsland() {
                           className="form-input"
                           value={item.data_inicio}
                           onChange={(e) => atualizarData(item.tempId, "data_inicio", e.target.value)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Cidade de inicio" style={{ minWidth: 220 }}>
@@ -1342,7 +1348,7 @@ export default function CircuitosIsland() {
                             setMostrarSugestoesCidade(true);
                           }}
                           onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                         {cidadeContexto?.tipo === "data" && cidadeContexto.id === item.tempId && (
                           <>
@@ -1398,7 +1404,7 @@ export default function CircuitosIsland() {
                           min={0}
                           value={item.dias_extra_antes}
                           onChange={(e) => atualizarData(item.tempId, "dias_extra_antes", e.target.value)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Dias depois" style={{ maxWidth: 120 }}>
@@ -1408,7 +1414,7 @@ export default function CircuitosIsland() {
                           min={0}
                           value={item.dias_extra_depois}
                           onChange={(e) => atualizarData(item.tempId, "dias_extra_depois", e.target.value)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Ações">
@@ -1416,7 +1422,7 @@ export default function CircuitosIsland() {
                           type="button"
                           className="btn btn-light"
                           onClick={() => removerData(item.tempId)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         >
                           Remover
                         </button>
@@ -1433,7 +1439,7 @@ export default function CircuitosIsland() {
                 type="button"
                 className="btn btn-light w-full sm:w-auto"
                 onClick={adicionarDia}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 Adicionar dia
               </button>
@@ -1443,7 +1449,7 @@ export default function CircuitosIsland() {
               const isContextoDia = cidadeContexto?.tipo === "dia" && cidadeContexto.id === dia.tempId;
               const isDragOver = dragOverDiaId === dia.tempId;
               const isDragging = draggingDiaId === dia.tempId;
-              const podeArrastar = permissao !== "view" && dias.length > 1;
+              const podeArrastar = !modoSomenteLeitura && dias.length > 1;
               return (
                 <div
                   key={dia.tempId}
@@ -1479,7 +1485,7 @@ export default function CircuitosIsland() {
                               if (idx === 0) return;
                               reordenarDias(dia.tempId, dias[idx - 1].tempId);
                             }}
-                            disabled={permissao === "view" || idx === 0}
+                            disabled={modoSomenteLeitura || idx === 0}
                           >
                             ⬆️
                           </button>
@@ -1491,7 +1497,7 @@ export default function CircuitosIsland() {
                               if (idx >= dias.length - 1) return;
                               reordenarDias(dia.tempId, dias[idx + 1].tempId);
                             }}
-                            disabled={permissao === "view" || idx >= dias.length - 1}
+                            disabled={modoSomenteLeitura || idx >= dias.length - 1}
                           >
                             ⬇️
                           </button>
@@ -1500,7 +1506,7 @@ export default function CircuitosIsland() {
                             className="icon-action-btn danger"
                             title="Remover dia"
                             onClick={() => removerDia(dia.tempId)}
-                            disabled={permissao === "view" || dias.length === 1}
+                            disabled={modoSomenteLeitura || dias.length === 1}
                           >
                             🗑️
                           </button>
@@ -1512,7 +1518,7 @@ export default function CircuitosIsland() {
                         min={1}
                         value={dia.dia_numero}
                         onChange={(e) => atualizarDia(dia.tempId, "dia_numero", Number(e.target.value))}
-                        disabled={permissao === "view"}
+                        disabled={modoSomenteLeitura}
                       />
                     </div>
                     <div className="form-group" style={{ flex: 1 }}>
@@ -1522,7 +1528,7 @@ export default function CircuitosIsland() {
                         value={dia.titulo}
                         onChange={(e) => atualizarDia(dia.tempId, "titulo", e.target.value)}
                         placeholder="Ex: Lisboa e Fatima"
-                        disabled={permissao === "view"}
+                        disabled={modoSomenteLeitura}
                       />
                     </div>
                   </div>
@@ -1535,7 +1541,7 @@ export default function CircuitosIsland() {
                       value={dia.descricao}
                       onChange={(e) => atualizarDia(dia.tempId, "descricao", e.target.value)}
                       placeholder={`Descricao do dia ${idx + 1}`}
-                      disabled={permissao === "view"}
+                      disabled={modoSomenteLeitura}
                     />
                   </div>
 
@@ -1565,7 +1571,7 @@ export default function CircuitosIsland() {
                             className="btn btn-light"
                             style={{ padding: "2px 6px" }}
                             onClick={() => removerCidadeDoDia(dia.tempId, cidade.id)}
-                            disabled={permissao === "view"}
+                            disabled={modoSomenteLeitura}
                           >
                             x
                           </button>
@@ -1583,7 +1589,7 @@ export default function CircuitosIsland() {
                         setMostrarSugestoesCidade(true);
                       }}
                       onBlur={() => setTimeout(() => setMostrarSugestoesCidade(false), 150)}
-                      disabled={permissao === "view"}
+                      disabled={modoSomenteLeitura}
                     />
                     {isContextoDia && (
                       <>
@@ -1815,3 +1821,4 @@ export default function CircuitosIsland() {
     </div>
   );
 }
+

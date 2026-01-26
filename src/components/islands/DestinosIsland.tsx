@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -69,7 +69,13 @@ const initialForm: FormState = {
 };
 
 export default function DestinosIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "admin");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   const {
     items: paises,
@@ -238,7 +244,7 @@ export default function DestinosIsland() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
 
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voce nao tem permissao para salvar destinos.");
       return;
     }
@@ -283,7 +289,7 @@ export default function DestinosIsland() {
   }
 
   async function excluir(id: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir destinos.");
       return;
     }
@@ -301,7 +307,7 @@ export default function DestinosIsland() {
   }
 
   function solicitarExclusao(destino: Destino) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir destinos.");
       return;
     }
@@ -317,7 +323,7 @@ export default function DestinosIsland() {
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
   }
-  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="destinos-page">
@@ -333,7 +339,7 @@ export default function DestinosIsland() {
                 onChange={(e) => handleChange("nome", e.target.value)}
                 onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
                 placeholder="Ex: Orlando, Paris, Gramado..."
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
 
@@ -343,7 +349,7 @@ export default function DestinosIsland() {
                 className="form-select"
                 value={form.pais_id}
                 onChange={(e) => handleChange("pais_id", e.target.value)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="">Selecione um pais</option>
                 {paises.map((p) => (
@@ -360,7 +366,7 @@ export default function DestinosIsland() {
                 className="form-select"
                 value={form.cidade_id}
                 onChange={(e) => handleChange("cidade_id", e.target.value)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="">Selecione uma cidade</option>
                 {cidadesFiltradas.map((c) => (
@@ -380,7 +386,7 @@ export default function DestinosIsland() {
                 value={form.tipo}
                 onChange={(e) => handleChange("tipo", e.target.value)}
                 placeholder="Ex: Cidade, Praia, Parque, Serra..."
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
             <div className="form-group">
@@ -390,7 +396,7 @@ export default function DestinosIsland() {
                 value={form.atracao_principal}
                 onChange={(e) => handleChange("atracao_principal", e.target.value)}
                 placeholder="Ex: Disney, Torre Eiffel, Centro Historico..."
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
           </div>
@@ -403,7 +409,7 @@ export default function DestinosIsland() {
                 value={form.melhor_epoca}
                 onChange={(e) => handleChange("melhor_epoca", e.target.value)}
                 placeholder="Ex: Dezembro a Marco"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
             <div className="form-group">
@@ -413,7 +419,7 @@ export default function DestinosIsland() {
                 value={form.duracao_sugerida}
                 onChange={(e) => handleChange("duracao_sugerida", e.target.value)}
                 placeholder="Ex: 7 dias"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
             <div className="form-group">
@@ -423,7 +429,7 @@ export default function DestinosIsland() {
                 value={form.nivel_preco}
                 onChange={(e) => handleChange("nivel_preco", e.target.value)}
                 placeholder="Ex: Economico, Intermediario, Premium"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
           </div>
@@ -436,7 +442,7 @@ export default function DestinosIsland() {
                 value={form.imagem_url}
                 onChange={(e) => handleChange("imagem_url", e.target.value)}
                 placeholder="URL de uma imagem do destino"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
             <div className="form-group">
@@ -445,7 +451,7 @@ export default function DestinosIsland() {
                 className="form-select"
                 value={form.ativo ? "true" : "false"}
                 onChange={(e) => handleChange("ativo", e.target.value === "true")}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="true">Sim</option>
                 <option value="false">Nao</option>
@@ -461,12 +467,12 @@ export default function DestinosIsland() {
               value={form.informacoes_importantes}
               onChange={(e) => handleChange("informacoes_importantes", e.target.value)}
               placeholder="Observacoes gerais, dicas, documentacao necessaria, etc."
-              disabled={permissao === "view"}
+              disabled={modoSomenteLeitura}
             />
           </div>
 
           <div className="mt-2">
-            {permissao !== "view" && (
+            {!modoSomenteLeitura && (
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -480,7 +486,7 @@ export default function DestinosIsland() {
               </button>
             )}
 
-            {editandoId && permissao !== "view" && (
+            {editandoId && !modoSomenteLeitura && (
               <button
                 type="button"
                 className="btn btn-light"
@@ -550,9 +556,9 @@ export default function DestinosIsland() {
             </td>
             <td className="th-actions" data-label="Acoes">
               <TableActions
-                show={permissao !== "view"}
+                show={!modoSomenteLeitura}
                 actions={[
-                  ...(permissao !== "view"
+                  ...(!modoSomenteLeitura
                     ? [
                         {
                           key: "edit",
@@ -562,7 +568,7 @@ export default function DestinosIsland() {
                         },
                       ]
                     : []),
-                  ...(permissao === "admin"
+                  ...(podeExcluir
                     ? [
                         {
                           key: "delete",

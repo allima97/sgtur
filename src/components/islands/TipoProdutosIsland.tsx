@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -38,7 +38,13 @@ type ComissaoProduto = {
 };
 
 export default function TipoProdutosIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
+  const podeCriar = can("Parametros", "create");
+  const podeEditar = can("Parametros", "edit");
+  const podeExcluir = can("Parametros", "admin");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   const {
     items: tipos,
@@ -228,7 +234,7 @@ export default function TipoProdutosIsland() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
 
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voc?? n??o tem permiss??o para salvar tipos de produto.");
       return;
     }
@@ -373,7 +379,7 @@ export default function TipoProdutosIsland() {
   }
 
   async function excluir(id: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir tipos de produto.");
       return;
     }
@@ -392,7 +398,7 @@ export default function TipoProdutosIsland() {
   }
 
   function solicitarExclusao(tipoProduto: TipoProduto) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir tipos de produto.");
       return;
     }
@@ -415,7 +421,7 @@ export default function TipoProdutosIsland() {
   }, [tiposFiltrados, busca]);
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Você não possui acesso ao módulo de Parâmetros.</div>;
+  if (!podeVer) return <div>Você não possui acesso ao módulo de Parâmetros.</div>;
 
   return (
     <div className="produtos-page">
@@ -430,7 +436,7 @@ export default function TipoProdutosIsland() {
                 value={form.nome}
                 onChange={(e) => handleChange("nome", e.target.value)}
                 onBlur={(e) => handleChange("nome", titleCaseWithExceptions(e.target.value))}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
             </div>
 
@@ -446,7 +452,7 @@ export default function TipoProdutosIsland() {
                     setRegraSelecionada("");
                   }
                 }}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="geral">Geral (usa regra cadastrada)</option>
                 <option value="diferenciado">Diferenciado (percentual fixo)</option>
@@ -461,7 +467,7 @@ export default function TipoProdutosIsland() {
                 className="form-input"
                 value={form.soma_na_meta ? "1" : "0"}
                 onChange={(e) => handleChange("soma_na_meta", e.target.value === "1")}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="1">Sim</option>
                 <option value="0">Não</option>
@@ -474,7 +480,7 @@ export default function TipoProdutosIsland() {
                 className="form-input"
                 value={form.ativo ? "1" : "0"}
                 onChange={(e) => handleChange("ativo", e.target.value === "1")}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="1">Sim</option>
                 <option value="0">Não</option>
@@ -489,7 +495,7 @@ export default function TipoProdutosIsland() {
                 className="form-input"
                 value={regraSelecionada}
                 onChange={(e) => setRegraSelecionada(e.target.value)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
                 required
               >
                 <option value="">Selecione</option>
@@ -512,7 +518,7 @@ export default function TipoProdutosIsland() {
                   step="0.01"
                   value={fixMetaNao}
                   onChange={(e) => setFixMetaNao(e.target.value)}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group">
@@ -523,7 +529,7 @@ export default function TipoProdutosIsland() {
                   step="0.01"
                   value={fixMetaAtingida}
                   onChange={(e) => setFixMetaAtingida(e.target.value)}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
               <div className="form-group">
@@ -534,13 +540,13 @@ export default function TipoProdutosIsland() {
                   step="0.01"
                   value={fixSuperMeta}
                   onChange={(e) => setFixSuperMeta(e.target.value)}
-                  disabled={permissao === "view"}
+                  disabled={modoSomenteLeitura}
                 />
               </div>
             </div>
           )}
 
-          {permissao !== "view" && (
+          {!modoSomenteLeitura && (
             <div className="mobile-stack-buttons" style={{ marginTop: 8 }}>
               <button className="btn btn-primary w-full sm:w-auto" type="submit">
                 {editandoId ? "Salvar alterações" : "Salvar tipo"}
@@ -577,7 +583,7 @@ export default function TipoProdutosIsland() {
                   style={{ width: "100%" }}
                 />
               </div>
-              {permissao !== "view" && (
+              {!modoSomenteLeitura && (
                 <div className="form-group" style={{ alignItems: "flex-end" }}>
                   <span style={{ visibility: "hidden" }}>botão</span>
                   <button
@@ -637,9 +643,9 @@ export default function TipoProdutosIsland() {
 
                 <td className="th-actions" data-label="Ações">
                   <TableActions
-                    show={permissao !== "view"}
+                    show={!modoSomenteLeitura}
                     actions={[
-                      ...(permissao !== "view"
+                      ...(!modoSomenteLeitura
                         ? [
                             {
                               key: "edit",
@@ -649,7 +655,7 @@ export default function TipoProdutosIsland() {
                             },
                           ]
                         : []),
-                      ...(permissao === "admin"
+                      ...(podeExcluir
                         ? [
                             {
                               key: "delete",
@@ -683,3 +689,4 @@ export default function TipoProdutosIsland() {
     </div>
   );
 }
+

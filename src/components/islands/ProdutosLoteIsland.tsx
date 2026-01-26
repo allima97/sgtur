@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -113,7 +113,12 @@ function criarProdutoItem(): ProdutoItem {
 }
 
 export default function ProdutosLoteIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
   const {
     saving: salvando,
     error: erro,
@@ -375,7 +380,7 @@ export default function ProdutosLoteIsland() {
   async function salvarProdutos(event: React.FormEvent) {
     event.preventDefault();
 
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voce nao tem permissao para salvar produtos.");
       return;
     }
@@ -450,7 +455,7 @@ export default function ProdutosLoteIsland() {
   if (loadingPerm) {
     return <LoadingUsuarioContext />;
   }
-  if (!ativo) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div>Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="produtos-lote-page">
@@ -477,7 +482,7 @@ export default function ProdutosLoteIsland() {
                 onChange={(e) => handleCidadeBusca(e.target.value)}
                 onFocus={() => setMostrarSugestoes(true)}
                 onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
                 style={{ marginBottom: 6 }}
               />
               {buscandoCidade && <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando...</div>}
@@ -540,7 +545,7 @@ export default function ProdutosLoteIsland() {
                 placeholder="Escolha um fornecedor"
                 value={common.fornecedor_label}
                 onChange={(e) => handleFornecedorInput(e.target.value)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
               <datalist id="fornecedores-lote-list">
                 {fornecedoresLista.map((fornecedor) => (
@@ -560,7 +565,7 @@ export default function ProdutosLoteIsland() {
                 value={common.atracao_principal}
                 onChange={(e) => handleCommonChange("atracao_principal", e.target.value)}
                 placeholder="Ex: Centro historico, parques, praias"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
               <datalist id="atracoes-lote-list">
                 {atracoesSugestoes.map((nome) => (
@@ -577,7 +582,7 @@ export default function ProdutosLoteIsland() {
                 value={common.melhor_epoca}
                 onChange={(e) => handleCommonChange("melhor_epoca", e.target.value)}
                 placeholder="Ex: Verão, baixa temporada"
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               />
               <datalist id="melhores-epocas-lote-list">
                 {melhoresEpocasSugestoes.map((nome) => (
@@ -592,7 +597,7 @@ export default function ProdutosLoteIsland() {
                 className="form-select"
                 value={common.duracao_sugerida}
                 onChange={(e) => handleCommonChange("duracao_sugerida", e.target.value)}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="">Selecione</option>
                 {duracaoOptions.map((duracao) => (
@@ -609,7 +614,7 @@ export default function ProdutosLoteIsland() {
                 className="form-select"
                 value={common.ativo ? "true" : "false"}
                 onChange={(e) => handleCommonChange("ativo", e.target.value === "true")}
-                disabled={permissao === "view"}
+                disabled={modoSomenteLeitura}
               >
                 <option value="true">Sim</option>
                 <option value="false">Nao</option>
@@ -649,7 +654,7 @@ export default function ProdutosLoteIsland() {
                           className="form-select"
                           value={produto.tipo_produto}
                           onChange={(e) => handleProdutoChange(produto.id, "tipo_produto", e.target.value)}
-                          disabled={permissao === "view" || carregando}
+                          disabled={modoSomenteLeitura || carregando}
                         >
                           <option value="">{carregando ? "Carregando..." : "Selecione o tipo"}</option>
                           {tipos.map((t) => (
@@ -669,7 +674,7 @@ export default function ProdutosLoteIsland() {
                           }
                           placeholder={`Produto ${index + 1}`}
                           style={{ minWidth: 320 }}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Destino">
@@ -683,7 +688,7 @@ export default function ProdutosLoteIsland() {
                           }
                           placeholder="Ex: Disney, Porto de Galinhas"
                           style={{ minWidth: 320 }}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Nivel de preco">
@@ -691,7 +696,7 @@ export default function ProdutosLoteIsland() {
                           className="form-select"
                           value={produto.nivel_preco}
                           onChange={(e) => handleProdutoChange(produto.id, "nivel_preco", e.target.value)}
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         >
                           <option value="">Selecione</option>
                           {nivelPrecosOptions.map((nivel) => (
@@ -707,7 +712,7 @@ export default function ProdutosLoteIsland() {
                           value={produto.imagem_url}
                           onChange={(e) => handleProdutoChange(produto.id, "imagem_url", e.target.value)}
                           placeholder="URL da imagem"
-                          disabled={permissao === "view"}
+                          disabled={modoSomenteLeitura}
                         />
                       </td>
                       <td data-label="Info">
@@ -724,7 +729,7 @@ export default function ProdutosLoteIsland() {
                           type="button"
                           className="btn btn-light"
                           onClick={() => removerProduto(produto.id)}
-                          disabled={permissao === "view" || produtos.length === 1}
+                          disabled={modoSomenteLeitura || produtos.length === 1}
                         >
                           Remover
                         </button>
@@ -741,7 +746,7 @@ export default function ProdutosLoteIsland() {
                               handleProdutoChange(produto.id, "informacoes_importantes", e.target.value)
                             }
                             placeholder="Observacoes, regras, detalhes relevantes..."
-                            disabled={permissao === "view"}
+                            disabled={modoSomenteLeitura}
                           />
                         </td>
                       </tr>
@@ -757,22 +762,22 @@ export default function ProdutosLoteIsland() {
               type="button"
               className="btn btn-light"
               onClick={adicionarProduto}
-              disabled={permissao === "view"}
+              disabled={modoSomenteLeitura}
             >
               Adicionar produto
             </button>
-            <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
+            <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
               {salvando ? "Salvando..." : "Salvar Produtos"}
             </button>
             <button
               type="button"
               className="btn btn-light"
               onClick={handleCancel}
-              disabled={salvando || permissao === "view"}
+              disabled={salvando || modoSomenteLeitura}
             >
               Cancelar
             </button>
-            <button type="button" className="btn btn-light" onClick={limparProdutos} disabled={salvando || permissao === "view"}>
+            <button type="button" className="btn btn-light" onClick={limparProdutos} disabled={salvando || modoSomenteLeitura}>
               Limpar itens
             </button>
           </div>
@@ -781,3 +786,4 @@ export default function ProdutosLoteIsland() {
     </div>
   );
 }
+

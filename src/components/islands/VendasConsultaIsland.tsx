@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
@@ -108,15 +108,14 @@ export default function VendasConsultaIsland() {
   // ================================
   // PERMISSÕES
   // ================================
-  const { permissao, ativo, loading: loadPerm, isAdmin } = usePermissao("Vendas");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadPerm = loadingPerms || !ready;
 
-  const podeVer = permissao !== "none";
-  const podeCriar =
-    permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeEditar =
-    permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeExcluir =
-    permissao === "delete" || permissao === "admin";
+  const podeVer = can("Vendas");
+  const podeCriar = can("Vendas", "create");
+  const podeEditar = can("Vendas", "edit");
+  const podeExcluir = can("Vendas", "delete");
+  const isAdmin = can("Vendas", "admin");
 
   // ================================
   // ESTADOS
@@ -787,7 +786,7 @@ export default function VendasConsultaIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return (
       <div className="card-base card-config">
         <strong>Acesso negado ao módulo de Vendas.</strong>

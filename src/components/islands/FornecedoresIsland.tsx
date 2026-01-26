@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -99,7 +99,12 @@ function formatCidadeLabel(cidade: CidadeBusca) {
 }
 
 export default function FornecedoresIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "admin");
   const {
     items: fornecedores,
     loading,
@@ -246,7 +251,7 @@ export default function FornecedoresIsland() {
     setMostrarFormulario(true);
   }
 
-  const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
+  const podeSalvar = podeCriar || podeEditar;
   const termosBusca = normalizeSearchValue(busca);
   const fornecedoresFiltrados = useMemo(() => {
     if (!termosBusca) return fornecedores;
@@ -404,7 +409,7 @@ export default function FornecedoresIsland() {
   }
 
   async function excluirFornecedor(fornecedor: Fornecedor) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir fornecedores.");
       return;
     }
@@ -436,7 +441,7 @@ export default function FornecedoresIsland() {
   }
 
   function solicitarExclusao(fornecedor: Fornecedor) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir fornecedores.");
       return;
     }
@@ -453,7 +458,7 @@ export default function FornecedoresIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Você não possui acesso ao módulo de Cadastros.</div>;
   }
 
@@ -805,7 +810,7 @@ export default function FornecedoresIsland() {
                       <TableActions
                         showEdit={podeSalvar}
                         onEdit={() => iniciarEdicaoFornecedor(fornecedor)}
-                        showDelete={permissao === "admin"}
+                        showDelete={podeExcluir}
                         onDelete={() => solicitarExclusao(fornecedor)}
                         deleteDisabled={excluindoId === fornecedor.id}
                         deleteIcon={excluindoId === fornecedor.id ? "..." : "🗑️"}
@@ -832,6 +837,3 @@ export default function FornecedoresIsland() {
   );
 }
 
-function permissoesNaoVazias(value: string) {
-  return value && value !== "none";
-}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 
@@ -66,9 +66,11 @@ function extractStoragePath(value?: string | null) {
 }
 
 export default function QuotePrintSettingsIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
-  const podeEditar = permissao === "admin" || permissao === "edit" || permissao === "delete";
-  const bloqueado = !ativo || !podeEditar;
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Parametros");
+  const podeEditar = can("Parametros", "edit");
+  const bloqueado = !podeVer || !podeEditar;
 
   const [settings, setSettings] = useState<QuotePrintSettings>(EMPTY_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -319,7 +321,7 @@ export default function QuotePrintSettingsIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Acesso ao modulo de parametros bloqueado.</div>;
   }
 

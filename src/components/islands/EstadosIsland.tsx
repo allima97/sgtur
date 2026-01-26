@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -39,7 +39,13 @@ const initialForm: FormState = {
 };
 
 export default function SubdivisoesIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Cadastros");
+  const podeCriar = can("Cadastros", "create");
+  const podeEditar = can("Cadastros", "edit");
+  const podeExcluir = can("Cadastros", "admin");
+  const modoSomenteLeitura = !podeCriar && !podeEditar;
 
   const {
     items: paises,
@@ -167,7 +173,7 @@ export default function SubdivisoesIsland() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (permissao === "view") {
+    if (modoSomenteLeitura) {
       setErro("Voce nao tem permissao para salvar subdivisoes.");
       return;
     }
@@ -196,7 +202,7 @@ export default function SubdivisoesIsland() {
   }
 
   async function excluir(id: string) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir subdivisoes.");
       return;
     }
@@ -213,7 +219,7 @@ export default function SubdivisoesIsland() {
   }
 
   function solicitarExclusao(subdivisao: Subdivisao) {
-    if (permissao !== "admin") {
+    if (!podeExcluir) {
       alert("Somente administradores podem excluir subdivisoes.");
       return;
     }
@@ -233,7 +239,7 @@ export default function SubdivisoesIsland() {
       </div>
     );
   }
-  if (!ativo) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
+  if (!podeVer) return <div className="paises-page">Voce nao possui acesso ao modulo de Cadastros.</div>;
 
   return (
     <div className="paises-page">
@@ -254,7 +260,7 @@ export default function SubdivisoesIsland() {
                 placeholder="Nome, país ou código..."
               />
             </div>
-            {permissao !== "view" && (
+            {!modoSomenteLeitura && (
               <div className="form-group" style={{ alignItems: "flex-end" }}>
                 <button
                   type="button"
@@ -325,7 +331,7 @@ export default function SubdivisoesIsland() {
             </div>
 
             <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-              <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
+              <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
                 {salvando ? "Salvando..." : "Salvar estado/província"}
               </button>
               <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
@@ -388,7 +394,7 @@ export default function SubdivisoesIsland() {
               </td>
               <td className="th-actions" data-label="Acoes">
                 <TableActions
-                  show={permissao !== "view"}
+                  show={!modoSomenteLeitura}
                   actions={[
                     {
                       key: "edit",
@@ -396,7 +402,7 @@ export default function SubdivisoesIsland() {
                       onClick: () => iniciarEdicao(s),
                       icon: "✏️",
                     },
-                    ...(permissao === "admin"
+                    ...(podeExcluir
                       ? [
                           {
                             key: "delete",
