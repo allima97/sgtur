@@ -81,6 +81,7 @@ export default function FornecedoresIsland() {
   const [formError, setFormError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
@@ -242,6 +243,43 @@ export default function FornecedoresIsland() {
       setFormError(editandoId ? "Erro ao atualizar fornecedor." : "Erro ao criar fornecedor.");
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function excluirFornecedor(fornecedor: Fornecedor) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir fornecedores.");
+      return;
+    }
+    if (!window.confirm("Tem certeza que deseja excluir este fornecedor?")) return;
+
+    try {
+      setExcluindoId(fornecedor.id);
+      setErro(null);
+
+      const { count, error: countError } = await supabase
+        .from("produtos")
+        .select("id", { count: "exact", head: true })
+        .eq("fornecedor_id", fornecedor.id);
+      if (countError) throw countError;
+
+      if ((count ?? 0) > 0) {
+        setErro("Não é possível excluir fornecedor com produtos vinculados.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("fornecedores")
+        .delete()
+        .eq("id", fornecedor.id);
+      if (error) throw error;
+
+      await carregarFornecedores();
+    } catch (error) {
+      console.error(error);
+      setErro("Nao foi possivel excluir o fornecedor.");
+    } finally {
+      setExcluindoId(null);
     }
   }
 
@@ -538,6 +576,16 @@ export default function FornecedoresIsland() {
                             onClick={() => iniciarEdicaoFornecedor(fornecedor)}
                           >
                             ✏️
+                          </button>
+                        )}
+                        {permissao === "admin" && (
+                          <button
+                            className="btn-icon btn-danger"
+                            title="Excluir"
+                            onClick={() => excluirFornecedor(fornecedor)}
+                            disabled={excluindoId === fornecedor.id}
+                          >
+                            {excluindoId === fornecedor.id ? "..." : "🗑️"}
                           </button>
                         )}
                       </div>
