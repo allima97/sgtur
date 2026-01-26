@@ -80,6 +80,7 @@ export default function FornecedoresIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
@@ -161,13 +162,36 @@ export default function FornecedoresIsland() {
   function abrirFormularioFornecedor() {
     setForm(INITIAL_FORM);
     setFormError(null);
+    setEditandoId(null);
     setMostrarFormulario(true);
   }
 
   function fecharFormularioFornecedor() {
     setForm(INITIAL_FORM);
     setFormError(null);
+    setEditandoId(null);
     setMostrarFormulario(false);
+  }
+
+  function iniciarEdicaoFornecedor(fornecedor: Fornecedor) {
+    setForm({
+      nome_completo: fornecedor.nome_completo || "",
+      nome_fantasia: fornecedor.nome_fantasia || "",
+      localizacao: fornecedor.localizacao || "brasil",
+      cnpj: fornecedor.cnpj || "",
+      cep: fornecedor.cep || "",
+      cidade: fornecedor.cidade || "",
+      estado: fornecedor.estado || "",
+      telefone: fornecedor.telefone || "",
+      whatsapp: fornecedor.whatsapp || "",
+      telefone_emergencia: fornecedor.telefone_emergencia || "",
+      responsavel: fornecedor.responsavel || "",
+      tipo_faturamento: fornecedor.tipo_faturamento || "pre_pago",
+      principais_servicos: fornecedor.principais_servicos || "",
+    });
+    setFormError(null);
+    setEditandoId(fornecedor.id);
+    setMostrarFormulario(true);
   }
 
   const podeSalvar = permissao !== "view" && permissoesNaoVazias(permissao);
@@ -206,14 +230,16 @@ export default function FornecedoresIsland() {
         tipo_faturamento: form.tipo_faturamento,
         principais_servicos: form.principais_servicos.trim(),
       };
-      const { error } = await supabase.from("fornecedores").insert(payload);
+      const { error } = editandoId
+        ? await supabase.from("fornecedores").update(payload).eq("id", editandoId)
+        : await supabase.from("fornecedores").insert(payload);
       if (error) throw error;
       setForm(INITIAL_FORM);
       await carregarFornecedores();
       fecharFormularioFornecedor();
     } catch (error) {
       console.error(error);
-      setFormError("Erro ao criar fornecedor.");
+      setFormError(editandoId ? "Erro ao atualizar fornecedor." : "Erro ao criar fornecedor.");
     } finally {
       setSalvando(false);
     }
@@ -265,7 +291,9 @@ export default function FornecedoresIsland() {
 
       {mostrarFormulario && (
         <div className="card-base card-blue form-card" style={{ marginTop: 12, padding: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Novo fornecedor</div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>
+            {editandoId ? "Editar fornecedor" : "Novo fornecedor"}
+          </div>
           <div className="form-row">
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">Localização</label>
@@ -431,7 +459,7 @@ export default function FornecedoresIsland() {
               onClick={salvarFornecedor}
               disabled={salvando || !podeSalvar}
             >
-              {salvando ? "Salvando..." : "Salvar fornecedor"}
+              {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Salvar fornecedor"}
             </button>
             <button
               type="button"
@@ -462,17 +490,18 @@ export default function FornecedoresIsland() {
                   <th>Faturamento</th>
                   <th>Contato</th>
                   <th>Serviços</th>
+                  <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={5}>Carregando fornecedores...</td>
+                    <td colSpan={6}>Carregando fornecedores...</td>
                   </tr>
                 )}
                 {!loading && fornecedoresExibidos.length === 0 && (
                   <tr>
-                    <td colSpan={5}>Nenhum fornecedor cadastrado.</td>
+                    <td colSpan={6}>Nenhum fornecedor cadastrado.</td>
                   </tr>
                 )}
                 {!loading &&
@@ -499,6 +528,19 @@ export default function FornecedoresIsland() {
                           ? `${fornecedor.principais_servicos.slice(0, 80)}...`
                           : fornecedor.principais_servicos
                         : "-"}
+                    </td>
+                    <td className="th-actions" data-label="Ações">
+                      <div className="action-buttons">
+                        {podeSalvar && (
+                          <button
+                            className="btn-icon"
+                            title="Editar"
+                            onClick={() => iniciarEdicaoFornecedor(fornecedor)}
+                          >
+                            ✏️
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
