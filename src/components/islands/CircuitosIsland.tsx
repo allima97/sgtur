@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -227,18 +228,27 @@ const initialForm = {
 export default function CircuitosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
-  const [circuitos, setCircuitos] = useState<CircuitoLista[]>([]);
+  const {
+    items: circuitos,
+    loading,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadCircuitos,
+    create,
+    update,
+    remove,
+  } = useCrudResource<CircuitoLista>({
+    table: "circuitos",
+  });
   const [form, setForm] = useState(initialForm);
   const [dias, setDias] = useState<CircuitoDia[]>([]);
   const [datas, setDatas] = useState<CircuitoData[]>([]);
   const [busca, setBusca] = useState("");
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [circuitoParaExcluir, setCircuitoParaExcluir] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
   const [cidadeBusca, setCidadeBusca] = useState("");
@@ -285,60 +295,57 @@ export default function CircuitosIsland() {
   }, []);
 
   async function carregarCircuitos() {
-    try {
-      setLoading(true);
-      setErro(null);
-      const { data, error } = await supabase
-        .from("circuitos")
-        .select(`
-          id,
-          nome,
-          codigo,
-          operador,
-          resumo,
-          ativo,
-          created_at,
-          circuito_dias (
-            titulo,
-            descricao,
-            cidades:circuito_dias_cidades (
-              cidades (nome)
+    const { error } = await loadCircuitos({
+      fetcher: async () => {
+        const { data, error: queryError } = await supabase
+          .from("circuitos")
+          .select(`
+            id,
+            nome,
+            codigo,
+            operador,
+            resumo,
+            ativo,
+            created_at,
+            circuito_dias (
+              titulo,
+              descricao,
+              cidades:circuito_dias_cidades (
+                cidades (nome)
+              )
             )
-          )
-        `)
-        .order("nome", { ascending: true });
-      if (error) throw error;
-      const formatados = (data || []).map((c: any) => {
-        const cidadesSet = new Set<string>();
-        const textosRoteiro: string[] = [];
-        (c.circuito_dias || []).forEach((dia: any) => {
-          if (dia?.titulo) textosRoteiro.push(dia.titulo);
-          if (dia?.descricao) textosRoteiro.push(dia.descricao);
-          (dia.cidades || []).forEach((item: any) => {
-            const nome = item?.cidades?.nome;
-            if (nome) cidadesSet.add(nome);
+          `)
+          .order("nome", { ascending: true });
+        if (queryError) throw queryError;
+        const formatados = (data || []).map((c: any) => {
+          const cidadesSet = new Set<string>();
+          const textosRoteiro: string[] = [];
+          (c.circuito_dias || []).forEach((dia: any) => {
+            if (dia?.titulo) textosRoteiro.push(dia.titulo);
+            if (dia?.descricao) textosRoteiro.push(dia.descricao);
+            (dia.cidades || []).forEach((item: any) => {
+              const nome = item?.cidades?.nome;
+              if (nome) cidadesSet.add(nome);
+            });
           });
+          const roteiroBusca = normalizeText([...textosRoteiro, ...Array.from(cidadesSet)].join(" "));
+          return {
+            id: c.id,
+            nome: c.nome,
+            codigo: c.codigo,
+            operador: c.operador,
+            resumo: c.resumo,
+            ativo: c.ativo,
+            created_at: c.created_at,
+            cidades_roteiro: Array.from(cidadesSet),
+            roteiro_busca: roteiroBusca,
+          } as CircuitoLista;
         });
-        const roteiroBusca = normalizeText([...textosRoteiro, ...Array.from(cidadesSet)].join(" "));
-        return {
-          id: c.id,
-          nome: c.nome,
-          codigo: c.codigo,
-          operador: c.operador,
-          resumo: c.resumo,
-          ativo: c.ativo,
-          created_at: c.created_at,
-          cidades_roteiro: Array.from(cidadesSet),
-          roteiro_busca: roteiroBusca,
-        } as CircuitoLista;
-      });
-      setCircuitos(formatados);
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao carregar circuitos.");
-    } finally {
-      setLoading(false);
-    }
+        return formatados;
+      },
+      errorMessage: "Erro ao carregar circuitos.",
+    });
+    if (error) return;
   }
 
   useEffect(() => {
@@ -704,7 +711,6 @@ export default function CircuitosIsland() {
     }
 
     try {
-      setSalvando(true);
       setErro(null);
       setSucesso(null);
 
@@ -718,12 +724,17 @@ export default function CircuitosIsland() {
 
       let circuitoId = editandoId;
       if (circuitoId) {
-        const { error: updateErr } = await supabase.from("circuitos").update(payload).eq("id", circuitoId);
-        if (updateErr) throw updateErr;
+        const { error } = await update(circuitoId, payload, {
+          errorMessage: "Erro ao salvar circuito.",
+        });
+        if (error) return;
       } else {
-        const { data, error } = await supabase.from("circuitos").insert(payload).select("id").maybeSingle();
-        if (error) throw error;
-        circuitoId = data?.id || null;
+        const { data, error } = await create(payload, {
+          select: "id",
+          errorMessage: "Erro ao salvar circuito.",
+        });
+        if (error) return;
+        circuitoId = (data as { id?: string } | null)?.id || null;
       }
 
       if (!circuitoId) {
@@ -826,8 +837,6 @@ export default function CircuitosIsland() {
       console.error(e);
       const msg = e?.message || e?.error?.message || "";
       setErro(`Erro ao salvar circuito.${msg ? ` Detalhes: ${msg}` : ""}`);
-    } finally {
-      setSalvando(false);
     }
   }
 
@@ -908,15 +917,15 @@ export default function CircuitosIsland() {
     }
 
     try {
-      setExcluindoId(circuitoId);
       setErro(null);
-      await supabase.from("circuitos").delete().eq("id", circuitoId);
+      const { error } = await remove(circuitoId, {
+        errorMessage: "Nao foi possivel excluir o circuito.",
+      });
+      if (error) return;
       await carregarCircuitos();
     } catch (e) {
       console.error(e);
       setErro("Nao foi possivel excluir o circuito.");
-    } finally {
-      setExcluindoId(null);
     }
   }
 

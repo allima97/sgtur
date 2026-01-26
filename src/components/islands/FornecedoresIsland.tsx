@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 
@@ -97,16 +98,27 @@ function formatCidadeLabel(cidade: CidadeBusca) {
 
 export default function FornecedoresIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const {
+    items: fornecedores,
+    loading,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadFornecedores,
+    create,
+    update,
+    remove,
+  } = useCrudResource<Fornecedor>({
+    table: "fornecedores",
+    select:
+      "id, nome_completo, nome_fantasia, localizacao, cidade, estado, telefone, whatsapp, telefone_emergencia, responsavel, tipo_faturamento, principais_servicos, created_at",
+  });
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [form, setForm] = useState<FornecedorForm>(INITIAL_FORM);
-  const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [fornecedorParaExcluir, setFornecedorParaExcluir] = useState<Fornecedor | null>(null);
   const [busca, setBusca] = useState("");
   const [cidadeBusca, setCidadeBusca] = useState("");
@@ -155,24 +167,12 @@ export default function FornecedoresIsland() {
 
   async function carregarFornecedores() {
     if (!companyId) return;
-    setLoading(true);
-    setErro(null);
-    try {
-      const { data, error } = await supabase
-        .from("fornecedores")
-        .select(
-          "id, nome_completo, nome_fantasia, localizacao, cidade, estado, telefone, whatsapp, telefone_emergencia, responsavel, tipo_faturamento, principais_servicos, created_at"
-        )
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setFornecedores((data || []) as Fornecedor[]);
-    } catch (error) {
-      console.error(error);
-      setErro("Erro ao carregar fornecedores.");
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await loadFornecedores({
+      filter: (query) => query.eq("company_id", companyId),
+      order: { column: "created_at", ascending: false },
+      errorMessage: "Erro ao carregar fornecedores.",
+    });
+    if (error) return;
   }
 
   function validarFormulario() {
@@ -373,7 +373,7 @@ export default function FornecedoresIsland() {
       return;
     }
     try {
-      setSalvando(true);
+      setErro(null);
       setFormError(null);
       const payload = {
         ...form,
@@ -382,17 +382,22 @@ export default function FornecedoresIsland() {
         principais_servicos: form.principais_servicos.trim(),
       };
       const { error } = editandoId
-        ? await supabase.from("fornecedores").update(payload).eq("id", editandoId)
-        : await supabase.from("fornecedores").insert(payload);
-      if (error) throw error;
+        ? await update(editandoId, payload, {
+            errorMessage: "Erro ao atualizar fornecedor.",
+          })
+        : await create(payload, {
+            errorMessage: "Erro ao criar fornecedor.",
+          });
+      if (error) {
+        setFormError(editandoId ? "Erro ao atualizar fornecedor." : "Erro ao criar fornecedor.");
+        return;
+      }
       setForm(INITIAL_FORM);
       await carregarFornecedores();
       fecharFormularioFornecedor();
     } catch (error) {
       console.error(error);
       setFormError(editandoId ? "Erro ao atualizar fornecedor." : "Erro ao criar fornecedor.");
-    } finally {
-      setSalvando(false);
     }
   }
 
@@ -403,7 +408,6 @@ export default function FornecedoresIsland() {
     }
 
     try {
-      setExcluindoId(fornecedor.id);
       setErro(null);
 
       const { count, error: countError } = await supabase
@@ -417,18 +421,15 @@ export default function FornecedoresIsland() {
         return;
       }
 
-      const { error } = await supabase
-        .from("fornecedores")
-        .delete()
-        .eq("id", fornecedor.id);
-      if (error) throw error;
+      const { error } = await remove(fornecedor.id, {
+        errorMessage: "Nao foi possivel excluir o fornecedor.",
+      });
+      if (error) return;
 
       await carregarFornecedores();
     } catch (error) {
       console.error(error);
       setErro("Nao foi possivel excluir o fornecedor.");
-    } finally {
-      setExcluindoId(null);
     }
   }
 

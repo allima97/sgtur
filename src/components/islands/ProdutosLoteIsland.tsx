@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { normalizeText } from "../../lib/normalizeText";
 import { usePermissao } from "../../lib/usePermissao";
+import { useCrudResource } from "../../lib/useCrudResource";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
@@ -113,6 +114,14 @@ function criarProdutoItem(): ProdutoItem {
 
 export default function ProdutosLoteIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
+  const {
+    saving: salvando,
+    error: erro,
+    setError: setErro,
+    create,
+  } = useCrudResource<ProdutoItem>({
+    table: "produtos",
+  });
   const [tipos, setTipos] = useState<TipoProduto[]>([]);
   const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -128,8 +137,6 @@ export default function ProdutosLoteIsland() {
   const [melhoresEpocasCadastro, setMelhoresEpocasCadastro] = useState<string[]>([]);
   const [infosAbertos, setInfosAbertos] = useState<Record<string, boolean>>({});
   const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
   useEffect(() => {
@@ -408,7 +415,6 @@ export default function ProdutosLoteIsland() {
     }
 
     try {
-      setSalvando(true);
       setErro(null);
       setSucesso(null);
 
@@ -428,16 +434,16 @@ export default function ProdutosLoteIsland() {
         todas_as_cidades: false,
       }));
 
-      const { error } = await supabase.from("produtos").insert(payload);
-      if (error) throw error;
+      const { error } = await create(payload, {
+        errorMessage: "Erro ao salvar produtos. Verifique os dados e tente novamente.",
+      });
+      if (error) return;
 
       setSucesso(`${payload.length} produto(s) salvo(s) com sucesso.`);
       setProdutos([criarProdutoItem()]);
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar produtos. Verifique os dados e tente novamente.");
-    } finally {
-      setSalvando(false);
     }
   }
 
