@@ -204,6 +204,12 @@ export default function QuoteManualIsland() {
   const [clienteBusca, setClienteBusca] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [clientesErro, setClientesErro] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [novoClienteAberto, setNovoClienteAberto] = useState(false);
+  const [novoClienteNome, setNovoClienteNome] = useState("");
+  const [novoClienteTelefone, setNovoClienteTelefone] = useState("");
+  const [novoClienteErro, setNovoClienteErro] = useState<string | null>(null);
+  const [novoClienteSalvando, setNovoClienteSalvando] = useState(false);
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
   const [produtosCatalogo, setProdutosCatalogo] = useState<ProdutoOption[]>([]);
@@ -283,6 +289,36 @@ export default function QuoteManualIsland() {
       }
     }
     carregarClientes();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function resolverCompanyId() {
+      try {
+        const { data: sessionData } = await supabaseBrowser.auth.getSession();
+        const sessionUser = sessionData?.session?.user;
+        const user = sessionUser || (await supabaseBrowser.auth.getUser()).data?.user || null;
+        if (!user || !active) return;
+        const { data, error } = await supabaseBrowser
+          .from("users")
+          .select("company_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!active) return;
+        if (error) {
+          console.error("Erro ao buscar company_id do usuario:", error);
+          return;
+        }
+        setCompanyId(data?.company_id || null);
+      } catch (err) {
+        if (!active) return;
+        console.error("Erro ao resolver company_id:", err);
+      }
+    }
+    resolverCompanyId();
     return () => {
       active = false;
     };
@@ -477,6 +513,67 @@ export default function QuoteManualIsland() {
     if (achado) {
       setClienteId(achado.id);
       setClienteBusca("");
+    }
+  }
+
+  function abrirNovoCliente() {
+    const nomeBase = clienteBusca.trim();
+    setNovoClienteNome(nomeBase);
+    setNovoClienteTelefone("");
+    setNovoClienteErro(null);
+    setNovoClienteAberto(true);
+  }
+
+  function cancelarNovoCliente() {
+    setNovoClienteAberto(false);
+    setNovoClienteNome("");
+    setNovoClienteTelefone("");
+    setNovoClienteErro(null);
+  }
+
+  async function salvarNovoCliente() {
+    const nomeRaw = novoClienteNome.trim();
+    const telefoneRaw = novoClienteTelefone.trim();
+    if (!nomeRaw || !telefoneRaw) {
+      setNovoClienteErro("Informe nome e telefone.");
+      return;
+    }
+    setNovoClienteSalvando(true);
+    setNovoClienteErro(null);
+    try {
+      const payload: Record<string, any> = {
+        nome: titleCaseWithExceptions(nomeRaw),
+        telefone: telefoneRaw,
+        whatsapp: telefoneRaw,
+        ativo: true,
+        active: true,
+      };
+      if (companyId) {
+        payload.company_id = companyId;
+      }
+      const { data, error } = await supabaseBrowser
+        .from("clientes")
+        .insert(payload)
+        .select("id, nome, cpf, whatsapp, email")
+        .single();
+      if (error || !data) {
+        throw error || new Error("Nao foi possivel criar o cliente.");
+      }
+      setClientes((prev) => {
+        const next = [...prev, data as ClienteOption];
+        next.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+        return next;
+      });
+      setClienteId(data.id);
+      setClienteBusca("");
+      setNovoClienteAberto(false);
+      setNovoClienteNome("");
+      setNovoClienteTelefone("");
+    } catch (err) {
+      console.error(err);
+      setNovoClienteErro("Nao foi possivel criar o cliente.");
+    } finally {
+      setNovoClienteSalvando(false);
     }
   }
 
@@ -850,6 +947,56 @@ export default function QuoteManualIsland() {
               <small style={{ color: "#64748b" }}>Carregando clientes...</small>
             )}
             {clientesErro && <small style={{ color: "#b91c1c" }}>{clientesErro}</small>}
+            <div style={{ marginTop: 8 }}>
+              {!novoClienteAberto ? (
+                <button type="button" className="btn btn-light w-full sm:w-auto" onClick={abrirNovoCliente}>
+                  Novo cliente
+                </button>
+              ) : (
+                <div className="card-base" style={{ padding: 12, marginTop: 8 }}>
+                  <div className="form-row mobile-stack">
+                    <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
+                      <label className="form-label">Nome do cliente *</label>
+                      <input
+                        className="form-input"
+                        value={novoClienteNome}
+                        onChange={(e) => setNovoClienteNome(e.target.value)}
+                        onBlur={(e) => setNovoClienteNome(titleCaseWithExceptions(e.target.value))}
+                        placeholder="Nome do cliente"
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
+                      <label className="form-label">Telefone *</label>
+                      <input
+                        className="form-input"
+                        value={novoClienteTelefone}
+                        onChange={(e) => setNovoClienteTelefone(e.target.value)}
+                        placeholder="Telefone do cliente"
+                      />
+                    </div>
+                  </div>
+                  {novoClienteErro && <small style={{ color: "#b91c1c" }}>{novoClienteErro}</small>}
+                  <div className="mobile-stack-buttons" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-light w-full sm:w-auto"
+                      onClick={cancelarNovoCliente}
+                      disabled={novoClienteSalvando}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary w-full sm:w-auto"
+                      onClick={salvarNovoCliente}
+                      disabled={novoClienteSalvando}
+                    >
+                      {novoClienteSalvando ? "Salvando..." : "Salvar cliente"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {status && <div style={{ marginTop: 12, fontSize: 14 }}>{status}</div>}
