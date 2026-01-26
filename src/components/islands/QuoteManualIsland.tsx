@@ -328,29 +328,19 @@ export default function QuoteManualIsland() {
     let active = true;
     async function carregarProdutosEDestinos() {
       try {
-        const [produtosResp, destinosResp] = await Promise.all([
-          supabaseBrowser
-            .from("produtos")
-            .select("nome, destino")
-            .order("nome", { ascending: true })
-            .limit(1000),
-          supabaseBrowser.from("destinos").select("nome").order("nome", { ascending: true }),
-        ]);
+        const produtosResp = await supabaseBrowser
+          .from("produtos")
+          .select("nome, destino")
+          .order("nome", { ascending: true })
+          .limit(1000);
         if (!active) return;
         if (produtosResp.error) {
           console.warn("[QuoteManual] Falha ao carregar produtos", produtosResp.error);
-        }
-        if (destinosResp.error) {
-          console.warn("[QuoteManual] Falha ao carregar destinos", destinosResp.error);
         }
 
         setProdutosCatalogo((produtosResp.data || []) as ProdutoOption[]);
 
         const destinos: string[] = [];
-        (destinosResp.data || []).forEach((destino) => {
-          const nome = (destino?.nome || "").trim();
-          if (nome) destinos.push(nome);
-        });
         (produtosResp.data || []).forEach((produto) => {
           const nome = (produto?.destino || "").trim();
           if (nome) destinos.push(nome);
