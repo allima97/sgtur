@@ -106,6 +106,18 @@ function dedupeSugestoes(valores: string[]) {
   return lista;
 }
 
+function formatTelefoneValue(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
 function gerarIdTemporario() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -960,7 +972,7 @@ export default function QuoteManualIsland() {
                       <input
                         className="form-input"
                         value={novoClienteTelefone}
-                        onChange={(e) => setNovoClienteTelefone(e.target.value)}
+                        onChange={(e) => setNovoClienteTelefone(formatTelefoneValue(e.target.value))}
                         placeholder="Telefone do cliente"
                       />
                     </div>
