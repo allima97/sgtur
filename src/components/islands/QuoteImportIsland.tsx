@@ -491,6 +491,12 @@ export default function QuoteImportIsland() {
     }
   }
 
+  function handleCancel() {
+    if (typeof window !== "undefined") {
+      window.location.href = "/orcamentos/consulta";
+    }
+  }
+
   async function handleSave() {
     if (!draft || !file) return;
     if (!clienteId) {
@@ -639,14 +645,24 @@ export default function QuoteImportIsland() {
             />
           </div>
           <div className="form-group" style={{ alignSelf: "flex-end" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleExtract}
-              disabled={!canExtractInput || extracting}
-            >
-              {extracting ? "Extraindo..." : "Extrair"}
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleExtract}
+                disabled={!canExtractInput || extracting}
+              >
+                {extracting ? "Extraindo..." : "Extrair"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={handleCancel}
+                disabled={extracting}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
         {status && <div style={{ marginTop: 12, fontSize: 14 }}>{status}</div>}

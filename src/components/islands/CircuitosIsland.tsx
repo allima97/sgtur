@@ -1702,7 +1702,7 @@ export default function CircuitosIsland() {
 
       {previewOpen && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 980, width: "95vw" }}>
+          <div className="modal-panel circuito-preview-modal" style={{ maxWidth: 980, width: "95vw" }}>
             <div className="modal-header">
               <div className="modal-title">Visualizacao do circuito</div>
               <button className="btn-ghost" onClick={fecharPreview} type="button">

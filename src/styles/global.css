@@ -1867,6 +1867,14 @@ body {
     align-self: flex-end;
   }
 
+  .interacao-modal .modal-footer .btn {
+    min-height: unset;
+  }
+
+  .circuito-preview-modal .modal-footer .btn {
+    min-height: unset;
+  }
+
   .mobile-only {
     display: block;
   }

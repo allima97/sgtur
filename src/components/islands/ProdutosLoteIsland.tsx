@@ -358,6 +358,12 @@ export default function ProdutosLoteIsland() {
     setInfosAbertos({});
   }
 
+  function handleCancel() {
+    if (typeof window !== "undefined") {
+      window.location.href = "/cadastros/produtos";
+    }
+  }
+
   function toggleInfo(id: string) {
     setInfosAbertos((prev) => ({ ...prev, [id]: !prev[id] }));
   }
@@ -754,6 +760,14 @@ export default function ProdutosLoteIsland() {
             </button>
             <button type="submit" className="btn btn-primary" disabled={salvando || permissao === "view"}>
               {salvando ? "Salvando..." : "Salvar Produtos"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={handleCancel}
+              disabled={salvando || permissao === "view"}
+            >
+              Cancelar
             </button>
             <button type="button" className="btn btn-light" onClick={limparProdutos} disabled={salvando || permissao === "view"}>
               Limpar itens

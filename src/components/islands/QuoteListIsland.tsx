@@ -493,7 +493,7 @@ export default function QuoteListIsland() {
       </div>
       {interacaoQuote && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 720, width: "92vw" }}>
+          <div className="modal-panel interacao-modal" style={{ maxWidth: 720, width: "92vw" }}>
             <div className="modal-header">
               <div>
                 <div className="modal-title">Última interação</div>
