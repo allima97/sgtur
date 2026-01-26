@@ -618,7 +618,7 @@ export default function FornecedoresIsland() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gap: 12 }}>
+        <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Telefone</label>
             <input
@@ -632,7 +632,7 @@ export default function FornecedoresIsland() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gap: 12 }}>
+        <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">WhatsApp</label>
             <input
@@ -646,7 +646,7 @@ export default function FornecedoresIsland() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gap: 12 }}>
+        <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Telefone emergência</label>
             <input
@@ -663,7 +663,7 @@ export default function FornecedoresIsland() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gap: 12 }}>
+        <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Responsável</label>
             <input
@@ -735,13 +735,15 @@ export default function FornecedoresIsland() {
             className="table-container overflow-x-auto"
             style={{ maxHeight: "65vh", overflowY: "auto" }}
           >
-            <table className="table-default table-header-teal table-mobile-cards min-w-[720px]">
+            <table className="table-default table-header-teal table-mobile-cards min-w-[720px] fornecedores-table">
               <thead>
                 <tr>
                   <th>Nome fantasia</th>
                   <th>Local</th>
                   <th>Faturamento</th>
-                  <th>Contato</th>
+                  <th>Telefone</th>
+                  <th>WhatsApp</th>
+                  <th>Telefone emergência</th>
                   <th>Serviços</th>
                   <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                 </tr>
@@ -749,12 +751,12 @@ export default function FornecedoresIsland() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6}>Carregando fornecedores...</td>
+                    <td colSpan={8}>Carregando fornecedores...</td>
                   </tr>
                 )}
                 {!loading && fornecedoresExibidos.length === 0 && (
                   <tr>
-                    <td colSpan={6}>Nenhum fornecedor cadastrado.</td>
+                    <td colSpan={8}>Nenhum fornecedor cadastrado.</td>
                   </tr>
                 )}
                 {!loading &&
@@ -771,10 +773,9 @@ export default function FornecedoresIsland() {
                     <td data-label="Faturamento">
                       {formatFaturamento(fornecedor.tipo_faturamento)}
                     </td>
-                    <td data-label="Contato">
-                      {fornecedor.telefone || "-"}
-                      {fornecedor.whatsapp && ` • WhatsApp: ${fornecedor.whatsapp}`}
-                    </td>
+                    <td data-label="Telefone">{fornecedor.telefone || "-"}</td>
+                    <td data-label="WhatsApp">{fornecedor.whatsapp || "-"}</td>
+                    <td data-label="Telefone emergência">{fornecedor.telefone_emergencia || "-"}</td>
                     <td data-label="Serviços" style={{ maxWidth: 240, whiteSpace: "normal" }}>
                       {fornecedor.principais_servicos
                         ? fornecedor.principais_servicos.length > 80

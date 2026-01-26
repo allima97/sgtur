@@ -2063,6 +2063,33 @@ body {
   font-size: 0.85rem;
 }
 
+@media (min-width: 768px) {
+  .fornecedores-table th:nth-child(1),
+  .fornecedores-table td:nth-child(1) { min-width: 180px; }
+
+  .fornecedores-table th:nth-child(2),
+  .fornecedores-table td:nth-child(2) { min-width: 170px; }
+
+  .fornecedores-table th:nth-child(3),
+  .fornecedores-table td:nth-child(3) { min-width: 130px; }
+
+  .fornecedores-table th:nth-child(4),
+  .fornecedores-table td:nth-child(4),
+  .fornecedores-table th:nth-child(5),
+  .fornecedores-table td:nth-child(5),
+  .fornecedores-table th:nth-child(6),
+  .fornecedores-table td:nth-child(6) {
+    min-width: 150px;
+    white-space: nowrap;
+  }
+
+  .fornecedores-table th:nth-child(7),
+  .fornecedores-table td:nth-child(7) { min-width: 240px; }
+
+  .fornecedores-table th:nth-child(8),
+  .fornecedores-table td:nth-child(8) { width: 90px; }
+}
+
 .btn-outline {
   background: transparent;
   border-radius: 999px;
