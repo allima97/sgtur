@@ -437,13 +437,25 @@ export default function VendasConsultaIsland() {
 
     const t = normalizeText(busca);
 
+    const produtosPorVenda = new Map<string, string[]>();
+    recibos.forEach((recibo) => {
+      if (!recibo.venda_id) return;
+      const nome = recibo.produto_nome || "";
+      if (!nome) return;
+      const lista = produtosPorVenda.get(recibo.venda_id) || [];
+      lista.push(nome);
+      produtosPorVenda.set(recibo.venda_id, lista);
+    });
+
     return vendas.filter(
       (v) =>
         normalizeText(v.cliente_nome || "").includes(t) ||
         normalizeText(v.destino_nome || "").includes(t) ||
+        normalizeText(v.destino_cidade_nome || "").includes(t) ||
+        (produtosPorVenda.get(v.id) || []).some((p) => normalizeText(p).includes(t)) ||
         normalizeText(v.id).includes(t)
     );
-  }, [vendas, busca]);
+  }, [vendas, busca, recibos]);
   const vendasExibidas = useMemo(() => {
     return busca.trim() ? vendasFiltradas : vendasFiltradas.slice(0, 5);
   }, [vendasFiltradas, busca]);

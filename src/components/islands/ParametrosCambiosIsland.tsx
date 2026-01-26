@@ -94,16 +94,17 @@ export default function ParametrosCambiosIsland() {
   }, [resetForm]);
 
   const carregar = useCallback(async () => {
-    setLoading(true);
     setErro(null);
     setSucesso(null);
+    setLoadingAuth(true);
     try {
       const { data: session } = await supabase.auth.getUser();
-      const userId = session?.user?.id || null;
-      setUserId(userId);
+      const currentUserId = session?.user?.id || null;
+      setUserId(currentUserId);
 
-      if (!userId) {
+      if (!currentUserId) {
         setErro("Usuário não autenticado.");
+        setCompanyId(null);
         setCambios([]);
         return;
       }
@@ -111,7 +112,7 @@ export default function ParametrosCambiosIsland() {
       const { data: usuario, error: usuarioErr } = await supabase
         .from("users")
         .select("company_id")
-        .eq("id", userId)
+        .eq("id", currentUserId)
         .maybeSingle();
 
       if (usuarioErr) throw usuarioErr;
@@ -125,25 +126,22 @@ export default function ParametrosCambiosIsland() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("parametros_cambios")
-        .select(
-          "id, moeda, data, valor, created_at, owner_user_id, owner_user:owner_user_id (nome_completo)"
-        )
-        .eq("company_id", companyValue)
-        .order("data", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setCambios(data || []);
+      const { error } = await loadCambios({
+        filter: (query) =>
+          query
+            .eq("company_id", companyValue)
+            .order("data", { ascending: false })
+            .order("created_at", { ascending: false }),
+        errorMessage: "Não foi possível carregar os câmbios.",
+      });
+      if (error) return;
     } catch (err) {
       console.error(err);
       setErro("Não foi possível carregar os câmbios.");
     } finally {
-      setLoading(false);
+      setLoadingAuth(false);
     }
-  }, []);
+  }, [loadCambios, setCambios, setErro]);
 
   useEffect(() => {
     carregar();
@@ -177,7 +175,6 @@ export default function ParametrosCambiosIsland() {
       return;
     }
 
-    setSalvando(true);
     try {
       const payload = {
         company_id: companyId,
@@ -186,15 +183,14 @@ export default function ParametrosCambiosIsland() {
         data: form.data,
         valor: valorNumero,
       };
-      let error = null;
-      if (editingId) {
-        const res = await supabase.from("parametros_cambios").update(payload).eq("id", editingId);
-        error = res.error;
-      } else {
-        const res = await supabase.from("parametros_cambios").insert(payload);
-        error = res.error;
-      }
-      if (error) throw error;
+      const { error } = editingId
+        ? await update(editingId, payload, {
+            errorMessage: "Não foi possível salvar o câmbio.",
+          })
+        : await create(payload, {
+            errorMessage: "Não foi possível salvar o câmbio.",
+          });
+      if (error) return;
 
       setSucesso(editingId ? "Câmbio atualizado com sucesso." : "Câmbio salvo com sucesso.");
       resetForm();
@@ -214,8 +210,6 @@ export default function ParametrosCambiosIsland() {
     } catch (err) {
       console.error(err);
       setErro("Não foi possível salvar o câmbio.");
-    } finally {
-      setSalvando(false);
     }
   };
 
@@ -223,10 +217,11 @@ export default function ParametrosCambiosIsland() {
     if (!podeExcluir) return;
     setErro(null);
     setSucesso(null);
-    setLoadingAuth(true);
     try {
-      const { error } = await supabase.from("parametros_cambios").delete().eq("id", id);
-      if (error) throw error;
+      const { error } = await remove(id, {
+        errorMessage: "Não foi possível excluir o câmbio.",
+      });
+      if (error) return;
       setSucesso("Câmbio excluído.");
       await carregar();
       await registrarLog({
@@ -238,8 +233,6 @@ export default function ParametrosCambiosIsland() {
     } catch (err) {
       console.error(err);
       setErro("Não foi possível excluir o câmbio.");
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1063,6 +1063,43 @@ export default function ClientesIsland() {
   };
 
   useEffect(() => {
+    if (loadPerm || modoSomenteLeitura || !podeEditar) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const clienteId = params.get("id");
+    if (!clienteId) return;
+
+    let active = true;
+    (async () => {
+      try {
+        setErro(null);
+        let query = supabase.from("clientes").select("*, company_id").eq("id", clienteId);
+        if (companyId) {
+          query = query.eq("company_id", companyId);
+        }
+        const { data, error } = await query.maybeSingle();
+        if (error) throw error;
+        if (!data) {
+          if (active) setErro("Cliente não encontrado.");
+          return;
+        }
+        if (!active) return;
+        iniciarEdicao(data as Cliente);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("id");
+        window.history.replaceState({}, "", url.toString());
+      } catch (e) {
+        console.error("Erro ao carregar cliente para edição:", e);
+        if (active) setErro("Erro ao carregar cliente para edição.");
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [loadPerm, modoSomenteLeitura, podeEditar, companyId]);
+
+  useEffect(() => {
     if (loadPerm || modoSomenteLeitura) return;
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);

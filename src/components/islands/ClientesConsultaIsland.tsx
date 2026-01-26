@@ -153,21 +153,12 @@ export default function ClientesConsultaIsland() {
     setClienteParaExcluir(null);
   }
 
-  async function editarCliente(id: string, atualNome: string) {
+  function editarCliente(id: string) {
     if (!podeEditar) {
       window.alert("Você não tem permissão para editar clientes.");
       return;
     }
-    const novo = window.prompt("Editar nome do cliente:", atualNome);
-    if (!novo || novo.trim() === atualNome) return;
-    try {
-      const { error } = await supabase.from("clientes").update({ nome: novo.trim() }).eq("id", id);
-      if (error) throw error;
-      setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, nome: novo.trim() } : c)));
-    } catch (e) {
-      console.error(e);
-      window.alert("Erro ao editar cliente.");
-    }
+    window.location.href = `/clientes/cadastro?id=${id}`;
   }
 
   function abrirHistorico(id: string, nome?: string) {
@@ -330,7 +321,7 @@ export default function ClientesConsultaIsland() {
                     <button className="btn-icon" onClick={() => abrirHistorico(c.id, c.nome)} title="Histórico">🗂️</button>
 
                     {podeEditar && (
-                      <button className="btn-icon" onClick={() => editarCliente(c.id, c.nome)} title="Editar">✏️</button>
+                      <button className="btn-icon" onClick={() => editarCliente(c.id)} title="Editar">✏️</button>
                     )}
 
                     {podeExcluir && (

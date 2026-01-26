@@ -561,7 +561,7 @@ export default function QuoteListIsland() {
                 <div style={{ color: "#b91c1c" }}>{interactionError}</div>
               )}
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer mobile-stack-buttons">
               <button
                 className="btn btn-light"
                 type="button"

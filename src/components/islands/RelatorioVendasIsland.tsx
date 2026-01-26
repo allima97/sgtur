@@ -22,6 +22,7 @@ type Produto = {
   nome: string | null;
   tipo_produto: string | null;
   cidade_id: string | null;
+  todas_as_cidades?: boolean | null;
   regra_comissionamento?: string | null;
   soma_na_meta?: boolean | null;
   usa_meta_produto?: boolean | null;
@@ -89,6 +90,7 @@ type Venda = {
 type ReciboEnriquecido = {
   id: string;
   venda_id: string;
+  cliente_id: string;
   numero_venda: string | null;
   cliente_nome: string;
   cliente_cpf: string;
@@ -192,7 +194,7 @@ function getPeriodosMeses(inicio: string, fim: string) {
 }
 
 async function carregarProdutosComissionamento() {
-  const baseCols = "id, nome, tipo_produto, cidade_id";
+  const baseCols = "id, nome, tipo_produto, cidade_id, todas_as_cidades";
   return supabase.from("produtos").select(baseCols).order("nome", { ascending: true });
 }
 
@@ -602,6 +604,7 @@ export default function RelatorioVendasIsland() {
           tipoRegistro?.id ||
           produtoResolvido?.tipo_produto ||
           produtoDestino?.tipo_produto ||
+          (recibo.produto_id ?? null) ||
           prodMap.get(recibo.produto_id || "")?.tipo_produto ||
           null;
         const tipoLabel =
@@ -610,8 +613,23 @@ export default function RelatorioVendasIsland() {
           tipoNomePorId.get(tipoId || "") ||
           tipoId ||
           "(sem tipo)";
+        const cidadeBaseId =
+          v.destino_cidade_id ||
+          produtoResolvido?.cidade_id ||
+          produtoDestino?.cidade_id ||
+          null;
+        const produtoBase =
+          tipoId && produtos.length
+            ? produtos.find((p) => {
+                if (!p?.tipo_produto || p.tipo_produto !== tipoId) return false;
+                if (p.todas_as_cidades) return true;
+                if (!cidadeBaseId) return !p.cidade_id;
+                return p.cidade_id === cidadeBaseId;
+              })
+            : undefined;
         const produtoNome =
           produtoResolvido?.nome ||
+          produtoBase?.nome ||
           produtoDestino?.nome ||
           tipoLabel ||
           "(sem produto)";
@@ -621,9 +639,8 @@ export default function RelatorioVendasIsland() {
           v.destino?.nome ||
           "(sem destino)";
         const cidadeId =
-          v.destino_cidade_id ||
-          produtoResolvido?.cidade_id ||
-          produtoDestino?.cidade_id ||
+          cidadeBaseId ||
+          produtoBase?.cidade_id ||
           prodMap.get(recibo.produto_id || "")?.cidade_id ||
           null;
         const vendaCidadeNome = v.destino_cidade?.nome || "";
@@ -633,6 +650,7 @@ export default function RelatorioVendasIsland() {
 
         const produtoId =
           produtoResolvido?.id ||
+          produtoBase?.id ||
           recibo.produto_id ||
           produtoDestino?.id ||
           null;
@@ -640,6 +658,7 @@ export default function RelatorioVendasIsland() {
         return {
           id: `${v.id}-${index}-${recibo.numero_recibo || "recibo"}`,
           venda_id: v.id,
+          cliente_id: v.cliente_id,
           numero_venda: v.numero_venda || v.id,
           cliente_nome: clienteNome,
           cliente_cpf: clienteCpf,
@@ -659,11 +678,12 @@ export default function RelatorioVendasIsland() {
         };
       });
     });
-  }, [vendas, clientes, produtos, tipoNomePorId]);
+  }, [vendas, clientes, produtos, tipoNomePorId, cidadePorId]);
 
   const recibosFiltrados = useMemo(() => {
     const termProd = normalizeText(destinoBusca.trim());
     const termCidade = normalizeText(cidadeNomeInput.trim());
+    const termCliente = normalizeText(clienteBusca.trim());
     return recibosEnriquecidos.filter((recibo) => {
       const matchTipo =
         !tipoSelecionadoId || recibo.produto_tipo_id === tipoSelecionadoId;
@@ -675,9 +695,23 @@ export default function RelatorioVendasIsland() {
           : normalizeText(recibo.cidade_nome || "").includes(termCidade);
       const nomeProduto = normalizeText(recibo.produto_nome || "");
       const matchProduto = !termProd || nomeProduto.includes(termProd);
-      return matchTipo && matchCidade && matchProduto;
+      const matchCliente = clienteSelecionado
+        ? recibo.cliente_id === clienteSelecionado.id
+        : !termCliente
+        ? true
+        : normalizeText(recibo.cliente_nome || "").includes(termCliente) ||
+          normalizeText(recibo.cliente_cpf || "").includes(termCliente);
+      return matchTipo && matchCidade && matchProduto && matchCliente;
     });
-  }, [recibosEnriquecidos, destinoBusca, tipoSelecionadoId, cidadeFiltro, cidadeNomeInput]);
+  }, [
+    recibosEnriquecidos,
+    destinoBusca,
+    tipoSelecionadoId,
+    cidadeFiltro,
+    cidadeNomeInput,
+    clienteBusca,
+    clienteSelecionado,
+  ]);
   const recibosExibidos = useMemo(() => {
     return recibosFiltrados;
   }, [recibosFiltrados]);
