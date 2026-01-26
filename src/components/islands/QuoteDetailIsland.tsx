@@ -4,6 +4,7 @@ import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 import CalculatorModal from "../ui/CalculatorModal";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type QuoteRecord = {
   id: string;
@@ -161,6 +162,7 @@ export default function QuoteDetailIsland(props: {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [removedItemIds, setRemovedItemIds] = useState<string[]>([]);
+  const [itemParaExcluir, setItemParaExcluir] = useState<{ index: number; label?: string } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
@@ -540,10 +542,6 @@ export default function QuoteDetailIsland(props: {
   function removerItem(index: number) {
     const current = items[index];
     if (!current) return;
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Confirma a exclusão deste item?");
-      if (!confirmed) return;
-    }
     if (current.id) {
       setRemovedItemIds((prev) =>
         prev.includes(current.id) ? prev : [...prev, current.id]
@@ -553,6 +551,19 @@ export default function QuoteDetailIsland(props: {
       const next = prev.filter((_, i) => i !== index);
       return next.map((item, idx) => ({ ...item, order_index: idx }));
     });
+  }
+
+  function solicitarRemocaoItem(index: number) {
+    const current = items[index];
+    if (!current) return;
+    const label = current.title || current.product_name || current.city_name || "este item";
+    setItemParaExcluir({ index, label });
+  }
+
+  function confirmarRemocaoItem() {
+    if (!itemParaExcluir) return;
+    removerItem(itemParaExcluir.index);
+    setItemParaExcluir(null);
   }
 
   async function handleSave() {
@@ -827,7 +838,7 @@ export default function QuoteDetailIsland(props: {
                               type="button"
                               className="icon-action-btn danger"
                               title="Remover item"
-                              onClick={() => removerItem(index)}
+                              onClick={() => solicitarRemocaoItem(index)}
                               disabled={!isEditing}
                             >
                               🗑️
@@ -1267,6 +1278,15 @@ export default function QuoteDetailIsland(props: {
           onClose={() => setFlightModal(null)}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(itemParaExcluir)}
+        title="Excluir item"
+        message={`Confirma a exclusão de ${itemParaExcluir?.label || "este item"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setItemParaExcluir(null)}
+        onConfirm={confirmarRemocaoItem}
+      />
       <CalculatorModal
         open={showCalculator}
         onClose={() => setShowCalculator(false)}

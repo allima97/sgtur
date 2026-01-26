@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Rule = {
   id: string;
@@ -49,6 +50,8 @@ export default function CommissionRulesIsland() {
   const [editId, setEditId] = useState<string | null>(null);
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [regraParaInativar, setRegraParaInativar] = useState<Rule | null>(null);
+  const [regraParaExcluir, setRegraParaExcluir] = useState<Rule | null>(null);
 
   useEffect(() => {
     carregar();
@@ -221,7 +224,6 @@ export default function CommissionRulesIsland() {
 
   async function inativar(id: string) {
     if (!podeEditar) return;
-    if (!confirm("Inativar esta regra?")) return;
     const { error } = await supabase
       .from("commission_rule")
       .update({ ativo: false })
@@ -231,7 +233,6 @@ export default function CommissionRulesIsland() {
 
   async function excluirRegra(id: string) {
     if (!podeEditar) return;
-    if (!confirm("Excluir permanentemente esta regra?")) return;
     const { error: tierErr } = await supabase.from("commission_tier").delete().eq("rule_id", id);
     if (tierErr) {
       setErro("Erro ao excluir faixas da regra.");
@@ -249,6 +250,16 @@ export default function CommissionRulesIsland() {
       detalhes: { id },
     });
     carregar();
+  }
+
+  function solicitarInativacao(regra: Rule) {
+    if (!podeEditar) return;
+    setRegraParaInativar(regra);
+  }
+
+  function solicitarExclusao(regra: Rule) {
+    if (!podeEditar) return;
+    setRegraParaExcluir(regra);
   }
 
   function editar(regra: Rule) {
@@ -546,7 +557,7 @@ export default function CommissionRulesIsland() {
                         </button>
                         <button
                           className="btn-icon btn-danger"
-                          onClick={() => inativar(r.id)}
+                          onClick={() => solicitarInativacao(r)}
                           disabled={!podeEditar}
                           title="Inativar"
                         >
@@ -554,7 +565,7 @@ export default function CommissionRulesIsland() {
                         </button>
                         <button
                           className="btn-icon btn-danger"
-                          onClick={() => excluirRegra(r.id)}
+                          onClick={() => solicitarExclusao(r)}
                           disabled={!podeEditar}
                           title="Excluir"
                         >
@@ -568,6 +579,32 @@ export default function CommissionRulesIsland() {
             </table>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(regraParaInativar)}
+        title="Inativar regra"
+        message={`Inativar ${regraParaInativar?.nome || "esta regra"}?`}
+        confirmLabel="Inativar"
+        confirmVariant="danger"
+        onCancel={() => setRegraParaInativar(null)}
+        onConfirm={async () => {
+          if (!regraParaInativar) return;
+          await inativar(regraParaInativar.id);
+          setRegraParaInativar(null);
+        }}
+      />
+      <ConfirmDialog
+        open={Boolean(regraParaExcluir)}
+        title="Excluir regra"
+        message={`Excluir permanentemente ${regraParaExcluir?.nome || "esta regra"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setRegraParaExcluir(null)}
+        onConfirm={async () => {
+          if (!regraParaExcluir) return;
+          await excluirRegra(regraParaExcluir.id);
+          setRegraParaExcluir(null);
+        }}
+      />
     </div>
   );
 }

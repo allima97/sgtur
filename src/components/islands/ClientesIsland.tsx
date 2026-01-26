@@ -6,6 +6,7 @@ import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -115,6 +116,7 @@ export default function ClientesIsland() {
   const [editId, setEditId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
   const [mostrarFormAcomp, setMostrarFormAcomp] = useState(false);
@@ -227,6 +229,7 @@ export default function ClientesIsland() {
   const [acompEditId, setAcompEditId] = useState<string | null>(null);
   const [acompSalvando, setAcompSalvando] = useState(false);
   const [acompExcluindo, setAcompExcluindo] = useState<string | null>(null);
+  const [acompanhanteParaExcluir, setAcompanhanteParaExcluir] = useState<Acompanhante | null>(null);
   // =====================================
   // CARREGAR CLIENTES
   // =====================================
@@ -884,8 +887,6 @@ export default function ClientesIsland() {
   async function excluir(id: string) {
     if (!podeExcluir) return;
 
-    if (!window.confirm("Excluir cliente?")) return;
-
     try {
       setExcluindoId(id);
 
@@ -908,6 +909,17 @@ export default function ClientesIsland() {
     } finally {
       setExcluindoId(null);
     }
+  }
+
+  function solicitarExclusaoCliente(cliente: Cliente) {
+    if (!podeExcluir) return;
+    setClienteParaExcluir(cliente);
+  }
+
+  async function confirmarExclusaoCliente() {
+    if (!clienteParaExcluir) return;
+    await excluir(clienteParaExcluir.id);
+    setClienteParaExcluir(null);
   }
 
   // =====================================
@@ -1009,7 +1021,6 @@ export default function ClientesIsland() {
   async function excluirAcompanhante(id: string) {
     const clienteId = historicoCliente?.id || editId;
     if (!podeExcluir || !clienteId) return;
-    if (!window.confirm("Remover acompanhante?")) return;
     try {
       setAcompExcluindo(id);
       setAcompErro(null);
@@ -1027,6 +1038,17 @@ export default function ClientesIsland() {
     } finally {
       setAcompExcluindo(null);
     }
+  }
+
+  function solicitarExclusaoAcompanhante(acompanhante: Acompanhante) {
+    if (!podeExcluir) return;
+    setAcompanhanteParaExcluir(acompanhante);
+  }
+
+  async function confirmarExclusaoAcompanhante() {
+    if (!acompanhanteParaExcluir) return;
+    await excluirAcompanhante(acompanhanteParaExcluir.id);
+    setAcompanhanteParaExcluir(null);
   }
 
   const iniciarNovoCliente = () => {
@@ -1117,7 +1139,7 @@ export default function ClientesIsland() {
                           <button
                             className="btn-icon btn-danger"
                             type="button"
-                            onClick={() => excluirAcompanhante(a.id)}
+                            onClick={() => solicitarExclusaoAcompanhante(a)}
                             disabled={acompExcluindo === a.id}
                             title="Excluir"
                           >
@@ -1637,7 +1659,7 @@ export default function ClientesIsland() {
                             {podeExcluir && (
                               <button
                                 className="btn-icon btn-danger"
-                                onClick={() => excluir(c.id)}
+                                onClick={() => solicitarExclusaoCliente(c)}
                                 disabled={excluindoId === c.id}
                                 title="Excluir"
                               >
@@ -2009,6 +2031,26 @@ export default function ClientesIsland() {
         </div>
       </div>
     )}
+    <ConfirmDialog
+      open={Boolean(clienteParaExcluir)}
+      title="Excluir cliente"
+      message={`Excluir ${clienteParaExcluir?.nome || "este cliente"}?`}
+      confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+      confirmVariant="danger"
+      confirmDisabled={Boolean(excluindoId)}
+      onCancel={() => setClienteParaExcluir(null)}
+      onConfirm={confirmarExclusaoCliente}
+    />
+    <ConfirmDialog
+      open={Boolean(acompanhanteParaExcluir)}
+      title="Remover acompanhante"
+      message={`Remover ${acompanhanteParaExcluir?.nome_completo || "este acompanhante"}?`}
+      confirmLabel={acompExcluindo ? "Removendo..." : "Remover"}
+      confirmVariant="danger"
+      confirmDisabled={Boolean(acompExcluindo)}
+      onCancel={() => setAcompanhanteParaExcluir(null)}
+      onConfirm={confirmarExclusaoAcompanhante}
+    />
     </>
   );
 }

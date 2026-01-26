@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();
@@ -174,6 +174,7 @@ export default function ProdutosIsland() {
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<Produto | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
@@ -832,7 +833,6 @@ export default function ProdutosIsland() {
       alert("Somente administradores podem excluir produtos.");
       return;
     }
-    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
 
     try {
       setExcluindoId(id);
@@ -848,6 +848,20 @@ export default function ProdutosIsland() {
     } finally {
       setExcluindoId(null);
     }
+  }
+
+  function solicitarExclusao(produto: Produto) {
+    if (permissao !== "admin" && permissao !== "delete") {
+      alert("Somente administradores podem excluir produtos.");
+      return;
+    }
+    setProdutoParaExcluir(produto);
+  }
+
+  async function confirmarExclusao() {
+    if (!produtoParaExcluir) return;
+    await excluir(produtoParaExcluir.id);
+    setProdutoParaExcluir(null);
   }
 
   if (loadingPerm) return <LoadingUsuarioContext />;
@@ -1241,75 +1255,83 @@ export default function ProdutosIsland() {
           )}
 
           {/* Tabela */}
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          <DataTable
+            className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Destino</th>
+                <th>Cidade</th>
+                <th>Nivel de preco</th>
+                <th>Ativo</th>
+                <th>Criado em</th>
+                <th className="th-actions">Acoes</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando produtos..."
+            empty={!loading && produtosFiltrados.length === 0}
+            emptyMessage="Nenhum produto encontrado."
+            colSpan={8}
           >
-            <table className="table-default table-header-blue table-mobile-cards min-w-[1080px]">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Produto</th>
-                  <th>Destino</th>
-                  <th>Cidade</th>
-                  <th>Nivel de preco</th>
-                  <th>Ativo</th>
-                  <th>Criado em</th>
-                  <th className="th-actions">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={8}>Carregando produtos...</td>
-                  </tr>
-                )}
-
-                {!loading && produtosFiltrados.length === 0 && (
-                  <tr>
-                    <td colSpan={8}>Nenhum produto encontrado.</td>
-                  </tr>
-                )}
-
-                {!loading &&
-                  produtosFiltrados.map((p) => (
-                    <tr key={p.id}>
-                      <td data-label="Tipo">{p.tipo_nome || "-"}</td>
-                      <td data-label="Produto">{p.nome}</td>
-                      <td data-label="Destino">{p.destino || "-"}</td>
-                      <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
-                      <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
-                      <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
-                      <td data-label="Criado em">
-                        {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
-                      </td>
-                      <td className="th-actions" data-label="Acoes">
-                        <div className="action-buttons">
-                          {permissao !== "view" && (
-                            <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(p)}>
-                              ✏️
-                            </button>
-                          )}
-
-                          {(permissao === "admin" || permissao === "delete") && (
-                            <button
-                              className="btn-icon btn-danger"
-                              title="Excluir"
-                              onClick={() => excluir(p.id)}
-                              disabled={excluindoId === p.id}
-                            >
-                              {excluindoId === p.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+            {produtosFiltrados.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Tipo">{p.tipo_nome || "-"}</td>
+                <td data-label="Produto">{p.nome}</td>
+                <td data-label="Destino">{p.destino || "-"}</td>
+                <td data-label="Cidade">{(p as any).cidade_nome || "-"}</td>
+                <td data-label="Nivel de preco">{nivelPrecoLabel(p.nivel_preco) || "-"}</td>
+                <td data-label="Ativo">{p.ativo ? "Sim" : "Nao"}</td>
+                <td data-label="Criado em">
+                  {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+                </td>
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    show={permissao !== "view"}
+                    actions={[
+                      ...(permissao !== "view"
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => iniciarEdicao(p),
+                              icon: "✏️",
+                            },
+                          ]
+                        : []),
+                      ...(permissao === "admin" || permissao === "delete"
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => solicitarExclusao(p),
+                              icon: excluindoId === p.id ? "..." : "🗑️",
+                              variant: "danger" as const,
+                              disabled: excluindoId === p.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(produtoParaExcluir)}
+        title="Excluir produto"
+        message={`Tem certeza que deseja excluir ${produtoParaExcluir?.nome || "este produto"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setProdutoParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

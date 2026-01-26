@@ -1,5 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import { createServerClient } from "@supabase/ssr";
+import { descobrirModulo } from "./config/modulos";
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -74,30 +75,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // ============================
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
   // ============================
-  const mapaRotas: Record<string, string> = {
-    "/dashboard/logs": "Admin",
-    "/dashboard/admin": "Admin",
-    "/dashboard/permissoes": "Admin",
-    "/": "Dashboard",
-    "/dashboard": "Dashboard",
-    "/vendas": "Vendas",
-    "/orcamentos": "Vendas",
-    "/clientes": "Clientes",
-    "/cadastros": "Cadastros",
-    "/relatorios": "Relatorios",
-    "/parametros": "Parametros",
-    "/admin": "Admin",
-    "/documentacao": "Admin",
-  };
-
-  function descobrirModulo(path: string): string | null {
-    const entradas = Object.keys(mapaRotas);
-    for (const p of entradas) {
-      if (path.startsWith(p)) return mapaRotas[p];
-    }
-    return null;
-  }
-
   const modulo = descobrirModulo(pathname);
   if (!modulo) return next(); // rota não associada a módulo
 
@@ -113,7 +90,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Sem registro → sem acesso
   if (!acc || !acc.ativo) {
-    return Response.redirect(new URL("/auth/login", url), 302);
+    return Response.redirect(new URL("/negado", url), 302);
   }
 
   const permissao = acc.permissao as
@@ -132,7 +109,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (idx < 1) {
     // none → bloqueado
-    return Response.redirect(new URL("/auth/login", url), 302);
+    return Response.redirect(new URL("/negado", url), 302);
   }
 
   // ADMIN → sempre permitido

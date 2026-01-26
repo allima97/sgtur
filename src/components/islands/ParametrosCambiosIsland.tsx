@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import { registrarLog } from "../../lib/logs";
 
 const MOEDA_SUGESTOES = ["R$", "USD", "EUR"];
@@ -42,20 +44,35 @@ function formatValorNumber(value?: number | null) {
 
 export default function ParametrosCambiosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
+  const {
+    items: cambios,
+    setItems: setCambios,
+    loading: loadingCambios,
+    saving: salvando,
+    error: erro,
+    setError: setErro,
+    load: loadCambios,
+    create,
+    update,
+    remove,
+  } = useCrudResource<CambioRecord>({
+    table: "parametros_cambios",
+    select:
+      "id, moeda, data, valor, created_at, owner_user_id, owner_user:owner_user_id (nome_completo)",
+  });
   const [form, setForm] = useState<FormState>(buildInitialForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [cambios, setCambios] = useState<CambioRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [cambioParaExcluir, setCambioParaExcluir] = useState<CambioRecord | null>(null);
 
   const nivel = (permissao || "").toLowerCase();
   const podeEscrever = nivel === "admin" || nivel === "edit" || nivel === "create";
   const podeExcluir = nivel === "admin" || nivel === "edit";
+  const loading = loadingCambios || loadingAuth;
 
   const resetForm = useCallback(() => {
     setForm(buildInitialForm());
@@ -204,10 +221,9 @@ export default function ParametrosCambiosIsland() {
 
   const handleDelete = async (id: string) => {
     if (!podeExcluir) return;
-    if (!window.confirm("Deseja excluir este câmbio?")) return;
     setErro(null);
     setSucesso(null);
-    setLoading(true);
+    setLoadingAuth(true);
     try {
       const { error } = await supabase.from("parametros_cambios").delete().eq("id", id);
       if (error) throw error;
@@ -225,6 +241,17 @@ export default function ParametrosCambiosIsland() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const solicitarExclusao = (cambio: CambioRecord) => {
+    if (!podeExcluir) return;
+    setCambioParaExcluir(cambio);
+  };
+
+  const confirmarExclusao = async () => {
+    if (!cambioParaExcluir) return;
+    await handleDelete(cambioParaExcluir.id);
+    setCambioParaExcluir(null);
   };
 
   const handleEdit = (cambio: CambioRecord) => {
@@ -351,7 +378,7 @@ export default function ParametrosCambiosIsland() {
                             type="button"
                             className="btn-icon btn-danger"
                             title="Excluir câmbio"
-                            onClick={() => handleDelete(cambio.id)}
+                            onClick={() => solicitarExclusao(cambio)}
                           >
                             🗑️
                           </button>
@@ -445,6 +472,15 @@ export default function ParametrosCambiosIsland() {
           )}
         </form>
       )}
+      <ConfirmDialog
+        open={Boolean(cambioParaExcluir)}
+        title="Excluir câmbio"
+        message="Deseja excluir este câmbio?"
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setCambioParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

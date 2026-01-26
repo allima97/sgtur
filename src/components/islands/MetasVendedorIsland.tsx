@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Usuario = {
   id: string;
@@ -63,6 +64,7 @@ export default function MetasVendedorIsland() {
   const [salvando, setSalvando] = useState(false);
   const [mostrarFormularioMeta, setMostrarFormularioMeta] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [metaParaExcluir, setMetaParaExcluir] = useState<Meta | null>(null);
 
   // =============================================
   // 1. CARREGAR USUÁRIO LOGADO + VENDEDORES
@@ -392,8 +394,6 @@ export default function MetasVendedorIsland() {
   }
 
   async function excluirMeta(id: string) {
-    if (!confirm("Excluir esta meta?")) return;
-
     const { error } = await supabase
       .from("metas_vendedor")
       .delete()
@@ -405,6 +405,16 @@ export default function MetasVendedorIsland() {
     }
 
     await carregarMetas(vendedorSelecionado);
+  }
+
+  function solicitarExclusaoMeta(meta: Meta) {
+    setMetaParaExcluir(meta);
+  }
+
+  async function confirmarExclusaoMeta() {
+    if (!metaParaExcluir) return;
+    await excluirMeta(metaParaExcluir.id);
+    setMetaParaExcluir(null);
   }
 
   // =============================================
@@ -680,7 +690,7 @@ export default function MetasVendedorIsland() {
                         <button
                           className="btn-icon btn-danger"
                           title="Excluir"
-                          onClick={() => excluirMeta(m.id)}
+                          onClick={() => solicitarExclusaoMeta(m)}
                         >
                           🗑️
                         </button>
@@ -700,6 +710,15 @@ export default function MetasVendedorIsland() {
           </table>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(metaParaExcluir)}
+        title="Excluir meta"
+        message={`Excluir a meta de ${metaParaExcluir?.periodo || "este período"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setMetaParaExcluir(null)}
+        onConfirm={confirmarExclusaoMeta}
+      />
     </div>
   );
 }

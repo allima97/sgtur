@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
 import { logoutUsuario } from "../../lib/logout";
 import { SYSTEM_NAME } from "../../lib/systemName";
+import { MAPA_MODULOS } from "../../config/modulos";
+import { ensurePermissoes, readPermissoesCache } from "../../lib/permissoesCache";
 
 
 type NivelPermissao =
@@ -14,60 +15,10 @@ type NivelPermissao =
   | "delete"
   | "admin";
 
-type RegistroAcesso = {
-  modulo: string;
-  permissao: NivelPermissao;
-  ativo: boolean;
-};
-
 // ----------------------
 // MAPA REAL DOS MÓDULOS
 // (IMPORTANTE: tem que bater com modulo_acesso.modulo)
 // ----------------------
-const MAPA_MODULOS: Record<string, string> = {
-  Dashboard: "dashboard",
-  Vendas: "vendas_consulta",
-  Orcamentos: "orcamentos",
-  Clientes: "clientes",
-
-  Cadastros: "cadastros",
-  Paises: "cadastros_paises",
-  Subdivisoes: "cadastros_estados",
-  Cidades: "cadastros_cidades",
-  Destinos: "cadastros_destinos",
-  Produtos: "cadastros_produtos",
-  Circuitos: "cadastros_produtos",
-  ProdutosLote: "cadastros_produtos",
-  Fornecedores: "cadastros_fornecedores",
-
-  Relatorios: "relatorios",
-  RelatorioVendas: "relatorios_vendas",
-  RelatorioDestinos: "relatorios_destinos",
-  RelatorioProdutos: "relatorios_produtos",
-  RelatorioClientes: "relatorios_clientes",
-
-  Parametros: "parametros",
-  TipoProdutos: "parametros_tipo_produtos",
-  Metas: "parametros_metas",
-  RegrasComissao: "parametros_regras_comissao",
-
-  Admin: "admin",
-  AdminDashboard: "admin_dashboard",
-  AdminUsers: "admin_users",
-  AdminLogs: "admin_logs",
-
-  Operacao: "operacao",
-  Viagens: "operacao_viagens",
-  Comissionamento: "comissionamento",
-};
-
-const MODULO_ALIASES: Record<string, string> = Object.keys(MAPA_MODULOS).reduce(
-  (acc, key) => {
-    acc[key.toLowerCase()] = MAPA_MODULOS[key];
-    return acc;
-  },
-  {} as Record<string, string>,
-);
 
 // hierarquia igual ao SQL perm_level()
 const permLevel = (p: NivelPermissao | undefined) => {
@@ -255,22 +206,6 @@ export default function MenuIsland({ activePage }) {
       : `${displaySeconds}s`;
 
   // monta mapa {modulo: permissao} pegando SEMPRE a maior permissão se houver duplicata
-  function setPerm(perms: Record<string, NivelPermissao>, key: string, perm: NivelPermissao) {
-    const normalizedKey = key.toLowerCase();
-    const atual = perms[normalizedKey] ?? "none";
-    perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
-  }
-
-  function mergePerm(perms: Record<string, NivelPermissao>, modulo: string, perm: NivelPermissao) {
-    const normalizedModulo = modulo.toLowerCase();
-    setPerm(perms, normalizedModulo, perm);
-
-    const alias = MODULO_ALIASES[normalizedModulo];
-    if (alias) {
-      setPerm(perms, alias, perm);
-    }
-  }
-
   async function carregar() {
     const { data: sessionData } = await supabase.auth.getSession();
     const sessionUser = sessionData?.session?.user;
@@ -292,63 +227,29 @@ export default function MenuIsland({ activePage }) {
       return;
     }
 
-    // ✅ Fonte única: permissões do usuário (modulo_acesso)
-    const { data, error } = await supabase
-      .from("modulo_acesso")
-      .select("modulo, permissao, ativo")
-      .eq("usuario_id", uid);
-
-    if (error) {
-      // se RLS negar, mantém cache e não zera menu
+    const cache = await ensurePermissoes(uid, email);
+    if (!cache) {
       setCacheLoaded(true);
       return;
     }
 
-    const perms: Record<string, NivelPermissao> = {};
-
-    (data || []).forEach((r: RegistroAcesso) => {
-      const modulo = String(r.modulo || "").toLowerCase();
-      const perm = String(r.permissao || "none").toLowerCase();
-
-      const permVal: NivelPermissao =
-        perm === "admin" || perm === "delete" || perm === "edit" || perm === "create" || perm === "view"
-          ? (perm as NivelPermissao)
-          : "none";
-
-      const finalPerm = r.ativo ? permVal : "none";
-      if (modulo) mergePerm(perms, modulo, finalPerm);
-    });
-
+    const perms = cache.acessos || {};
     setAcessos((prev) => {
       const prevStr = JSON.stringify(prev);
       const nextStr = JSON.stringify(perms);
       return prevStr !== nextStr ? perms : prev;
     });
 
-    try {
-      window.localStorage.setItem(
-        "sgtur_menu_cache",
-        JSON.stringify({
-          userId: uid,
-          acessos: perms,
-          userEmail: email.toLowerCase(),
-        })
-      );
-    } catch {}
-
     setCacheLoaded(true);
   }
 
   useEffect(() => {
-    try {
-      const cache = window.localStorage.getItem("sgtur_menu_cache");
-      if (cache) {
-        const parsed = JSON.parse(cache);
-        setUserId(parsed.userId || null);
-        setAcessos(parsed.acessos || {});
-        setUserEmail(parsed.userEmail || "");
-      }
-    } catch {}
+    const cache = readPermissoesCache();
+    if (cache) {
+      setUserId(cache.userId || null);
+      setAcessos(cache.acessos || {});
+      setUserEmail(cache.userEmail || "");
+    }
     setCacheLoaded(true);
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps

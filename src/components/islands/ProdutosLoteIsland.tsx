@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { normalizeText } from "../../lib/normalizeText";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -16,10 +17,6 @@ type CidadeBusca = {
   pais_nome: string | null;
   subdivisao_id?: string | null;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();

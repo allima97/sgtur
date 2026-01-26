@@ -4,6 +4,8 @@ import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
+import { normalizeText } from "../../lib/normalizeText";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Viagem = {
   id: string;
@@ -63,10 +65,6 @@ function obterStatusPorPeriodo(inicio?: string | null, fim?: string | null): str
 function formatarMoeda(valor?: number | null) {
   if (valor == null || Number.isNaN(valor)) return "-";
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function obterMinData(datas: Array<string | null | undefined>) {
@@ -141,6 +139,7 @@ export default function ViagensListaIsland() {
   const [clientes, setClientes] = useState<{ id: string; nome: string; cpf?: string | null }[]>([]);
   const [clientesErro, setClientesErro] = useState<string | null>(null);
   const [deletandoViagemId, setDeletandoViagemId] = useState<string | null>(null);
+  const [viagemParaExcluir, setViagemParaExcluir] = useState<ViagemExibicao | null>(null);
   const [buscandoCidades, setBuscandoCidades] = useState(false);
   const [erroCidades, setErroCidades] = useState<string | null>(null);
   const cidadesAbort = useRef<AbortController | null>(null);
@@ -385,12 +384,6 @@ export default function ViagensListaIsland() {
 
   async function excluirViagem(v: ViagemExibicao) {
     if (!podeExcluir) return;
-    const possuiMultiplos = (v.recibos || []).length > 1;
-    const mensagemConfirmacao = possuiMultiplos
-      ? "Tem certeza que deseja excluir esta viagem e seus itens vinculados?"
-      : "Tem certeza que deseja excluir esta viagem?";
-    const confirmar = window.confirm(mensagemConfirmacao);
-    if (!confirmar) return;
     try {
       setDeletandoViagemId(v.id);
       setErro(null);
@@ -412,6 +405,17 @@ export default function ViagensListaIsland() {
     } finally {
       setDeletandoViagemId(null);
     }
+  }
+
+  function solicitarExclusaoViagem(viagem: ViagemExibicao) {
+    if (!podeExcluir) return;
+    setViagemParaExcluir(viagem);
+  }
+
+  async function confirmarExclusaoViagem() {
+    if (!viagemParaExcluir) return;
+    await excluirViagem(viagemParaExcluir);
+    setViagemParaExcluir(null);
   }
 
   function obterStatusExibicao(viagem: Viagem) {
@@ -466,6 +470,12 @@ export default function ViagensListaIsland() {
 
     return Array.from(grupos.values()).map(({ base, recibos }) => ({ ...base, recibos }));
   }, [viagens]);
+
+  const mensagemExclusaoViagem = viagemParaExcluir
+    ? (viagemParaExcluir.recibos || []).length > 1
+      ? "Tem certeza que deseja excluir esta viagem e seus itens vinculados?"
+      : "Tem certeza que deseja excluir esta viagem?"
+    : "";
 
   const proximasViagens = useMemo(() => {
     return [...viagensAgrupadas].sort((a, b) => {
@@ -908,7 +918,7 @@ export default function ViagensListaIsland() {
                             <button
                               className="btn-icon btn-danger"
                               title="Excluir viagem"
-                              onClick={() => excluirViagem(v)}
+                              onClick={() => solicitarExclusaoViagem(v)}
                               disabled={deletandoViagemId === v.id}
                             >
                               {deletandoViagemId === v.id ? "..." : "🗑️"}
@@ -931,6 +941,16 @@ export default function ViagensListaIsland() {
             </button>
           </div>
         )}
+        <ConfirmDialog
+          open={Boolean(viagemParaExcluir)}
+          title="Excluir viagem"
+          message={mensagemExclusaoViagem}
+          confirmLabel={deletandoViagemId ? "Excluindo..." : "Excluir"}
+          confirmVariant="danger"
+          confirmDisabled={Boolean(deletandoViagemId)}
+          onCancel={() => setViagemParaExcluir(null)}
+          onConfirm={confirmarExclusaoViagem}
+        />
       </div>
     </div>
   );

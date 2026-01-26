@@ -2,11 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
+import { normalizeText } from "../../lib/normalizeText";
 import CalculatorModal from "../ui/CalculatorModal";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 type Cliente = { id: string; nome: string; cpf?: string | null };
 type Cidade = { id: string; nome: string };

@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "clean:delivery": "node scripts/clean-delivery.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",

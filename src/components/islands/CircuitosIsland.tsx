@@ -3,7 +3,9 @@ import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Circuito = {
   id: string;
@@ -71,10 +73,6 @@ type CidadeContexto = {
   tipo: "dia" | "data";
   id: string;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 const ROTULO_CIRCUITO = /^Circuito\s*:/i;
 const ROTULO_OPERADOR = /^Operador\s+por\s*:/i;
@@ -239,6 +237,7 @@ export default function CircuitosIsland() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [circuitoParaExcluir, setCircuitoParaExcluir] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
@@ -907,7 +906,6 @@ export default function CircuitosIsland() {
       alert("Somente administradores podem excluir circuitos.");
       return;
     }
-    if (!window.confirm("Tem certeza que deseja excluir este circuito?")) return;
 
     try {
       setExcluindoId(circuitoId);
@@ -920,6 +918,20 @@ export default function CircuitosIsland() {
     } finally {
       setExcluindoId(null);
     }
+  }
+
+  function solicitarExclusao(circuitoId: string) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir circuitos.");
+      return;
+    }
+    setCircuitoParaExcluir(circuitoId);
+  }
+
+  async function confirmarExclusaoCircuito() {
+    if (!circuitoParaExcluir) return;
+    await excluir(circuitoParaExcluir);
+    setCircuitoParaExcluir(null);
   }
 
   async function abrirPreview(circuitoId: string) {
@@ -1685,7 +1697,7 @@ export default function CircuitosIsland() {
                         <button
                           type="button"
                           className="btn-icon btn-danger"
-                          onClick={() => excluir(circuito.id)}
+                          onClick={() => solicitarExclusao(circuito.id)}
                           disabled={excluindoId === circuito.id}
                           title="Excluir"
                         >
@@ -1781,6 +1793,16 @@ export default function CircuitosIsland() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(circuitoParaExcluir)}
+        title="Excluir circuito"
+        message="Tem certeza que deseja excluir este circuito?"
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setCircuitoParaExcluir(null)}
+        onConfirm={confirmarExclusaoCircuito}
+      />
     </div>
   );
 }

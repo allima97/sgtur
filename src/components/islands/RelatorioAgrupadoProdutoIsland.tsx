@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { normalizeText } from "../../lib/normalizeText";
 
 type Produto = {
   id: string;
@@ -67,10 +68,6 @@ type ExportFlags = {
   pdf: boolean;
   excel: boolean;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 function hojeISO() {
   return new Date().toISOString().substring(0, 10);

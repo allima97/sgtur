@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Template = {
   id: string;
@@ -67,6 +68,7 @@ export default function CommissionTemplatesIsland() {
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [templateParaExcluir, setTemplateParaExcluir] = useState<Template | null>(null);
 
   // ============================================================
   // LOADING INICIAL
@@ -220,8 +222,6 @@ export default function CommissionTemplatesIsland() {
   }
 
   async function excluir(id: string) {
-    if (!window.confirm("Excluir este template?")) return;
-
     try {
       const { error } = await supabase
         .from("commission_templates")
@@ -241,6 +241,16 @@ export default function CommissionTemplatesIsland() {
     } catch (e) {
       setErro("Erro ao excluir template.");
     }
+  }
+
+  function solicitarExclusao(template: Template) {
+    setTemplateParaExcluir(template);
+  }
+
+  async function confirmarExclusao() {
+    if (!templateParaExcluir) return;
+    await excluir(templateParaExcluir.id);
+    setTemplateParaExcluir(null);
   }
 
   // ============================================================
@@ -628,7 +638,7 @@ export default function CommissionTemplatesIsland() {
                     <button
                       className="btn-icon btn-danger"
                       title="Excluir"
-                      onClick={() => excluir(t.id)}
+                      onClick={() => solicitarExclusao(t)}
                     >
                       🗑️
                     </button>
@@ -638,6 +648,15 @@ export default function CommissionTemplatesIsland() {
           </tbody>
         </table>
       </div>
+      <ConfirmDialog
+        open={Boolean(templateParaExcluir)}
+        title="Excluir template"
+        message={`Excluir ${templateParaExcluir?.nome || "este template"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setTemplateParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

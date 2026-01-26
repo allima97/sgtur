@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Fornecedor = {
   id: string;
@@ -106,6 +107,7 @@ export default function FornecedoresIsland() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [fornecedorParaExcluir, setFornecedorParaExcluir] = useState<Fornecedor | null>(null);
   const [busca, setBusca] = useState("");
   const [cidadeBusca, setCidadeBusca] = useState("");
   const [resultadosCidade, setResultadosCidade] = useState<CidadeBusca[]>([]);
@@ -399,7 +401,6 @@ export default function FornecedoresIsland() {
       alert("Somente administradores podem excluir fornecedores.");
       return;
     }
-    if (!window.confirm("Tem certeza que deseja excluir este fornecedor?")) return;
 
     try {
       setExcluindoId(fornecedor.id);
@@ -429,6 +430,20 @@ export default function FornecedoresIsland() {
     } finally {
       setExcluindoId(null);
     }
+  }
+
+  function solicitarExclusao(fornecedor: Fornecedor) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir fornecedores.");
+      return;
+    }
+    setFornecedorParaExcluir(fornecedor);
+  }
+
+  async function confirmarExclusaoFornecedor() {
+    if (!fornecedorParaExcluir) return;
+    await excluirFornecedor(fornecedorParaExcluir);
+    setFornecedorParaExcluir(null);
   }
 
   if (loadingPerm) {
@@ -798,7 +813,7 @@ export default function FornecedoresIsland() {
                           <button
                             className="btn-icon btn-danger"
                             title="Excluir"
-                            onClick={() => excluirFornecedor(fornecedor)}
+                            onClick={() => solicitarExclusao(fornecedor)}
                             disabled={excluindoId === fornecedor.id}
                           >
                             {excluindoId === fornecedor.id ? "..." : "🗑️"}
@@ -813,6 +828,16 @@ export default function FornecedoresIsland() {
           </div>
         </>
       )}
+      <ConfirmDialog
+        open={Boolean(fornecedorParaExcluir)}
+        title="Excluir fornecedor"
+        message={`Tem certeza que deseja excluir ${fornecedorParaExcluir?.nome_fantasia || fornecedorParaExcluir?.nome_completo || "este fornecedor"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setFornecedorParaExcluir(null)}
+        onConfirm={confirmarExclusaoFornecedor}
+      />
     </div>
   );
 }

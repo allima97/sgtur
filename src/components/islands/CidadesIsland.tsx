@@ -3,16 +3,14 @@ import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { registrarLog } from "../../lib/logs";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText as baseNormalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+const normalizeText = (value: string) =>
+  baseNormalizeText(value, { collapseWhitespace: true, trim: true });
 
 type Pais = {
   id: string;
@@ -70,27 +68,58 @@ export default function CidadesIsland() {
   const podeExcluir = isAdmin || permissao === "delete" || permissao === "admin";
 
   // STATES
-  const [paises, setPaises] = useState<Pais[]>([]);
-  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
-  const [cidades, setCidades] = useState<Cidade[]>([]);
+  const {
+    items: paises,
+    loading: loadingPaises,
+    load: loadPaises,
+  } = useCrudResource<Pais>({
+    table: "paises",
+    select: "id, nome",
+  });
+
+  const {
+    items: subdivisoes,
+    loading: loadingSubdivisoes,
+    load: loadSubdivisoes,
+  } = useCrudResource<Subdivisao>({
+    table: "subdivisoes",
+    select: "id, nome, pais_id, codigo_admin1, tipo",
+  });
+
+  const {
+    items: cidades,
+    loading: loadingCidades,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadCidades,
+    setItems: setCidades,
+    create,
+    update,
+    remove,
+  } = useCrudResource<Cidade>({
+    table: "cidades",
+    select: "id, nome, subdivisao_id, descricao, created_at",
+  });
+
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [cidadeParaExcluir, setCidadeParaExcluir] = useState<Cidade | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [loadingBusca, setLoadingBusca] = useState(false);
   const [subdivisaoBusca, setSubdivisaoBusca] = useState("");
   const [mostrarSugestoesSubdivisao, setMostrarSugestoesSubdivisao] = useState(false);
+
+  const loading = loadingCidades || loadingPaises || loadingSubdivisoes;
 
   // CARREGAR DADOS
   async function carregar(todos = false) {
     if (!podeVer) return;
+    setErro(null);
 
-    async function carregarCidades() {
+    async function carregarCidades(): Promise<Cidade[]> {
       const selectPadrao = "id, nome, subdivisao_id, descricao, created_at";
       const selectFallback = "id, nome, subdivisao_id, descricao";
       if (todos) {
@@ -135,40 +164,40 @@ export default function CidadesIsland() {
           }
         }
         return todas;
-      } else {
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("cidades")
+          .select(selectPadrao)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        return (data || []) as Cidade[];
+      } catch (err) {
+        console.warn("[Cidades] created_at indisponivel, ordenando por nome.", err);
         try {
           const { data, error } = await supabase
             .from("cidades")
-            .select(selectPadrao)
-            .order("created_at", { ascending: false })
+            .select(selectFallback)
+            .order("nome")
             .limit(5);
           if (error) throw error;
           return (data || []) as Cidade[];
-        } catch (err) {
-          console.warn("[Cidades] created_at indisponivel, ordenando por nome.", err);
-          try {
-            const { data, error } = await supabase
-              .from("cidades")
-              .select(selectFallback)
-              .order("nome")
-              .limit(5);
-            if (error) throw error;
-            return (data || []) as Cidade[];
-          } catch (fallbackErr) {
-            console.warn("[Cidades] Fallback sem descricao/nome.", fallbackErr);
-            const { data, error } = await supabase
+        } catch (fallbackErr) {
+          console.warn("[Cidades] Fallback sem descricao/nome.", fallbackErr);
+          const { data, error } = await supabase
             .from("cidades")
             .select("id, nome, subdivisao_id")
             .order("nome")
             .limit(5);
-            if (error) throw error;
-            return (data || []) as Cidade[];
-          }
+          if (error) throw error;
+          return (data || []) as Cidade[];
         }
       }
     }
 
-    async function carregarSubdivisoes() {
+    async function carregarSubdivisoes(): Promise<Subdivisao[]> {
       const todas: Subdivisao[] = [];
       const pageSize = 1000;
       let from = 0;
@@ -186,43 +215,36 @@ export default function CidadesIsland() {
       return todas;
     }
 
-    try {
-      setLoading(true);
+    const [paisesRes, subdivisoesRes, cidadesRes] = await Promise.all([
+      loadPaises({
+        order: { column: "nome", ascending: true },
+        errorMessage: "Erro ao carregar paises.",
+      }),
+      loadSubdivisoes({
+        fetcher: carregarSubdivisoes,
+        errorMessage: "Erro ao carregar cidades.",
+      }),
+      loadCidades({
+        fetcher: carregarCidades,
+        errorMessage: "Erro ao carregar cidades.",
+      }),
+    ]);
 
-      const [
-        { data: paisesData, error: paisesErro },
-        subdivisoesData,
-        cidadesData,
-      ] = await Promise.all([
-        supabase.from("paises").select("id, nome").order("nome"),
-        carregarSubdivisoes(),
-        carregarCidades(),
-      ]);
-
-      if (paisesErro) {
-        setErro("Erro ao carregar paises.");
-      } else {
-        setPaises(paisesData || []);
-      }
-
-      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
-
-      setCidades((cidadesData as Cidade[]) || []);
-      setCarregouTodos(todos);
-    } catch (e) {
-      console.error(e);
+    if (subdivisoesRes.error || cidadesRes.error) {
       setErro("Erro ao carregar cidades.");
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    if (paisesRes.error) {
+      setErro("Erro ao carregar paises.");
+    }
+
+    setCarregouTodos(todos);
   }
 
   useEffect(() => {
     if (carregando) return;
-    if (!podeVer) {
-      setLoading(false);
-      return;
-    }
+    if (!podeVer) return;
     carregar(false);
   }, [carregando, podeVer]);
 
@@ -240,7 +262,6 @@ export default function CidadesIsland() {
 
     const controller = new AbortController();
     async function buscar() {
-      setLoadingBusca(true);
       setErro(null);
       try {
         const { data, error } = await supabase.rpc(
@@ -280,9 +301,6 @@ export default function CidadesIsland() {
           const msg = errFinal instanceof Error ? errFinal.message : "";
           setErro(`Erro ao buscar cidades.${msg ? ` Detalhe: ${msg}` : ""}`);
         }
-      } finally {
-        if (!controller.signal.aborted) setLoadingBusca(false);
-      }
     }
 
     buscar();
@@ -461,27 +479,27 @@ export default function CidadesIsland() {
       setErro("Subdivisao e obrigatoria.");
       return;
     }
+    if (!form.nome.trim()) {
+      setErro("Nome e obrigatorio.");
+      return;
+    }
+
+    setErro(null);
+
+    const payload = {
+      nome: titleCaseWithExceptions(form.nome),
+      subdivisao_id: form.subdivisao_id,
+      descricao: form.descricao || null,
+    };
+
+    const result = editId
+      ? await update(editId, payload, { errorMessage: "Erro ao salvar cidade." })
+      : await create(payload, { errorMessage: "Erro ao salvar cidade." });
+
+    if (result.error) return;
 
     try {
-      setSalvando(true);
-      setErro(null);
-
-      const nomeNormalizado = titleCaseWithExceptions(form.nome);
-
-      const payload = {
-        nome: nomeNormalizado,
-        subdivisao_id: form.subdivisao_id,
-        descricao: form.descricao || null,
-      };
-
       if (editId) {
-        const { error } = await supabase
-          .from("cidades")
-          .update(payload)
-          .eq("id", editId);
-
-        if (error) throw error;
-
         await registrarLog({
           user_id: null,
           acao: "cidade_editada",
@@ -489,9 +507,6 @@ export default function CidadesIsland() {
           detalhes: { id: editId, payload },
         });
       } else {
-        const { error } = await supabase.from("cidades").insert(payload);
-        if (error) throw error;
-
         await registrarLog({
           user_id: null,
           acao: "cidade_criada",
@@ -499,42 +514,53 @@ export default function CidadesIsland() {
           detalhes: payload,
         });
       }
-
-      carregar(carregouTodos);
-      fecharFormulario();
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar cidade.");
-    } finally {
-      setSalvando(false);
+      return;
     }
+
+    carregar(carregouTodos);
+    fecharFormulario();
   }
 
   // EXCLUIR
   async function excluir(id: string) {
     if (!podeExcluir) return;
-    if (!confirm("Excluir cidade?")) return;
+
+    setErro(null);
+
+    const result = await remove(id, {
+      errorMessage: "Erro ao excluir cidade (provavelmente usada em produtos/destinos).",
+    });
+
+    if (result.error) return;
 
     try {
-      setExcluindoId(id);
-
-      const { error } = await supabase.from("cidades").delete().eq("id", id);
-      if (error) throw error;
-
       await registrarLog({
         user_id: null,
         acao: "cidade_excluida",
         modulo: "Cadastros",
         detalhes: { id },
       });
-
-      carregar(carregouTodos);
     } catch (e) {
       console.error(e);
       setErro("Erro ao excluir cidade (provavelmente usada em produtos/destinos).");
-    } finally {
-      setExcluindoId(null);
+      return;
     }
+
+    carregar(carregouTodos);
+  }
+
+  function solicitarExclusao(cidade: Cidade) {
+    if (!podeExcluir) return;
+    setCidadeParaExcluir(cidade);
+  }
+
+  async function confirmarExclusao() {
+    if (!cidadeParaExcluir) return;
+    await excluir(cidadeParaExcluir.id);
+    setCidadeParaExcluir(null);
   }
 
   if (!podeVer && !isAdmin) {
@@ -693,65 +719,76 @@ export default function CidadesIsland() {
       )}
 
       {!mostrarFormulario && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        <DataTable
+          className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          headers={
+            <tr>
+              <th>Cidade</th>
+              <th>Subdivisao</th>
+              <th>Pais</th>
+              <th>Criada em</th>
+              {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
+            </tr>
+          }
+          loading={loading}
+          loadingMessage="Carregando..."
+          empty={!loading && filtradas.length === 0}
+          emptyMessage="Nenhuma cidade encontrada."
+          colSpan={podeEditar || podeExcluir ? 5 : 4}
         >
-          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Cidade</th>
-                <th>Subdivisao</th>
-                <th>Pais</th>
-                <th>Criada em</th>
-                {(podeEditar || podeExcluir) && <th className="th-actions">Acoes</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5}>Carregando...</td>
-                </tr>
+          {filtradas.map((c) => (
+            <tr key={c.id}>
+              <td data-label="Cidade">{c.nome}</td>
+              <td data-label="Subdivisao">{(c as any).subdivisao_nome || "-"}</td>
+              <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
+              <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
+              {(podeEditar || podeExcluir) && (
+                <td className="th-actions" data-label="Acoes">
+                  <TableActions
+                    show={podeEditar || podeExcluir}
+                    actions={[
+                      ...(podeEditar
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => iniciarEdicao(c),
+                              icon: "✏️",
+                            },
+                          ]
+                        : []),
+                      ...(podeExcluir
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => solicitarExclusao(c),
+                              icon: excluindoId === c.id ? "..." : "🗑️",
+                              variant: "danger" as const,
+                              disabled: excluindoId === c.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
               )}
-              {!loading && filtradas.length === 0 && (
-                <tr>
-                  <td colSpan={5}>Nenhuma cidade encontrada.</td>
-                </tr>
-              )}
-              {!loading &&
-                filtradas.map((c) => (
-                  <tr key={c.id}>
-                    <td data-label="Cidade">{c.nome}</td>
-                    <td data-label="Subdivisao">{(c as any).subdivisao_nome || "-"}</td>
-                    <td data-label="Pais">{(c as any).pais_nome || "-"}</td>
-                    <td data-label="Criada em">{c.created_at ? c.created_at.slice(0, 10) : "-"}</td>
-                    {(podeEditar || podeExcluir) && (
-                      <td className="th-actions" data-label="Acoes">
-                        <div className="action-buttons">
-                          {podeEditar && (
-                            <button className="btn-icon" onClick={() => iniciarEdicao(c)} title="Editar">
-                              ✏️
-                            </button>
-                          )}
-                          {podeExcluir && (
-                            <button
-                              className="btn-icon btn-danger"
-                              onClick={() => excluir(c.id)}
-                              disabled={excluindoId === c.id}
-                              title="Excluir"
-                            >
-                              {excluindoId === c.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          ))}
+        </DataTable>
       )}
+
+      <ConfirmDialog
+        open={Boolean(cidadeParaExcluir)}
+        title="Excluir cidade"
+        message={`Excluir ${cidadeParaExcluir?.nome || "esta cidade"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setCidadeParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

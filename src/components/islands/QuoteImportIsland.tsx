@@ -3,6 +3,7 @@ import { extractCvcQuoteFromText } from "../../lib/quote/cvcPdfExtractor";
 import { saveQuoteDraft } from "../../lib/quote/saveQuoteDraft";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
 import type { ImportResult, QuoteDraft, QuoteItemDraft } from "../../lib/quote/types";
 import FlightDetailsModal, { FlightDetails } from "../ui/FlightDetailsModal";
 
@@ -20,10 +21,6 @@ type CidadeOption = {
   subdivisao_nome?: string | null;
   pais_nome?: string | null;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 function normalizeCpf(value: string) {
   return (value || "").replace(/\D/g, "");

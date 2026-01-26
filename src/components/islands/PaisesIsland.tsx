@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+import SearchInput from "../ui/SearchInput";
+import EmptyState from "../ui/EmptyState";
 
 type Pais = {
   id: string;
@@ -29,41 +31,42 @@ const initialForm: FormState = {
 };
 
 export default function PaisesIsland() {
-  const [paises, setPaises] = useState<Pais[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const {
+    items: paises,
+    loading,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load,
+    create,
+    update,
+    remove,
+  } = useCrudResource<Pais>({
+    table: "paises",
+    select: "id, nome, codigo_iso, continente, created_at",
+  });
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState<FormState>(initialForm);
-  const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [paisParaExcluir, setPaisParaExcluir] = useState<Pais | null>(null);
 
   async function carregarPaises(todos = false) {
-    try {
-      setLoading(true);
-      setErro(null);
+    const result = await load({
+      order: {
+        column: todos ? "nome" : "created_at",
+        ascending: todos,
+      },
+      limit: todos ? undefined : 5,
+      errorMessage:
+        "Erro ao carregar pa??ses. Verifique se a tabela 'paises' existe e se as colunas est??o corretas.",
+    });
 
-      const query = supabase
-        .from("paises")
-        .select("id, nome, codigo_iso, continente, created_at")
-        .order(todos ? "nome" : "created_at", { ascending: !todos })
-        .limit(todos ? undefined : 5);
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setPaises((data || []) as Pais[]);
+    if (!result.error) {
       setCarregouTodos(todos || false);
-    } catch (e: any) {
-      console.error(e);
-      setErro(
-        "Erro ao carregar países. Verifique se a tabela 'paises' existe e se as colunas estão corretas."
-      );
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -118,75 +121,67 @@ export default function PaisesIsland() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar países.");
+      setErro("Voc?? n??o tem permiss??o para salvar pa??ses.");
       return;
     }
 
     if (!form.nome.trim()) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome ?? obrigat??rio.");
       return;
     }
 
-    try {
-      setSalvando(true);
-      setErro(null);
+    setErro(null);
 
-      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+    const payload = {
+      nome: titleCaseWithExceptions(form.nome),
+      codigo_iso: form.codigo_iso.trim() || null,
+      continente: form.continente.trim() || null,
+    };
 
-      if (editandoId) {
-        const { error } = await supabase
-          .from("paises")
-          .update({
-            nome: nomeNormalizado,
-            codigo_iso: form.codigo_iso.trim() || null,
-            continente: form.continente.trim() || null
-          })
-          .eq("id", editandoId);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("paises").insert({
-          nome: nomeNormalizado,
-          codigo_iso: form.codigo_iso.trim() || null,
-          continente: form.continente.trim() || null
+    const result = editandoId
+      ? await update(editandoId, payload, {
+          errorMessage: "Erro ao salvar pa??s. Verifique se o nome ?? ??nico.",
+        })
+      : await create(payload, {
+          errorMessage: "Erro ao salvar pa??s. Verifique se o nome ?? ??nico.",
         });
 
-        if (error) throw error;
-      }
+    if (result.error) return;
 
-      await carregarPaises(carregouTodos);
-      fecharFormulario();
-    } catch (e: any) {
-      console.error(e);
-      setErro("Erro ao salvar país. Verifique se o nome é único.");
-    } finally {
-      setSalvando(false);
-    }
+    await carregarPaises(carregouTodos);
+    fecharFormulario();
   }
 
   async function excluir(id: string) {
     if (permissao !== "admin") {
+      window.alert("Somente administradores podem excluir pa??ses.");
+      return;
+    }
+
+    setErro(null);
+
+    const result = await remove(id, {
+      errorMessage:
+        "N??o foi poss??vel excluir o pa??s. Verifique se n??o existem destinos vinculados.",
+    });
+
+    if (result.error) return;
+
+    await carregarPaises(carregouTodos);
+  }
+
+  function solicitarExclusao(pais: Pais) {
+    if (permissao !== "admin") {
       window.alert("Somente administradores podem excluir países.");
       return;
     }
-    if (!window.confirm("Tem certeza que deseja excluir este país?")) return;
+    setPaisParaExcluir(pais);
+  }
 
-    try {
-      setExcluindoId(id);
-      setErro(null);
-
-      const { error } = await supabase.from("paises").delete().eq("id", id);
-      if (error) throw error;
-
-      await carregarPaises(carregouTodos);
-    } catch (e: any) {
-      console.error(e);
-      setErro(
-        "Não foi possível excluir o país. Verifique se não existem destinos vinculados."
-      );
-    } finally {
-      setExcluindoId(null);
-    }
+  async function confirmarExclusao() {
+    if (!paisParaExcluir) return;
+    await excluir(paisParaExcluir.id);
+    setPaisParaExcluir(null);
   }
 
   if (loadingPerm) {
@@ -216,12 +211,11 @@ export default function PaisesIsland() {
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
           >
-            <div className="form-group" style={{ flex: "1 1 320px" }}>
-              <label className="form-label">Buscar país</label>
-              <input
-                className="form-input"
+            <div style={{ flex: "1 1 320px" }}>
+              <SearchInput
+                label="Buscar país"
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={setBusca}
                 placeholder="Digite parte do nome..."
               />
             </div>
@@ -309,73 +303,81 @@ export default function PaisesIsland() {
       )}
 
       {!mostrarFormulario && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        <DataTable
+          className="table-default table-header-blue table-mobile-cards min-w-[520px]"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          headers={
+            <tr>
+              <th>Nome</th>
+              <th>Código ISO</th>
+              <th>Continente</th>
+              <th>Criado em</th>
+              <th className="th-actions">Ações</th>
+            </tr>
+          }
+          loading={loading}
+          loadingMessage="Carregando países..."
+          empty={!loading && paisesFiltrados.length === 0}
+          emptyMessage={
+            <EmptyState
+              title="Nenhum país encontrado"
+              description={
+                busca.trim()
+                  ? "Tente ajustar a busca ou cadastre um novo país."
+                  : "Cadastre um novo país para começar."
+              }
+            />
+          }
+          colSpan={5}
         >
-          <table className="table-default table-header-blue table-mobile-cards min-w-[520px]">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Código ISO</th>
-                <th>Continente</th>
-                <th>Criado em</th>
-                <th className="th-actions">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5}>Carregando países...</td>
-                </tr>
-              )}
-
-              {!loading && paisesFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={5}>Nenhum país encontrado.</td>
-                </tr>
-              )}
-
-              {!loading &&
-                paisesFiltrados.map((p) => (
-                  <tr key={p.id}>
-                    <td data-label="Nome">{p.nome}</td>
-                    <td data-label="Codigo ISO">{p.codigo_iso || "-"}</td>
-                    <td data-label="Continente">{p.continente || "-"}</td>
-                    <td data-label="Criado em">
-                      {p.created_at
-                        ? new Date(p.created_at).toLocaleDateString("pt-BR")
-                        : "-"}
-                    </td>
-                    <td className="th-actions" data-label="Acoes">
-                      {permissao !== "view" && (
-                        <div className="action-buttons">
-                          <button
-                            className="btn-icon"
-                            title="Editar"
-                            onClick={() => iniciarEdicao(p)}
-                          >
-                            ✏️
-                          </button>
-                          {permissao === "admin" && (
-                            <button
-                              className="btn-icon btn-danger"
-                              title="Excluir"
-                              onClick={() => excluir(p.id)}
-                              disabled={excluindoId === p.id}
-                            >
-                              {excluindoId === p.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+          {paisesFiltrados.map((p) => (
+            <tr key={p.id}>
+              <td data-label="Nome">{p.nome}</td>
+              <td data-label="Codigo ISO">{p.codigo_iso || "-"}</td>
+              <td data-label="Continente">{p.continente || "-"}</td>
+              <td data-label="Criado em">
+                {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+              </td>
+              <td className="th-actions" data-label="Acoes">
+                <TableActions
+                  show={permissao !== "view"}
+                  actions={[
+                    {
+                      key: "edit",
+                      label: "Editar",
+                      onClick: () => iniciarEdicao(p),
+                      icon: "✏️",
+                    },
+                    ...(permissao === "admin"
+                      ? [
+                          {
+                            key: "delete",
+                            label: "Excluir",
+                            onClick: () => solicitarExclusao(p),
+                            icon: excluindoId === p.id ? "..." : "🗑️",
+                            variant: "danger" as const,
+                            disabled: excluindoId === p.id,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
+
+      <ConfirmDialog
+        open={Boolean(paisParaExcluir)}
+        title="Excluir país"
+        message={`Tem certeza que deseja excluir ${paisParaExcluir?.nome || "este país"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setPaisParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

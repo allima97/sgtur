@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type Cliente = {
   id: string;
@@ -25,6 +26,7 @@ export default function ClientesConsultaIsland() {
   const [erro, setErro] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [historicoVendas, setHistoricoVendas] = useState<
     {
@@ -127,7 +129,6 @@ export default function ClientesConsultaIsland() {
       window.alert("Você não tem permissão para excluir clientes.");
       return;
     }
-    if (!window.confirm("Tem certeza que deseja excluir este cliente?")) return;
     try {
       const { error } = await supabase.from("clientes").delete().eq("id", id);
       if (error) throw error;
@@ -136,6 +137,20 @@ export default function ClientesConsultaIsland() {
       console.error(e);
       window.alert("Erro ao excluir cliente.");
     }
+  }
+
+  function solicitarExclusao(cliente: Cliente) {
+    if (!podeExcluir) {
+      window.alert("Você não tem permissão para excluir clientes.");
+      return;
+    }
+    setClienteParaExcluir(cliente);
+  }
+
+  async function confirmarExclusaoCliente() {
+    if (!clienteParaExcluir) return;
+    await excluirCliente(clienteParaExcluir.id);
+    setClienteParaExcluir(null);
   }
 
   async function editarCliente(id: string, atualNome: string) {
@@ -319,7 +334,7 @@ export default function ClientesConsultaIsland() {
                     )}
 
                     {podeExcluir && (
-                      <button className="btn-icon btn-danger" onClick={() => excluirCliente(c.id)} title="Excluir">🗑️</button>
+                      <button className="btn-icon btn-danger" onClick={() => solicitarExclusao(c)} title="Excluir">🗑️</button>
                     )}
                   </div>
                 </td>
@@ -468,6 +483,15 @@ export default function ClientesConsultaIsland() {
         </div>
       </div>
     )}
+    <ConfirmDialog
+      open={Boolean(clienteParaExcluir)}
+      title="Excluir cliente"
+      message={`Tem certeza que deseja excluir ${clienteParaExcluir?.nome || "este cliente"}?`}
+      confirmLabel="Excluir"
+      confirmVariant="danger"
+      onCancel={() => setClienteParaExcluir(null)}
+      onConfirm={confirmarExclusaoCliente}
+    />
     </>
   );
 }

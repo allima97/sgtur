@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type ClienteOption = {
   id: string;
@@ -42,10 +44,6 @@ type ManualItem = {
   raw: Record<string, unknown>;
   order_index: number;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 function normalizeCpf(value: string) {
   return (value || "").replace(/\D/g, "");
@@ -237,6 +235,9 @@ export default function QuoteManualIsland() {
   const [cidadeInputValues, setCidadeInputValues] = useState<Record<string, string>>({});
   const [cidadeCache, setCidadeCache] = useState<Record<string, string>>({});
   const [cidadeNameMap, setCidadeNameMap] = useState<Record<string, string>>({});
+  const [itemParaExcluir, setItemParaExcluir] = useState<{ index: number; label?: string } | null>(
+    null
+  );
   const cidadeFetchTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const isMountedRef = useRef(true);
 
@@ -693,10 +694,6 @@ export default function QuoteManualIsland() {
   function removerItem(index: number) {
     const current = items[index];
     if (!current) return;
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Confirma a exclusão deste item?");
-      if (!confirmed) return;
-    }
     const rowKey = current.temp_id || `row-${index}`;
     setItems((prev) => {
       const next = prev.filter((_, i) => i !== index);
@@ -714,6 +711,19 @@ export default function QuoteManualIsland() {
       delete next[rowKey];
       return next;
     });
+  }
+
+  function solicitarRemocaoItem(index: number) {
+    const current = items[index];
+    if (!current) return;
+    const label = current.title || current.product_name || current.city_name || "este item";
+    setItemParaExcluir({ index, label });
+  }
+
+  function confirmarRemocaoItem() {
+    if (!itemParaExcluir) return;
+    removerItem(itemParaExcluir.index);
+    setItemParaExcluir(null);
   }
 
   function adicionarItem() {
@@ -1095,7 +1105,7 @@ export default function QuoteManualIsland() {
                               type="button"
                               className="icon-action-btn danger"
                               title="Remover item"
-                              onClick={() => removerItem(index)}
+                              onClick={() => solicitarRemocaoItem(index)}
                             >
                               🗑️
                             </button>
@@ -1280,6 +1290,15 @@ export default function QuoteManualIsland() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(itemParaExcluir)}
+        title="Excluir item"
+        message={`Confirma a exclusão de ${itemParaExcluir?.label || "este item"}?`}
+        confirmLabel="Excluir"
+        confirmVariant="danger"
+        onCancel={() => setItemParaExcluir(null)}
+        onConfirm={confirmarRemocaoItem}
+      />
     </div>
   );
 }

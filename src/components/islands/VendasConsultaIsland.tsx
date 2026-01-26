@@ -4,10 +4,9 @@ import { registrarLog } from "../../lib/logs";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import { normalizeText } from "../../lib/normalizeText";
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 function formatarDataCorretamente(dataString: string | null | undefined): string {
   if (!dataString) return "-";
@@ -140,6 +139,13 @@ export default function VendasConsultaIsland() {
   const [mostrarComplementares, setMostrarComplementares] = useState(false);
   const [vinculandoComplementar, setVinculandoComplementar] = useState(false);
   const [removendoComplementar, setRemovendoComplementar] = useState<string | null>(null);
+  const [confirmVendaCancelamento, setConfirmVendaCancelamento] = useState<Venda | null>(null);
+  const [confirmReciboExclusao, setConfirmReciboExclusao] = useState<{ id: string; vendaId: string } | null>(
+    null
+  );
+  const [confirmComplementarRemover, setConfirmComplementarRemover] = useState<ReciboComplementar | null>(
+    null
+  );
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastCounter, setToastCounter] = useState(0);
 
@@ -555,7 +561,6 @@ export default function VendasConsultaIsland() {
   // ================================
   async function cancelarVenda(venda: Venda) {
     if (!podeExcluir && !isAdmin) return;
-    if (!confirm("Tem certeza que deseja CANCELAR esta venda?")) return;
 
     try {
       setCancelando(true);
@@ -585,12 +590,16 @@ export default function VendasConsultaIsland() {
     }
   }
 
+  function solicitarCancelamentoVenda(venda: Venda) {
+    if (!podeExcluir && !isAdmin) return;
+    setConfirmVendaCancelamento(venda);
+  }
+
   // ================================
   // EXCLUIR RECIBO
   // ================================
   async function excluirRecibo(id: string, vendaId: string) {
     if (!podeExcluir) return;
-    if (!confirm("Excluir este recibo?")) return;
 
     try {
       setExcluindoRecibo(id);
@@ -612,6 +621,11 @@ export default function VendasConsultaIsland() {
     } finally {
       setExcluindoRecibo(null);
     }
+  }
+
+  function solicitarExclusaoRecibo(id: string, vendaId: string) {
+    if (!podeExcluir) return;
+    setConfirmReciboExclusao({ id, vendaId });
   }
 
   // ================================
@@ -703,7 +717,6 @@ export default function VendasConsultaIsland() {
 
   async function removerReciboComplementar(link: ReciboComplementar) {
     if (!podeEditar) return;
-    if (!confirm("Remover recibo complementar?")) return;
 
     try {
       setRemovendoComplementar(link.id);
@@ -748,6 +761,11 @@ export default function VendasConsultaIsland() {
     } finally {
       setRemovendoComplementar(null);
     }
+  }
+
+  function solicitarRemocaoComplementar(link: ReciboComplementar) {
+    if (!podeEditar) return;
+    setConfirmComplementarRemover(link);
   }
 
   // ================================
@@ -843,99 +861,90 @@ export default function VendasConsultaIsland() {
       )}
 
       {/* TABELA */}
-      <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-        <table className="table-default table-header-green table-mobile-cards min-w-[820px]">
-          <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-            <tr>
-              <th>Cliente</th>
-              <th>Destino</th>
-              <th>Produto</th>
-              <th style={{ textAlign: "center" }}>Embarque</th>
-              <th>Valor</th>
-              <th>Taxas</th>
-              {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
+      <DataTable
+        className="table-default table-header-green table-mobile-cards min-w-[820px]"
+        containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+        headers={
+          <tr>
+            <th>Cliente</th>
+            <th>Destino</th>
+            <th>Produto</th>
+            <th style={{ textAlign: "center" }}>Embarque</th>
+            <th>Valor</th>
+            <th>Taxas</th>
+            {podeVer && <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>}
+          </tr>
+        }
+        loading={loading}
+        loadingMessage="Carregando..."
+        empty={!loading && vendasExibidas.length === 0}
+        emptyMessage="Nenhuma venda encontrada."
+        colSpan={7}
+      >
+        {vendasExibidas.map((v) => {
+          const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
+          const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
+          const produtosVenda = recibosDaVenda(v.id)
+            .map((r) => r.produto_nome || "")
+            .filter(Boolean);
+          const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
+
+          return (
+            <tr key={v.id}>
+              <td data-label="Cliente">{v.cliente_nome}</td>
+              <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
+              <td data-label="Produto">
+                {produtosVenda.length === 0 ? (
+                  "-"
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {produtosVenda.map((p, idx) => (
+                      <span key={`${v.id}-prod-${idx}`}>{p}</span>
+                    ))}
+                  </div>
+                )}
+              </td>
+              <td data-label="Embarque" style={{ textAlign: "center" }}>
+                {formatarDataCorretamente(v.data_embarque)}
+              </td>
+              <td data-label="Valor">
+                R${" "}
+                {totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td data-label="Taxas">
+                {totalTaxas === 0
+                  ? "-"
+                  : `R$ ${totalTaxas.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+              </td>
+              <td className="th-actions" data-label="Ações">
+                <div className="action-buttons">
+                  {whatsappLink && (
+                    <a
+                      className="btn-icon"
+                      href={whatsappLink}
+                      title="Enviar WhatsApp"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      💬
+                    </a>
+                  )}
+                  <button
+                    className="btn-icon"
+                    title="Ver detalhes"
+                    onClick={() => setModalVenda(v)}
+                  >
+                    👁️
+                  </button>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={7}>Carregando...</td>
-              </tr>
-            )}
-
-            {!loading && vendasExibidas.length === 0 && (
-              <tr>
-                <td colSpan={7}>Nenhuma venda encontrada.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              vendasExibidas.map((v) => {
-                const totalValor = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_total || 0), 0);
-                const totalTaxas = recibosDaVenda(v.id).reduce((acc, r) => acc + (r.valor_taxas || 0), 0);
-                const produtosVenda = recibosDaVenda(v.id)
-                  .map((r) => r.produto_nome || "")
-                  .filter(Boolean);
-                const whatsappLink = construirLinkWhatsApp(v.clientes?.whatsapp);
-
-                return (
-                  <tr key={v.id}>
-                    <td data-label="Cliente">{v.cliente_nome}</td>
-                    <td data-label="Destino">{v.destino_cidade_nome || "-"}</td>
-                    <td data-label="Produto">
-                      {produtosVenda.length === 0 ? (
-                        "-"
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          {produtosVenda.map((p, idx) => (
-                            <span key={`${v.id}-prod-${idx}`}>{p}</span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td data-label="Embarque" style={{ textAlign: "center" }}>
-                      {formatarDataCorretamente(v.data_embarque)}
-                    </td>
-                    <td data-label="Valor">
-                      R${" "}
-                      {totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td data-label="Taxas">
-                      {totalTaxas === 0
-                        ? "-"
-                        : `R$ ${totalTaxas.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`}
-                    </td>
-                    <td className="th-actions" data-label="Ações">
-                      <div className="action-buttons">
-                        {whatsappLink && (
-                          <a
-                            className="btn-icon"
-                            href={whatsappLink}
-                            title="Enviar WhatsApp"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            💬
-                          </a>
-                        )}
-                        <button
-                          className="btn-icon"
-                          title="Ver detalhes"
-                          onClick={() => setModalVenda(v)}
-                        >
-                          👁️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
+          );
+        })}
+      </DataTable>
 
       {/* ================================
           MODAL DETALHES
@@ -1036,7 +1045,7 @@ export default function VendasConsultaIsland() {
                                 <button
                                   className="btn-icon btn-danger"
                                   disabled={excluindoRecibo === r.id}
-                                  onClick={() => excluirRecibo(r.id, modalVenda.id)}
+                                  onClick={() => solicitarExclusaoRecibo(r.id, modalVenda.id)}
                                 >
                                   {excluindoRecibo === r.id ? "…" : "🗑️"}
                                 </button>
@@ -1195,7 +1204,7 @@ export default function VendasConsultaIsland() {
                                 type="button"
                                 className="btn-icon"
                                 title="Remover recibo complementar"
-                                onClick={() => removerReciboComplementar(link)}
+                                onClick={() => solicitarRemocaoComplementar(link)}
                                 disabled={removendoComplementar === link.id}
                               >
                                 {removendoComplementar === link.id ? "..." : "✕"}
@@ -1233,7 +1242,7 @@ export default function VendasConsultaIsland() {
               {podeExcluir && (
                 <button
                   className="btn btn-danger w-full sm:w-auto"
-                  onClick={() => cancelarVenda(modalVenda)}
+                  onClick={() => solicitarCancelamentoVenda(modalVenda)}
                   disabled={cancelando}
                 >
                   {cancelando ? "Cancelando..." : "Cancelar Venda"}
@@ -1281,6 +1290,50 @@ export default function VendasConsultaIsland() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(confirmVendaCancelamento)}
+        title="Cancelar venda"
+        message="Tem certeza que deseja cancelar esta venda? Esta ação remove recibos vinculados."
+        confirmLabel={cancelando ? "Cancelando..." : "Cancelar venda"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(cancelando)}
+        onCancel={() => setConfirmVendaCancelamento(null)}
+        onConfirm={async () => {
+          if (!confirmVendaCancelamento) return;
+          await cancelarVenda(confirmVendaCancelamento);
+          setConfirmVendaCancelamento(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmReciboExclusao)}
+        title="Excluir recibo"
+        message="Deseja excluir este recibo?"
+        confirmLabel={excluindoRecibo ? "Excluindo..." : "Excluir recibo"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoRecibo)}
+        onCancel={() => setConfirmReciboExclusao(null)}
+        onConfirm={async () => {
+          if (!confirmReciboExclusao) return;
+          await excluirRecibo(confirmReciboExclusao.id, confirmReciboExclusao.vendaId);
+          setConfirmReciboExclusao(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmComplementarRemover)}
+        title="Remover recibo complementar"
+        message="Deseja remover este recibo complementar?"
+        confirmLabel={removendoComplementar ? "Removendo..." : "Remover"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(removendoComplementar)}
+        onCancel={() => setConfirmComplementarRemover(null)}
+        onConfirm={async () => {
+          if (!confirmComplementarRemover) return;
+          await removerReciboComplementar(confirmComplementarRemover);
+          setConfirmComplementarRemover(null);
+        }}
+      />
       {podeCriar && (
         <div className="mobile-actionbar sm:hidden">
           <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>

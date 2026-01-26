@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import {
+  ensurePermissoes,
+  getPermissaoFromCache,
+  readPermissoesCache,
+  subscribePermissoes,
+} from "./permissoesCache";
+import type { Permissao } from "./permissoesCache";
 
-export type Permissao =
-  | "none"
-  | "view"
-  | "create"
-  | "edit"
-  | "delete"
-  | "admin";
+export type { Permissao } from "./permissoesCache";
 
 const permLevel = (p: Permissao | undefined): number => {
   switch (p) {
@@ -44,6 +45,8 @@ export function usePermissao(modulo: string) {
 
   useEffect(() => {
     let cancelled = false;
+    let resolved = false;
+    let unsubscribe: (() => void) | null = null;
 
     if (!moduloTrimmed) {
       setPermissao("none");
@@ -54,14 +57,75 @@ export function usePermissao(modulo: string) {
 
     async function carregarPermissao() {
       setLoading(true);
-      setPermissao("none");
-      setAtivo(false);
 
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const user = sessionData?.session?.user;
         if (!user) {
+          if (!cancelled) {
+            setPermissao("none");
+            setAtivo(false);
+            setLoading(false);
+          }
           return;
+        }
+
+        const finalizar = () => {
+          if (unsubscribe) {
+            unsubscribe();
+            unsubscribe = null;
+          }
+        };
+
+        const aplicarPermissao = (permData: { permissao: Permissao; ativo: boolean }) => {
+          if (cancelled || resolved) return;
+          resolved = true;
+          setPermissao(permData.permissao);
+          setAtivo(permData.ativo);
+          setLoading(false);
+          finalizar();
+        };
+
+        const aplicarNenhuma = () => {
+          if (cancelled || resolved) return;
+          resolved = true;
+          setPermissao("none");
+          setAtivo(false);
+          setLoading(false);
+          finalizar();
+        };
+
+        const cacheAtual = readPermissoesCache();
+        const cachedPerm = getPermissaoFromCache(moduloTrimmed, user.id, cacheAtual);
+        if (cachedPerm) {
+          aplicarPermissao(cachedPerm);
+          return;
+        }
+
+        unsubscribe = subscribePermissoes((cache) => {
+          if (cancelled || resolved || cache.userId !== user.id) return;
+          const permFromCache = getPermissaoFromCache(moduloTrimmed, user.id, cache);
+          if (permFromCache) {
+            aplicarPermissao(permFromCache);
+          }
+        });
+
+        const ensuredCache = await ensurePermissoes(user.id, user.email);
+        if (cancelled || resolved) return;
+
+        if (ensuredCache && ensuredCache.userId === user.id) {
+          const ensuredPerm = getPermissaoFromCache(moduloTrimmed, user.id, ensuredCache);
+          if (ensuredPerm) {
+            aplicarPermissao(ensuredPerm);
+          } else {
+            aplicarNenhuma();
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setPermissao("none");
+          setAtivo(false);
         }
 
         const { data, error } = await supabase
@@ -70,10 +134,10 @@ export function usePermissao(modulo: string) {
           .eq("usuario_id", user.id)
           .ilike("modulo", moduloTrimmed);
 
-        if (cancelled) return;
+        if (cancelled || resolved) return;
 
         if (error) {
-          console.error("Erro ao carregar permissão do módulo", moduloTrimmed, error);
+          console.error("Erro ao carregar permissao do modulo", moduloTrimmed, error);
           return;
         }
 
@@ -103,21 +167,22 @@ export function usePermissao(modulo: string) {
         }
 
         if (!melhorRegistro) {
-          setAtivo(false);
-          setPermissao("none");
+          aplicarNenhuma();
           return;
         }
 
         const ativoValue = Boolean(melhorRegistro.ativo);
         const permissaoValue = normalizePermissao(melhorRegistro.permissao);
-        setAtivo(ativoValue);
-        setPermissao(ativoValue ? permissaoValue : "none");
+        aplicarPermissao({
+          permissao: ativoValue ? permissaoValue : "none",
+          ativo: ativoValue,
+        });
       } catch (err) {
         if (!cancelled) {
-          console.error("Erro ao buscar permissão do módulo", moduloTrimmed, err);
+          console.error("Erro ao buscar permissao do modulo", moduloTrimmed, err);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !resolved) {
           setLoading(false);
         }
       }
@@ -127,8 +192,10 @@ export function usePermissao(modulo: string) {
 
     return () => {
       cancelled = true;
+      if (unsubscribe) unsubscribe();
     };
   }, [moduloTrimmed]);
+
 
   const nivel = useMemo(() => permLevel(permissao), [permissao]);
   const isAdmin = permissao === "admin";

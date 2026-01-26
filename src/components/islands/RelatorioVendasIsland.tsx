@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
+import { normalizeText } from "../../lib/normalizeText";
 import {
   ParametrosComissao,
   Regra,
@@ -132,10 +133,6 @@ type ExportFlags = {
 
 function hojeISO() {
   return new Date().toISOString().substring(0, 10);
-}
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function addDays(base: Date, days: number) {

@@ -1,12 +1,14 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
+import SearchInput from "../ui/SearchInput";
+import EmptyState from "../ui/EmptyState";
 
 type Pais = {
   id: string;
@@ -39,44 +41,66 @@ const initialForm: FormState = {
 export default function SubdivisoesIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
-  const [paises, setPaises] = useState<Pais[]>([]);
-  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
+  const {
+    items: paises,
+    loading: loadingPaises,
+    load: loadPaises,
+  } = useCrudResource<Pais>({
+    table: "paises",
+    select: "id, nome",
+  });
+
+  const {
+    items: subdivisoes,
+    loading: loadingSubdivisoes,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadSubdivisoes,
+    create,
+    update,
+    remove,
+  } = useCrudResource<Subdivisao>({
+    table: "subdivisoes",
+    select: "id, nome, pais_id, codigo_admin1, tipo, created_at",
+  });
+
   const [form, setForm] = useState<FormState>(initialForm);
   const [busca, setBusca] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [subdivisaoParaExcluir, setSubdivisaoParaExcluir] = useState<Subdivisao | null>(null);
+
+  const loading = loadingSubdivisoes || loadingPaises;
 
   async function carregarDados(todos = false) {
-    try {
-      setLoading(true);
-      setErro(null);
+    setErro(null);
 
-      const [{ data: paisData, error: paisErr }, { data: subdivisaoData, error: subErr }] = await Promise.all([
-        supabase.from("paises").select("id, nome").order("nome"),
-        supabase
-          .from("subdivisoes")
-          .select("id, nome, pais_id, codigo_admin1, tipo, created_at")
-          .order(todos ? "nome" : "created_at", { ascending: !todos })
-          .limit(todos ? undefined : 5),
-      ]);
+    const [paisesResult, subdivisoesResult] = await Promise.all([
+      loadPaises({
+        order: { column: "nome", ascending: true },
+        errorMessage: "Erro ao carregar subdivisoes.",
+      }),
+      loadSubdivisoes({
+        order: {
+          column: todos ? "nome" : "created_at",
+          ascending: todos,
+        },
+        limit: todos ? undefined : 5,
+        errorMessage: "Erro ao carregar subdivisoes.",
+      }),
+    ]);
 
-      if (paisErr) throw paisErr;
-      if (subErr) throw subErr;
-
-      setPaises((paisData || []) as Pais[]);
-      setSubdivisoes((subdivisaoData || []) as Subdivisao[]);
-      setCarregouTodos(todos);
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao carregar subdivisoes.");
-    } finally {
-      setLoading(false);
+    if (paisesResult.error || subdivisoesResult.error) {
+      if (paisesResult.error && !subdivisoesResult.error) {
+        setErro("Erro ao carregar subdivisoes.");
+      }
+      return;
     }
+
+    setCarregouTodos(todos);
   }
 
   useEffect(() => {
@@ -152,33 +176,23 @@ export default function SubdivisoesIsland() {
       return;
     }
 
-    try {
-      setSalvando(true);
-      setErro(null);
+    setErro(null);
 
-      const payload = {
-        nome: titleCaseWithExceptions(form.nome),
-        pais_id: form.pais_id,
-        codigo_admin1: form.codigo_admin1.trim(),
-        tipo: form.tipo.trim() || null,
-      };
+    const payload = {
+      nome: titleCaseWithExceptions(form.nome),
+      pais_id: form.pais_id,
+      codigo_admin1: form.codigo_admin1.trim(),
+      tipo: form.tipo.trim() || null,
+    };
 
-      if (editandoId) {
-        const { error } = await supabase.from("subdivisoes").update(payload).eq("id", editandoId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("subdivisoes").insert(payload);
-        if (error) throw error;
-      }
+    const result = editandoId
+      ? await update(editandoId, payload, { errorMessage: "Erro ao salvar subdivisao." })
+      : await create(payload, { errorMessage: "Erro ao salvar subdivisao." });
+
+    if (result.error) return;
 
     await carregarDados(carregouTodos);
     fecharFormulario();
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao salvar subdivisao.");
-    } finally {
-      setSalvando(false);
-    }
   }
 
   async function excluir(id: string) {
@@ -186,19 +200,30 @@ export default function SubdivisoesIsland() {
       alert("Somente administradores podem excluir subdivisoes.");
       return;
     }
-    if (!confirm("Excluir esta subdivisao?")) return;
 
-    try {
-      setExcluindoId(id);
-      const { error } = await supabase.from("subdivisoes").delete().eq("id", id);
-      if (error) throw error;
-      await carregarDados(carregouTodos);
-    } catch (e) {
-      console.error(e);
-      setErro("Erro ao excluir subdivisao. Verifique se nao existem cidades vinculadas.");
-    } finally {
-      setExcluindoId(null);
+    setErro(null);
+
+    const result = await remove(id, {
+      errorMessage: "Erro ao excluir subdivisao. Verifique se nao existem cidades vinculadas.",
+    });
+
+    if (result.error) return;
+
+    await carregarDados(carregouTodos);
+  }
+
+  function solicitarExclusao(subdivisao: Subdivisao) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir subdivisoes.");
+      return;
     }
+    setSubdivisaoParaExcluir(subdivisao);
+  }
+
+  async function confirmarExclusao() {
+    if (!subdivisaoParaExcluir) return;
+    await excluir(subdivisaoParaExcluir.id);
+    setSubdivisaoParaExcluir(null);
   }
 
   if (loadingPerm) {
@@ -221,12 +246,11 @@ export default function SubdivisoesIsland() {
             className="form-row mobile-stack"
             style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
           >
-            <div className="form-group" style={{ flex: "1 1 320px" }}>
-              <label className="form-label">Buscar subdivisão</label>
-              <input
-                className="form-input"
+            <div style={{ flex: "1 1 320px" }}>
+              <SearchInput
+                label="Buscar subdivisão"
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={setBusca}
                 placeholder="Nome, país ou código..."
               />
             </div>
@@ -325,69 +349,83 @@ export default function SubdivisoesIsland() {
       )}
 
       {!mostrarFormulario && (
-        <div
-          className="table-container overflow-x-auto"
-          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        <DataTable
+          className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+          containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+          headers={
+            <tr>
+              <th>Subdivisao</th>
+              <th>Codigo</th>
+              <th>Pais</th>
+              <th>Tipo</th>
+              <th>Criado em</th>
+              <th className="th-actions">Acoes</th>
+            </tr>
+          }
+          loading={loading}
+          loadingMessage="Carregando subdivisoes..."
+          empty={!loading && filtrados.length === 0}
+          emptyMessage={
+            <EmptyState
+              title="Nenhuma subdivisão encontrada"
+              description={
+                busca.trim()
+                  ? "Tente ajustar a busca ou cadastre uma subdivisão."
+                  : "Cadastre uma subdivisão para começar."
+              }
+            />
+          }
+          colSpan={6}
         >
-          <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-            <thead>
-              <tr>
-                <th>Subdivisao</th>
-                <th>Codigo</th>
-                <th>Pais</th>
-                <th>Tipo</th>
-                <th>Criado em</th>
-                <th className="th-actions">Acoes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={6}>Carregando subdivisoes...</td>
-                </tr>
-              )}
-
-              {!loading && filtrados.length === 0 && (
-                <tr>
-                  <td colSpan={6}>Nenhuma subdivisao encontrada.</td>
-                </tr>
-              )}
-
-              {!loading &&
-                filtrados.map((s) => (
-                  <tr key={s.id}>
-                    <td data-label="Subdivisao">{s.nome}</td>
-                    <td data-label="Codigo">{s.codigo_admin1}</td>
-                    <td data-label="Pais">{(s as any).pais_nome || "-"}</td>
-                    <td data-label="Tipo">{s.tipo || "-"}</td>
-                    <td data-label="Criado em">
-                      {s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}
-                    </td>
-                    <td className="th-actions" data-label="Acoes">
-                      {permissao !== "view" && (
-                        <div className="action-buttons">
-                          <button className="btn-icon" title="Editar" onClick={() => iniciarEdicao(s)}>
-                            ✏️
-                          </button>
-                          {permissao === "admin" && (
-                            <button
-                              className="btn-icon btn-danger"
-                              title="Excluir"
-                              onClick={() => excluir(s.id)}
-                              disabled={excluindoId === s.id}
-                            >
-                              {excluindoId === s.id ? "..." : "🗑️"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+          {filtrados.map((s) => (
+            <tr key={s.id}>
+              <td data-label="Subdivisao">{s.nome}</td>
+              <td data-label="Codigo">{s.codigo_admin1}</td>
+              <td data-label="Pais">{(s as any).pais_nome || "-"}</td>
+              <td data-label="Tipo">{s.tipo || "-"}</td>
+              <td data-label="Criado em">
+                {s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "-"}
+              </td>
+              <td className="th-actions" data-label="Acoes">
+                <TableActions
+                  show={permissao !== "view"}
+                  actions={[
+                    {
+                      key: "edit",
+                      label: "Editar",
+                      onClick: () => iniciarEdicao(s),
+                      icon: "✏️",
+                    },
+                    ...(permissao === "admin"
+                      ? [
+                          {
+                            key: "delete",
+                            label: "Excluir",
+                            onClick: () => solicitarExclusao(s),
+                            icon: excluindoId === s.id ? "..." : "🗑️",
+                            variant: "danger" as const,
+                            disabled: excluindoId === s.id,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
+
+      <ConfirmDialog
+        open={Boolean(subdivisaoParaExcluir)}
+        title="Excluir subdivisão"
+        message={`Excluir ${subdivisaoParaExcluir?.nome || "esta subdivisão"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setSubdivisaoParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

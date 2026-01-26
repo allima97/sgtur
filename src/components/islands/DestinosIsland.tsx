@@ -1,12 +1,12 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
 
 type Pais = {
   id: string;
@@ -71,56 +71,88 @@ const initialForm: FormState = {
 export default function DestinosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
 
-  const [paises, setPaises] = useState<Pais[]>([]);
-  const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
-  const [cidades, setCidades] = useState<Cidade[]>([]);
-  const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const {
+    items: paises,
+    loading: loadingPaises,
+    load: loadPaises,
+  } = useCrudResource<Pais>({
+    table: "paises",
+    select: "id, nome",
+  });
+
+  const {
+    items: subdivisoes,
+    loading: loadingSubdivisoes,
+    load: loadSubdivisoes,
+  } = useCrudResource<Subdivisao>({
+    table: "subdivisoes",
+    select: "id, nome, pais_id",
+  });
+
+  const {
+    items: cidades,
+    loading: loadingCidades,
+    load: loadCidades,
+  } = useCrudResource<Cidade>({
+    table: "cidades",
+    select: "id, nome, subdivisao_id",
+  });
+
+  const {
+    items: destinos,
+    loading: loadingDestinos,
+    saving: salvando,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadDestinos,
+    create,
+    update,
+    remove,
+  } = useCrudResource<Destino>({
+    table: "destinos",
+    select:
+      "id, nome, cidade_id, informacoes_importantes, tipo, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at",
+  });
+
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState<FormState>(initialForm);
-  const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [destinoParaExcluir, setDestinoParaExcluir] = useState<Destino | null>(null);
+
+  const loading =
+    loadingPaises || loadingSubdivisoes || loadingCidades || loadingDestinos;
 
   async function carregarDadosIniciais() {
-    try {
-      setLoading(true);
-      setErro(null);
+    const errorMessage =
+      "Erro ao carregar destinos. Verifique se as tabelas 'paises', 'subdivisoes' e 'cidades' existem e se as colunas estao corretas.";
 
-      const [
-        { data: paisesData, error: paisesErr },
-        { data: subdivisoesData, error: subErr },
-        { data: cidadesData, error: cidadesErr },
-        { data: destinosData, error: destinosErr },
-      ] = await Promise.all([
-        supabase.from("paises").select("id, nome").order("nome", { ascending: true }),
-        supabase.from("subdivisoes").select("id, nome, pais_id").order("nome", { ascending: true }),
-        supabase.from("cidades").select("id, nome, subdivisao_id").order("nome", { ascending: true }),
-        supabase
-          .from("destinos")
-          .select(
-            "id, nome, cidade_id, informacoes_importantes, tipo, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, created_at"
-          )
-          .order("nome", { ascending: true }),
-      ]);
+    setErro(null);
 
-      if (paisesErr) throw paisesErr;
-      if (subErr) throw subErr;
-      if (cidadesErr) throw cidadesErr;
-      if (destinosErr) throw destinosErr;
+    const [paisesRes, subdivisoesRes, cidadesRes, destinosRes] = await Promise.all([
+      loadPaises({
+        order: { column: "nome", ascending: true },
+        errorMessage,
+      }),
+      loadSubdivisoes({
+        order: { column: "nome", ascending: true },
+        errorMessage,
+      }),
+      loadCidades({
+        order: { column: "nome", ascending: true },
+        errorMessage,
+      }),
+      loadDestinos({
+        order: { column: "nome", ascending: true },
+        errorMessage,
+      }),
+    ]);
 
-      setPaises((paisesData || []) as Pais[]);
-      setSubdivisoes((subdivisoesData || []) as Subdivisao[]);
-      setCidades((cidadesData || []) as Cidade[]);
-      setDestinos((destinosData || []) as Destino[]);
-    } catch (e: any) {
-      console.error(e);
-      setErro(
-        "Erro ao carregar destinos. Verifique se as tabelas 'paises', 'subdivisoes' e 'cidades' existem e se as colunas estao corretas."
-      );
-    } finally {
-      setLoading(false);
+    if (paisesRes.error || subdivisoesRes.error || cidadesRes.error || destinosRes.error) {
+      if (!destinosRes.error) {
+        setErro(errorMessage);
+      }
+      return;
     }
   }
 
@@ -220,42 +252,34 @@ export default function DestinosIsland() {
       return;
     }
 
-    try {
-      setSalvando(true);
-      setErro(null);
+    setErro(null);
 
-      const nomeNormalizado = titleCaseWithExceptions(form.nome);
+    const payload = {
+      nome: titleCaseWithExceptions(form.nome),
+      cidade_id: form.cidade_id,
+      tipo: form.tipo.trim() || null,
+      atracao_principal: form.atracao_principal.trim() || null,
+      melhor_epoca: form.melhor_epoca.trim() || null,
+      duracao_sugerida: form.duracao_sugerida.trim() || null,
+      nivel_preco: form.nivel_preco.trim() || null,
+      imagem_url: form.imagem_url.trim() || null,
+      informacoes_importantes: form.informacoes_importantes.trim() || null,
+      ativo: form.ativo,
+    };
 
-      const payload = {
-        nome: nomeNormalizado,
-        cidade_id: form.cidade_id,
-        tipo: form.tipo.trim() || null,
-        atracao_principal: form.atracao_principal.trim() || null,
-        melhor_epoca: form.melhor_epoca.trim() || null,
-        duracao_sugerida: form.duracao_sugerida.trim() || null,
-        nivel_preco: form.nivel_preco.trim() || null,
-        imagem_url: form.imagem_url.trim() || null,
-        informacoes_importantes: form.informacoes_importantes.trim() || null,
-        ativo: form.ativo,
-      };
+    const result = editandoId
+      ? await update(editandoId, payload, {
+          errorMessage: "Erro ao salvar destino. Verifique os dados e tente novamente.",
+        })
+      : await create(payload, {
+          errorMessage: "Erro ao salvar destino. Verifique os dados e tente novamente.",
+        });
 
-      if (editandoId) {
-        const { error } = await supabase.from("destinos").update(payload).eq("id", editandoId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("destinos").insert(payload);
-        if (error) throw error;
-      }
+    if (result.error) return;
 
-      setForm(initialForm);
-      setEditandoId(null);
-      await carregarDadosIniciais();
-    } catch (e: any) {
-      console.error(e);
-      setErro("Erro ao salvar destino. Verifique os dados e tente novamente.");
-    } finally {
-      setSalvando(false);
-    }
+    setForm(initialForm);
+    setEditandoId(null);
+    await carregarDadosIniciais();
   }
 
   async function excluir(id: string) {
@@ -264,22 +288,30 @@ export default function DestinosIsland() {
       return;
     }
 
-    if (!window.confirm("Tem certeza que deseja excluir este destino?")) return;
+    setErro(null);
 
-    try {
-      setExcluindoId(id);
-      setErro(null);
+    const result = await remove(id, {
+      errorMessage:
+        "Nao foi possivel excluir o destino. Verifique se nao existem vendas vinculadas.",
+    });
 
-      const { error } = await supabase.from("destinos").delete().eq("id", id);
-      if (error) throw error;
+    if (result.error) return;
 
-      await carregarDadosIniciais();
-    } catch (e: any) {
-      console.error(e);
-      setErro("Nao foi possivel excluir o destino. Verifique se nao existem vendas vinculadas.");
-    } finally {
-      setExcluindoId(null);
+    await carregarDadosIniciais();
+  }
+
+  function solicitarExclusao(destino: Destino) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir destinos.");
+      return;
     }
+    setDestinoParaExcluir(destino);
+  }
+
+  async function confirmarExclusao() {
+    if (!destinoParaExcluir) return;
+    await excluir(destinoParaExcluir.id);
+    setDestinoParaExcluir(null);
   }
 
   if (loadingPerm) {
@@ -484,78 +516,81 @@ export default function DestinosIsland() {
       )}
 
       {/* Tabela */}
-      <div
-        className="table-container overflow-x-auto"
-        style={{ maxHeight: "65vh", overflowY: "auto" }}
+      <DataTable
+        className="table-default table-header-blue table-mobile-cards min-w-[960px]"
+        containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+        headers={
+          <tr>
+            <th>Destino</th>
+            <th>Cidade</th>
+            <th>Pais</th>
+            <th>Tipo</th>
+            <th>Nivel de preco</th>
+            <th>Ativo</th>
+            <th>Criado em</th>
+            <th className="th-actions">Acoes</th>
+          </tr>
+        }
+        loading={loading}
+        loadingMessage="Carregando destinos..."
+        empty={!loading && destinosExibidos.length === 0}
+        emptyMessage="Nenhum destino encontrado."
+        colSpan={8}
       >
-        <table className="table-default table-header-blue table-mobile-cards min-w-[960px]">
-          <thead>
-            <tr>
-              <th>Destino</th>
-              <th>Cidade</th>
-              <th>Pais</th>
-              <th>Tipo</th>
-              <th>Nivel de preco</th>
-              <th>Ativo</th>
-              <th>Criado em</th>
-              <th className="th-actions">Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={8}>Carregando destinos...</td>
-              </tr>
-            )}
+        {destinosExibidos.map((d) => (
+          <tr key={d.id}>
+            <td data-label="Destino">{d.nome}</td>
+            <td data-label="Cidade">{(d as any).cidade_nome || "-"}</td>
+            <td data-label="Pais">{(d as any).pais_nome || "-"}</td>
+            <td data-label="Tipo">{d.tipo || "-"}</td>
+            <td data-label="Nivel de preco">{d.nivel_preco || "-"}</td>
+            <td data-label="Ativo">{d.ativo ? "Sim" : "Nao"}</td>
+            <td data-label="Criado em">
+              {d.created_at ? new Date(d.created_at).toLocaleDateString("pt-BR") : "-"}
+            </td>
+            <td className="th-actions" data-label="Acoes">
+              <TableActions
+                show={permissao !== "view"}
+                actions={[
+                  ...(permissao !== "view"
+                    ? [
+                        {
+                          key: "edit",
+                          label: "Editar",
+                          onClick: () => iniciarEdicao(d),
+                          icon: "✏️",
+                        },
+                      ]
+                    : []),
+                  ...(permissao === "admin"
+                    ? [
+                        {
+                          key: "delete",
+                          label: "Excluir",
+                          onClick: () => solicitarExclusao(d),
+                          icon: excluindoId === d.id ? "..." : "🗑️",
+                          variant: "danger" as const,
+                          disabled: excluindoId === d.id,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </td>
+          </tr>
+        ))}
+      </DataTable>
 
-            {!loading && destinosExibidos.length === 0 && (
-              <tr>
-                <td colSpan={8}>Nenhum destino encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              destinosExibidos.map((d) => (
-                <tr key={d.id}>
-                  <td data-label="Destino">{d.nome}</td>
-                  <td data-label="Cidade">{(d as any).cidade_nome || "-"}</td>
-                  <td data-label="Pais">{(d as any).pais_nome || "-"}</td>
-                  <td data-label="Tipo">{d.tipo || "-"}</td>
-                  <td data-label="Nivel de preco">{d.nivel_preco || "-"}</td>
-                  <td data-label="Ativo">{d.ativo ? "Sim" : "Nao"}</td>
-                  <td data-label="Criado em">
-                    {d.created_at
-                      ? new Date(d.created_at).toLocaleDateString("pt-BR")
-                      : "-"}
-                  </td>
-                  <td className="th-actions" data-label="Acoes">
-                    <div className="action-buttons">
-                      {permissao !== "view" && (
-                        <button
-                          className="btn-icon"
-                          title="Editar"
-                          onClick={() => iniciarEdicao(d)}
-                        >
-                          ✏️
-                        </button>
-                      )}
-                      {permissao === "admin" && (
-                        <button
-                          className="btn-icon btn-danger"
-                          title="Excluir"
-                          onClick={() => excluir(d.id)}
-                          disabled={excluindoId === d.id}
-                        >
-                          {excluindoId === d.id ? "..." : "🗑️"}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+      <ConfirmDialog
+        open={Boolean(destinoParaExcluir)}
+        title="Excluir destino"
+        message={`Tem certeza que deseja excluir ${destinoParaExcluir?.nome || "este destino"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setDestinoParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { exportQuotePdfById } from "../../lib/quote/exportQuotePdfClient";
+import { normalizeText } from "../../lib/normalizeText";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 type QuoteItemRow = {
   id: string;
@@ -27,10 +29,6 @@ type QuoteRow = {
   cliente?: { id: string; nome?: string | null; cpf?: string | null } | null;
   quote_item?: QuoteItemRow[] | null;
 };
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 function formatDate(value: string) {
   if (!value) return "-";
@@ -89,6 +87,7 @@ export default function QuoteListIsland() {
   const [exportingQuoteId, setExportingQuoteId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [interacaoQuote, setInteracaoQuote] = useState<QuoteRow | null>(null);
+  const [quoteParaExcluir, setQuoteParaExcluir] = useState<QuoteRow | null>(null);
   const [interactionDate, setInteractionDate] = useState("");
   const [interactionNotes, setInteractionNotes] = useState("");
   const [interactionSaving, setInteractionSaving] = useState(false);
@@ -161,8 +160,6 @@ export default function QuoteListIsland() {
   }
 
   async function excluirQuote(id: string) {
-    const confirmar = window.confirm("Excluir este orcamento? Esta acao nao pode ser desfeita.");
-    if (!confirmar) return;
     setDeletandoId(id);
     setErro(null);
     try {
@@ -175,6 +172,16 @@ export default function QuoteListIsland() {
     } finally {
       setDeletandoId(null);
     }
+  }
+
+  function solicitarExclusao(quote: QuoteRow) {
+    setQuoteParaExcluir(quote);
+  }
+
+  async function confirmarExclusao() {
+    if (!quoteParaExcluir) return;
+    await excluirQuote(quoteParaExcluir.id);
+    setQuoteParaExcluir(null);
   }
 
   async function atualizarStatus(id: string, status: string) {
@@ -478,7 +485,7 @@ export default function QuoteListIsland() {
                         <button
                           className="btn-icon btn-danger"
                           title="Excluir orcamento"
-                          onClick={() => excluirQuote(quote.id)}
+                          onClick={() => solicitarExclusao(quote)}
                           disabled={deletandoId === quote.id}
                         >
                           {deletandoId === quote.id ? "..." : "🗑️"}
@@ -636,6 +643,16 @@ export default function QuoteListIsland() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(quoteParaExcluir)}
+        title="Excluir orçamento"
+        message="Excluir este orçamento? Esta ação não pode ser desfeita."
+        confirmLabel={deletandoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(deletandoId)}
+        onCancel={() => setQuoteParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

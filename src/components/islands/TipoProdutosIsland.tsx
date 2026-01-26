@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
+import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
-
-function normalizeText(value: string) {
-  return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import DataTable from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import TableActions from "../ui/TableActions";
 
 type TipoProduto = {
   id: string;
@@ -39,13 +40,27 @@ type ComissaoProduto = {
 export default function TipoProdutosIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Parametros");
 
-  const [tipos, setTipos] = useState<TipoProduto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const {
+    items: tipos,
+    loading: loadingTipos,
+    deletingId: excluindoId,
+    error: erro,
+    setError: setErro,
+    load: loadTipos,
+    create,
+    update,
+    remove,
+  } = useCrudResource<TipoProduto>({
+    table: "tipo_produtos",
+    select: "*",
+  });
+
+  const [loadingExtras, setLoadingExtras] = useState(true);
+  const loading = loadingTipos || loadingExtras;
   const [busca, setBusca] = useState("");
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [tipoParaExcluir, setTipoParaExcluir] = useState<TipoProduto | null>(null);
   const [regras, setRegras] = useState<Regra[]>([]);
   const [produtoRegraMap, setProdutoRegraMap] = useState<Record<string, ComissaoProduto>>({});
   const [regraSelecionada, setRegraSelecionada] = useState<string>("");
@@ -79,12 +94,15 @@ export default function TipoProdutosIsland() {
   }
 
   async function carregar() {
-    try {
-      setLoading(true);
-      setErro(null);
+    setLoadingExtras(true);
+    setErro(null);
 
-      const [{ data, error }, regrasData, mapData, colExibeKpi] = await Promise.all([
-        supabase.from("tipo_produtos").select("*").order("nome", { ascending: true }),
+    try {
+      const [tiposResult, regrasData, mapData, colExibeKpi] = await Promise.all([
+        loadTipos({
+          order: { column: "nome", ascending: true },
+          errorMessage: "Erro ao carregar tipos de produto.",
+        }),
         supabase
           .from("commission_rule")
           .select("id, nome, tipo")
@@ -96,10 +114,10 @@ export default function TipoProdutosIsland() {
         supabase.from("tipo_produtos").select("exibe_kpi_comissao").limit(1),
       ]);
 
-      if (error) throw error;
+      if (tiposResult.error) return;
+
       const suporta = !colExibeKpi.error;
       setSuportaExibeKpi(suporta);
-      setTipos((data || []) as TipoProduto[]);
       setRegras((regrasData.data as any) || []);
       const map: Record<string, ComissaoProduto> = {};
       (mapData.data as any)?.forEach((r: any) => {
@@ -115,7 +133,7 @@ export default function TipoProdutosIsland() {
       console.error(e);
       setErro("Erro ao carregar tipos de produto.");
     } finally {
-      setLoading(false);
+      setLoadingExtras(false);
     }
   }
 
@@ -211,17 +229,17 @@ export default function TipoProdutosIsland() {
     e.preventDefault();
 
     if (permissao === "view") {
-      setErro("Você não tem permissão para salvar tipos de produto.");
+      setErro("Voc?? n??o tem permiss??o para salvar tipos de produto.");
       return;
     }
     const nome = titleCaseWithExceptions(form.nome);
     const tipo = titleCaseWithExceptions(form.tipo || nome);
     if (!nome) {
-      setErro("Nome é obrigatório.");
+      setErro("Nome ?? obrigat??rio.");
       return;
     }
     if (form.regra_comissionamento === "geral" && !regraSelecionada) {
-      setErro("Selecione uma regra de comissão para produtos do tipo 'geral'.");
+      setErro("Selecione uma regra de comiss??o para produtos do tipo 'geral'.");
       return;
     }
     const toNumberOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -232,48 +250,56 @@ export default function TipoProdutosIsland() {
       const fixAtNum = toNumberOrNull(fixMetaAtingida);
       const fixSupNum = toNumberOrNull(fixSuperMeta);
       const algumInvalido =
-        fixNaoNum === null || isNaN(fixNaoNum) || fixAtNum === null || isNaN(fixAtNum) || fixSupNum === null || isNaN(fixSupNum);
+        fixNaoNum === null ||
+        isNaN(fixNaoNum) ||
+        fixAtNum === null ||
+        isNaN(fixAtNum) ||
+        fixSupNum === null ||
+        isNaN(fixSupNum);
       if (algumInvalido) {
-        setErro("Preencha os percentuais fixos para meta não atingida, atingida e super meta (apenas números).");
+        setErro(
+          "Preencha os percentuais fixos para meta n??o atingida, atingida e super meta (apenas n??meros)."
+        );
         return;
       }
     }
 
-      try {
-        setErro(null);
-        const payload: Record<string, any> = {
-          nome,
-          tipo,
-          regra_comissionamento: form.regra_comissionamento,
-          soma_na_meta: form.soma_na_meta,
-          ativo: form.ativo,
-          usa_meta_produto: usaMetaProduto,
-          meta_produto_valor: usaMetaProduto ? metaProdValor : null,
-          comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
-          descontar_meta_geral: descontarMetaGeral,
-        };
-        if (suportaExibeKpi) {
-          payload.exibe_kpi_comissao = exibeKpiComissao;
-        }
+    try {
+      setErro(null);
+      const payload: Record<string, any> = {
+        nome,
+        tipo,
+        regra_comissionamento: form.regra_comissionamento,
+        soma_na_meta: form.soma_na_meta,
+        ativo: form.ativo,
+        usa_meta_produto: usaMetaProduto,
+        meta_produto_valor: usaMetaProduto ? metaProdValor : null,
+        comissao_produto_meta_pct: usaMetaProduto ? comissaoMetaPct : null,
+        descontar_meta_geral: descontarMetaGeral,
+      };
+      if (suportaExibeKpi) {
+        payload.exibe_kpi_comissao = exibeKpiComissao;
+      }
 
       let tipoId = editandoId;
       if (editandoId) {
-        const { error } = await supabase.from("tipo_produtos").update(payload).eq("id", editandoId);
-        if (error) throw error;
+        const result = await update(editandoId, payload, {
+          errorMessage: "Erro ao salvar tipo de produto.",
+        });
+        if (result.error) return;
       } else {
-        const { data: insertData, error } = await supabase
-          .from("tipo_produtos")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (error) throw error;
-        tipoId = insertData?.id || null;
+        const result = await create(payload, {
+          errorMessage: "Erro ao salvar tipo de produto.",
+          select: "id",
+        });
+        if (result.error) return;
+        tipoId = (result.data as any)?.id || null;
       }
 
       if (tipoId) {
         // garante uma regra para respeitar o NOT NULL de rule_id quando diferenciado
         async function garantirRegraFixa(): Promise<string> {
-          const nomeRegra = "Comissão Fixa (auto)";
+          const nomeRegra = "Comiss??o Fixa (auto)";
           const { data: regraExistente } = await supabase
             .from("commission_rule")
             .select("id")
@@ -317,20 +343,20 @@ export default function TipoProdutosIsland() {
         }
 
         if (regraSelecionada || form.regra_comissionamento === "diferenciado") {
-        const { error: upsertErr } = await supabase
-          .from("product_commission_rule")
-          .upsert(
-            {
-              produto_id: tipoId,
-              rule_id: ruleIdToUse,
-              ativo: true,
-              fix_meta_nao_atingida: fixNao,
-              fix_meta_atingida: fixAt,
-              fix_super_meta: fixSup,
-            },
-            { onConflict: "produto_id" }
-          );
-        if (upsertErr) throw upsertErr;
+          const { error: upsertErr } = await supabase
+            .from("product_commission_rule")
+            .upsert(
+              {
+                produto_id: tipoId,
+                rule_id: ruleIdToUse,
+                ativo: true,
+                fix_meta_nao_atingida: fixNao,
+                fix_meta_atingida: fixAt,
+                fix_super_meta: fixSup,
+              },
+              { onConflict: "produto_id" }
+            );
+          if (upsertErr) throw upsertErr;
         } else {
           await supabase.from("product_commission_rule").delete().eq("produto_id", tipoId);
         }
@@ -340,7 +366,9 @@ export default function TipoProdutosIsland() {
       await carregar();
     } catch (e) {
       console.error(e);
-      setErro(e instanceof Error ? `Erro ao salvar tipo de produto: ${e.message}` : "Erro ao salvar tipo de produto.");
+      setErro(
+        e instanceof Error ? `Erro ao salvar tipo de produto: ${e.message}` : "Erro ao salvar tipo de produto."
+      );
     }
   }
 
@@ -350,20 +378,31 @@ export default function TipoProdutosIsland() {
       return;
     }
 
-    if (!confirm("Tem certeza que deseja excluir este tipo de produto?")) return;
-
     try {
-      setExcluindoId(id);
-      const { error } = await supabase.from("tipo_produtos").delete().eq("id", id);
-      if (error) throw error;
+      const result = await remove(id, {
+        errorMessage: "Erro ao excluir tipo de produto. Talvez esteja vinculado a vendas/recibos.",
+      });
+      if (result.error) return;
 
       await carregar();
     } catch (e) {
       console.error(e);
       setErro("Erro ao excluir tipo de produto. Talvez esteja vinculado a vendas/recibos.");
-    } finally {
-      setExcluindoId(null);
     }
+  }
+
+  function solicitarExclusao(tipoProduto: TipoProduto) {
+    if (permissao !== "admin") {
+      alert("Somente administradores podem excluir tipos de produto.");
+      return;
+    }
+    setTipoParaExcluir(tipoProduto);
+  }
+
+  async function confirmarExclusao() {
+    if (!tipoParaExcluir) return;
+    await excluir(tipoParaExcluir.id);
+    setTipoParaExcluir(null);
   }
 
   const tiposFiltrados = useMemo(() => {
@@ -557,82 +596,90 @@ export default function TipoProdutosIsland() {
           {erro && <div className="card-base card-config mb-3">{erro}</div>}
 
           {/* TABELA */}
-          <div
-            className="table-container overflow-x-auto"
-            style={{ maxHeight: "65vh", overflowY: "auto" }}
+          <DataTable
+            className="table-default table-header-blue table-mobile-cards min-w-[720px]"
+            containerStyle={{ maxHeight: "65vh", overflowY: "auto" }}
+            headers={
+              <tr>
+                <th>Nome</th>
+                <th>Regra</th>
+                <th>Regra vinculada</th>
+                <th>Soma meta</th>
+                <th>Ativo</th>
+                <th>Criado em</th>
+                <th className="th-actions">Ações</th>
+              </tr>
+            }
+            loading={loading}
+            loadingMessage="Carregando tipos de produto..."
+            empty={!loading && tiposExibidos.length === 0}
+            emptyMessage="Nenhum tipo encontrado."
+            colSpan={7}
           >
-            <table className="table-default table-header-blue table-mobile-cards min-w-[720px]">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Regra</th>
-                  <th>Regra vinculada</th>
-                  <th>Soma meta</th>
-                  <th>Ativo</th>
-                  <th>Criado em</th>
-                  <th className="th-actions">Ações</th>
-                </tr>
-              </thead>
+            {tiposExibidos.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Nome">{p.nome || p.tipo}</td>
+                <td data-label="Regra">{p.regra_comissionamento}</td>
+                <td data-label="Regra vinculada">
+                  {produtoRegraMap[p.id]?.rule_id
+                    ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-"
+                    : produtoRegraMap[p.id]?.fix_meta_atingida
+                      ? "Comissão fixa"
+                      : "-"}
+                </td>
+                <td data-label="Soma meta">{p.soma_na_meta ? "Sim" : "Não"}</td>
+                <td data-label="Ativo" style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
+                  {p.ativo ? "Ativo" : "Inativo"}
+                </td>
+                <td data-label="Criado em">
+                  {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
+                </td>
 
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={7}>Carregando tipos de produto...</td>
+                <td className="th-actions" data-label="Ações">
+                  <TableActions
+                    show={permissao !== "view"}
+                    actions={[
+                      ...(permissao !== "view"
+                        ? [
+                            {
+                              key: "edit",
+                              label: "Editar",
+                              onClick: () => iniciarEdicao(p),
+                              icon: "✏️",
+                            },
+                          ]
+                        : []),
+                      ...(permissao === "admin"
+                        ? [
+                            {
+                              key: "delete",
+                              label: "Excluir",
+                              onClick: () => solicitarExclusao(p),
+                              icon: excluindoId === p.id ? "..." : "🗑️",
+                              variant: "danger" as const,
+                              disabled: excluindoId === p.id,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </td>
               </tr>
-            )}
-
-            {!loading && tiposExibidos.length === 0 && (
-              <tr>
-                <td colSpan={7}>Nenhum tipo encontrado.</td>
-              </tr>
-            )}
-
-            {!loading &&
-              tiposExibidos.map((p) => (
-                <tr key={p.id}>
-                  <td data-label="Nome">{p.nome || p.tipo}</td>
-                  <td data-label="Regra">{p.regra_comissionamento}</td>
-                  <td data-label="Regra vinculada">
-                    {produtoRegraMap[p.id]?.rule_id
-                      ? regras.find((r) => r.id === produtoRegraMap[p.id]?.rule_id)?.nome || "-"
-                      : produtoRegraMap[p.id]?.fix_meta_atingida
-                        ? "Comissão fixa"
-                        : "-"}
-                  </td>
-                  <td data-label="Soma meta">{p.soma_na_meta ? "Sim" : "Não"}</td>
-                  <td data-label="Ativo" style={{ color: p.ativo ? "#22c55e" : "#ef4444" }}>
-                    {p.ativo ? "Ativo" : "Inativo"}
-                  </td>
-                  <td data-label="Criado em">
-                    {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "-"}
-                  </td>
-
-                  <td className="th-actions" data-label="Ações">
-                    <div className="action-buttons">
-                      {permissao !== "view" && (
-                        <button className="btn-icon" onClick={() => iniciarEdicao(p)}>
-                          ✏️
-                        </button>
-                      )}
-
-                      {permissao === "admin" && (
-                        <button
-                          className="btn-icon btn-danger"
-                          onClick={() => excluir(p.id)}
-                          disabled={excluindoId === p.id}
-                        >
-                          {excluindoId === p.id ? "..." : "🗑️"}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+            ))}
+          </DataTable>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(tipoParaExcluir)}
+        title="Excluir tipo de produto"
+        message={`Tem certeza que deseja excluir ${tipoParaExcluir?.nome || "este tipo"}?`}
+        confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
+        confirmVariant="danger"
+        confirmDisabled={Boolean(excluindoId)}
+        onCancel={() => setTipoParaExcluir(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }
