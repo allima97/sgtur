@@ -159,7 +159,7 @@ export default function FornecedoresIsland() {
       const { data, error } = await supabase
         .from("fornecedores")
         .select(
-          "id, nome_completo, nome_fantasia, localizacao, cidade, estado, telefone, whatsapp, responsavel, tipo_faturamento, principais_servicos, created_at"
+          "id, nome_completo, nome_fantasia, localizacao, cidade, estado, telefone, whatsapp, telefone_emergencia, responsavel, tipo_faturamento, principais_servicos, created_at"
         )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
