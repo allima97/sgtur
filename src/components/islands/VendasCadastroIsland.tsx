@@ -4,6 +4,7 @@ import { usePermissoesStore } from "../../lib/permissoesStore";
 import { registrarLog } from "../../lib/logs";
 import { normalizeText } from "../../lib/normalizeText";
 import CalculatorModal from "../ui/CalculatorModal";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Cliente = { id: string; nome: string; cpf?: string | null };
 type Cidade = { id: string; nome: string };
@@ -36,12 +37,6 @@ type FormRecibo = {
   data_inicio: string;
   data_fim: string;
   principal: boolean;
-};
-
-type Toast = {
-  id: number;
-  message: string;
-  type: "success" | "error";
 };
 
 const initialVenda: FormVenda = {
@@ -159,8 +154,7 @@ export default function VendasCadastroIsland() {
   const [salvando, setSalvando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingVenda, setLoadingVenda] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [toastCounter, setToastCounter] = useState(0);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
   const [showCalculator, setShowCalculator] = useState(false);
 
   // AUTOCOMPLETE (cliente, cidade de destino, produto)
@@ -612,17 +606,6 @@ export default function VendasCadastroIsland() {
     }
     setMostrarSugestoesCidade(true);
   }
-
-function showToast(message: string, type: "success" | "error" = "success") {
-  setToastCounter((prev) => {
-    const id = prev + 1;
-    setToasts((current) => [...current, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((current) => current.filter((t) => t.id !== id));
-    }, 3500);
-    return id;
-  });
-}
 
 function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   if (recibos.length === 0) return [];
@@ -1550,35 +1533,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
           </div>
         </form>
       </div>
-      {toasts.length > 0 && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 16,
-            right: 16,
-            display: "grid",
-            gap: 8,
-            zIndex: 9999,
-            maxWidth: "320px",
-          }}
-        >
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className="card-base"
-              style={{
-                padding: "10px 12px",
-                background: t.type === "success" ? "#ecfdf3" : "#fee2e2",
-                border: `1px solid ${t.type === "success" ? "#16a34a" : "#ef4444"}`,
-                color: "#0f172a",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-              }}
-            >
-              {t.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <CalculatorModal
         open={showCalculator}
         onClose={() => setShowCalculator(false)}

@@ -131,3 +131,15 @@ Centralizar mapa de módulos/rotas (Menu + middleware usando o mesmo arquivo).
 Criar DataTable + ConfirmDialog e migrar 1 tela piloto (ex.: Países) → depois replicar.
 
 Ajustar middleware para /negado em vez de login quando for “sem permissão”.
+
+PermissoesProvider + helpers can()/isAdmin()
+Maior impacto transversal: reduz duplicação em quase todas as telas, corta consultas repetidas e evita divergência de regra. Já temos cache; é a próxima etapa natural.
+
+UI kit faltante (TableActions + Toast/Alert)
+Rápido de implementar e elimina repetição de botões/feedback em muitas telas.
+
+Migrar CRUDs de maior uso (ex.: ProdutosIsland, ParametrosSistemaIsland)
+Continua padronizando e simplificando manutenção.
+
+Paginação/virtualização nas listas mais pesadas
+Impacto grande em performance, mas exige mais ajustes de UX.

@@ -7,6 +7,7 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 function formatarDataCorretamente(dataString: string | null | undefined): string {
   if (!dataString) return "-";
@@ -90,12 +91,6 @@ type ReciboComplementar = {
   recibo_id: string;
 };
 
-type Toast = {
-  id: number;
-  message: string;
-  type: "success" | "error";
-};
-
 type Papel = "ADMIN" | "GESTOR" | "VENDEDOR" | "OUTRO";
 
 type UserCtx = {
@@ -145,8 +140,7 @@ export default function VendasConsultaIsland() {
   const [confirmComplementarRemover, setConfirmComplementarRemover] = useState<ReciboComplementar | null>(
     null
   );
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [toastCounter, setToastCounter] = useState(0);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   // ================================
   // CONTEXTO DE USUÁRIO (papel/vendedorIds)
@@ -557,15 +551,6 @@ export default function VendasConsultaIsland() {
       totalSeguro,
     };
   }, [recibos, vendas]);
-
-  function showToast(message: string, type: "success" | "error" = "success") {
-    setToastCounter((prev) => prev + 1);
-    const id = toastCounter + 1;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
-  }
 
   // ================================
   // CANCELAR VENDA
@@ -1272,35 +1257,7 @@ export default function VendasConsultaIsland() {
           </div>
         </div>
       )}
-      {toasts.length > 0 && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 16,
-            right: 16,
-            display: "grid",
-            gap: 8,
-            zIndex: 9999,
-            maxWidth: "320px",
-          }}
-        >
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className="card-base"
-              style={{
-                padding: "10px 12px",
-                background: t.type === "success" ? "#ecfdf3" : "#fee2e2",
-                border: `1px solid ${t.type === "success" ? "#16a34a" : "#ef4444"}`,
-                color: "#0f172a",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-              }}
-            >
-              {t.message}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={Boolean(confirmVendaCancelamento)}
         title="Cancelar venda"
