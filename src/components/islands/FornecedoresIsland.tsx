@@ -23,6 +23,14 @@ type Fornecedor = {
 
 type FornecedorForm = Omit<Fornecedor, "id" | "created_at">;
 
+type CidadeBusca = {
+  id: string;
+  nome: string;
+  subdivisao_nome: string | null;
+  pais_nome?: string | null;
+  subdivisao_id?: string | null;
+};
+
 const LOCALIZACAO_OPCOES = [
   { value: "brasil", label: "Brasil" },
   { value: "exterior", label: "Exterior" },
@@ -70,6 +78,22 @@ function normalizeSearchValue(value?: string | null) {
     .toLowerCase();
 }
 
+function formatTelefoneValue(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function formatCidadeLabel(cidade: CidadeBusca) {
+  return cidade.subdivisao_nome ? `${cidade.nome} (${cidade.subdivisao_nome})` : cidade.nome;
+}
+
 export default function FornecedoresIsland() {
   const { permissao, ativo, loading: loadingPerm } = usePermissao("Cadastros");
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -83,6 +107,11 @@ export default function FornecedoresIsland() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [cidadeBusca, setCidadeBusca] = useState("");
+  const [resultadosCidade, setResultadosCidade] = useState<CidadeBusca[]>([]);
+  const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
+  const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -164,6 +193,10 @@ export default function FornecedoresIsland() {
     setForm(INITIAL_FORM);
     setFormError(null);
     setEditandoId(null);
+    setCidadeBusca("");
+    setResultadosCidade([]);
+    setMostrarSugestoesCidade(false);
+    setErroCidadeBusca(null);
     setMostrarFormulario(true);
   }
 
@@ -171,6 +204,10 @@ export default function FornecedoresIsland() {
     setForm(INITIAL_FORM);
     setFormError(null);
     setEditandoId(null);
+    setCidadeBusca("");
+    setResultadosCidade([]);
+    setMostrarSugestoesCidade(false);
+    setErroCidadeBusca(null);
     setMostrarFormulario(false);
   }
 
@@ -192,6 +229,16 @@ export default function FornecedoresIsland() {
     });
     setFormError(null);
     setEditandoId(fornecedor.id);
+    setCidadeBusca(
+      fornecedor.cidade
+        ? fornecedor.estado
+          ? `${fornecedor.cidade} (${fornecedor.estado})`
+          : fornecedor.cidade
+        : ""
+    );
+    setResultadosCidade([]);
+    setMostrarSugestoesCidade(false);
+    setErroCidadeBusca(null);
     setMostrarFormulario(true);
   }
 
@@ -207,6 +254,107 @@ export default function FornecedoresIsland() {
   const fornecedoresExibidos = useMemo(() => {
     return busca.trim() ? fornecedoresFiltrados : fornecedoresFiltrados.slice(0, 5);
   }, [fornecedoresFiltrados, busca]);
+
+  useEffect(() => {
+    if (!mostrarSugestoesCidade) return;
+    if (cidadeBusca.trim().length < 2) {
+      setResultadosCidade([]);
+      setErroCidadeBusca(null);
+      setBuscandoCidade(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        setBuscandoCidade(true);
+        const { data, error } = await supabase.rpc("buscar_cidades", {
+          q: cidadeBusca.trim(),
+          limite: 10,
+        });
+        if (controller.signal.aborted) return;
+        if (error) {
+          console.error("Erro ao buscar cidades:", error);
+          setErroCidadeBusca("Erro ao buscar cidades (RPC). Tentando fallback...");
+          const { data: dataFallback, error: errorFallback } = await supabase
+            .from("cidades")
+            .select("id, nome, subdivisao_nome")
+            .ilike("nome", `%${cidadeBusca.trim()}%`)
+            .order("nome");
+          if (errorFallback) {
+            console.error("Erro no fallback de cidades:", errorFallback);
+            setErroCidadeBusca("Erro ao buscar cidades.");
+          } else {
+            setResultadosCidade((dataFallback as CidadeBusca[]) || []);
+            setErroCidadeBusca(null);
+          }
+        } else {
+          setResultadosCidade((data as CidadeBusca[]) || []);
+          setErroCidadeBusca(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) setBuscandoCidade(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [cidadeBusca, mostrarSugestoesCidade]);
+
+  function selecionarCidade(cidade: CidadeBusca) {
+    setForm((prev) => ({
+      ...prev,
+      cidade: cidade.nome || "",
+      estado: cidade.subdivisao_nome || "",
+    }));
+    setCidadeBusca(formatCidadeLabel(cidade));
+    setMostrarSugestoesCidade(false);
+    setResultadosCidade([]);
+    setErroCidadeBusca(null);
+  }
+
+  function handleCidadeChange(valor: string) {
+    setCidadeBusca(valor);
+    setMostrarSugestoesCidade(true);
+    if (form.cidade || form.estado) {
+      setForm((prev) => ({ ...prev, cidade: "", estado: "" }));
+    }
+  }
+
+  function handleCidadeBlur() {
+    setTimeout(() => {
+      setMostrarSugestoesCidade(false);
+      const texto = normalizeSearchValue(cidadeBusca);
+      const atual = form.cidade
+        ? form.estado
+          ? `${form.cidade} (${form.estado})`
+          : form.cidade
+        : "";
+      if (texto && normalizeSearchValue(atual) === texto) {
+        setErroCidadeBusca(null);
+        return;
+      }
+      const match = resultadosCidade.find((cidade) => {
+        const label = formatCidadeLabel(cidade);
+        return (
+          normalizeSearchValue(label) === texto ||
+          normalizeSearchValue(cidade.nome) === texto
+        );
+      });
+      if (match) {
+        selecionarCidade(match);
+        return;
+      }
+      if (texto) {
+        setErroCidadeBusca("Selecione uma cidade da lista.");
+      } else {
+        setErroCidadeBusca(null);
+      }
+      setForm((prev) => ({ ...prev, cidade: "", estado: "" }));
+    }, 150);
+  }
 
   async function salvarFornecedor() {
     if (!companyId) {
@@ -402,18 +550,70 @@ export default function FornecedoresIsland() {
             <label className="form-label">Cidade</label>
             <input
               className="form-input"
-              value={form.cidade}
-              onChange={(e) => setForm((prev) => ({ ...prev, cidade: e.target.value }))}
+              value={cidadeBusca}
+              onChange={(e) => handleCidadeChange(e.target.value)}
+              onFocus={() => setMostrarSugestoesCidade(true)}
+              onBlur={handleCidadeBlur}
               disabled={!podeSalvar}
-              placeholder="Cidade principal de atuação" />
+              placeholder="Buscar cidade..." />
+            {buscandoCidade && (
+              <div style={{ fontSize: 12, color: "#6b7280" }}>Buscando cidades...</div>
+            )}
+            {erroCidadeBusca && !buscandoCidade && (
+              <div style={{ fontSize: 12, color: "#dc2626" }}>{erroCidadeBusca}</div>
+            )}
+            {mostrarSugestoesCidade && (
+              <div
+                className="card-base"
+                style={{
+                  marginTop: 4,
+                  maxHeight: 180,
+                  overflowY: "auto",
+                  padding: 6,
+                  border: "1px solid #e5e7eb",
+                }}
+              >
+                {resultadosCidade.length === 0 && !buscandoCidade && cidadeBusca.trim().length >= 2 && (
+                  <div style={{ padding: "4px 6px", color: "#6b7280" }}>Nenhuma cidade encontrada.</div>
+                )}
+                {resultadosCidade.map((cidade) => {
+                  const label = formatCidadeLabel(cidade);
+                  return (
+                    <button
+                      key={cidade.id}
+                      type="button"
+                      className="btn btn-light"
+                      style={{
+                        width: "100%",
+                        justifyContent: "flex-start",
+                        marginBottom: 4,
+                        background:
+                          form.cidade === cidade.nome ? "#e0f2fe" : "#fff",
+                        borderColor:
+                          form.cidade === cidade.nome ? "#38bdf8" : "#e5e7eb",
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selecionarCidade(cidade);
+                      }}
+                    >
+                      {label}
+                      {cidade.pais_nome ? (
+                        <span style={{ color: "#6b7280", marginLeft: 6 }}>- {cidade.pais_nome}</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Estado</label>
             <input
               className="form-input"
               value={form.estado}
-              onChange={(e) => setForm((prev) => ({ ...prev, estado: e.target.value }))}
-              disabled={!podeSalvar}
+              readOnly
+              disabled
               placeholder="UF / região" />
           </div>
         </div>
@@ -424,16 +624,23 @@ export default function FornecedoresIsland() {
             <input
               className="form-input"
               value={form.telefone}
-              onChange={(e) => setForm((prev) => ({ ...prev, telefone: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, telefone: formatTelefoneValue(e.target.value) }))
+              }
               disabled={!podeSalvar}
               placeholder="(00) 0000-0000" />
           </div>
+        </div>
+
+        <div className="form-row" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">WhatsApp</label>
             <input
               className="form-input"
               value={form.whatsapp}
-              onChange={(e) => setForm((prev) => ({ ...prev, whatsapp: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, whatsapp: formatTelefoneValue(e.target.value) }))
+              }
               disabled={!podeSalvar}
               placeholder="+55 00 00000-0000" />
           </div>
@@ -445,10 +652,18 @@ export default function FornecedoresIsland() {
             <input
               className="form-input"
               value={form.telefone_emergencia}
-              onChange={(e) => setForm((prev) => ({ ...prev, telefone_emergencia: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  telefone_emergencia: formatTelefoneValue(e.target.value),
+                }))
+              }
               disabled={!podeSalvar}
               placeholder="Contato alternativo" />
           </div>
+        </div>
+
+        <div className="form-row" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Responsável</label>
             <input
