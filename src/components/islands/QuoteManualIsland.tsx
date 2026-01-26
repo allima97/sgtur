@@ -222,6 +222,9 @@ export default function QuoteManualIsland() {
   const [novoClienteTelefone, setNovoClienteTelefone] = useState("");
   const [novoClienteErro, setNovoClienteErro] = useState<string | null>(null);
   const [novoClienteSalvando, setNovoClienteSalvando] = useState(false);
+  const [valorInputs, setValorInputs] = useState<
+    Record<string, { total?: string; taxes?: string }>
+  >({});
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [tipoOptions, setTipoOptions] = useState<TipoProdutoOption[]>([]);
   const [produtosCatalogo, setProdutosCatalogo] = useState<ProdutoOption[]>([]);
@@ -577,6 +580,34 @@ export default function QuoteManualIsland() {
     } finally {
       setNovoClienteSalvando(false);
     }
+  }
+
+  function getValorInput(
+    rowKey: string,
+    field: "total" | "taxes",
+    value: number
+  ) {
+    const entry = valorInputs[rowKey];
+    if (entry && entry[field] !== undefined) {
+      return entry[field] ?? "";
+    }
+    return Number.isFinite(value) ? formatCurrency(value) : "";
+  }
+
+  function handleValorBlur(
+    rowKey: string,
+    field: "total" | "taxes",
+    value: string
+  ) {
+    const trimmed = value.trim();
+    const nextValue = trimmed ? formatCurrency(normalizeNumber(trimmed)) : "";
+    setValorInputs((prev) => ({
+      ...prev,
+      [rowKey]: {
+        ...prev[rowKey],
+        [field]: nextValue,
+      },
+    }));
   }
 
   function buildProdutoSuggestions(item: ManualItem) {
@@ -1162,15 +1193,33 @@ export default function QuoteManualIsland() {
                       <td data-label="Total">
                         <input
                           className="form-input"
-                          value={formatCurrency(item.total_amount)}
-                          onChange={(e) => updateItem(index, { total_amount: normalizeNumber(e.target.value) })}
+                          inputMode="decimal"
+                          value={getValorInput(rowKey, "total", item.total_amount)}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            setValorInputs((prev) => ({
+                              ...prev,
+                              [rowKey]: { ...prev[rowKey], total: raw },
+                            }));
+                            updateItem(index, { total_amount: normalizeNumber(raw) });
+                          }}
+                          onBlur={(e) => handleValorBlur(rowKey, "total", e.target.value)}
                         />
                       </td>
                       <td data-label="Taxas">
                         <input
                           className="form-input"
-                          value={formatCurrency(item.taxes_amount || 0)}
-                          onChange={(e) => updateItem(index, { taxes_amount: normalizeNumber(e.target.value) })}
+                          inputMode="decimal"
+                          value={getValorInput(rowKey, "taxes", item.taxes_amount || 0)}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            setValorInputs((prev) => ({
+                              ...prev,
+                              [rowKey]: { ...prev[rowKey], taxes: raw },
+                            }));
+                            updateItem(index, { taxes_amount: normalizeNumber(raw) });
+                          }}
+                          onBlur={(e) => handleValorBlur(rowKey, "taxes", e.target.value)}
                         />
                       </td>
                     </tr>
