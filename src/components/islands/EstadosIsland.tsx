@@ -257,10 +257,10 @@ export default function SubdivisoesIsland() {
           >
             <div style={{ flex: "1 1 320px" }}>
               <SearchInput
-                label="Buscar subdivis„o"
+                label="Buscar subdivis√£o"
                 value={busca}
                 onChange={setBusca}
-                placeholder="Nome, paÌs ou cÛdigo..."
+                placeholder="Nome, pa√≠s ou c√≥digo..."
               />
             </div>
             {!modoSomenteLeitura && (
@@ -271,7 +271,7 @@ export default function SubdivisoesIsland() {
                   onClick={abrirFormulario}
                   disabled={mostrarFormulario}
                 >
-                  Adicionar Estado/ProvÌncia
+                  Adicionar Estado/Prov√≠ncia
                 </button>
               </div>
             )}
@@ -284,7 +284,7 @@ export default function SubdivisoesIsland() {
           <form onSubmit={salvar}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Nome da subdivis„o *</label>
+                <label className="form-label">Nome da subdivis√£o *</label>
                 <input
                   className="form-input"
                   value={form.nome}
@@ -295,7 +295,7 @@ export default function SubdivisoesIsland() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">CÛdigo admin1 *</label>
+                <label className="form-label">C√≥digo admin1 *</label>
                 <input
                   className="form-input"
                   value={form.codigo_admin1}
@@ -335,7 +335,7 @@ export default function SubdivisoesIsland() {
 
             <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
               <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
-                {salvando ? "Salvando..." : "Salvar estado/provÌncia"}
+                {salvando ? "Salvando..." : "Salvar estado/prov√≠ncia"}
               </button>
               <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
                 Cancelar
@@ -376,11 +376,11 @@ export default function SubdivisoesIsland() {
           empty={!loading && filtrados.length === 0}
           emptyMessage={
             <EmptyState
-              title="Nenhuma subdivis„o encontrada"
+              title="Nenhuma subdivis√£o encontrada"
               description={
                 busca.trim()
-                  ? "Tente ajustar a busca ou cadastre uma subdivis„o."
-                  : "Cadastre uma subdivis„o para comeÁar."
+                  ? "Tente ajustar a busca ou cadastre uma subdivis√£o."
+                  : "Cadastre uma subdivis√£o para come√ßar."
               }
             />
           }
@@ -427,8 +427,8 @@ export default function SubdivisoesIsland() {
 
       <ConfirmDialog
         open={Boolean(subdivisaoParaExcluir)}
-        title="Excluir subdivis„o"
-        message={`Excluir ${subdivisaoParaExcluir?.nome || "esta subdivis„o"}?`}
+        title="Excluir subdivis√£o"
+        message={`Excluir ${subdivisaoParaExcluir?.nome || "esta subdivis√£o"}?`}
         confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
         confirmVariant="danger"
         confirmDisabled={Boolean(excluindoId)}

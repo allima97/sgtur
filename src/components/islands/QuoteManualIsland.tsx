@@ -137,9 +137,9 @@ const EXCLUDED_PRODUTO_TIPOS = new Set(
   ].map((value) => normalizeLookupText(value))
 );
 
-function criarItemManual(): ManualItem {
+function criarItemManual(tempId?: string): ManualItem {
   return {
-    temp_id: gerarIdTemporario(),
+    temp_id: tempId ?? gerarIdTemporario(),
     item_type: "",
     title: "",
     product_name: "",
@@ -156,6 +156,8 @@ function criarItemManual(): ManualItem {
     order_index: 0,
   };
 }
+
+const INITIAL_ITEM_ID = "temp-inicial";
 
 function isItemEmpty(item: ManualItem) {
   const hasValue =
@@ -209,7 +211,7 @@ function normalizeItemText(item: ManualItem): ManualItem {
 }
 
 export default function QuoteManualIsland() {
-  const [items, setItems] = useState<ManualItem[]>(() => [criarItemManual()]);
+  const [items, setItems] = useState<ManualItem[]>(() => [criarItemManual(INITIAL_ITEM_ID)]);
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [clienteBusca, setClienteBusca] = useState("");
   const [clienteId, setClienteId] = useState("");

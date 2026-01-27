@@ -100,9 +100,9 @@ const initialCommon: CommonForm = {
   ativo: true,
 };
 
-function criarProdutoItem(): ProdutoItem {
+function criarProdutoItem(id?: string): ProdutoItem {
   return {
-    id: gerarIdTemporario(),
+    id: id ?? gerarIdTemporario(),
     tipo_produto: "",
     nome: "",
     destino: "",
@@ -111,6 +111,8 @@ function criarProdutoItem(): ProdutoItem {
     imagem_url: "",
   };
 }
+
+const INITIAL_ITEM_ID = "temp-inicial";
 
 export default function ProdutosLoteIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
@@ -131,7 +133,7 @@ export default function ProdutosLoteIsland() {
   const [fornecedoresLista, setFornecedoresLista] = useState<FornecedorOption[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [common, setCommon] = useState<CommonForm>(initialCommon);
-  const [produtos, setProdutos] = useState<ProdutoItem[]>(() => [criarProdutoItem()]);
+  const [produtos, setProdutos] = useState<ProdutoItem[]>(() => [criarProdutoItem(INITIAL_ITEM_ID)]);
   const [cidadeBusca, setCidadeBusca] = useState("");
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const [resultadosCidade, setResultadosCidade] = useState<CidadeBusca[]>([]);
@@ -786,4 +788,3 @@ export default function ProdutosLoteIsland() {
     </div>
   );
 }
-

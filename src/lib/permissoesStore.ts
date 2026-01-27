@@ -30,7 +30,8 @@ let state: PermissoesState = {
 const listeners = new Set<() => void>();
 let subscribed = false;
 let refreshPromise: Promise<PermissoesCache | null> | null = null;
-let cacheHydrated = false;
+let hydrationLocked = typeof window !== "undefined";
+let hydrationUnlockScheduled = false;
 
 const permLevel = (p: Permissao | undefined): number => {
   switch (p) {
@@ -71,25 +72,37 @@ const ensureSubscribed = () => {
   });
 };
 
-const hydrateCache = () => {
-  if (cacheHydrated || typeof window === "undefined") return;
-  cacheHydrated = true;
-  const cache = readPermissoesCache();
-  if (!cache) return;
-  setState({
-    cache,
-    ready: true,
-    userId: cache.userId ?? null,
-    userEmail: cache.userEmail ?? "",
-  });
+const scheduleHydrationUnlock = () => {
+  if (!hydrationLocked || hydrationUnlockScheduled || typeof window === "undefined") return;
+  hydrationUnlockScheduled = true;
+  const unlock = () => {
+    hydrationLocked = false;
+    hydrationUnlockScheduled = false;
+    emit();
+  };
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => requestAnimationFrame(unlock));
+  } else {
+    setTimeout(unlock, 0);
+  }
 };
 
 export function getPermissoesSnapshot() {
+  if (hydrationLocked && typeof window !== "undefined") {
+    return {
+      ...state,
+      cache: null,
+      ready: false,
+      userId: null,
+      userEmail: "",
+    };
+  }
   return state;
 }
 
 export function subscribePermissoesStore(listener: () => void) {
   ensureSubscribed();
+  scheduleHydrationUnlock();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -154,8 +167,9 @@ export function usePermissoesStore() {
 
   useEffect(() => {
     if (!snapshot.ready && !snapshot.loading) {
-      hydrateCache();
-      refreshPermissoes();
+      setTimeout(() => {
+        refreshPermissoes();
+      }, 0);
     }
   }, [snapshot.ready, snapshot.loading]);
 
