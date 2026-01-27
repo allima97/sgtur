@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 
@@ -40,7 +40,11 @@ const isUsuarioVendedor = (usuario?: Usuario | null) =>
   extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("VENDEDOR"));
 
 export default function MetasVendedorIsland() {
-  const { permissao, ativo, loading } = usePermissao("Metas");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Metas");
+  const isAdmin = can("Metas", "admin");
+  const isEdit = !isAdmin && can("Metas", "edit");
   const [parametros, setParametros] = useState<{
     foco_valor?: "bruto" | "liquido";
   } | null>(null);
@@ -101,8 +105,8 @@ export default function MetasVendedorIsland() {
       setProdutos(produtosData || []);
 
       // selecionar vendedores da empresa
-      const isAdminLocal = permissao === "admin";
-      const isEditLocal = permissao === "edit";
+      const isAdminLocal = can("Metas", "admin");
+      const isEditLocal = can("Metas", "edit");
 
       let vendedoresDisponiveis: Usuario[] = [];
       if (isAdminLocal || isEditLocal) {
@@ -144,8 +148,8 @@ export default function MetasVendedorIsland() {
   // 2. CARREGAR METAS DO VENDEDOR SELECIONADO
   // =============================================
   async function carregarMetas(vendedor_id: string, usuarioLogado?: Usuario | null) {
-    const isAdminLocal = permissao === "admin";
-    const isEditLocal = permissao === "edit";
+    const isAdminLocal = can("Metas", "admin");
+    const isEditLocal = can("Metas", "edit");
 
     const usuarioAtual = usuarioLogado ?? usuario;
 
@@ -189,17 +193,14 @@ export default function MetasVendedorIsland() {
   }
 
   useEffect(() => {
-    if (!loading && vendedorSelecionado) {
+    if (!loadingPerm && vendedorSelecionado) {
       carregarMetas(vendedorSelecionado);
     }
-  }, [vendedorSelecionado, loading]);
+  }, [vendedorSelecionado, loadingPerm]);
 
   // =============================================
   // 3. PERFIL DE ACESSO
   // =============================================
-  const isAdmin = permissao === "admin";
-  const isEdit = permissao === "edit";
-
   const usuarioPodeEditar =
     usuario?.uso_individual || isAdmin || isEdit;
 
@@ -421,8 +422,8 @@ export default function MetasVendedorIsland() {
   // UI
   // =============================================
 
-  if (loading || loadingMeta) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Acesso ao módulo de Metas bloqueado.</div>;
+  if (loadingPerm || loadingMeta) return <LoadingUsuarioContext />;
+  if (!podeVer) return <div>Acesso ao módulo de Metas bloqueado.</div>;
 
   const metasExibidas = listaMetas.slice(0, 5);
 

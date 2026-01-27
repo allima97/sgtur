@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
@@ -107,13 +107,12 @@ const initialCadastroForm = {
 };
 
 export default function ViagensListaIsland() {
-  const { permissao, loading: loadingPerm, ativo, podeExcluir, podeEditar } = usePermissao("Operacao");
-  const podeVer = permissao !== "none";
-  const podeCriar =
-    permissao === "create" ||
-    permissao === "edit" ||
-    permissao === "delete" ||
-    permissao === "admin";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Operacao");
+  const podeCriar = can("Operacao", "create");
+  const podeEditar = can("Operacao", "edit");
+  const podeExcluir = can("Operacao", "delete");
 
   const [statusFiltro, setStatusFiltro] = useState<string>("");
   const [inicio, setInicio] = useState<string>("");
@@ -518,7 +517,7 @@ export default function ViagensListaIsland() {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
   }
 

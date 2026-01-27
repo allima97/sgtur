@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
@@ -45,8 +45,9 @@ const MODULOS = [
 
 
 export default function PermissoesAdminIsland() {
-  const { permissao, ativo, loading: loadingPerm } =
-    usePermissao("AdminDashboard");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("AdminDashboard");
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [permissoes, setPermissoes] = useState<Permissao[]>([]);
@@ -80,7 +81,7 @@ export default function PermissoesAdminIsland() {
   }, []);
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo || !isAdmin)
+  if (!podeVer || !isAdmin)
     return (
       <div style={{ padding: 20 }}>
         <h3>Apenas administradores podem acessar este módulo.</h3>
@@ -159,7 +160,7 @@ export default function PermissoesAdminIsland() {
     );
   }
 
-  const permissaoList = permissao ? permissoes : [];
+  const permissaoList = podeVer ? permissoes : [];
   const usuarioSelecionado = usuarios.find((u) => u.id === usuarioSelecionadoId) || null;
 
   // -----------------------

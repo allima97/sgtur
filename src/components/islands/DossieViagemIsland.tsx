@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { parentescoOptions } from "../../lib/parentescoOptions";
@@ -131,11 +131,11 @@ function parseStorageRef(url?: string | null) {
 }
 
 export default function DossieViagemIsland({ viagemId }: Props) {
-  const { permissao, loading: loadingPerm, ativo } = usePermissao("Operacao");
-  const podeVer = permissao !== "none";
-  const podeCriar =
-    permissao === "create" || permissao === "edit" || permissao === "delete" || permissao === "admin";
-  const podeExcluir = permissao === "delete" || permissao === "admin";
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Operacao");
+  const podeCriar = can("Operacao", "create");
+  const podeExcluir = can("Operacao", "delete");
 
   const [viagem, setViagem] = useState<ViagemDetalhe | null>(null);
   const [loading, setLoading] = useState(false);
@@ -402,7 +402,7 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     return <LoadingUsuarioContext />;
   }
 
-  if (!ativo) {
+  if (!podeVer) {
     return <div>Você não possui acesso ao módulo de Operação/Viagens.</div>;
   }
 

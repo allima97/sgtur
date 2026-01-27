@@ -12,6 +12,7 @@ import {
 } from "../../lib/comissaoUtils";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
 
 type Cliente = {
   id: string;
@@ -259,6 +260,10 @@ export default function RelatorioVendasIsland() {
     useState<MobileFiltroTipo>("data");
   const [mobilePeriodoPreset, setMobilePeriodoPreset] =
     useState<MobilePeriodoPreset>("7");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalVendasDb, setTotalVendasDb] = useState(0);
+  const [carregouTodos, setCarregouTodos] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const [parametrosComissao, setParametrosComissao] =
     useState<ParametrosComissao | null>(null);
@@ -683,6 +688,13 @@ export default function RelatorioVendasIsland() {
     });
   }, [vendas, clientes, produtos, tipoNomePorId, cidadePorId]);
 
+  const filtrosLocaisAtivos = Boolean(
+    destinoBusca.trim() ||
+      cidadeNomeInput.trim() ||
+      clienteBusca.trim() ||
+      tipoSelecionadoId
+  );
+
   const recibosFiltrados = useMemo(() => {
     const termProd = normalizeText(destinoBusca.trim());
     const termCidade = normalizeText(cidadeNomeInput.trim());
@@ -715,9 +727,21 @@ export default function RelatorioVendasIsland() {
     clienteBusca,
     clienteSelecionado,
   ]);
+  const usaPaginacaoServidor = !filtrosLocaisAtivos && !carregouTodos;
+  const totalItems = usaPaginacaoServidor ? totalVendasDb : recibosFiltrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalItems / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
   const recibosExibidos = useMemo(() => {
-    return recibosFiltrados;
-  }, [recibosFiltrados]);
+    if (usaPaginacaoServidor) return recibosFiltrados;
+    const inicio = (paginaAtual - 1) * pageSize;
+    return recibosFiltrados.slice(inicio, inicio + pageSize);
+  }, [usaPaginacaoServidor, recibosFiltrados, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
 
   const totalRecibos = recibosFiltrados.length;
   const somaValores = recibosFiltrados.reduce((acc, v) => {
@@ -948,13 +972,18 @@ export default function RelatorioVendasIsland() {
     [comissaoPorRecibo]
   );
 
-  async function carregarVendas() {
+  async function carregarVendas(pageOverride?: number) {
     if (!userCtx) return;
     try {
       setLoading(true);
       setErro(null);
 
-        let query = supabase
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina - 1;
+
+      let query = supabase
         .from("vendas")
         .select(
           `
@@ -981,7 +1010,8 @@ export default function RelatorioVendasIsland() {
             produto_resolvido:produtos!produto_resolvido_id (id, nome, tipo_produto, cidade_id),
             tipo_produtos (id, nome, tipo)
           )
-        `
+        `,
+          { count: "exact" }
         )
         .order("data_lancamento", { ascending: false });
 
@@ -1011,11 +1041,22 @@ export default function RelatorioVendasIsland() {
         query = query.lte("valor_total", vMax);
       }
 
-      const { data, error } = await query;
+      if (!filtrosLocaisAtivos) {
+        query = query.range(inicio, fim);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
       setVendas((data || []) as Venda[]);
+      if (filtrosLocaisAtivos) {
+        setCarregouTodos(true);
+        setTotalVendasDb((data || []).length);
+      } else {
+        setCarregouTodos(false);
+        setTotalVendasDb(count ?? (data || []).length);
+      }
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao carregar vendas para o relatório. Confira o schema e filtros.");
@@ -1025,10 +1066,10 @@ export default function RelatorioVendasIsland() {
   }
 
   useEffect(() => {
-    if (userCtx) {
+    if (userCtx && !filtrosLocaisAtivos) {
       carregarVendas();
     }
-  }, [userCtx]);
+  }, [userCtx, page, pageSize]);
 
   function aplicarPeriodoPreset(tipo: "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar") {
     const hoje = new Date();
@@ -1544,7 +1585,10 @@ export default function RelatorioVendasIsland() {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={carregarVendas}
+            onClick={() => {
+              setPage(1);
+              carregarVendas(1);
+            }}
           >
             Aplicar filtros
           </button>
@@ -1845,7 +1889,8 @@ export default function RelatorioVendasIsland() {
               className="btn btn-primary"
               style={{ marginTop: 12, width: "100%" }}
               onClick={() => {
-                carregarVendas();
+                setPage(1);
+                carregarVendas(1);
                 setShowFilters(false);
               }}
             >
@@ -1959,6 +2004,23 @@ export default function RelatorioVendasIsland() {
         </div>
       </div>
 
+      {usaPaginacaoServidor && (
+        <div className="card-base card-config mb-3">
+          Totais e tabela refletem a página atual. Use filtros de texto para carregar todos os recibos.
+        </div>
+      )}
+
+      <PaginationControls
+        page={paginaAtual}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
+
       <div className="table-container overflow-x-auto">
         <table className="table-default table-header-purple table-mobile-cards min-w-[1100px]">
           <thead>
@@ -2042,4 +2104,3 @@ export default function RelatorioVendasIsland() {
     </div>
   );
 }
-

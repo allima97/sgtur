@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import {
   calcularValorComissao,
@@ -100,7 +100,10 @@ function getPrimeiroDiaMesSeguinte(periodoYYYYMM: string) {
 }
 
 export default function FechamentoComissaoIsland() {
-  const { permissao, ativo, loading: loadingPermissao } = usePermissao("Metas");
+  const { can, loading: loadingPerms, ready, getPermissao } = usePermissoesStore();
+  const loadingPermissao = loadingPerms || !ready;
+  const permissaoMetas = getPermissao("Metas")?.permissao ?? "none";
+  const ativo = permissaoMetas !== "none";
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
@@ -152,8 +155,8 @@ export default function FechamentoComissaoIsland() {
   // ==========================================
   // PERFIS
   // ==========================================
-  const isAdmin = permissao === "admin";
-  const isEdit = permissao === "edit";
+  const isAdmin = can("Metas", "admin");
+  const isEdit = !isAdmin && can("Metas", "edit");
   const usuarioPodeVerTodos =
     (usuario?.uso_individual === false && (isAdmin || isEdit)) || isAdmin;
 
@@ -553,14 +556,14 @@ export default function FechamentoComissaoIsland() {
               textTransform: "uppercase",
               fontWeight: "bold",
               color:
-                permissao === "admin"
+                permissaoMetas === "admin"
                   ? "#22c55e"
-                  : permissao === "edit"
+                  : permissaoMetas === "edit"
                   ? "#eab308"
                   : "#ef4444",
             }}
           >
-            {permissao}
+            {permissaoMetas}
           </span>
         </div>
         <div className="w-full mt-2 flex flex-wrap gap-2">

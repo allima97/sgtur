@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
@@ -88,8 +88,9 @@ type SistemaCount = {
 };
 
 export default function DashboardAdminIsland() {
-  const { permissao, ativo, loading: loadingPerm } =
-    usePermissao("AdminDashboard");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("AdminDashboard");
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -510,7 +511,7 @@ export default function DashboardAdminIsland() {
 
   // bloquear quem não é admin
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo || !isAdmin)
+  if (!podeVer || !isAdmin)
     return (
       <div style={{ padding: 20 }}>
         <h3>Apenas administradores podem acessar este dashboard.</h3>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import CalculatorModal from "../ui/CalculatorModal";
 
@@ -175,7 +175,10 @@ function buildKpiLabelFromList(base: string, values: string[]) {
 }
 
 export default function ComissionamentoIsland() {
-  const { permissao, ativo, loading: loadingPerm } = usePermissao("Vendas");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Vendas");
+  const isAdminPermissao = can("Vendas", "admin");
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
   const [user, setUser] = useState<UserCtx | null>(null);
   const [parametros, setParametros] = useState<Parametros | null>(null);
@@ -195,9 +198,9 @@ export default function ComissionamentoIsland() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (loadingPerm || !ativo) return;
+    if (loadingPerm || !podeVer) return;
     carregarTudo();
-  }, [loadingPerm, ativo, preset, permissao]);
+  }, [loadingPerm, podeVer, preset, isAdminPermissao]);
 
   useEffect(() => {
     setPeriodo(calcPeriodo(preset));
@@ -214,8 +217,6 @@ export default function ComissionamentoIsland() {
         return;
       }
       const periodoAtual = calcPeriodo(preset);
-      const isAdminPermissao = permissao === "admin";
-
       const { data: usuarioDb } = await supabase
         .from("users")
         .select("id, company_id, user_types(name)")
@@ -665,7 +666,7 @@ export default function ComissionamentoIsland() {
   }, [vendas, parametros, produtos, regraProdutoMap, metasProduto, metaGeral, regras, metaProdEnabled]);
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Você não possui acesso ao módulo de Vendas.</div>;
+  if (!podeVer) return <div>Você não possui acesso ao módulo de Vendas.</div>;
 
   const labelComissao = resumo
     ? buildKpiLabel("Comissão", resumo.pctComissaoGeral || [])

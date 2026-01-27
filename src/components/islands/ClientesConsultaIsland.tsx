@@ -5,6 +5,7 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
 
 type Cliente = {
   id: string;
@@ -28,6 +29,9 @@ export default function ClientesConsultaIsland() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalClientesDb, setTotalClientesDb] = useState(0);
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
@@ -76,23 +80,33 @@ export default function ClientesConsultaIsland() {
     return () => { mounted = false; };
   }, []);
 
-  async function carregar(todos = false) {
+  async function carregar(todos = false, pageOverride?: number) {
     if (!podeVer || !companyId) return;
     try {
       setLoading(true);
       setErro(null);
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina - 1;
+
       let query = supabase
         .from("clientes")
-        .select("id, nome, cpf, telefone, email, whatsapp, company_id")
+        .select("id, nome, cpf, telefone, email, whatsapp, company_id", { count: "exact" })
         .eq("company_id", companyId)
         .order(todos ? "nome" : "created_at", { ascending: todos });
       if (!todos) {
-        query = query.limit(5);
+        query = query.range(inicio, fim);
       }
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
       setClientes((data || []) as Cliente[]);
       setCarregouTodos(todos);
+      if (todos) {
+        setTotalClientesDb((data || []).length);
+      } else {
+        setTotalClientesDb(count ?? (data || []).length);
+      }
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar clientes.");
@@ -102,15 +116,19 @@ export default function ClientesConsultaIsland() {
   }
 
   useEffect(() => {
-    if (!loadingPerm && podeVer && companyId) carregar(false);
-  }, [loadingPerm, podeVer, companyId]);
-  useEffect(() => {
-    if (busca.trim() && !carregouTodos && podeVer && companyId) {
-      carregar(true);
-    } else if (!busca.trim() && carregouTodos && podeVer && companyId) {
+    if (!loadingPerm && podeVer && companyId && !carregouTodos && !busca.trim()) {
       carregar(false);
     }
-  }, [busca, carregouTodos, podeVer, companyId]);
+  }, [loadingPerm, podeVer, companyId, page, pageSize, busca, carregouTodos]);
+  useEffect(() => {
+    if (!loadingPerm && busca.trim() && !carregouTodos && podeVer && companyId) {
+      setPage(1);
+      carregar(true, 1);
+    } else if (!loadingPerm && !busca.trim() && carregouTodos && podeVer && companyId) {
+      setPage(1);
+      carregar(false, 1);
+    }
+  }, [busca, carregouTodos, podeVer, companyId, loadingPerm]);
 
   const filtrados = useMemo(() => {
     const q = (busca || "").toLowerCase().trim();
@@ -121,9 +139,21 @@ export default function ClientesConsultaIsland() {
       (c.email || "").toLowerCase().includes(q)
     );
   }, [clientes, busca]);
+  const usaPaginacaoServidor = !busca.trim() && !carregouTodos;
+  const totalClientes = usaPaginacaoServidor ? totalClientesDb : filtrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalClientes / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
   const clientesExibidos = useMemo(() => {
-    return busca.trim() ? filtrados : filtrados.slice(0, 5);
-  }, [filtrados, busca]);
+    if (usaPaginacaoServidor) return clientes;
+    const inicio = (paginaAtual - 1) * pageSize;
+    return filtrados.slice(inicio, inicio + pageSize);
+  }, [usaPaginacaoServidor, clientes, filtrados, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
 
   const podeEditar = can("Clientes", "edit");
   const podeExcluir = can("Clientes", "delete");
@@ -289,6 +319,23 @@ export default function ClientesConsultaIsland() {
           <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
+
+      {!carregouTodos && !erro && (
+        <div className="card-base card-config mb-3">
+          Use a paginação para navegar. Digite na busca para filtrar todos.
+        </div>
+      )}
+
+      <PaginationControls
+        page={paginaAtual}
+        pageSize={pageSize}
+        totalItems={totalClientes}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
       <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
         <table className="table-default table-header-blue clientes-table table-mobile-cards">
@@ -495,4 +542,3 @@ export default function ClientesConsultaIsland() {
     </>
   );
 }
-

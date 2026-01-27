@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 type LogEntry = {
@@ -16,8 +16,9 @@ type LogEntry = {
 };
 
 export default function LogsIsland() {
-  const { permissao, ativo, loading: loadingPerm } =
-    usePermissao("AdminDashboard");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("AdminDashboard");
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -128,7 +129,7 @@ export default function LogsIsland() {
 
   if (loadingPerm) return <LoadingUsuarioContext />;
 
-  if (!ativo || !isAdmin)
+  if (!podeVer || !isAdmin)
     return (
       <div style={{ padding: 20 }}>
         <h3>Apenas administradores podem acessar os logs.</h3>

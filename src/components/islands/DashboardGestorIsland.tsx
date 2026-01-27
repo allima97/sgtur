@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 
 import {
@@ -66,8 +66,9 @@ const COLORS = ["#7c3aed", "#a855f7", "#818cf8", "#ec4899", "#22c55e"];
 // =====================================================================
 
 export default function DashboardGestorIsland() {
-  const { permissao, ativo, loading: loadingPerm } =
-    usePermissao("Dashboard");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVer = can("Dashboard");
 
   const [papel, setPapel] = useState<Papel>("OUTRO");
   const [userId, setUserId] = useState("");
@@ -304,7 +305,7 @@ export default function DashboardGestorIsland() {
   // =====================================================================
 
   if (loadingPerm) return <LoadingUsuarioContext />;
-  if (!ativo) return <div>Você não possui acesso ao Dashboard.</div>;
+  if (!podeVer) return <div>Você não possui acesso ao Dashboard.</div>;
 
   if (papel !== "GESTOR" && papel !== "ADMIN") {
     return (

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { usePermissao } from "../../lib/usePermissao";
+import { usePermissoesStore } from "../../lib/permissoesStore";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import CalculatorModal from "../ui/CalculatorModal";
@@ -228,8 +228,10 @@ const COLORS_PURPLE = ["#7c3aed", "#a855f7", "#6366f1", "#ec4899", "#22c55e"];
 const DashboardGeralIsland: React.FC = () => {
   const [userCtx, setUserCtx] = useState<UserContext | null>(null);
   const [loadingUserCtx, setLoadingUserCtx] = useState(true);
-  const permissaoData = usePermissao("dashboard");
-  const permissaoOperacao = usePermissao("Operacao");
+  const { can, loading: loadingPerms, ready } = usePermissoesStore();
+  const loadingPerm = loadingPerms || !ready;
+  const podeVerDashboard = can("Dashboard");
+  const podeVerOperacao = can("Operacao");
 
   const [presetPeriodo, setPresetPeriodo] =
     useState<PresetPeriodo>("mes_atual");
@@ -573,7 +575,7 @@ const DashboardGeralIsland: React.FC = () => {
 
   useEffect(() => {
     if (!userCtx || !inicio || !fim) return;
-    if (permissaoOperacao.loading) return;
+    if (loadingPerm) return;
 
     async function carregarDashboard() {
       try {
@@ -700,7 +702,7 @@ const DashboardGeralIsland: React.FC = () => {
         if (clientesErr) throw clientesErr;
 
         // ----- VIAGENS (próximas) -----
-        if (permissaoOperacao.permissao === "none") {
+        if (!podeVerOperacao) {
           setViagens([]);
         } else {
           try {
@@ -895,7 +897,7 @@ const DashboardGeralIsland: React.FC = () => {
     }
 
     carregarDashboard();
-  }, [userCtx, inicio, fim, permissaoOperacao.loading, permissaoOperacao.permissao]);
+  }, [userCtx, inicio, fim, loadingPerm, podeVerOperacao]);
 
   // ----------------- DERIVADOS: KPI -----------------
 
@@ -1650,7 +1652,7 @@ const DashboardGeralIsland: React.FC = () => {
                 Próximas viagens ({proximasViagensAgrupadas.length})
               </h3>
             )}
-            {permissaoOperacao.permissao === "none" ? (
+            {!podeVerOperacao ? (
               <div>Você não possui acesso ao módulo de Operação/Viagens.</div>
             ) : (
               <div
@@ -1848,11 +1850,11 @@ const DashboardGeralIsland: React.FC = () => {
   // Evita ficar preso no estado de carregamento caso o hook demore,
   // liberando a renderização assim que já houver contexto básico.
 
-  if ((loadingUserCtx && !userCtx) || permissaoData.loading) {
+  if ((loadingUserCtx && !userCtx) || loadingPerm) {
     return <LoadingUsuarioContext />;
   }
 
-  if (!permissaoData.ativo) {
+  if (!podeVerDashboard) {
     return (
       <div>Você não possui acesso ao módulo de Dashboard.</div>
     );

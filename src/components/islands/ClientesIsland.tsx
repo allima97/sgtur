@@ -7,6 +7,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { parentescoOptions } from "../../lib/parentescoOptions";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import PaginationControls from "../ui/PaginationControls";
 
 function titleCaseAllWords(valor: string) {
   const trimmed = (valor || "").trim();
@@ -108,6 +109,9 @@ export default function ClientesIsland() {
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalClientesDb, setTotalClientesDb] = useState(0);
 
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -230,22 +234,27 @@ export default function ClientesIsland() {
   // =====================================
   // CARREGAR CLIENTES
   // =====================================
-  async function carregar(todos = false) {
+  async function carregar(todos = false, pageOverride?: number) {
     if (!podeVer || !companyId) return;
 
     try {
       setLoading(true);
       setErro(null);
 
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina - 1;
+
       let query = supabase
         .from("clientes")
-        .select("*, company_id")
+        .select("*, company_id", { count: "exact" })
         .eq("company_id", companyId)
         .order(todos ? "nome" : "created_at", { ascending: todos });
       if (!todos) {
-        query = query.limit(5);
+        query = query.range(inicio, fim);
       }
-      const { data, error } = await query;
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -253,6 +262,11 @@ export default function ClientesIsland() {
       setAcompanhantes([]);
       setAcompErro(null);
       setCarregouTodos(todos);
+      if (todos) {
+        setTotalClientesDb((data || []).length);
+      } else {
+        setTotalClientesDb(count ?? (data || []).length);
+      }
     } catch (e) {
       console.error(e);
       setErro("Erro ao carregar clientes.");
@@ -262,17 +276,19 @@ export default function ClientesIsland() {
   }
 
   useEffect(() => {
-    if (!loadPerm && podeVer && companyId) {
+    if (!loadPerm && podeVer && companyId && !carregouTodos && !busca.trim()) {
       carregar(false);
     }
-  }, [loadPerm, podeVer, companyId]);
+  }, [loadPerm, podeVer, companyId, page, pageSize, busca, carregouTodos]);
   useEffect(() => {
-    if (busca.trim() && !carregouTodos && podeVer && companyId) {
-      carregar(true);
-    } else if (!busca.trim() && carregouTodos && podeVer && companyId) {
-      carregar(false);
+    if (!loadPerm && busca.trim() && !carregouTodos && podeVer && companyId) {
+      setPage(1);
+      carregar(true, 1);
+    } else if (!loadPerm && !busca.trim() && carregouTodos && podeVer && companyId) {
+      setPage(1);
+      carregar(false, 1);
     }
-  }, [busca, carregouTodos, podeVer, companyId]);
+  }, [busca, carregouTodos, podeVer, companyId, loadPerm]);
 
   // =====================================
   // FILTRO
@@ -287,15 +303,21 @@ export default function ClientesIsland() {
         (c.email || "").toLowerCase().includes(t)
     );
   }, [clientes, busca]);
+  const usaPaginacaoServidor = !busca.trim() && !carregouTodos;
+  const totalClientes = usaPaginacaoServidor ? totalClientesDb : filtrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalClientes / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
   const clientesExibidos = useMemo(() => {
-    if (busca.trim()) return filtrados;
-    const ordenados = [...clientes].sort((a, b) => {
-      const dataA = a.created_at || "";
-      const dataB = b.created_at || "";
-      return dataB.localeCompare(dataA);
-    });
-    return ordenados.slice(0, 5);
-  }, [filtrados, busca, clientes]);
+    if (usaPaginacaoServidor) return clientes;
+    const inicio = (paginaAtual - 1) * pageSize;
+    return filtrados.slice(inicio, inicio + pageSize);
+  }, [usaPaginacaoServidor, clientes, filtrados, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
 
   // =====================================
   // FORM HANDLER
@@ -868,7 +890,7 @@ export default function ClientesIsland() {
       setEditId(null);
       setMostrarFormCliente(false);
       setMsg(editId ? "Cliente atualizado com sucesso." : "Cliente criado com sucesso.");
-      await carregar();
+      await carregar(Boolean(busca.trim()));
     } catch (e) {
       console.error(e);
       setErro("Erro ao salvar cliente.");
@@ -900,7 +922,7 @@ export default function ClientesIsland() {
         detalhes: { id },
       });
 
-      await carregar();
+      await carregar(Boolean(busca.trim()));
     } catch {
       setErro("Não foi possível excluir este cliente.");
     } finally {
@@ -1614,6 +1636,23 @@ export default function ClientesIsland() {
               <strong>{erro}</strong>
             </div>
           )}
+
+          {!carregouTodos && !erro && (
+            <div className="card-base card-config mb-3">
+              Use a paginação para navegar. Digite na busca para filtrar todos.
+            </div>
+          )}
+
+          <PaginationControls
+            page={paginaAtual}
+            pageSize={pageSize}
+            totalItems={totalClientes}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
 
           {/* LISTA */}
           <div
