@@ -460,7 +460,7 @@ body {
   position: relative;
   overscroll-behavior-x: contain;
   overscroll-behavior-y: auto;
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: auto;
 }
 
 .table-container::before,
@@ -482,6 +482,13 @@ body {
 .table-container::after {
   right: 0;
   background: linear-gradient(-90deg, rgba(248,250,252,0.95), rgba(248,250,252,0));
+}
+
+@media (min-width: 641px) {
+  .table-container::before,
+  .table-container::after {
+    display: none;
+  }
 }
 
 .table-default {
@@ -689,6 +696,46 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.viagens-page .th-actions {
+  width: 160px;
+}
+
+.viagens-page .viagens-action-buttons {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.clientes-page .th-actions {
+  width: 160px;
+}
+
+.clientes-page .action-buttons {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.circuitos-page .th-actions {
+  width: 160px;
+}
+
+.circuitos-page .action-buttons {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.regras-comissao-page .th-actions {
+  width: 160px;
+}
+
+.regras-comissao-page .action-buttons {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
 }
 
 @media (max-width: 640px) {
@@ -1749,6 +1796,13 @@ body {
 @media (min-width: 641px) {
   .mobile-bottom-nav {
     display: none;
+  }
+}
+
+@media (min-width: 641px) {
+  .btn.w-full,
+  .btn-icon.w-full {
+    width: auto;
   }
 }
 

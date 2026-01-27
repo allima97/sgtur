@@ -403,7 +403,7 @@ export default function SubdivisoesIsland() {
                       key: "edit",
                       label: "Editar",
                       onClick: () => iniciarEdicao(s),
-                      icon: "??",
+                      icon: "✏️",
                     },
                     ...(podeExcluir
                       ? [
@@ -411,7 +411,7 @@ export default function SubdivisoesIsland() {
                             key: "delete",
                             label: "Excluir",
                             onClick: () => solicitarExclusao(s),
-                            icon: excluindoId === s.id ? "..." : "???",
+                            icon: excluindoId === s.id ? "..." : "🗑️",
                             variant: "danger" as const,
                             disabled: excluindoId === s.id,
                           },
@@ -439,4 +439,3 @@ export default function SubdivisoesIsland() {
     </div>
   );
 }
-

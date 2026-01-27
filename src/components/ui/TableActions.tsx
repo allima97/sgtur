@@ -1,6 +1,21 @@
 import React from "react";
 
+type ActionVariant = "danger" | "primary" | "light" | "ghost";
+
+type ActionItem = {
+  key: string;
+  label: string;
+  onClick?: () => void;
+  icon?: React.ReactNode;
+  variant?: ActionVariant;
+  disabled?: boolean;
+  title?: string;
+  className?: string;
+};
+
 type TableActionsProps = {
+  show?: boolean;
+  actions?: ActionItem[];
   onEdit?: () => void;
   onDelete?: () => void;
   showEdit?: boolean;
@@ -15,6 +30,8 @@ type TableActionsProps = {
 };
 
 export default function TableActions({
+  show = true,
+  actions,
   onEdit,
   onDelete,
   showEdit,
@@ -27,6 +44,40 @@ export default function TableActions({
   deleteIcon = "🗑️",
   className = "",
 }: TableActionsProps) {
+  if (!show) return null;
+
+  const normalizedActions = (actions || []).filter(Boolean);
+  if (normalizedActions.length > 0) {
+    return (
+      <div className={`action-buttons ${className}`.trim()}>
+        {normalizedActions.map((action) => {
+          const variantClass =
+            action.variant === "danger"
+              ? "btn-danger"
+              : action.variant === "primary"
+                ? "btn-primary"
+                : action.variant === "light"
+                  ? "btn-light"
+                  : action.variant === "ghost"
+                    ? "btn-ghost"
+                    : "";
+          return (
+            <button
+              key={action.key}
+              type="button"
+              className={`btn-icon ${variantClass} ${action.className || ""}`.trim()}
+              title={action.title || action.label}
+              onClick={action.onClick}
+              disabled={action.disabled}
+            >
+              {action.icon ?? action.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const shouldShowEdit = showEdit ?? Boolean(onEdit);
   const shouldShowDelete = showDelete ?? Boolean(onDelete);
 

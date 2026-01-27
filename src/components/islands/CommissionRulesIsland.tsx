@@ -305,19 +305,30 @@ export default function CommissionRulesIsland() {
     <div className="page-content-wrap regras-comissao-page">
       {!mostrarFormulario && (
         <div className="card-base mb-4 list-toolbar-sticky">
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-            <h3 className="card-title text-center sm:text-left" style={{ marginBottom: 6 }}>
-              Regras cadastradas
-            </h3>
+          <div
+            className="form-row mobile-stack"
+            style={{
+              gap: 12,
+              gridTemplateColumns: "minmax(240px, 1fr) auto",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <h3 className="card-title" style={{ margin: 0 }}>
+                Regras cadastradas
+              </h3>
+            </div>
             {podeEditar && (
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
-                onClick={abrirFormularioRegra}
-                disabled={mostrarFormulario}
-              >
-                Adicionar regra
-              </button>
+              <div className="form-group" style={{ alignItems: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full sm:w-auto"
+                  onClick={abrirFormularioRegra}
+                  disabled={mostrarFormulario}
+                >
+                  Adicionar regra
+                </button>
+              </div>
             )}
           </div>
         </div>
