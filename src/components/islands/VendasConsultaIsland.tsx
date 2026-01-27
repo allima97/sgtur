@@ -143,6 +143,13 @@ export default function VendasConsultaIsland() {
     null
   );
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
+  const [kpiMesAtual, setKpiMesAtual] = useState({
+    totalVendas: 0,
+    totalTaxas: 0,
+    totalLiquido: 0,
+    totalSeguro: 0,
+  });
+  const [kpiMesLoading, setKpiMesLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalVendasDb, setTotalVendasDb] = useState(0);
@@ -219,6 +226,65 @@ export default function VendasConsultaIsland() {
   // ================================
   // CARREGAR LISTA
   // ================================
+  async function carregarResumoMesAtual() {
+    if (!podeVer || !userCtx) return;
+
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const inicioISO = inicioMes.toISOString().slice(0, 10);
+    const hojeISO = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+      .toISOString()
+      .slice(0, 10);
+
+    try {
+      setKpiMesLoading(true);
+      let query = supabase
+        .from("vendas")
+        .select("id, vendedor_id, data_lancamento")
+        .gte("data_lancamento", inicioISO)
+        .lte("data_lancamento", hojeISO);
+
+      if (userCtx.papel !== "ADMIN") {
+        query = query.in("vendedor_id", userCtx.vendedorIds);
+      }
+
+      const { data: vendasMes, error: vendasError } = await query;
+      if (vendasError) throw vendasError;
+
+      const vendaIds = (vendasMes || []).map((v: any) => v.id);
+      if (vendaIds.length === 0) {
+        setKpiMesAtual({ totalVendas: 0, totalTaxas: 0, totalLiquido: 0, totalSeguro: 0 });
+        return;
+      }
+
+      const { data: recibosData, error: recibosError } = await supabase
+        .from("vendas_recibos")
+        .select("venda_id, valor_total, valor_taxas, tipo_produtos (id, nome, tipo)")
+        .in("venda_id", vendaIds);
+      if (recibosError) throw recibosError;
+
+      let totalVendas = 0;
+      let totalTaxas = 0;
+      let totalSeguro = 0;
+      (recibosData || []).forEach((r: any) => {
+        totalVendas += r.valor_total || 0;
+        totalTaxas += r.valor_taxas || 0;
+        if (isSeguroRecibo(r)) totalSeguro += r.valor_total || 0;
+      });
+
+      setKpiMesAtual({
+        totalVendas,
+        totalTaxas,
+        totalLiquido: totalVendas - totalTaxas,
+        totalSeguro,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setKpiMesLoading(false);
+    }
+  }
+
   async function carregar() {
     if (!podeVer || !userCtx) return;
 
@@ -441,6 +507,11 @@ export default function VendasConsultaIsland() {
   }, [loadPerm, podeVer, userCtx, page, pageSize, busca]);
 
   useEffect(() => {
+    if (loadPerm || !podeVer || !userCtx) return;
+    carregarResumoMesAtual();
+  }, [loadPerm, podeVer, userCtx]);
+
+  useEffect(() => {
     setBuscaReciboComplementar("");
     setMostrarComplementares(false);
     setRemovendoComplementar(null);
@@ -566,39 +637,28 @@ export default function VendasConsultaIsland() {
     return lista[0];
   }
 
-  const kpiResumo = useMemo(() => {
-    const agora = new Date();
-    const mesAtual = agora.getMonth();
-    const anoAtual = agora.getFullYear();
-
-    const vendasMesAtual = new Set(
-      vendas
-        .filter((v) => {
-          if (!v.data_lancamento) return false;
-          const data = new Date(v.data_lancamento);
-          return data.getFullYear() === anoAtual && data.getMonth() === mesAtual;
-        })
-        .map((v) => v.id)
-    );
-
-    let totalVendas = 0;
-    let totalTaxas = 0;
-    let totalSeguro = 0;
-    recibos.forEach((r) => {
-      if (!vendasMesAtual.has(r.venda_id)) return;
-      totalVendas += r.valor_total || 0;
-      totalTaxas += r.valor_taxas || 0;
-      if (isSeguroRecibo(r)) {
-        totalSeguro += r.valor_total || 0;
-      }
-    });
-    return {
-      totalVendas,
-      totalTaxas,
-      totalLiquido: totalVendas - totalTaxas,
-      totalSeguro,
-    };
-  }, [recibos, vendas]);
+  const textoPeriodoKpi = useMemo(() => {
+    const hoje = new Date();
+    const diaAtual = String(hoje.getDate()).padStart(2, "0");
+    const mesIdx = hoje.getMonth();
+    const ano = hoje.getFullYear();
+    const meses = [
+      "janeiro",
+      "fevereiro",
+      "março",
+      "abril",
+      "maio",
+      "junho",
+      "julho",
+      "agosto",
+      "setembro",
+      "outubro",
+      "novembro",
+      "dezembro",
+    ];
+    const mesNome = meses[mesIdx] || "";
+    return `Resultados do dia 01 ${mesNome} até o dia ${diaAtual} ${mesNome} de ${ano}`;
+  }, []);
 
   // ================================
   // CANCELAR VENDA
@@ -870,29 +930,33 @@ export default function VendasConsultaIsland() {
         </div>
       </div>
 
+      <div className="card-base mb-2" style={{ textAlign: "center", fontWeight: 700 }}>
+        {textoPeriodoKpi}
+      </div>
+
       <div className="dashboard-grid-kpi mb-3">
         <div className="kpi-card kpi-vendas">
           <div style={{ width: "100%", textAlign: "center" }}>
             <div className="kpi-label">Total de Vendas</div>
-            <div className="kpi-value">{formatCurrency(kpiResumo.totalVendas)}</div>
+            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalVendas)}</div>
           </div>
         </div>
         <div className="kpi-card kpi-diferenciado">
           <div style={{ width: "100%", textAlign: "center" }}>
             <div className="kpi-label">Seguro Viagem</div>
-            <div className="kpi-value">{formatCurrency(kpiResumo.totalSeguro)}</div>
+            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalSeguro)}</div>
           </div>
         </div>
         <div className="kpi-card kpi-meta">
           <div style={{ width: "100%", textAlign: "center" }}>
             <div className="kpi-label">Taxas</div>
-            <div className="kpi-value">{formatCurrency(kpiResumo.totalTaxas)}</div>
+            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalTaxas)}</div>
           </div>
         </div>
         <div className="kpi-card kpi-ticket">
           <div style={{ width: "100%", textAlign: "center" }}>
             <div className="kpi-label">Total Líquido</div>
-            <div className="kpi-value">{formatCurrency(kpiResumo.totalLiquido)}</div>
+            <div className="kpi-value">{formatCurrency(kpiMesAtual.totalLiquido)}</div>
           </div>
         </div>
       </div>
