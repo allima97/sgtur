@@ -18,7 +18,7 @@ type PermissoesState = {
   userEmail: string;
 };
 
-const initialCache = readPermissoesCache();
+const initialCache = null;
 let state: PermissoesState = {
   cache: initialCache,
   loading: false,
@@ -30,6 +30,7 @@ let state: PermissoesState = {
 const listeners = new Set<() => void>();
 let subscribed = false;
 let refreshPromise: Promise<PermissoesCache | null> | null = null;
+let cacheHydrated = false;
 
 const permLevel = (p: Permissao | undefined): number => {
   switch (p) {
@@ -67,6 +68,19 @@ const ensureSubscribed = () => {
       userId: cache.userId ?? null,
       userEmail: cache.userEmail ?? "",
     });
+  });
+};
+
+const hydrateCache = () => {
+  if (cacheHydrated || typeof window === "undefined") return;
+  cacheHydrated = true;
+  const cache = readPermissoesCache();
+  if (!cache) return;
+  setState({
+    cache,
+    ready: true,
+    userId: cache.userId ?? null,
+    userEmail: cache.userEmail ?? "",
   });
 };
 
@@ -140,6 +154,7 @@ export function usePermissoesStore() {
 
   useEffect(() => {
     if (!snapshot.ready && !snapshot.loading) {
+      hydrateCache();
       refreshPermissoes();
     }
   }, [snapshot.ready, snapshot.loading]);
