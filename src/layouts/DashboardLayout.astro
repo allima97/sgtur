@@ -7,6 +7,17 @@ import PermissoesProvider from "../components/islands/PermissoesProvider.tsx";
 import { SYSTEM_NAME } from "../lib/systemName";
 
 const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
+let menuCache = null;
+try {
+  const raw = Astro.cookies.get("sgtur_menu_cache")?.value;
+  if (raw) {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    const userId = Astro.locals?.userId;
+    if (!userId || parsed?.userId === userId) {
+      menuCache = parsed;
+    }
+  }
+} catch {}
 ---
 
 <html lang="pt-BR">
@@ -29,7 +40,7 @@ const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
 
       <!-- MENU DINÂMICO: render on server and hydrate on load to keep desktop layout stable -->
       <PermissoesProvider client:load />
-      <MenuIsland client:load {activePage} />
+      <MenuIsland client:load {activePage} initialCache={menuCache} />
 
       <!-- CONTEÚDO -->
       <main class="app-main">

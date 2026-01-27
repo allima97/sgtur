@@ -24,6 +24,7 @@ type RegistroAcesso = {
 };
 
 const CACHE_KEY = "sgtur_menu_cache";
+const CACHE_COOKIE_KEY = "sgtur_menu_cache";
 const WINDOW_CACHE_KEY = "__sgturPermCache";
 const WINDOW_PROMISE_KEY = "__sgturPermCachePromise";
 const EVENT_NAME = "sgtur:permissoes-update";
@@ -124,12 +125,24 @@ export function persistPermissoesCache(cache: PermissoesCache) {
     aliases: cache.aliases || MODULO_ALIASES,
   };
 
+  const cookiePayload = {
+    userId: cache.userId,
+    acessos: cache.acessos,
+    updatedAt: cache.updatedAt,
+    userEmail: cache.userEmail,
+  };
+
   try {
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
   } catch {}
 
   try {
     (window as any)[WINDOW_CACHE_KEY] = payload;
+  } catch {}
+
+  try {
+    const encoded = encodeURIComponent(JSON.stringify(cookiePayload));
+    document.cookie = `${CACHE_COOKIE_KEY}=${encoded}; path=/; max-age=2592000; samesite=lax`;
   } catch {}
 
   try {

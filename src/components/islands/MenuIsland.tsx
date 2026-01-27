@@ -2,6 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logoutUsuario } from "../../lib/logout";
 import { SYSTEM_NAME } from "../../lib/systemName";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import { MAPA_MODULOS } from "../../config/modulos";
+import {
+  getPermissaoFromCache,
+  readPermissoesCache,
+  subscribePermissoes,
+  type Permissao,
+  type PermissoesCache,
+} from "../../lib/permissoesCache";
 
 
 const FornecedoresIcon = () => (
@@ -26,11 +34,17 @@ const FornecedoresIcon = () => (
   </svg>
 );
 
-export default function MenuIsland({ activePage }) {
+type MenuIslandProps = {
+  activePage?: string;
+  initialCache?: PermissoesCache | null;
+};
+
+export default function MenuIsland({ activePage, initialCache }: MenuIslandProps) {
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
-  const { userId, isAdmin, can } = usePermissoesStore();
+  const { userId, isAdmin, can, ready } = usePermissoesStore();
+  const [cachedPerms, setCachedPerms] = useState(() => initialCache ?? readPermissoesCache());
   const [saindo, setSaindo] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -41,6 +55,44 @@ export default function MenuIsland({ activePage }) {
   const SESSION_EXTENSION_MS = 15 * 60 * 1000;
   const [remainingMs, setRemainingMs] = useState(AUTO_LOGOUT_MS);
   const deadlineRef = useRef(Date.now() + AUTO_LOGOUT_MS);
+
+  const cacheUserId = cachedPerms?.userId ?? null;
+
+  const permLevel = (p?: Permissao | null): number => {
+    switch (p) {
+      case "admin":
+        return 5;
+      case "delete":
+        return 4;
+      case "edit":
+        return 3;
+      case "create":
+        return 2;
+      case "view":
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
+  const canFromCache = (modulo: string, min: Permissao = "view") => {
+    if (!cacheUserId) return false;
+    const modDb = MAPA_MODULOS[modulo] || modulo;
+    const perm = getPermissaoFromCache(modDb, cacheUserId, cachedPerms)?.permissao ?? "none";
+    return permLevel(perm) >= permLevel(min);
+  };
+
+  const canMenu = ready ? can : canFromCache;
+  const menuUserId = ready ? userId : cacheUserId;
+  const menuIsAdmin = ready
+    ? isAdmin
+    : Object.values(cachedPerms?.acessos ?? {}).some((p) => p === "admin");
+
+  useEffect(() => {
+    return subscribePermissoes((cache) => {
+      setCachedPerms(cache);
+    });
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)");
@@ -183,12 +235,12 @@ export default function MenuIsland({ activePage }) {
       label: "Fornecedores",
     },
   ];
-  const hasCadastrosSection = cadastrosMenu.some((item) => can(item.name));
+  const hasCadastrosSection = cadastrosMenu.some((item) => canMenu(item.name));
 
   const sidebarId = "app-sidebar";
 
   const mobileNavItems: MobileNavItem[] = [];
-  if (can("Dashboard")) {
+  if (canMenu("Dashboard")) {
     mobileNavItems.push({
       key: "dashboard",
       label: "Dashboard",
@@ -197,7 +249,7 @@ export default function MenuIsland({ activePage }) {
       active: "dashboard",
     });
   }
-  if (can("Vendas")) {
+  if (canMenu("Vendas")) {
     mobileNavItems.push({
       key: "vendas",
       label: "Vendas",
@@ -206,7 +258,7 @@ export default function MenuIsland({ activePage }) {
       active: "vendas",
     });
   }
-  if (can("Orcamentos")) {
+  if (canMenu("Orcamentos")) {
     mobileNavItems.push({
       key: "orcamentos",
       label: "Orçamentos",
@@ -215,7 +267,7 @@ export default function MenuIsland({ activePage }) {
       active: "orcamentos",
     });
   }
-  if (can("Clientes")) {
+  if (canMenu("Clientes")) {
     mobileNavItems.push({
       key: "clientes",
       label: "Clientes",
@@ -269,7 +321,7 @@ export default function MenuIsland({ activePage }) {
         <div>
           <div className="sidebar-section-title">Operação</div>
           <ul className="sidebar-nav">
-            {can("Dashboard") && (
+            {canMenu("Dashboard") && (
               <li>
                 <a
                   className={`sidebar-link ${activePage === "dashboard" ? "active" : ""}`}
@@ -281,7 +333,7 @@ export default function MenuIsland({ activePage }) {
               </li>
             )}
 
-            {can("Vendas") && (
+            {canMenu("Vendas") && (
               <li>
                 <a
                   className={`sidebar-link ${activePage === "vendas" ? "active" : ""}`}
@@ -293,7 +345,7 @@ export default function MenuIsland({ activePage }) {
               </li>
             )}
 
-            {can("Orcamentos") && (
+            {canMenu("Orcamentos") && (
               <>
                 <li>
                   <a
@@ -308,7 +360,7 @@ export default function MenuIsland({ activePage }) {
             )}
 
 
-            {can("Comissionamento") && (
+            {canMenu("Comissionamento") && (
               <li>
                 <a
                   className={`sidebar-link ${activePage === "comissionamento" ? "active" : ""}`}
@@ -320,7 +372,7 @@ export default function MenuIsland({ activePage }) {
               </li>
             )}
 
-            {can("Operacao") && (
+            {canMenu("Operacao") && (
               <li>
                 <a
                   className={`sidebar-link ${activePage === "operacao_viagens" ? "active" : ""}`}
@@ -332,7 +384,7 @@ export default function MenuIsland({ activePage }) {
               </li>
             )}
 
-            {can("Clientes") && (
+            {canMenu("Clientes") && (
               <li>
                 <a
                   className={`sidebar-link ${activePage === "clientes" ? "active" : ""}`}
@@ -352,7 +404,7 @@ export default function MenuIsland({ activePage }) {
             <div className="sidebar-section-title">Cadastros</div>
             <ul className="sidebar-nav">
               {cadastrosMenu
-                .filter((item) => can(item.name))
+                .filter((item) => canMenu(item.name))
                 .map((item) => (
                   <li key={item.name}>
                     <a
@@ -370,7 +422,7 @@ export default function MenuIsland({ activePage }) {
         )}
 
         {/* RELATORIOS */}
-        {can("Relatorios") && (
+        {canMenu("Relatorios") && (
           <div>
             <div className="sidebar-section-title">Relatórios</div>
             <ul className="sidebar-nav">
@@ -415,7 +467,7 @@ export default function MenuIsland({ activePage }) {
         )}
 
         {/* PARAMETROS */}
-        {can("Parametros") && (
+        {canMenu("Parametros") && (
           <div>
             <div className="sidebar-section-title">Parâmetros</div>
             <ul className="sidebar-nav">
@@ -429,7 +481,7 @@ export default function MenuIsland({ activePage }) {
                 </a>
               </li>
 
-              {can("Metas") && (
+              {canMenu("Metas") && (
                 <li>
                   <a
                     className={`sidebar-link ${activePage === "parametros-metas" ? "active" : ""}`}
@@ -485,7 +537,7 @@ export default function MenuIsland({ activePage }) {
         )}
 
         {/* PERFIL */}
-        {userId && (
+        {menuUserId && (
           <div>
             <div className="sidebar-section-title">Conta</div>
             <ul className="sidebar-nav">
@@ -503,7 +555,7 @@ export default function MenuIsland({ activePage }) {
         )}
 
         {/* ADMIN */}
-        {isAdmin && (
+        {menuIsAdmin && (
           <div>
             <div className="sidebar-section-title">Administração</div>
             <ul className="sidebar-nav">

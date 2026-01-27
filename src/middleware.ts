@@ -71,6 +71,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!user) {
     return Response.redirect(new URL("/auth/login", url), 302);
   }
+  context.locals.userId = user.id;
+  context.locals.userEmail = user.email ?? "";
 
   // ============================
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
