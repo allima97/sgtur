@@ -26,6 +26,13 @@ let state: PermissoesState = {
   userId: initialCache?.userId ?? null,
   userEmail: initialCache?.userEmail ?? "",
 };
+const hydrationSnapshot: PermissoesState = {
+  cache: null,
+  loading: false,
+  ready: false,
+  userId: null,
+  userEmail: "",
+};
 
 const listeners = new Set<() => void>();
 let subscribed = false;
@@ -54,8 +61,17 @@ const emit = () => {
   listeners.forEach((listener) => listener());
 };
 
+const syncHydrationSnapshot = () => {
+  hydrationSnapshot.cache = null;
+  hydrationSnapshot.loading = state.loading;
+  hydrationSnapshot.ready = false;
+  hydrationSnapshot.userId = null;
+  hydrationSnapshot.userEmail = "";
+};
+
 const setState = (partial: Partial<PermissoesState>) => {
   state = { ...state, ...partial };
+  syncHydrationSnapshot();
   emit();
 };
 
@@ -89,13 +105,7 @@ const scheduleHydrationUnlock = () => {
 
 export function getPermissoesSnapshot() {
   if (hydrationLocked && typeof window !== "undefined") {
-    return {
-      ...state,
-      cache: null,
-      ready: false,
-      userId: null,
-      userEmail: "",
-    };
+    return hydrationSnapshot;
   }
   return state;
 }
