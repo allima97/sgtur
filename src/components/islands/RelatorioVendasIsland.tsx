@@ -238,12 +238,8 @@ export default function RelatorioVendasIsland() {
 
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
 
-  const [dataInicio, setDataInicio] = useState<string>(() => {
-    const hoje = new Date();
-    const inicio = addDays(hoje, -7);
-    return formatISO(inicio);
-  });
-  const [dataFim, setDataFim] = useState<string>(hojeISO());
+  const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [valorMin, setValorMin] = useState<string>("");
   const [valorMax, setValorMax] = useState<string>("");
@@ -259,7 +255,7 @@ export default function RelatorioVendasIsland() {
   const [mobileFiltroTipo, setMobileFiltroTipo] =
     useState<MobileFiltroTipo>("data");
   const [mobilePeriodoPreset, setMobilePeriodoPreset] =
-    useState<MobilePeriodoPreset>("7");
+    useState<MobilePeriodoPreset>("personalizado");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalVendasDb, setTotalVendasDb] = useState(0);
