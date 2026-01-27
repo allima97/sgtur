@@ -1430,9 +1430,15 @@ export default function VendasConsultaIsland() {
       />
       {podeCriar && (
         <div className="mobile-actionbar sm:hidden">
-          <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              window.location.href = "/vendas/cadastro";
+            }}
+          >
             Nova venda
-          </a>
+          </button>
         </div>
       )}
     </div>
