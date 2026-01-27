@@ -15,6 +15,14 @@ const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
     <title>{title}</title>
+    <style>
+      /* Apply critical desktop layout only on wide screens to avoid forcing
+         desktop styles on mobile during navigation. */
+      @media (min-width: 1025px) {
+        .app-shell{display:grid;grid-template-columns:260px 1fr;}
+        .app-sidebar{display:flex;flex-direction:column;}
+      }
+    </style>
   </head>
   <body>
     <div class="app-shell">

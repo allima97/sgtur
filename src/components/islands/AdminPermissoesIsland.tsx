@@ -266,7 +266,7 @@ export default function AdminPermissoesIsland() {
   }
 
   if (loading) {
-    return <div>Carregando dados de permissões...</div>;
+    return <LoadingUsuarioContext />;
   }
 
   return (

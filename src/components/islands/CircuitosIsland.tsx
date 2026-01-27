@@ -1804,7 +1804,7 @@ export default function CircuitosIsland() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-light" onClick={fecharPreview} type="button">
+              <button className="btn btn-light w-full sm:w-auto" onClick={fecharPreview} type="button">
                 Fechar
               </button>
             </div>
@@ -1825,5 +1825,4 @@ export default function CircuitosIsland() {
     </div>
   );
 }
-
 

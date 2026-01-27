@@ -1347,14 +1347,14 @@ export default function ClientesIsland() {
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
-                className={`btn ${abaFormCliente === "dados" ? "btn-primary" : "btn-outline"}`}
+                className={`btn w-full sm:w-auto ${abaFormCliente === "dados" ? "btn-primary" : "btn-outline"}`}
                 onClick={() => setAbaFormCliente("dados")}
               >
                 Dados do cliente
               </button>
               <button
                 type="button"
-                className={`btn ${abaFormCliente === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
+                className={`btn w-full sm:w-auto ${abaFormCliente === "acompanhantes" ? "btn-primary" : "btn-outline"}`}
                 onClick={() => setAbaFormCliente("acompanhantes")}
               >
                 Acompanhantes
