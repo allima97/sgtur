@@ -20,8 +20,8 @@ const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
     <div class="app-shell">
 
       <!-- MENU DINÂMICO -->
-      <PermissoesProvider client:idle />
-      <MenuIsland client:visible {activePage} />
+      <PermissoesProvider client:only="react" />
+      <MenuIsland client:only="react" {activePage} />
 
       <!-- CONTEÚDO -->
       <main class="app-main">
