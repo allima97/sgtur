@@ -108,12 +108,8 @@ function formatCurrency(value: number): string {
 
 export default function RelatorioAgrupadoProdutoIsland() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [dataInicio, setDataInicio] = useState<string>(() => {
-    const hoje = new Date();
-    const inicio = addDays(hoje, -30);
-    return formatISO(inicio);
-  });
-  const [dataFim, setDataFim] = useState<string>(hojeISO());
+  const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaProduto, setBuscaProduto] = useState("");
   const [tipoReciboSelecionado, setTipoReciboSelecionado] = useState("");
@@ -332,6 +328,14 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
 
     carregarUserCtx();
+  }, []);
+
+  useEffect(() => {
+    if (dataInicio || dataFim) return;
+    const hoje = new Date();
+    const inicio = addDays(hoje, -30);
+    setDataInicio(formatISO(inicio));
+    setDataFim(hojeISO());
   }, []);
 
   const tipoProdutosNomeMap = useMemo(

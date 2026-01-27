@@ -63,12 +63,8 @@ function csvEscape(value: string): string {
 }
 
 export default function RelatorioAgrupadoClienteIsland() {
-  const [dataInicio, setDataInicio] = useState<string>(() => {
-    const hoje = new Date();
-    const inicio = addDays(hoje, -30);
-    return formatISO(inicio);
-  });
-  const [dataFim, setDataFim] = useState<string>(hojeISO());
+  const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaCliente, setBuscaCliente] = useState("");
 
@@ -174,6 +170,14 @@ export default function RelatorioAgrupadoClienteIsland() {
     }
 
     carregarUserCtx();
+  }, []);
+
+  useEffect(() => {
+    if (dataInicio || dataFim) return;
+    const hoje = new Date();
+    const inicio = addDays(hoje, -30);
+    setDataInicio(formatISO(inicio));
+    setDataFim(hojeISO());
   }, []);
 
   const linhasExibidas = linhas;
