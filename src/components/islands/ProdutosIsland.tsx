@@ -201,14 +201,32 @@ export default function ProdutosIsland() {
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [totalProdutosDb, setTotalProdutosDb] = useState(0);
 
-  async function carregarDados(todos = false) {
+  async function carregarDados(todos = false, pageOverride?: number) {
     const erros: string[] = [];
     const detalhesErro: string[] = [];
     setLoading(true);
     setErro(null);
 
     try {
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina - 1;
+
+      let produtosQuery = supabase
+        .from("produtos")
+        .select(
+          "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades",
+          { count: "exact" }
+        )
+        .order(todos ? "nome" : "created_at", { ascending: todos ? true : false });
+
+      if (!todos) {
+        produtosQuery = produtosQuery.range(inicio, fim);
+      }
+
       const [
         { data: paisData, error: paisErr },
         { data: subdivisaoData, error: subErr },
@@ -232,13 +250,7 @@ export default function ProdutosIsland() {
             }
             return res;
           }),
-        supabase
-          .from("produtos")
-          .select(
-            "id, nome, destino, cidade_id, tipo_produto, informacoes_importantes, atracao_principal, melhor_epoca, duracao_sugerida, nivel_preco, imagem_url, ativo, fornecedor_id, created_at, todas_as_cidades"
-          )
-          .order(todos ? "nome" : "created_at", { ascending: todos ? true : false })
-        .limit(todos ? undefined : 5),
+        produtosQuery,
         supabase
           .from("produtos")
           .select("destino, atracao_principal, melhor_epoca")
@@ -292,6 +304,11 @@ export default function ProdutosIsland() {
         const produtoData = (produtosResp.data || []) as Produto[];
         setProdutos(produtoData);
         setCarregouTodos(todos);
+        if (todos) {
+          setTotalProdutosDb(produtoData.length);
+        } else {
+          setTotalProdutosDb(produtosResp.count ?? produtoData.length);
+        }
 
         // Busca apenas as cidades referenciadas nos produtos (economiza e evita falhas maiores)
         const idsCidade = Array.from(new Set(produtoData.map((p) => p.cidade_id).filter(Boolean)));
@@ -385,8 +402,15 @@ export default function ProdutosIsland() {
   }
 
   useEffect(() => {
-    carregarDados(false);
-  }, []);
+    const buscaAtiva = busca.trim();
+    if (buscaAtiva) {
+      if (!carregouTodos) {
+        carregarDados(true);
+      }
+      return;
+    }
+    carregarDados(false, page);
+  }, [busca, page, pageSize]);
 
   useEffect(() => {
     let isMounted = true;
@@ -453,12 +477,8 @@ export default function ProdutosIsland() {
   }, [companyId]);
 
   useEffect(() => {
-    if (busca.trim() && !carregouTodos) {
-      carregarDados(true);
-    } else if (!busca.trim() && carregouTodos) {
-      carregarDados(false);
-    }
-  }, [busca, carregouTodos]);
+    setPage(1);
+  }, [busca]);
 
   const subdivisaoMap = useMemo(() => new Map(subdivisoes.map((s) => [s.id, s])), [subdivisoes]);
 
@@ -511,17 +531,15 @@ export default function ProdutosIsland() {
     );
   }, [busca, produtosEnriquecidos]);
 
-  const totalProdutos = produtosFiltrados.length;
+  const usaPaginacaoServidor = !busca.trim() && !carregouTodos;
+  const totalProdutos = usaPaginacaoServidor ? totalProdutosDb : produtosFiltrados.length;
   const totalPaginas = Math.max(1, Math.ceil(totalProdutos / Math.max(pageSize, 1)));
   const paginaAtual = Math.min(page, totalPaginas);
   const produtosExibidos = useMemo(() => {
+    if (usaPaginacaoServidor) return produtosEnriquecidos;
     const inicio = (paginaAtual - 1) * pageSize;
     return produtosFiltrados.slice(inicio, inicio + pageSize);
-  }, [produtosFiltrados, paginaAtual, pageSize]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [busca, carregouTodos]);
+  }, [usaPaginacaoServidor, produtosEnriquecidos, produtosFiltrados, paginaAtual, pageSize]);
 
   useEffect(() => {
     if (page > totalPaginas) {
@@ -852,7 +870,7 @@ export default function ProdutosIsland() {
 
       iniciarNovo();
       setMostrarFormulario(false);
-      await carregarDados(carregouTodos);
+      await carregarDados(carregouTodos, page);
     } catch (e: any) {
       console.error(e);
       const msg = e?.message || e?.error?.message || "";
@@ -877,7 +895,7 @@ export default function ProdutosIsland() {
       });
       if (result.error) throw result.error;
 
-      await carregarDados(carregouTodos);
+      await carregarDados(carregouTodos, page);
     } catch (e) {
       console.error(e);
       setErro("Nao foi possivel excluir o produto. Verifique vinculos com vendas/orcamentos.");
@@ -1286,7 +1304,7 @@ export default function ProdutosIsland() {
           )}
           {!carregouTodos && !erro && (
             <div className="card-base card-config mb-3">
-              Ultimos Produtos Cadastrados (5). Digite na busca para consultar todos.
+              Use a paginaÃ§Ã£o para navegar. Digite na busca para filtrar todos.
             </div>
           )}
 

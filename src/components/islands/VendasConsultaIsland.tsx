@@ -145,6 +145,8 @@ export default function VendasConsultaIsland() {
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [totalVendasDb, setTotalVendasDb] = useState(0);
+  const [carregouTodos, setCarregouTodos] = useState(false);
 
   // ================================
   // CONTEXTO DE USUÁRIO (papel/vendedorIds)
@@ -222,10 +224,17 @@ export default function VendasConsultaIsland() {
 
     try {
       setLoading(true);
+      const buscaAtiva = busca.trim();
+      const forcarCargaCompleta = Boolean(pendingOpenId);
+      const paginaAtual = Math.max(1, page);
+      const tamanhoPagina = Math.max(1, pageSize);
+      const inicio = (paginaAtual - 1) * tamanhoPagina;
+      const fim = inicio + tamanhoPagina - 1;
 
       let query = supabase
         .from("vendas")
-          .select(`
+        .select(
+          `
           id,
           vendedor_id,
           cliente_id,
@@ -238,15 +247,27 @@ export default function VendasConsultaIsland() {
             nome,
             cidade_id
           )
-        `)
+        `,
+          { count: "exact" }
+        )
         .order("data_lancamento", { ascending: false });
 
       if (userCtx.papel !== "ADMIN") {
         query = query.in("vendedor_id", userCtx.vendedorIds);
       }
 
-      const { data: vendasData, error } = await query;
+      if (!buscaAtiva && !forcarCargaCompleta) {
+        query = query.range(inicio, fim);
+        setCarregouTodos(false);
+      } else {
+        setCarregouTodos(true);
+      }
+
+      const { data: vendasData, error, count } = await query;
       if (error) throw error;
+      if (!buscaAtiva && !forcarCargaCompleta) {
+        setTotalVendasDb(count ?? (vendasData ? vendasData.length : 0));
+      }
 
       const cidadeIds = Array.from(
         new Set(
@@ -409,8 +430,15 @@ export default function VendasConsultaIsland() {
   }
 
   useEffect(() => {
-    if (!loadPerm && podeVer && userCtx) carregar();
-  }, [loadPerm, podeVer, userCtx]);
+    if (loadPerm || !podeVer || !userCtx) return;
+    if (busca.trim()) {
+      if (!carregouTodos) {
+        carregar();
+      }
+      return;
+    }
+    carregar();
+  }, [loadPerm, podeVer, userCtx, page, pageSize, busca]);
 
   useEffect(() => {
     setBuscaReciboComplementar("");
@@ -453,13 +481,15 @@ export default function VendasConsultaIsland() {
         normalizeText(v.id).includes(t)
     );
   }, [vendas, busca, recibos]);
-  const totalVendas = vendasFiltradas.length;
+  const usaPaginacaoServidor = !busca.trim() && !carregouTodos;
+  const totalVendas = usaPaginacaoServidor ? totalVendasDb : vendasFiltradas.length;
   const totalPaginas = Math.max(1, Math.ceil(totalVendas / Math.max(pageSize, 1)));
   const paginaAtual = Math.min(page, totalPaginas);
   const vendasExibidas = useMemo(() => {
+    if (usaPaginacaoServidor) return vendas;
     const inicio = (paginaAtual - 1) * pageSize;
     return vendasFiltradas.slice(inicio, inicio + pageSize);
-  }, [vendasFiltradas, paginaAtual, pageSize]);
+  }, [usaPaginacaoServidor, vendas, vendasFiltradas, paginaAtual, pageSize]);
 
   useEffect(() => {
     setPage(1);
