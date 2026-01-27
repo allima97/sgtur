@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissao } from "../../lib/usePermissao";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Usuario = {
   id: string;
@@ -51,6 +53,7 @@ export default function PermissoesAdminIsland() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState("");
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -192,7 +195,7 @@ export default function PermissoesAdminIsland() {
       setPermissoes(data || []);
     } catch (e) {
       console.error(e);
-      alert("Erro ao salvar permissão.");
+      showToast("Erro ao salvar permissão.", "error");
     }
   }
 
@@ -207,7 +210,9 @@ export default function PermissoesAdminIsland() {
       </div>
 
       {erro && (
-        <div className="card-base card-config mb-3">{erro}</div>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
+        </div>
       )}
 
       {loading && <div>Carregando...</div>}
@@ -357,6 +362,7 @@ export default function PermissoesAdminIsland() {
           </div>
         </div>
       </div>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

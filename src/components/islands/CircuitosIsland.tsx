@@ -7,6 +7,8 @@ import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Circuito = {
   id: string;
@@ -256,6 +258,7 @@ export default function CircuitosIsland() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [circuitoParaExcluir, setCircuitoParaExcluir] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const [cidadeBusca, setCidadeBusca] = useState("");
   const [cidadeContexto, setCidadeContexto] = useState<CidadeContexto | null>(null);
@@ -918,7 +921,7 @@ export default function CircuitosIsland() {
 
   async function excluir(circuitoId: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir circuitos.");
+      showToast("Somente administradores podem excluir circuitos.", "error");
       return;
     }
 
@@ -937,7 +940,7 @@ export default function CircuitosIsland() {
 
   function solicitarExclusao(circuitoId: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir circuitos.");
+      showToast("Somente administradores podem excluir circuitos.", "error");
       return;
     }
     setCircuitoParaExcluir(circuitoId);
@@ -1148,8 +1151,8 @@ export default function CircuitosIsland() {
       {!mostrarFormulario && (
         <>
           {erro && (
-            <div className="card-base card-config mb-3">
-              <strong>{erro}</strong>
+            <div className="mb-3">
+              <AlertMessage variant="error">{erro}</AlertMessage>
             </div>
           )}
           {sucesso && (
@@ -1818,7 +1821,9 @@ export default function CircuitosIsland() {
         onCancel={() => setCircuitoParaExcluir(null)}
         onConfirm={confirmarExclusaoCircuito}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+
 

@@ -1,4 +1,4 @@
-ï»¿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { useCrudResource } from "../../lib/useCrudResource";
@@ -6,6 +6,7 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Fornecedor = {
   id: string;
@@ -41,7 +42,7 @@ const LOCALIZACAO_OPCOES = [
 ];
 
 const TIPO_FATURAMENTO_OPCOES = [
-  { value: "pre_pago", label: "PrÃ©-Pago" },
+  { value: "pre_pago", label: "Pré-Pago" },
   { value: "semanal", label: "Semanal" },
   { value: "quinzenal", label: "Quinzenal" },
   { value: "mensal", label: "Mensal" },
@@ -133,6 +134,7 @@ export default function FornecedoresIsland() {
   const [mostrarSugestoesCidade, setMostrarSugestoesCidade] = useState(false);
   const [buscandoCidade, setBuscandoCidade] = useState(false);
   const [erroCidadeBusca, setErroCidadeBusca] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
     let isMounted = true;
@@ -189,10 +191,10 @@ export default function FornecedoresIsland() {
     if (!form.estado.trim()) return "Informe o estado.";
     if (!form.telefone.trim()) return "Informe o telefone.";
     if (!form.whatsapp.trim()) return "Informe o WhatsApp.";
-    if (!form.telefone_emergencia.trim()) return "Informe o telefone de emergÃªncia.";
-    if (!form.responsavel.trim()) return "Informe o responsÃ¡vel.";
+    if (!form.telefone_emergencia.trim()) return "Informe o telefone de emergência.";
+    if (!form.responsavel.trim()) return "Informe o responsável.";
     if (!form.tipo_faturamento) return "Escolha o tipo de faturamento.";
-    if (!form.principais_servicos.trim()) return "Descreva os principais serviÃ§os.";
+    if (!form.principais_servicos.trim()) return "Descreva os principais serviços.";
     if (form.localizacao === "brasil" && !form.cnpj.trim()) return "Informe o CNPJ.";
     if (form.localizacao === "brasil" && !form.cep.trim()) return "Informe o CEP.";
     return null;
@@ -367,11 +369,11 @@ export default function FornecedoresIsland() {
 
   async function salvarFornecedor() {
     if (!companyId) {
-      setFormError("NÃ£o foi possÃ­vel determinar sua empresa.");
+      setFormError("Não foi possível determinar sua empresa.");
       return;
     }
     if (!podeSalvar) {
-      setFormError("Sua permissÃ£o nÃ£o permite salvar fornecedores.");
+      setFormError("Sua permissão não permite salvar fornecedores.");
       return;
     }
     const erroValidacao = validarFormulario();
@@ -410,7 +412,7 @@ export default function FornecedoresIsland() {
 
   async function excluirFornecedor(fornecedor: Fornecedor) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir fornecedores.");
+      showToast("Somente administradores podem excluir fornecedores.", "error");
       return;
     }
 
@@ -424,7 +426,7 @@ export default function FornecedoresIsland() {
       if (countError) throw countError;
 
       if ((count ?? 0) > 0) {
-        setErro("NÃ£o Ã© possÃ­vel excluir fornecedor com produtos vinculados.");
+        setErro("Não é possível excluir fornecedor com produtos vinculados.");
         return;
       }
 
@@ -442,7 +444,7 @@ export default function FornecedoresIsland() {
 
   function solicitarExclusao(fornecedor: Fornecedor) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir fornecedores.");
+      showToast("Somente administradores podem excluir fornecedores.", "error");
       return;
     }
     setFornecedorParaExcluir(fornecedor);
@@ -459,7 +461,7 @@ export default function FornecedoresIsland() {
   }
 
   if (!podeVer) {
-    return <div>VocÃª nÃ£o possui acesso ao mÃ³dulo de Cadastros.</div>;
+    return <div>Você não possui acesso ao módulo de Cadastros.</div>;
   }
 
   return (
@@ -505,7 +507,7 @@ export default function FornecedoresIsland() {
           </div>
           <div className="form-row">
             <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">LocalizaÃ§Ã£o</label>
+              <label className="form-label">Localização</label>
               <div style={{ display: "flex", gap: 12 }}>
                 {LOCALIZACAO_OPCOES.map((opcao) => (
                   <label key={opcao.value} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -532,7 +534,7 @@ export default function FornecedoresIsland() {
               value={form.nome_completo}
               onChange={(e) => setForm((prev) => ({ ...prev, nome_completo: e.target.value }))}
               disabled={!podeSalvar}
-              placeholder="RazÃ£o social" />
+              placeholder="Razão social" />
           </div>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Nome fantasia</label>
@@ -637,7 +639,7 @@ export default function FornecedoresIsland() {
               value={form.estado}
               readOnly
               disabled
-              placeholder="UF / regiÃ£o" />
+              placeholder="UF / região" />
           </div>
         </div>
 
@@ -671,7 +673,7 @@ export default function FornecedoresIsland() {
 
         <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Telefone emergÃªncia</label>
+            <label className="form-label">Telefone emergência</label>
             <input
               className="form-input"
               value={form.telefone_emergencia}
@@ -688,7 +690,7 @@ export default function FornecedoresIsland() {
 
         <div className="form-row mobile-stack" style={{ gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">ResponsÃ¡vel</label>
+            <label className="form-label">Responsável</label>
             <input
               className="form-input"
               value={form.responsavel}
@@ -717,13 +719,13 @@ export default function FornecedoresIsland() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Principais serviÃ§os</label>
+          <label className="form-label">Principais serviços</label>
           <textarea
             className="form-textarea"
             value={form.principais_servicos}
             onChange={(e) => setForm((prev) => ({ ...prev, principais_servicos: e.target.value }))}
             disabled={!podeSalvar}
-            placeholder="Descreva BR/EX serviÃ§os oferecidos"
+            placeholder="Descreva BR/EX serviços oferecidos"
             rows={3}
           />
         </div>
@@ -735,7 +737,7 @@ export default function FornecedoresIsland() {
               onClick={salvarFornecedor}
               disabled={salvando || !podeSalvar}
             >
-              {salvando ? "Salvando..." : editandoId ? "Salvar alteraÃ§Ãµes" : "Salvar fornecedor"}
+              {salvando ? "Salvando..." : editandoId ? "Salvar alterações" : "Salvar fornecedor"}
             </button>
             <button
               type="button"
@@ -766,9 +768,9 @@ export default function FornecedoresIsland() {
                   <th>Faturamento</th>
                   <th>Telefone</th>
                   <th>WhatsApp</th>
-                  <th>Telefone emergÃªncia</th>
-                  <th>ServiÃ§os</th>
-                  <th className="th-actions" style={{ textAlign: "center" }}>AÃ§Ãµes</th>
+                  <th>Telefone emergência</th>
+                  <th>Serviços</th>
+                  <th className="th-actions" style={{ textAlign: "center" }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -790,7 +792,7 @@ export default function FornecedoresIsland() {
                     </td>
                     <td data-label="Local">
                       {formatLocalizacao(fornecedor.localizacao)}
-                      {fornecedor.cidade ? ` â€¢ ${fornecedor.cidade}` : ""}
+                      {fornecedor.cidade ? ` • ${fornecedor.cidade}` : ""}
                       {fornecedor.estado ? `/${fornecedor.estado}` : ""}
                     </td>
                     <td data-label="Faturamento">
@@ -798,22 +800,22 @@ export default function FornecedoresIsland() {
                     </td>
                     <td data-label="Telefone">{fornecedor.telefone || "-"}</td>
                     <td data-label="WhatsApp">{fornecedor.whatsapp || "-"}</td>
-                    <td data-label="Telefone emergÃªncia">{fornecedor.telefone_emergencia || "-"}</td>
-                    <td data-label="ServiÃ§os" style={{ maxWidth: 240, whiteSpace: "normal" }}>
+                    <td data-label="Telefone emergência">{fornecedor.telefone_emergencia || "-"}</td>
+                    <td data-label="Serviços" style={{ maxWidth: 240, whiteSpace: "normal" }}>
                       {fornecedor.principais_servicos
                         ? fornecedor.principais_servicos.length > 80
                           ? `${fornecedor.principais_servicos.slice(0, 80)}...`
                           : fornecedor.principais_servicos
                         : "-"}
                     </td>
-                    <td className="th-actions" data-label="AÃ§Ãµes">
+                    <td className="th-actions" data-label="Ações">
                       <TableActions
                         showEdit={podeSalvar}
                         onEdit={() => iniciarEdicaoFornecedor(fornecedor)}
                         showDelete={podeExcluir}
                         onDelete={() => solicitarExclusao(fornecedor)}
                         deleteDisabled={excluindoId === fornecedor.id}
-                        deleteIcon={excluindoId === fornecedor.id ? "..." : "ðŸ—‘ï¸"}
+                        deleteIcon={excluindoId === fornecedor.id ? "..." : "???"}
                       />
                     </td>
                   </tr>
@@ -833,7 +835,9 @@ export default function FornecedoresIsland() {
         onCancel={() => setFornecedorParaExcluir(null)}
         onConfirm={confirmarExclusaoFornecedor}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+
 

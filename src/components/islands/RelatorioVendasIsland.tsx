@@ -10,6 +10,8 @@ import {
   RegraProduto,
   calcularPctPorRegra,
 } from "../../lib/comissaoUtils";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Cliente = {
   id: string;
@@ -273,6 +275,7 @@ export default function RelatorioVendasIsland() {
   const [, setCommissionLoading] = useState(false);
   const [, setCommissionErro] = useState<string | null>(null);
   const metaProdEnabled = import.meta.env.PUBLIC_META_PRODUTO_ENABLED !== "false";
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
     if (exportTipo === "excel" && !exportFlags.excel) {
@@ -1077,7 +1080,7 @@ export default function RelatorioVendasIsland() {
 
   function exportarCSV() {
     if (recibosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -1131,11 +1134,11 @@ export default function RelatorioVendasIsland() {
 
   function exportarExcel() {
     if (!exportFlags.excel) {
-      alert("Exportação Excel desabilitada nos parâmetros.");
+      showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
     if (recibosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -1161,11 +1164,11 @@ export default function RelatorioVendasIsland() {
 
   function exportarPDF() {
     if (!exportFlags.pdf) {
-      alert("Exportação PDF desabilitada nos parâmetros.");
+      showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
     if (recibosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -1919,8 +1922,8 @@ export default function RelatorioVendasIsland() {
       )}
 
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -2035,6 +2038,8 @@ export default function RelatorioVendasIsland() {
           </tfoot>
         </table>
       </div>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

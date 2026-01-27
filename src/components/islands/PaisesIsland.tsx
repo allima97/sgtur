@@ -9,6 +9,8 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import SearchInput from "../ui/SearchInput";
 import EmptyState from "../ui/EmptyState";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Pais = {
   id: string;
@@ -59,6 +61,7 @@ export default function PaisesIsland() {
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [paisParaExcluir, setPaisParaExcluir] = useState<Pais | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   async function carregarPaises(todos = false) {
     const result = await load({
@@ -160,7 +163,7 @@ export default function PaisesIsland() {
 
   async function excluir(id: string) {
     if (!podeExcluir) {
-      window.alert("Somente administradores podem excluir pa??ses.");
+      showToast("Somente administradores podem excluir países.", "error");
       return;
     }
 
@@ -178,7 +181,7 @@ export default function PaisesIsland() {
 
   function solicitarExclusao(pais: Pais) {
     if (!podeExcluir) {
-      window.alert("Somente administradores podem excluir países.");
+      showToast("Somente administradores podem excluir países.", "error");
       return;
     }
     setPaisParaExcluir(pais);
@@ -303,8 +306,8 @@ export default function PaisesIsland() {
       )}
 
       {!mostrarFormulario && erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -384,6 +387,8 @@ export default function PaisesIsland() {
         onCancel={() => setPaisParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

@@ -4,6 +4,8 @@ import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { normalizeText } from "../../lib/normalizeText";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Cliente = {
   id: string;
@@ -101,6 +103,7 @@ export default function RelatorioAgrupadoClienteIsland() {
   });
   const [showExport, setShowExport] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
   const [ordemDesc, setOrdemDesc] = useState<boolean>(true);
@@ -388,7 +391,7 @@ export default function RelatorioAgrupadoClienteIsland() {
 
   function exportarCSV() {
     if (linhasFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -426,11 +429,11 @@ export default function RelatorioAgrupadoClienteIsland() {
 
   function exportarExcel() {
     if (!exportFlags.excel) {
-      alert("Exportação Excel desabilitada nos parâmetros.");
+      showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
     if (linhasFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -452,11 +455,11 @@ export default function RelatorioAgrupadoClienteIsland() {
 
   function exportarPDF() {
     if (!exportFlags.pdf) {
-      alert("Exportação PDF desabilitada nos parâmetros.");
+      showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
     if (linhasFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -719,8 +722,8 @@ export default function RelatorioAgrupadoClienteIsland() {
       )}
 
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -798,6 +801,8 @@ export default function RelatorioAgrupadoClienteIsland() {
           </tbody>
         </table>
       </div>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

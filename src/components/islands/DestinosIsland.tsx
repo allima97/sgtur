@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
@@ -7,6 +7,8 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Pais = {
   id: string;
@@ -125,6 +127,7 @@ export default function DestinosIsland() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [destinoParaExcluir, setDestinoParaExcluir] = useState<Destino | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const loading =
     loadingPaises || loadingSubdivisoes || loadingCidades || loadingDestinos;
@@ -290,7 +293,7 @@ export default function DestinosIsland() {
 
   async function excluir(id: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir destinos.");
+      showToast("Somente administradores podem excluir destinos.", "error");
       return;
     }
 
@@ -308,7 +311,7 @@ export default function DestinosIsland() {
 
   function solicitarExclusao(destino: Destino) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir destinos.");
+      showToast("Somente administradores podem excluir destinos.", "error");
       return;
     }
     setDestinoParaExcluir(destino);
@@ -516,8 +519,8 @@ export default function DestinosIsland() {
       </div>
 
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -564,7 +567,7 @@ export default function DestinosIsland() {
                           key: "edit",
                           label: "Editar",
                           onClick: () => iniciarEdicao(d),
-                          icon: "✏️",
+                          icon: "??",
                         },
                       ]
                     : []),
@@ -574,7 +577,7 @@ export default function DestinosIsland() {
                           key: "delete",
                           label: "Excluir",
                           onClick: () => solicitarExclusao(d),
-                          icon: excluindoId === d.id ? "..." : "🗑️",
+                          icon: excluindoId === d.id ? "..." : "???",
                           variant: "danger" as const,
                           disabled: excluindoId === d.id,
                         },
@@ -597,6 +600,8 @@ export default function DestinosIsland() {
         onCancel={() => setDestinoParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type BillingRow = {
   id: string;
@@ -34,6 +36,7 @@ const FinanceiroAdminIsland: React.FC = () => {
   const [registros, setRegistros] = useState<BillingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
     carregarFinanceiro();
@@ -77,7 +80,7 @@ const FinanceiroAdminIsland: React.FC = () => {
       if (error) throw error;
       await carregarFinanceiro();
     } catch {
-      alert("Erro ao atualizar status financeiro.");
+      showToast("Erro ao atualizar status financeiro.", "error");
     }
   }
 
@@ -96,8 +99,8 @@ const FinanceiroAdminIsland: React.FC = () => {
       <h3 className="text-xl font-semibold mb-4">💳 Controle Financeiro (Billing)</h3>
 
       {erro && (
-        <div className="bg-red-900 text-red-100 p-3 rounded mb-3">
-          {erro}
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -169,6 +172,7 @@ const FinanceiroAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

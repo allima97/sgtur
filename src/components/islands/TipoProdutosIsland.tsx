@@ -8,6 +8,8 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type TipoProduto = {
   id: string;
@@ -88,6 +90,7 @@ export default function TipoProdutosIsland() {
     ativo: true,
   });
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   function handleChange(campo: string, valor: any) {
     setForm((prev) => {
@@ -380,7 +383,7 @@ export default function TipoProdutosIsland() {
 
   async function excluir(id: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir tipos de produto.");
+      showToast("Somente administradores podem excluir tipos de produto.", "error");
       return;
     }
 
@@ -399,7 +402,7 @@ export default function TipoProdutosIsland() {
 
   function solicitarExclusao(tipoProduto: TipoProduto) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir tipos de produto.");
+      showToast("Somente administradores podem excluir tipos de produto.", "error");
       return;
     }
     setTipoParaExcluir(tipoProduto);
@@ -599,7 +602,11 @@ export default function TipoProdutosIsland() {
             </div>
           </div>
 
-          {erro && <div className="card-base card-config mb-3">{erro}</div>}
+          {erro && (
+            <div className="mb-3">
+              <AlertMessage variant="error">{erro}</AlertMessage>
+            </div>
+          )}
 
           {/* TABELA */}
           <DataTable
@@ -686,7 +693,9 @@ export default function TipoProdutosIsland() {
         onCancel={() => setTipoParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+
 

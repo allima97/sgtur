@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type EmpresaRow = {
   id: string;
@@ -29,6 +31,7 @@ const EmpresasAdminIsland: React.FC = () => {
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
     carregarEmpresas();
@@ -80,7 +83,7 @@ const EmpresasAdminIsland: React.FC = () => {
 
       await carregarEmpresas();
     } catch (e: any) {
-      alert("Erro ao atualizar status.");
+      showToast("Erro ao atualizar status.", "error");
     }
   }
 
@@ -89,8 +92,8 @@ const EmpresasAdminIsland: React.FC = () => {
       <h3 className="text-xl font-semibold mb-4">🏢 Empresas Cadastradas</h3>
 
       {erro && (
-        <div className="bg-red-900 text-red-100 p-3 rounded mb-3">
-          {erro}
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -173,6 +176,7 @@ const EmpresasAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

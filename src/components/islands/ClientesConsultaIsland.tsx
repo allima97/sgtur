@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Cliente = {
   id: string;
@@ -28,6 +30,7 @@ export default function ClientesConsultaIsland() {
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [historicoVendas, setHistoricoVendas] = useState<
     {
@@ -127,7 +130,7 @@ export default function ClientesConsultaIsland() {
 
   async function excluirCliente(id: string) {
     if (!podeExcluir) {
-      window.alert("Você não tem permissão para excluir clientes.");
+      showToast("Você não tem permissão para excluir clientes.", "error");
       return;
     }
     try {
@@ -136,13 +139,13 @@ export default function ClientesConsultaIsland() {
       setClientes((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       console.error(e);
-      window.alert("Erro ao excluir cliente.");
+      showToast("Erro ao excluir cliente.", "error");
     }
   }
 
   function solicitarExclusao(cliente: Cliente) {
     if (!podeExcluir) {
-      window.alert("Você não tem permissão para excluir clientes.");
+      showToast("Você não tem permissão para excluir clientes.", "error");
       return;
     }
     setClienteParaExcluir(cliente);
@@ -156,7 +159,7 @@ export default function ClientesConsultaIsland() {
 
   function editarCliente(id: string) {
     if (!podeEditar) {
-      window.alert("Você não tem permissão para editar clientes.");
+      showToast("Você não tem permissão para editar clientes.", "error");
       return;
     }
     window.location.href = `/clientes/cadastro?id=${id}`;
@@ -281,7 +284,11 @@ export default function ClientesConsultaIsland() {
         </div>
       </div>
 
-      {erro && (<div className="card-base card-config mb-3"><strong>{erro}</strong></div>)}
+      {erro && (
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
+        </div>
+      )}
 
       <div className="table-container overflow-x-auto" style={{ maxHeight: "65vh", overflowY: "auto" }}>
         <table className="table-default table-header-blue clientes-table table-mobile-cards">
@@ -484,6 +491,8 @@ export default function ClientesConsultaIsland() {
       onCancel={() => setClienteParaExcluir(null)}
       onConfirm={confirmarExclusaoCliente}
     />
+    <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }
+

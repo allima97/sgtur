@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type UserRow = {
   id: string;
@@ -24,6 +26,7 @@ const UsuariosAdminIsland: React.FC = () => {
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
     carregarUsuarios();
@@ -75,7 +78,7 @@ const UsuariosAdminIsland: React.FC = () => {
       if (error) throw error;
       await carregarUsuarios();
     } catch (e) {
-      alert("Erro ao mudar tipo do usuário.");
+      showToast("Erro ao mudar tipo do usuário.", "error");
     }
   }
 
@@ -89,7 +92,7 @@ const UsuariosAdminIsland: React.FC = () => {
       if (error) throw error;
       await carregarUsuarios();
     } catch (e) {
-      alert("Erro ao atualizar status.");
+      showToast("Erro ao atualizar status.", "error");
     }
   }
 
@@ -98,8 +101,8 @@ const UsuariosAdminIsland: React.FC = () => {
       <h3 className="text-xl font-semibold mb-4">👥 Usuários do Sistema</h3>
 
       {erro && (
-        <div className="bg-red-900 text-red-100 p-3 rounded mb-3">
-          {erro}
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -164,6 +167,7 @@ const UsuariosAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

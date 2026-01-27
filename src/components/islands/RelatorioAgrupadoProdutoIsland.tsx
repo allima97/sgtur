@@ -4,6 +4,8 @@ import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { normalizeText } from "../../lib/normalizeText";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Produto = {
   id: string;
@@ -136,6 +138,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showExport, setShowExport] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("total");
   const [ordemDesc, setOrdemDesc] = useState<boolean>(true);
@@ -665,7 +668,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
     if (activeTab === "agrupado") {
       if (linhasFiltradas.length === 0) {
-        alert("Não há dados para exportar.");
+        showToast("Não há dados para exportar.", "warning");
         return;
       }
 
@@ -678,7 +681,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
       ]);
     } else {
       if (recibosFiltrados.length === 0) {
-        alert("Não há dados para exportar.");
+        showToast("Não há dados para exportar.", "warning");
         return;
       }
 
@@ -719,13 +722,13 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
   function exportarExcel() {
     if (!exportFlags.excel) {
-      alert("Exportação Excel desabilitada nos parâmetros.");
+      showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
 
     if (activeTab === "agrupado") {
       if (linhasFiltradas.length === 0) {
-        alert("Não há dados para exportar.");
+        showToast("Não há dados para exportar.", "warning");
         return;
       }
 
@@ -746,7 +749,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
 
     if (recibosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -770,7 +773,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
   function exportarPDF() {
     if (!exportFlags.pdf) {
-      alert("Exportação PDF desabilitada nos parâmetros.");
+      showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
 
@@ -787,7 +790,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
 
     if (activeTab === "agrupado") {
       if (linhasFiltradas.length === 0) {
-        alert("Não há dados para exportar.");
+        showToast("Não há dados para exportar.", "warning");
         return;
       }
 
@@ -811,7 +814,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
 
     if (recibosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast("Não há dados para exportar.", "warning");
       return;
     }
 
@@ -1181,8 +1184,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
       )}
 
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -1333,7 +1336,8 @@ export default function RelatorioAgrupadoProdutoIsland() {
           </div>
         </>
       )}
-
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

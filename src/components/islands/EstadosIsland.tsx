@@ -1,4 +1,4 @@
-Ôªøimport React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
@@ -9,6 +9,8 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import SearchInput from "../ui/SearchInput";
 import EmptyState from "../ui/EmptyState";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 type Pais = {
   id: string;
@@ -78,6 +80,7 @@ export default function SubdivisoesIsland() {
   const [carregouTodos, setCarregouTodos] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [subdivisaoParaExcluir, setSubdivisaoParaExcluir] = useState<Subdivisao | null>(null);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   const loading = loadingSubdivisoes || loadingPaises;
 
@@ -203,7 +206,7 @@ export default function SubdivisoesIsland() {
 
   async function excluir(id: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir subdivisoes.");
+      showToast("Somente administradores podem excluir subdivisoes.", "error");
       return;
     }
 
@@ -220,7 +223,7 @@ export default function SubdivisoesIsland() {
 
   function solicitarExclusao(subdivisao: Subdivisao) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir subdivisoes.");
+      showToast("Somente administradores podem excluir subdivisoes.", "error");
       return;
     }
     setSubdivisaoParaExcluir(subdivisao);
@@ -254,10 +257,10 @@ export default function SubdivisoesIsland() {
           >
             <div style={{ flex: "1 1 320px" }}>
               <SearchInput
-                label="Buscar subdivis√£o"
+                label="Buscar subdivis„o"
                 value={busca}
                 onChange={setBusca}
-                placeholder="Nome, pa√≠s ou c√≥digo..."
+                placeholder="Nome, paÌs ou cÛdigo..."
               />
             </div>
             {!modoSomenteLeitura && (
@@ -268,7 +271,7 @@ export default function SubdivisoesIsland() {
                   onClick={abrirFormulario}
                   disabled={mostrarFormulario}
                 >
-                  Adicionar Estado/Prov√≠ncia
+                  Adicionar Estado/ProvÌncia
                 </button>
               </div>
             )}
@@ -281,7 +284,7 @@ export default function SubdivisoesIsland() {
           <form onSubmit={salvar}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Nome da subdivis√£o *</label>
+                <label className="form-label">Nome da subdivis„o *</label>
                 <input
                   className="form-input"
                   value={form.nome}
@@ -292,7 +295,7 @@ export default function SubdivisoesIsland() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">C√≥digo admin1 *</label>
+                <label className="form-label">CÛdigo admin1 *</label>
                 <input
                   className="form-input"
                   value={form.codigo_admin1}
@@ -332,7 +335,7 @@ export default function SubdivisoesIsland() {
 
             <div className="mobile-stack-buttons" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
               <button type="submit" className="btn btn-primary" disabled={salvando || modoSomenteLeitura}>
-                {salvando ? "Salvando..." : "Salvar estado/prov√≠ncia"}
+                {salvando ? "Salvando..." : "Salvar estado/provÌncia"}
               </button>
               <button type="button" className="btn btn-light" onClick={fecharFormulario} disabled={salvando}>
                 Cancelar
@@ -349,8 +352,8 @@ export default function SubdivisoesIsland() {
       )}
 
       {!mostrarFormulario && erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
 
@@ -373,11 +376,11 @@ export default function SubdivisoesIsland() {
           empty={!loading && filtrados.length === 0}
           emptyMessage={
             <EmptyState
-              title="Nenhuma subdivis√£o encontrada"
+              title="Nenhuma subdivis„o encontrada"
               description={
                 busca.trim()
-                  ? "Tente ajustar a busca ou cadastre uma subdivis√£o."
-                  : "Cadastre uma subdivis√£o para come√ßar."
+                  ? "Tente ajustar a busca ou cadastre uma subdivis„o."
+                  : "Cadastre uma subdivis„o para comeÁar."
               }
             />
           }
@@ -400,7 +403,7 @@ export default function SubdivisoesIsland() {
                       key: "edit",
                       label: "Editar",
                       onClick: () => iniciarEdicao(s),
-                      icon: "‚úèÔ∏è",
+                      icon: "??",
                     },
                     ...(podeExcluir
                       ? [
@@ -408,7 +411,7 @@ export default function SubdivisoesIsland() {
                             key: "delete",
                             label: "Excluir",
                             onClick: () => solicitarExclusao(s),
-                            icon: excluindoId === s.id ? "..." : "üóëÔ∏è",
+                            icon: excluindoId === s.id ? "..." : "???",
                             variant: "danger" as const,
                             disabled: excluindoId === s.id,
                           },
@@ -424,14 +427,16 @@ export default function SubdivisoesIsland() {
 
       <ConfirmDialog
         open={Boolean(subdivisaoParaExcluir)}
-        title="Excluir subdivis√£o"
-        message={`Excluir ${subdivisaoParaExcluir?.nome || "esta subdivis√£o"}?`}
+        title="Excluir subdivis„o"
+        message={`Excluir ${subdivisaoParaExcluir?.nome || "esta subdivis„o"}?`}
         confirmLabel={excluindoId ? "Excluindo..." : "Excluir"}
         confirmVariant="danger"
         confirmDisabled={Boolean(excluindoId)}
         onCancel={() => setSubdivisaoParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+

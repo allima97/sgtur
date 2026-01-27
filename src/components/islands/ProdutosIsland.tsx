@@ -7,6 +7,8 @@ import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
+import AlertMessage from "../ui/AlertMessage";
+import { ToastStack, useToastQueue } from "../ui/Toast";
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();
@@ -190,6 +192,7 @@ export default function ProdutosIsland() {
   const [modoGlobal, setModoGlobal] = useState<boolean | null>(null);
   const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
   const [mostrarInfo, setMostrarInfo] = useState(false);
+  const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -836,7 +839,7 @@ export default function ProdutosIsland() {
 
   async function excluir(id: string) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir produtos.");
+      showToast("Somente administradores podem excluir produtos.", "error");
       return;
     }
 
@@ -858,7 +861,7 @@ export default function ProdutosIsland() {
 
   function solicitarExclusao(produto: Produto) {
     if (!podeExcluir) {
-      alert("Somente administradores podem excluir produtos.");
+      showToast("Somente administradores podem excluir produtos.", "error");
       return;
     }
     setProdutoParaExcluir(produto);
@@ -1250,8 +1253,8 @@ export default function ProdutosIsland() {
       {!mostrarFormulario && (
         <>
           {erro && (
-            <div className="card-base card-config mb-3">
-              <strong>{erro}</strong>
+            <div className="mb-3">
+              <AlertMessage variant="error">{erro}</AlertMessage>
             </div>
           )}
           {!carregouTodos && !erro && (
@@ -1338,7 +1341,9 @@ export default function ProdutosIsland() {
         onCancel={() => setProdutoParaExcluir(null)}
         onConfirm={confirmarExclusao}
       />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
+
 
