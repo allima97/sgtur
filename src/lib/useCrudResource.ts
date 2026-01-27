@@ -19,6 +19,7 @@ type MutationOptions = {
   idColumn?: string;
   errorMessage?: string;
   select?: string;
+  onConflict?: string;
 };
 
 type UseCrudResourceConfig<T> = {
@@ -178,6 +179,38 @@ export function useCrudResource<T>({ table, select, mapData }: UseCrudResourceCo
     [table]
   );
 
+  const upsert = useCallback(
+    async (payload: Record<string, any>, options: MutationOptions = {}): Promise<MutationResult> => {
+      setSaving(true);
+      setError(null);
+      try {
+        let query = supabase
+          .from(table)
+          .upsert(payload, options.onConflict ? { onConflict: options.onConflict } : undefined);
+        if (options.select) {
+          const { data, error: queryError } = await query.select(options.select).single();
+          if (queryError) {
+            setError(options.errorMessage || "Erro ao salvar registro.");
+            return { error: queryError };
+          }
+          return { error: null, data };
+        }
+        const { error: queryError } = await query;
+        if (queryError) {
+          setError(options.errorMessage || "Erro ao salvar registro.");
+          return { error: queryError };
+        }
+        return { error: null };
+      } catch (err) {
+        setError(options.errorMessage || "Erro ao salvar registro.");
+        return { error: err };
+      } finally {
+        setSaving(false);
+      }
+    },
+    [table]
+  );
+
   return {
     items,
     setItems,
@@ -189,6 +222,7 @@ export function useCrudResource<T>({ table, select, mapData }: UseCrudResourceCo
     load,
     create,
     update,
+    upsert,
     remove,
   };
 }

@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
 import { titleCaseWithExceptions } from "../../lib/titleCase";
 import { normalizeText } from "../../lib/normalizeText";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
@@ -163,6 +164,10 @@ export default function ProdutosIsland() {
   const podeEditar = can("Cadastros", "edit");
   const podeExcluir = can("Cadastros", "delete");
   const modoSomenteLeitura = !podeCriar && !podeEditar;
+  const { create: criarProduto, update: atualizarProduto, remove: removerProduto } =
+    useCrudResource<Produto>({
+      table: "produtos",
+    });
 
   const [paises, setPaises] = useState<Pais[]>([]);
   const [subdivisoes, setSubdivisoes] = useState<Subdivisao[]>([]);
@@ -802,23 +807,22 @@ export default function ProdutosIsland() {
       };
 
       let produtoId = editandoId;
-      if (produtoId) {
-        const { error } = await supabase.from("produtos").update(payload).eq("id", produtoId);
-        if (error) {
-          const msg = erroSupabaseMsg(error);
-          throw new Error(msg || error.message);
-        }
-      } else {
-        const { data, error } = await supabase
-          .from("produtos")
-          .insert(payload)
-          .select("id")
-          .maybeSingle();
-        if (error) {
-          const msg = erroSupabaseMsg(error);
-          throw new Error(msg || error.message);
-        }
-        produtoId = data?.id || null;
+      const result = produtoId
+        ? await atualizarProduto(produtoId, payload, {
+            errorMessage: "Erro ao salvar produto.",
+          })
+        : await criarProduto(payload, {
+            select: "id",
+            errorMessage: "Erro ao salvar produto.",
+          });
+
+      if (result.error) {
+        const msg = erroSupabaseMsg(result.error);
+        throw new Error(msg || "Erro ao salvar produto.");
+      }
+
+      if (!produtoId) {
+        produtoId = (result.data as { id?: string } | null)?.id || null;
         if (!produtoId) {
           throw new Error("Não foi possível identificar o produto salvo.");
         }
@@ -847,8 +851,10 @@ export default function ProdutosIsland() {
       setExcluindoId(id);
       setErro(null);
 
-      const { error } = await supabase.from("produtos").delete().eq("id", id);
-      if (error) throw error;
+      const result = await removerProduto(id, {
+        errorMessage: "Nao foi possivel excluir o produto.",
+      });
+      if (result.error) throw result.error;
 
       await carregarDados(carregouTodos);
     } catch (e) {
@@ -1345,5 +1351,6 @@ export default function ProdutosIsland() {
     </div>
   );
 }
+
 
 

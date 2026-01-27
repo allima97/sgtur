@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { usePermissoesStore } from "../../lib/permissoesStore";
+import { useCrudResource } from "../../lib/useCrudResource";
 import LoadingUsuarioContext from "../ui/LoadingUsuarioContext";
 import { registrarLog } from "../../lib/logs";
 
@@ -16,6 +17,22 @@ type ParametrosSistema = {
   foco_faturamento: "bruto" | "liquido";
   exportacao_pdf: boolean;
   exportacao_excel: boolean;
+};
+
+type ParametrosSistemaRow = {
+  id: string;
+  company_id: string | null;
+  owner_user_id?: string | null;
+  owner_user?: { nome_completo: string | null } | null;
+  usar_taxas_na_meta?: boolean | null;
+  foco_valor?: string | null;
+  modo_corporativo?: boolean | null;
+  politica_cancelamento?: string | null;
+  foco_faturamento?: string | null;
+  exportacao_pdf?: boolean | null;
+  exportacao_excel?: boolean | null;
+  updated_at?: string | null;
+  created_at?: string | null;
 };
 
 const DEFAULT_PARAMS: ParametrosSistema = {
@@ -44,6 +61,11 @@ export default function ParametrosSistemaIsland() {
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [origemDados, setOrigemDados] = useState<"default" | "banco">("default");
   const [ownerNome, setOwnerNome] = useState<string | null>(null);
+  const { upsert } = useCrudResource<ParametrosSistemaRow>({
+    table: "parametros_comissao",
+    select:
+      "id, company_id, owner_user_id, usar_taxas_na_meta, foco_valor, modo_corporativo, politica_cancelamento, foco_faturamento, exportacao_pdf, exportacao_excel, updated_at, created_at, owner_user:owner_user_id (nome_completo)",
+  });
 
   const bloqueado = !podeVer || !podeAdministrar;
 
@@ -147,11 +169,17 @@ export default function ParametrosSistemaIsland() {
         exportacao_excel: params.exportacao_excel,
       };
 
-      const { error } = await supabase
-        .from("parametros_comissao")
-        .upsert(payload, { onConflict: "company_id" });
+      const result = await upsert(payload, {
+        select: "id",
+        onConflict: "company_id",
+        errorMessage: "Erro ao salvar parâmetros.",
+      });
 
-      if (error) throw error;
+      const novoId = (result.data as { id?: string } | null)?.id;
+      if (novoId) {
+        setParams((prev) => ({ ...prev, id: novoId }));
+      }
+      if (result?.error) throw result.error;
 
       await registrarLog({
         user_id: (await supabase.auth.getUser()).data.user?.id || null,
