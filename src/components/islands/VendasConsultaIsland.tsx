@@ -905,8 +905,11 @@ export default function VendasConsultaIsland() {
         className="card-base mb-3 list-toolbar-sticky"
         style={{ background: "#ecfdf3", borderColor: "#bbf7d0" }}
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="form-group flex-1 min-w-0">
+        <div
+          className="form-row mobile-stack"
+          style={{ gap: 12, gridTemplateColumns: "minmax(240px, 1fr) auto", alignItems: "flex-end" }}
+        >
+          <div className="form-group">
             <label className="form-label">Buscar venda</label>
             <input
               className="form-input"
@@ -914,20 +917,20 @@ export default function VendasConsultaIsland() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
-            {filtroLabel && (
-              <small style={{ color: "#64748b" }}>
-                {filtroLabel} {userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""}
-              </small>
-            )}
           </div>
           {podeCriar && (
-            <div className="hidden sm:flex sm:items-end sm:ml-auto">
+            <div className="form-group hidden sm:flex" style={{ alignItems: "flex-end" }}>
               <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
                 Nova venda
               </a>
             </div>
           )}
         </div>
+        {filtroLabel && (
+          <small style={{ color: "#64748b", display: "block", marginTop: 6 }}>
+            {filtroLabel} {userCtx?.papel !== "ADMIN" ? "(restrição por vendedor)" : ""}
+          </small>
+        )}
       </div>
 
       <div className="card-base mb-2" style={{ textAlign: "center", fontWeight: 700 }}>
