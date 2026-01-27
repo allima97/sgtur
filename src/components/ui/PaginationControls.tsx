@@ -32,31 +32,22 @@ export default function PaginationControls({
   const start = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const end = Math.min(totalItems, safePage * pageSize);
 
+  const rootClass = `pagination-controls ${className || ""}`.trim();
+
   return (
-    <div
-      className={className}
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 8,
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 12,
-      }}
-    >
-      <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
+    <div className={rootClass}>
+      <div className="pagination-controls__summary">
         Mostrando {start}-{end} de {totalItems}
       </div>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="pagination-controls__actions">
         {onPageSizeChange && (
-          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ color: "#64748b", fontSize: "0.85rem" }}>Itens por pagina</span>
+          <label className="pagination-controls__page-size">
+            <span className="pagination-controls__page-size-label">Itens por pagina</span>
             <select
-              className="form-select"
+              className="form-select pagination-controls__page-size-select"
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              style={{ minWidth: 90 }}
             >
               {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>
@@ -67,7 +58,7 @@ export default function PaginationControls({
           </label>
         )}
 
-        <div style={{ display: "flex", gap: 6 }}>
+        <div className="pagination-controls__pager">
           <button
             type="button"
             className="btn btn-light"
@@ -76,7 +67,7 @@ export default function PaginationControls({
           >
             Anterior
           </button>
-          <div style={{ alignSelf: "center", color: "#64748b", fontSize: "0.9rem" }}>
+          <div className="pagination-controls__page-label">
             Pagina {safePage} de {totalPages}
           </div>
           <button
