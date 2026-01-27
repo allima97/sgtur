@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { logoutUsuario } from "../../lib/logout";
 import { SYSTEM_NAME } from "../../lib/systemName";
 import { usePermissoesStore } from "../../lib/permissoesStore";
@@ -33,7 +32,6 @@ export default function MenuIsland({ activePage }) {
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
   const { userId, isAdmin, can } = usePermissoesStore();
   const [saindo, setSaindo] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,12 +42,7 @@ export default function MenuIsland({ activePage }) {
   const [remainingMs, setRemainingMs] = useState(AUTO_LOGOUT_MS);
   const deadlineRef = useRef(Date.now() + AUTO_LOGOUT_MS);
 
-  // Admin FINAL vindo do MESMO lugar do RLS (modulo_acesso)
-  useEffect(() => setMounted(true), []);
-
   useEffect(() => {
-    if (!mounted) return;
-
     const mq = window.matchMedia("(max-width: 1024px)");
     const onChange = (event: MediaQueryListEvent) => {
       if (!event.matches) setMobileOpen(false);
@@ -62,7 +55,7 @@ export default function MenuIsland({ activePage }) {
       if (mq.removeEventListener) mq.removeEventListener("change", onChange);
       else mq.removeListener(onChange);
     };
-  }, [mounted]);
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -138,8 +131,6 @@ export default function MenuIsland({ activePage }) {
   }, [scheduleTimers]);
 
   useEffect(() => {
-    if (!mounted) return;
-
     scheduleTimers();
     const eventosAtividade = ["mousedown", "keydown", "scroll", "touchstart"];
     eventosAtividade.forEach((eventName) => window.addEventListener(eventName, handleActivity));
@@ -149,7 +140,7 @@ export default function MenuIsland({ activePage }) {
       clearTimers();
       setShowWarning(false);
     };
-  }, [handleActivity, scheduleTimers, mounted, clearTimers]);
+  }, [handleActivity, scheduleTimers, clearTimers]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -196,25 +187,6 @@ export default function MenuIsland({ activePage }) {
 
   const sidebarId = "app-sidebar";
 
-  const mobileControls = mounted
-    ? createPortal(
-        <>
-          <button
-            type="button"
-            className="sidebar-mobile-trigger"
-            aria-expanded={mobileOpen}
-            aria-controls={sidebarId}
-            onClick={toggleMobile}
-          >
-            <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
-            <span>{mobileOpen ? "Fechar" : "Menu"}</span>
-          </button>
-          <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
-        </>,
-        document.body
-      )
-    : null;
-
   const mobileNavItems: MobileNavItem[] = [];
   if (can("Dashboard")) {
     mobileNavItems.push({
@@ -253,39 +225,44 @@ export default function MenuIsland({ activePage }) {
     });
   }
 
-  const mobileBottomNav = mounted
-    ? createPortal(
-        <nav className="mobile-bottom-nav" aria-label="Atalhos principais">
-          {mobileNavItems.map((item) => (
-            <a
-              key={item.key}
-              className={`mobile-bottom-nav-item ${activePage === item.active ? "active" : ""}`}
-              href={item.href}
-              onClick={handleNavClick}
-            >
-              <span className="mobile-bottom-nav-icon">{item.icon}</span>
-              <span className="mobile-bottom-nav-label">{item.label}</span>
-            </a>
-          ))}
-          <button
-            type="button"
-            className="mobile-bottom-nav-item"
-            aria-expanded={mobileOpen}
-            aria-controls={sidebarId}
-            onClick={toggleMobile}
-          >
-            <span className="mobile-bottom-nav-icon">☰</span>
-            <span className="mobile-bottom-nav-label">Mais</span>
-          </button>
-        </nav>,
-        document.body
-      )
-    : null;
-
   return (
     <>
-      {mobileControls}
-      {mobileBottomNav}
+      <button
+        type="button"
+        className="sidebar-mobile-trigger"
+        aria-expanded={mobileOpen}
+        aria-controls={sidebarId}
+        onClick={toggleMobile}
+      >
+        <span className="sidebar-mobile-icon">{mobileOpen ? "✕" : "☰"}</span>
+        <span>{mobileOpen ? "Fechar" : "Menu"}</span>
+      </button>
+      <div className={`sidebar-overlay ${mobileOpen ? "visible" : ""}`} onClick={closeMobile} />
+
+      <nav className="mobile-bottom-nav" aria-label="Atalhos principais">
+        {mobileNavItems.map((item) => (
+          <a
+            key={item.key}
+            className={`mobile-bottom-nav-item ${activePage === item.active ? "active" : ""}`}
+            href={item.href}
+            onClick={handleNavClick}
+          >
+            <span className="mobile-bottom-nav-icon">{item.icon}</span>
+            <span className="mobile-bottom-nav-label">{item.label}</span>
+          </a>
+        ))}
+        <button
+          type="button"
+          className="mobile-bottom-nav-item"
+          aria-expanded={mobileOpen}
+          aria-controls={sidebarId}
+          onClick={toggleMobile}
+        >
+          <span className="mobile-bottom-nav-icon">☰</span>
+          <span className="mobile-bottom-nav-label">Mais</span>
+        </button>
+      </nav>
+
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
             <div className="sidebar-logo">{SYSTEM_NAME}</div>
 
