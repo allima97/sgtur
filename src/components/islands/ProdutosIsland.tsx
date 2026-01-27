@@ -10,6 +10,7 @@ import ConfirmDialog from "../ui/ConfirmDialog";
 import TableActions from "../ui/TableActions";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
 
 function dedupeSugestoes(valores: string[]) {
   const vistos = new Set<string>();
@@ -198,6 +199,8 @@ export default function ProdutosIsland() {
   const [tarifas, setTarifas] = useState<TarifaEntry[]>([]);
   const [mostrarInfo, setMostrarInfo] = useState(false);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   async function carregarDados(todos = false) {
     const erros: string[] = [];
@@ -507,6 +510,24 @@ export default function ProdutosIsland() {
         normalizeText(p.destino || "").includes(termo)
     );
   }, [busca, produtosEnriquecidos]);
+
+  const totalProdutos = produtosFiltrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalProdutos / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
+  const produtosExibidos = useMemo(() => {
+    const inicio = (paginaAtual - 1) * pageSize;
+    return produtosFiltrados.slice(inicio, inicio + pageSize);
+  }, [produtosFiltrados, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca, carregouTodos]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
 
   const destinosSugestoes = useMemo(() => dedupeSugestoes(destinosCadastro), [destinosCadastro]);
   const atracoesSugestoes = useMemo(() => dedupeSugestoes(atracoesCadastro), [atracoesCadastro]);
@@ -1269,6 +1290,17 @@ export default function ProdutosIsland() {
             </div>
           )}
 
+          <PaginationControls
+            page={paginaAtual}
+            pageSize={pageSize}
+            totalItems={totalProdutos}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
+
           {/* Tabela */}
           <DataTable
             className="table-default table-header-blue table-mobile-cards min-w-[1080px]"
@@ -1291,7 +1323,7 @@ export default function ProdutosIsland() {
             emptyMessage="Nenhum produto encontrado."
             colSpan={8}
           >
-            {produtosFiltrados.map((p) => (
+            {produtosExibidos.map((p) => (
               <tr key={p.id}>
                 <td data-label="Tipo">{p.tipo_nome || "-"}</td>
                 <td data-label="Produto">{p.nome}</td>

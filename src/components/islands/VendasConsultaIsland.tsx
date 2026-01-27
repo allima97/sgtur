@@ -7,7 +7,9 @@ import { construirLinkWhatsApp } from "../../lib/whatsapp";
 import { normalizeText } from "../../lib/normalizeText";
 import DataTable from "../ui/DataTable";
 import ConfirmDialog from "../ui/ConfirmDialog";
+import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
 
 function formatarDataCorretamente(dataString: string | null | undefined): string {
   if (!dataString) return "-";
@@ -141,6 +143,8 @@ export default function VendasConsultaIsland() {
     null
   );
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // ================================
   // CONTEXTO DE USUÁRIO (papel/vendedorIds)
@@ -449,9 +453,23 @@ export default function VendasConsultaIsland() {
         normalizeText(v.id).includes(t)
     );
   }, [vendas, busca, recibos]);
+  const totalVendas = vendasFiltradas.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalVendas / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
   const vendasExibidas = useMemo(() => {
-    return busca.trim() ? vendasFiltradas : vendasFiltradas.slice(0, 5);
-  }, [vendasFiltradas, busca]);
+    const inicio = (paginaAtual - 1) * pageSize;
+    return vendasFiltradas.slice(inicio, inicio + pageSize);
+  }, [vendasFiltradas, paginaAtual, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
 
   const vendasPorId = useMemo(() => {
     return Object.fromEntries(vendas.map((v) => [v.id, v]));
@@ -851,10 +869,21 @@ export default function VendasConsultaIsland() {
 
       {/* ERRO */}
       {erro && (
-        <div className="card-base card-config mb-3">
-          <strong>{erro}</strong>
+        <div className="mb-3">
+          <AlertMessage variant="error">{erro}</AlertMessage>
         </div>
       )}
+
+      <PaginationControls
+        page={paginaAtual}
+        pageSize={pageSize}
+        totalItems={totalVendas}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
       {/* TABELA */}
       <DataTable
