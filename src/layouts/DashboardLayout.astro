@@ -27,9 +27,9 @@ const { title = SYSTEM_NAME, activePage = "" } = Astro.props;
   <body>
     <div class="app-shell">
 
-      <!-- MENU DINÂMICO -->
-      <PermissoesProvider client:only="react" />
-      <MenuIsland client:only="react" {activePage} />
+      <!-- MENU DINÂMICO: render on server and hydrate on load to keep desktop layout stable -->
+      <PermissoesProvider client:load />
+      <MenuIsland client:load {activePage} />
 
       <!-- CONTEÚDO -->
       <main class="app-main">
