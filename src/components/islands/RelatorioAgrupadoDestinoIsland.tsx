@@ -1,34 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
-import { normalizeText } from "../../lib/normalizeText";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
-
-type Destino = {
-  id: string;
-  nome: string | null;
-  cidade_id?: string | null;
-};
-
-type Cidade = {
-  id: string;
-  nome: string;
-};
-
-type Venda = {
-  id: string;
-  cliente_id: string;
-  destino_id: string;
-  produto_id: string | null;
-  data_lancamento: string;
-  data_embarque: string | null;
-  valor_total: number | null;
-  status: string | null;
-  vendas_recibos?: { valor_total: number | null; valor_taxas: number | null }[];
-};
+import PaginationControls from "../ui/PaginationControls";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
 type MobilePeriodoPreset =
@@ -93,8 +70,6 @@ function csvEscape(value: string): string {
 }
 
 export default function RelatorioAgrupadoDestinoIsland() {
-  const [destinos, setDestinos] = useState<Destino[]>([]);
-  const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const hoje = new Date();
     const inicio = addDays(hoje, -30);
@@ -104,11 +79,16 @@ export default function RelatorioAgrupadoDestinoIsland() {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaDestino, setBuscaDestino] = useState("");
 
-  const [vendas, setVendas] = useState<Venda[]>([]);
+  const [linhas, setLinhas] = useState<LinhaDestino[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalLinhas, setTotalLinhas] = useState(0);
+  const [totalGeral, setTotalGeral] = useState(0);
+  const [totalQtd, setTotalQtd] = useState(0);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showFilters, setShowFilters] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -129,40 +109,6 @@ export default function RelatorioAgrupadoDestinoIsland() {
       setExportTipo("csv");
     }
   }, [exportFlags, exportTipo]);
-
-  useEffect(() => {
-    async function carregarBase() {
-      try {
-        const [
-          { data: destinosData, error: destinosErr },
-          { data: cidadesData, error: cidadesErr },
-        ] = await Promise.all([
-          supabase
-            .from("produtos")
-            .select("id, nome, cidade_id")
-            .order("nome", { ascending: true }),
-          supabase.from("cidades").select("id, nome").order("nome", { ascending: true }),
-        ]);
-
-        if (destinosErr) throw destinosErr;
-        if (cidadesErr) throw cidadesErr;
-        setDestinos((destinosData || []) as Destino[]);
-
-        const map: Record<string, string> = {};
-        (cidadesData || []).forEach((cidade: Cidade) => {
-          if (cidade.id && cidade.nome) {
-            map[cidade.id] = cidade.nome;
-          }
-        });
-        setCidadesMap(map);
-      } catch (e: any) {
-        console.error(e);
-        setErro("Erro ao carregar destinos e cidades.");
-      }
-    }
-
-    carregarBase();
-  }, []);
 
   useEffect(() => {
     async function carregarUserCtx() {
@@ -237,72 +183,10 @@ export default function RelatorioAgrupadoDestinoIsland() {
     carregarUserCtx();
   }, []);
 
-  const linhas: LinhaDestino[] = useMemo(() => {
-    const destMap = new Map(destinos.map((d) => [d.id, d]));
-    const map = new Map<string, LinhaDestino>();
-
-    vendas.forEach((v) => {
-      const key = v.destino_id;
-      const base = destMap.get(key);
-      const nome = base?.nome || "(sem destino)";
-      const cidadeNome = base?.cidade_id ? cidadesMap[base.cidade_id] || "" : "";
-      const atual =
-        map.get(key) ||
-        {
-          destino_id: key,
-          destino_nome: nome,
-          cidade_nome: cidadeNome,
-          quantidade: 0,
-          total: 0,
-          ticketMedio: 0,
-        };
-      const valRecibos = (v.vendas_recibos || []).reduce(
-        (acc, r) => acc + Number(r.valor_total || 0),
-        0
-      );
-      const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
-      atual.quantidade += 1;
-      atual.total += val;
-      map.set(key, atual);
-    });
-
-    const arr = Array.from(map.values()).map((l) => ({
-      ...l,
-      ticketMedio: l.quantidade > 0 ? l.total / l.quantidade : 0,
-    }));
-
-    arr.sort((a, b) => {
-      let comp = 0;
-      if (ordenacao === "total") {
-        comp = a.total - b.total;
-      } else if (ordenacao === "quantidade") {
-        comp = a.quantidade - b.quantidade;
-      } else {
-        comp = a.ticketMedio - b.ticketMedio;
-      }
-      return ordemDesc ? -comp : comp;
-    });
-
-    return arr;
-  }, [vendas, destinos, ordenacao, ordemDesc, cidadesMap]);
-
-  const linhasFiltradas = useMemo(() => {
-    const term = normalizeText(buscaDestino.trim());
-    if (!term) return linhas;
-    return linhas.filter((l) => {
-      return (
-        normalizeText(l.destino_nome).includes(term) ||
-        normalizeText(l.cidade_nome).includes(term)
-      );
-    });
-  }, [linhas, buscaDestino]);
-  const linhasExibidas = useMemo(() => {
-    return linhasFiltradas;
-  }, [linhasFiltradas]);
-
-  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
+  const linhasExibidas = linhas;
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
+  const totalPaginas = Math.max(1, Math.ceil(totalLinhas / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
 
   function aplicarPeriodoPreset(
     tipo: "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar"
@@ -346,53 +230,94 @@ export default function RelatorioAgrupadoDestinoIsland() {
     }
   }
 
-  async function carregar() {
+  async function carregarResumo(pageOverride?: number) {
     if (!userCtx) return;
     try {
       setLoading(true);
       setErro(null);
 
-      let query = supabase
-        .from("vendas")
-        .select(
-          `
-          id,
-          vendedor_id,
-          cliente_id,
-          destino_id,
-          produto_id,
-          data_lancamento,
-          data_embarque,
-          valor_total,
-          status,
-          vendas_recibos (valor_total, valor_taxas)
-        `
-        )
-        .order("data_lancamento", { ascending: false });
-
-      if (userCtx.papel !== "ADMIN") {
-        query = query.in("vendedor_id", userCtx.vendedorIds);
-      }
-
-      if (dataInicio) {
-        query = query.gte("data_lancamento", dataInicio);
-      }
-      if (dataFim) {
-        query = query.lte("data_lancamento", dataFim);
-      }
-      if (statusFiltro !== "todos") {
-        query = query.eq("status", statusFiltro);
-      }
-
-      const { data, error } = await query;
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_destino", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaDestino || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: paginaAtual,
+        p_page_size: pageSize,
+      });
       if (error) throw error;
-      setVendas((data || []) as Venda[]);
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        destino_id: row.destino_id,
+        destino_nome: row.destino_nome || "(sem destino)",
+        cidade_nome: row.cidade_nome || "",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+
+      setLinhas(mapped);
+      if (rows.length > 0) {
+        setTotalLinhas(Number(rows[0].total_count || 0));
+        setTotalGeral(Number(rows[0].total_total || 0));
+        setTotalQtd(Number(rows[0].total_quantidade || 0));
+      } else {
+        setTotalLinhas(0);
+        setTotalGeral(0);
+        setTotalQtd(0);
+      }
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao carregar vendas para relatório por destino.");
+      setLinhas([]);
+      setTotalLinhas(0);
+      setTotalGeral(0);
+      setTotalQtd(0);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function carregarTodasLinhas(): Promise<LinhaDestino[]> {
+    if (!userCtx) return [];
+    const pageSizeExport = 500;
+    let pagina = 1;
+    const todas: LinhaDestino[] = [];
+
+    while (true) {
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_destino", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaDestino || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: pagina,
+        p_page_size: pageSizeExport,
+      });
+      if (error) throw error;
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        destino_id: row.destino_id,
+        destino_nome: row.destino_nome || "(sem destino)",
+        cidade_nome: row.cidade_nome || "",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+      todas.push(...mapped);
+
+      if (rows.length < pageSizeExport) break;
+      pagina += 1;
+    }
+
+    return todas;
   }
 
   function mudarOrdenacao(campo: Ordenacao) {
@@ -402,23 +327,35 @@ export default function RelatorioAgrupadoDestinoIsland() {
       setOrdenacao(campo);
       setOrdemDesc(true);
     }
+    setPage(1);
   }
 
   useEffect(() => {
     if (userCtx) {
-      carregar();
+      carregarResumo();
     }
-  }, [userCtx]);
+  }, [userCtx, page, pageSize, dataInicio, dataFim, statusFiltro, buscaDestino, ordenacao, ordemDesc]);
 
-  function exportarCSV() {
-    if (linhasFiltradas.length === 0) {
+  useEffect(() => {
+    setPage(1);
+  }, [dataInicio, dataFim, statusFiltro, buscaDestino, ordenacao, ordemDesc]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
+
+  async function exportarCSV() {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
 
     const header = ["destino", "quantidade", "total", "ticket_medio"];
 
-    const rows = linhasFiltradas.map((l) => [
+    const rows = linhasExport.map((l) => [
       l.destino_nome,
       l.quantidade.toString(),
       l.total.toFixed(2).replace(".", ","),
@@ -447,17 +384,18 @@ export default function RelatorioAgrupadoDestinoIsland() {
     URL.revokeObjectURL(url);
   }
 
-  function exportarExcel() {
+  async function exportarExcel() {
     if (!exportFlags.excel) {
       showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (linhasFiltradas.length === 0) {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
 
-    const data = linhasFiltradas.map((l) => ({
+    const data = linhasExport.map((l) => ({
       Destino: l.destino_nome,
       Quantidade: l.quantidade,
       "Faturamento (R$)": l.total,
@@ -472,12 +410,13 @@ export default function RelatorioAgrupadoDestinoIsland() {
     XLSX.writeFile(wb, `relatorio-destinos-${ts}.xlsx`);
   }
 
-  function exportarPDF() {
+  async function exportarPDF() {
     if (!exportFlags.pdf) {
       showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (linhasFiltradas.length === 0) {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
@@ -488,7 +427,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
       "Faturamento",
       "Ticket médio",
     ];
-    const rows = linhasFiltradas.map((l) => [
+    const rows = linhasExport.map((l) => [
       l.destino_nome,
       l.quantidade,
       l.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
@@ -516,16 +455,16 @@ export default function RelatorioAgrupadoDestinoIsland() {
     });
   }
 
-  function exportarSelecionado() {
+  async function exportarSelecionado() {
     if (exportTipo === "csv") {
-      exportarCSV();
+      await exportarCSV();
       return;
     }
     if (exportTipo === "excel") {
-      exportarExcel();
+      await exportarExcel();
       return;
     }
-    exportarPDF();
+    await exportarPDF();
   }
 
   const exportDisabled =
@@ -639,7 +578,14 @@ export default function RelatorioAgrupadoDestinoIsland() {
             Limpar datas
           </button>
 
-          <button type="button" className="btn btn-primary" onClick={carregar}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setPage(1);
+              carregarResumo(1);
+            }}
+          >
             Aplicar filtros
           </button>
 
@@ -751,7 +697,8 @@ export default function RelatorioAgrupadoDestinoIsland() {
               className="btn btn-primary"
               style={{ marginTop: 12, width: "100%" }}
               onClick={() => {
-                carregar();
+                setPage(1);
+                carregarResumo(1);
                 setShowFilters(false);
               }}
             >
@@ -846,7 +793,7 @@ export default function RelatorioAgrupadoDestinoIsland() {
         <div className="form-row">
           <div className="form-group">
             <span>
-              Destinos: <strong>{linhasFiltradas.length}</strong>
+              Destinos: <strong>{totalLinhas}</strong>
             </span>
           </div>
           <div className="form-group">
@@ -873,6 +820,17 @@ export default function RelatorioAgrupadoDestinoIsland() {
           </div>
         </div>
       </div>
+
+      <PaginationControls
+        page={paginaAtual}
+        pageSize={pageSize}
+        totalItems={totalLinhas}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
       <div className="table-container overflow-x-auto">
         <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
@@ -938,4 +896,3 @@ export default function RelatorioAgrupadoDestinoIsland() {
     </div>
   );
 }
-

@@ -264,6 +264,7 @@ export default function RelatorioVendasIsland() {
   const [pageSize, setPageSize] = useState(25);
   const [totalVendasDb, setTotalVendasDb] = useState(0);
   const [carregouTodos, setCarregouTodos] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
   const [parametrosComissao, setParametrosComissao] =
     useState<ParametrosComissao | null>(null);
@@ -594,18 +595,19 @@ export default function RelatorioVendasIsland() {
     return map;
   }, [cidades]);
 
-  const recibosEnriquecidos: ReciboEnriquecido[] = useMemo(() => {
-    const cliMap = new Map(clientes.map((c) => [c.id, c]));
-    const prodMap = new Map(produtos.map((p) => [p.id, p]));
+  const construirRecibosEnriquecidos = useCallback(
+    (vendasInput: Venda[]) => {
+      const cliMap = new Map(clientes.map((c) => [c.id, c]));
+      const prodMap = new Map(produtos.map((p) => [p.id, p]));
 
-    return vendas.flatMap((v) => {
-      const c = cliMap.get(v.cliente_id) || v.cliente;
-      const clienteNome = c?.nome || "(sem cliente)";
-      const clienteCpf = c?.cpf || "";
-      const produtoDestino = v.destino_produto;
-      const recibos = v.vendas_recibos || [];
+      return vendasInput.flatMap((v) => {
+        const c = cliMap.get(v.cliente_id) || v.cliente;
+        const clienteNome = c?.nome || "(sem cliente)";
+        const clienteCpf = c?.cpf || "";
+        const produtoDestino = v.destino_produto;
+        const recibos = v.vendas_recibos || [];
 
-      return recibos.map((recibo, index) => {
+        return recibos.map((recibo, index) => {
         const produtoResolvido = recibo.produto_resolvido;
         const tipoRegistro = recibo.tipo_produtos;
         const tipoId =
@@ -684,9 +686,16 @@ export default function RelatorioVendasIsland() {
           valor_taxas: recibo.valor_taxas ?? null,
           status: v.status,
         };
+        });
       });
-    });
-  }, [vendas, clientes, produtos, tipoNomePorId, cidadePorId]);
+    },
+    [clientes, produtos, tipoNomePorId, cidadePorId]
+  );
+
+  const recibosEnriquecidos: ReciboEnriquecido[] = useMemo(
+    () => construirRecibosEnriquecidos(vendas),
+    [vendas, construirRecibosEnriquecidos]
+  );
 
   const filtrosLocaisAtivos = Boolean(
     destinoBusca.trim() ||
@@ -695,38 +704,45 @@ export default function RelatorioVendasIsland() {
       tipoSelecionadoId
   );
 
-  const recibosFiltrados = useMemo(() => {
-    const termProd = normalizeText(destinoBusca.trim());
-    const termCidade = normalizeText(cidadeNomeInput.trim());
-    const termCliente = normalizeText(clienteBusca.trim());
-    return recibosEnriquecidos.filter((recibo) => {
-      const matchTipo =
-        !tipoSelecionadoId || recibo.produto_tipo_id === tipoSelecionadoId;
-      const matchCidade =
-        !cidadeFiltro && !termCidade
+  const filtrarRecibos = useCallback(
+    (recibos: ReciboEnriquecido[]) => {
+      const termProd = normalizeText(destinoBusca.trim());
+      const termCidade = normalizeText(cidadeNomeInput.trim());
+      const termCliente = normalizeText(clienteBusca.trim());
+      return recibos.filter((recibo) => {
+        const matchTipo =
+          !tipoSelecionadoId || recibo.produto_tipo_id === tipoSelecionadoId;
+        const matchCidade =
+          !cidadeFiltro && !termCidade
+            ? true
+            : cidadeFiltro
+            ? recibo.cidade_id === cidadeFiltro
+            : normalizeText(recibo.cidade_nome || "").includes(termCidade);
+        const nomeProduto = normalizeText(recibo.produto_nome || "");
+        const matchProduto = !termProd || nomeProduto.includes(termProd);
+        const matchCliente = clienteSelecionado
+          ? recibo.cliente_id === clienteSelecionado.id
+          : !termCliente
           ? true
-          : cidadeFiltro
-          ? recibo.cidade_id === cidadeFiltro
-          : normalizeText(recibo.cidade_nome || "").includes(termCidade);
-      const nomeProduto = normalizeText(recibo.produto_nome || "");
-      const matchProduto = !termProd || nomeProduto.includes(termProd);
-      const matchCliente = clienteSelecionado
-        ? recibo.cliente_id === clienteSelecionado.id
-        : !termCliente
-        ? true
-        : normalizeText(recibo.cliente_nome || "").includes(termCliente) ||
-          normalizeText(recibo.cliente_cpf || "").includes(termCliente);
-      return matchTipo && matchCidade && matchProduto && matchCliente;
-    });
-  }, [
-    recibosEnriquecidos,
-    destinoBusca,
-    tipoSelecionadoId,
-    cidadeFiltro,
-    cidadeNomeInput,
-    clienteBusca,
-    clienteSelecionado,
-  ]);
+          : normalizeText(recibo.cliente_nome || "").includes(termCliente) ||
+            normalizeText(recibo.cliente_cpf || "").includes(termCliente);
+        return matchTipo && matchCidade && matchProduto && matchCliente;
+      });
+    },
+    [
+      destinoBusca,
+      tipoSelecionadoId,
+      cidadeFiltro,
+      cidadeNomeInput,
+      clienteBusca,
+      clienteSelecionado,
+    ]
+  );
+
+  const recibosFiltrados = useMemo(
+    () => filtrarRecibos(recibosEnriquecidos),
+    [recibosEnriquecidos, filtrarRecibos]
+  );
   const usaPaginacaoServidor = !filtrosLocaisAtivos && !carregouTodos;
   const totalItems = usaPaginacaoServidor ? totalVendasDb : recibosFiltrados.length;
   const totalPaginas = Math.max(1, Math.ceil(totalItems / Math.max(pageSize, 1)));
@@ -1065,6 +1081,108 @@ export default function RelatorioVendasIsland() {
     }
   }
 
+  async function carregarVendasParaExport(): Promise<Venda[]> {
+    if (!userCtx) return [];
+    const pageSizeExport = 1000;
+    let pagina = 0;
+    const todas: Venda[] = [];
+
+    while (true) {
+      const inicio = pagina * pageSizeExport;
+      const fim = inicio + pageSizeExport - 1;
+
+      let query = supabase
+        .from("vendas")
+        .select(
+          `
+          id,
+          vendedor_id,
+          numero_venda,
+          cliente_id,
+          destino_id,
+          destino_cidade_id,
+          produto_id,
+          data_lancamento,
+          data_embarque,
+          valor_total,
+          status,
+          cliente:clientes!cliente_id (nome, cpf),
+          destino_produto:produtos!destino_id (id, nome, tipo_produto, cidade_id),
+          destino_cidade:cidades!destino_cidade_id (nome),
+          vendas_recibos (
+            numero_recibo,
+            valor_total,
+            valor_taxas,
+            produto_id,
+            produto_resolvido_id,
+            produto_resolvido:produtos!produto_resolvido_id (id, nome, tipo_produto, cidade_id),
+            tipo_produtos (id, nome, tipo)
+          )
+        `
+        )
+        .order("data_lancamento", { ascending: false });
+
+      if (userCtx.papel !== "ADMIN") {
+        query = query.in("vendedor_id", userCtx.vendedorIds);
+      }
+
+      if (dataInicio) {
+        query = query.gte("data_lancamento", dataInicio);
+      }
+      if (dataFim) {
+        query = query.lte("data_lancamento", dataFim);
+      }
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+      if (clienteSelecionado) {
+        query = query.eq("cliente_id", clienteSelecionado.id);
+      }
+
+      const vMin = parseFloat(valorMin.replace(",", "."));
+      if (!isNaN(vMin)) {
+        query = query.gte("valor_total", vMin);
+      }
+      const vMax = parseFloat(valorMax.replace(",", "."));
+      if (!isNaN(vMax)) {
+        query = query.lte("valor_total", vMax);
+      }
+
+      query = query.range(inicio, fim);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const rows = (data || []) as Venda[];
+      todas.push(...rows);
+
+      if (rows.length < pageSizeExport) break;
+      pagina += 1;
+    }
+
+    return todas;
+  }
+
+  async function prepararRecibosParaExport(): Promise<ReciboEnriquecido[]> {
+    if (exportando) return [];
+    if (!userCtx) {
+      showToast("Aguarde o carregamento do usuário antes de exportar.", "warning");
+      return [];
+    }
+    try {
+      setExportando(true);
+      const vendasExport = await carregarVendasParaExport();
+      const recibosExport = construirRecibosEnriquecidos(vendasExport);
+      return filtrarRecibos(recibosExport);
+    } catch (e) {
+      console.error("Erro ao preparar exportação:", e);
+      showToast("Erro ao preparar exportação.", "error");
+      return [];
+    } finally {
+      setExportando(false);
+    }
+  }
+
   useEffect(() => {
     if (userCtx && !filtrosLocaisAtivos) {
       carregarVendas();
@@ -1119,8 +1237,9 @@ export default function RelatorioVendasIsland() {
     }
   }
 
-  function exportarCSV() {
-    if (recibosFiltrados.length === 0) {
+  async function exportarCSV() {
+    const recibosParaExportar = await prepararRecibosParaExport();
+    if (recibosParaExportar.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
@@ -1137,7 +1256,7 @@ export default function RelatorioVendasIsland() {
       "valor_total",
     ];
 
-    const linhas = recibosFiltrados.map((r) => [
+    const linhas = recibosParaExportar.map((r) => [
       r.numero_recibo || "",
       r.cliente_nome,
       r.cliente_cpf || "",
@@ -1173,17 +1292,18 @@ export default function RelatorioVendasIsland() {
     URL.revokeObjectURL(url);
   }
 
-  function exportarExcel() {
+  async function exportarExcel() {
     if (!exportFlags.excel) {
       showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (recibosFiltrados.length === 0) {
+    const recibosParaExportar = await prepararRecibosParaExport();
+    if (recibosParaExportar.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
 
-    const data = recibosFiltrados.map((r) => ({
+    const data = recibosParaExportar.map((r) => ({
       "Número recibo": r.numero_recibo || "",
       Cliente: r.cliente_nome,
       CPF: r.cliente_cpf,
@@ -1203,12 +1323,13 @@ export default function RelatorioVendasIsland() {
     XLSX.writeFile(wb, `relatorio-vendas-${ts}.xlsx`);
   }
 
-  function exportarPDF() {
+  async function exportarPDF() {
     if (!exportFlags.pdf) {
       showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (recibosFiltrados.length === 0) {
+    const recibosParaExportar = await prepararRecibosParaExport();
+    if (recibosParaExportar.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
@@ -1227,7 +1348,7 @@ export default function RelatorioVendasIsland() {
       "Valor líquido",
       "Comissão",
     ];
-    const rows = recibosFiltrados.map((r) => {
+    const rows = recibosParaExportar.map((r) => {
       const valorTotal = r.valor_total ?? null;
       const valorTaxas = r.valor_taxas ?? null;
       const valorLiquido =

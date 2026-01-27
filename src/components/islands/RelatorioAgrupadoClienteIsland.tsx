@@ -1,30 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import * as XLSX from "xlsx";
 import { exportTableToPDF } from "../../lib/pdf";
 import { formatarDataParaExibicao } from "../../lib/formatDate";
-import { normalizeText } from "../../lib/normalizeText";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
-
-type Cliente = {
-  id: string;
-  nome: string;
-  cpf: string | null;
-};
-
-type Venda = {
-  id: string;
-  vendedor_id: string;
-  cliente_id: string;
-  destino_id: string;
-  produto_id: string | null;
-  data_lancamento: string;
-  data_embarque: string | null;
-  valor_total: number | null;
-  status: string | null;
-  vendas_recibos?: { valor_total: number | null; valor_taxas: number | null }[];
-};
+import PaginationControls from "../ui/PaginationControls";
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
 
@@ -82,7 +63,6 @@ function csvEscape(value: string): string {
 }
 
 export default function RelatorioAgrupadoClienteIsland() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const hoje = new Date();
     const inicio = addDays(hoje, -30);
@@ -92,11 +72,16 @@ export default function RelatorioAgrupadoClienteIsland() {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaCliente, setBuscaCliente] = useState("");
 
-  const [vendas, setVendas] = useState<Venda[]>([]);
+  const [linhas, setLinhas] = useState<LinhaCliente[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalLinhas, setTotalLinhas] = useState(0);
+  const [totalGeral, setTotalGeral] = useState(0);
+  const [totalQtd, setTotalQtd] = useState(0);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({
     pdf: true,
     excel: true,
@@ -117,25 +102,6 @@ export default function RelatorioAgrupadoClienteIsland() {
       setExportTipo("csv");
     }
   }, [exportFlags, exportTipo]);
-
-  useEffect(() => {
-    async function carregarBase() {
-      try {
-        const { data, error } = await supabase
-          .from("clientes")
-          .select("id, nome, cpf")
-          .order("nome", { ascending: true });
-
-        if (error) throw error;
-        setClientes((data || []) as Cliente[]);
-      } catch (e: any) {
-        console.error(e);
-        setErro("Erro ao carregar clientes.");
-      }
-    }
-
-    carregarBase();
-  }, []);
 
   useEffect(() => {
     async function carregarUserCtx() {
@@ -210,78 +176,10 @@ export default function RelatorioAgrupadoClienteIsland() {
     carregarUserCtx();
   }, []);
 
-  const linhas: LinhaCliente[] = useMemo(() => {
-    const cliMap = new Map(clientes.map((c) => [c.id, c]));
-    const map = new Map<string, LinhaCliente>();
-
-    vendas.forEach((v) => {
-      const key = v.cliente_id;
-      const base = cliMap.get(key);
-      const nome = base?.nome || "(sem cliente)";
-      const cpf = base?.cpf || "";
-      const atual =
-        map.get(key) ||
-        {
-          cliente_id: key,
-          cliente_nome: nome,
-          cliente_cpf: cpf,
-          quantidade: 0,
-          total: 0,
-          ticketMedio: 0,
-        };
-
-      const valRecibos = (v.vendas_recibos || []).reduce(
-        (acc, r) => acc + Number(r.valor_total || 0),
-        0
-      );
-      const val = valRecibos > 0 ? valRecibos : v.valor_total ?? 0;
-      atual.quantidade += 1;
-      atual.total += val;
-      map.set(key, atual);
-    });
-
-    const arr = Array.from(map.values()).map((l) => ({
-      ...l,
-      ticketMedio: l.quantidade > 0 ? l.total / l.quantidade : 0,
-    }));
-
-    arr.sort((a, b) => {
-      let comp = 0;
-      if (ordenacao === "total") {
-        comp = a.total - b.total;
-      } else if (ordenacao === "quantidade") {
-        comp = a.quantidade - b.quantidade;
-      } else {
-        comp = a.ticketMedio - b.ticketMedio;
-      }
-      return ordemDesc ? -comp : comp;
-    });
-
-    return arr;
-  }, [vendas, clientes, ordenacao, ordemDesc]);
-
-  const linhasFiltradas = useMemo(() => {
-    const term = normalizeText(buscaCliente.trim());
-    if (!term) return linhas;
-    const termDigits = term.replace(/\D/g, "");
-    return linhas.filter((l) => {
-      if (normalizeText(l.cliente_nome).includes(term)) return true;
-      const cpfRaw = l.cliente_cpf || "";
-      if (normalizeText(cpfRaw).includes(term)) return true;
-      if (termDigits) {
-        const cpfDigits = cpfRaw.replace(/\D/g, "");
-        return cpfDigits.includes(termDigits);
-      }
-      return false;
-    });
-  }, [linhas, buscaCliente]);
-  const linhasExibidas = useMemo(() => {
-    return linhasFiltradas.slice(0, 5);
-  }, [linhasFiltradas]);
-
-  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
+  const linhasExibidas = linhas;
   const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
+  const totalPaginas = Math.max(1, Math.ceil(totalLinhas / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
 
   function aplicarPeriodoPreset(
     tipo: "hoje" | "7" | "30" | "mes_atual" | "mes_anterior" | "limpar"
@@ -325,53 +223,94 @@ export default function RelatorioAgrupadoClienteIsland() {
     }
   }
 
-  async function carregar() {
+  async function carregarResumo(pageOverride?: number) {
     if (!userCtx) return;
     try {
       setLoading(true);
       setErro(null);
 
-      let query = supabase
-        .from("vendas")
-        .select(
-          `
-          id,
-          vendedor_id,
-          cliente_id,
-          destino_id,
-          produto_id,
-          data_lancamento,
-          data_embarque,
-          valor_total,
-          status,
-          vendas_recibos (valor_total, valor_taxas)
-        `
-        )
-        .order("data_lancamento", { ascending: false });
-
-      if (userCtx.papel !== "ADMIN") {
-        query = query.in("vendedor_id", userCtx.vendedorIds);
-      }
-
-      if (dataInicio) {
-        query = query.gte("data_lancamento", dataInicio);
-      }
-      if (dataFim) {
-        query = query.lte("data_lancamento", dataFim);
-      }
-      if (statusFiltro !== "todos") {
-        query = query.eq("status", statusFiltro);
-      }
-
-      const { data, error } = await query;
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_cliente", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaCliente || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: paginaAtual,
+        p_page_size: pageSize,
+      });
       if (error) throw error;
-      setVendas((data || []) as Venda[]);
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        cliente_id: row.cliente_id,
+        cliente_nome: row.cliente_nome || "(sem cliente)",
+        cliente_cpf: row.cliente_cpf || "",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+
+      setLinhas(mapped);
+      if (rows.length > 0) {
+        setTotalLinhas(Number(rows[0].total_count || 0));
+        setTotalGeral(Number(rows[0].total_total || 0));
+        setTotalQtd(Number(rows[0].total_quantidade || 0));
+      } else {
+        setTotalLinhas(0);
+        setTotalGeral(0);
+        setTotalQtd(0);
+      }
     } catch (e: any) {
       console.error(e);
       setErro("Erro ao carregar vendas para relatório por cliente.");
+      setLinhas([]);
+      setTotalLinhas(0);
+      setTotalGeral(0);
+      setTotalQtd(0);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function carregarTodasLinhas(): Promise<LinhaCliente[]> {
+    if (!userCtx) return [];
+    const pageSizeExport = 500;
+    let pagina = 1;
+    const todas: LinhaCliente[] = [];
+
+    while (true) {
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_cliente", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaCliente || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: pagina,
+        p_page_size: pageSizeExport,
+      });
+      if (error) throw error;
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        cliente_id: row.cliente_id,
+        cliente_nome: row.cliente_nome || "(sem cliente)",
+        cliente_cpf: row.cliente_cpf || "",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+      todas.push(...mapped);
+
+      if (rows.length < pageSizeExport) break;
+      pagina += 1;
+    }
+
+    return todas;
   }
 
   function mudarOrdenacao(campo: Ordenacao) {
@@ -381,22 +320,34 @@ export default function RelatorioAgrupadoClienteIsland() {
       setOrdenacao(campo);
       setOrdemDesc(true);
     }
+    setPage(1);
   }
 
   useEffect(() => {
     if (userCtx) {
-      carregar();
+      carregarResumo();
     }
-  }, [userCtx]);
+  }, [userCtx, page, pageSize, dataInicio, dataFim, statusFiltro, buscaCliente, ordenacao, ordemDesc]);
 
-  function exportarCSV() {
-    if (linhasFiltradas.length === 0) {
+  useEffect(() => {
+    setPage(1);
+  }, [dataInicio, dataFim, statusFiltro, buscaCliente, ordenacao, ordemDesc]);
+
+  useEffect(() => {
+    if (page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [page, totalPaginas]);
+
+  async function exportarCSV() {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
 
     const header = ["cliente", "cpf", "quantidade", "total", "ticket_medio"];
-    const rows = linhasFiltradas.map((l) => [
+    const rows = linhasExport.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade.toString(),
@@ -427,17 +378,18 @@ export default function RelatorioAgrupadoClienteIsland() {
     URL.revokeObjectURL(url);
   }
 
-  function exportarExcel() {
+  async function exportarExcel() {
     if (!exportFlags.excel) {
       showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (linhasFiltradas.length === 0) {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
 
-    const data = linhasFiltradas.map((l) => ({
+    const data = linhasExport.map((l) => ({
       Cliente: l.cliente_nome,
       CPF: l.cliente_cpf,
       Quantidade: l.quantidade,
@@ -453,12 +405,13 @@ export default function RelatorioAgrupadoClienteIsland() {
     XLSX.writeFile(wb, `relatorio-clientes-${ts}.xlsx`);
   }
 
-  function exportarPDF() {
+  async function exportarPDF() {
     if (!exportFlags.pdf) {
       showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
     }
-    if (linhasFiltradas.length === 0) {
+    const linhasExport = await carregarTodasLinhas();
+    if (linhasExport.length === 0) {
       showToast("Não há dados para exportar.", "warning");
       return;
     }
@@ -475,7 +428,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         : undefined;
 
     const headers = ["Cliente", "CPF", "Qtde", "Faturamento", "Ticket médio"];
-    const rows = linhasFiltradas.map((l) => [
+    const rows = linhasExport.map((l) => [
       l.cliente_nome,
       l.cliente_cpf,
       l.quantidade,
@@ -496,16 +449,16 @@ export default function RelatorioAgrupadoClienteIsland() {
     });
   }
 
-  function exportarSelecionado() {
+  async function exportarSelecionado() {
     if (exportTipo === "csv") {
-      exportarCSV();
+      await exportarCSV();
       return;
     }
     if (exportTipo === "excel") {
-      exportarExcel();
+      await exportarExcel();
       return;
     }
-    exportarPDF();
+    await exportarPDF();
   }
 
   const exportDisabled =
@@ -620,7 +573,14 @@ export default function RelatorioAgrupadoClienteIsland() {
               Limpar datas
             </button>
 
-            <button type="button" className="btn btn-primary" onClick={carregar}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setPage(1);
+                carregarResumo(1);
+              }}
+            >
               Aplicar filtros
             </button>
 
@@ -731,7 +691,7 @@ export default function RelatorioAgrupadoClienteIsland() {
         <div className="form-row">
           <div className="form-group">
             <span>
-              Clientes: <strong>{linhasFiltradas.length}</strong>
+              Clientes: <strong>{totalLinhas}</strong>
             </span>
           </div>
           <div className="form-group">
@@ -752,6 +712,17 @@ export default function RelatorioAgrupadoClienteIsland() {
           </div>
         </div>
       </div>
+
+      <PaginationControls
+        page={paginaAtual}
+        pageSize={pageSize}
+        totalItems={totalLinhas}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
       <div className="table-container overflow-x-auto">
         <table className="table-default table-header-purple table-mobile-cards min-w-[700px]">
@@ -805,4 +776,3 @@ export default function RelatorioAgrupadoClienteIsland() {
     </div>
   );
 }
-

@@ -6,6 +6,7 @@ import { formatarDataParaExibicao } from "../../lib/formatDate";
 import { normalizeText } from "../../lib/normalizeText";
 import AlertMessage from "../ui/AlertMessage";
 import { ToastStack, useToastQueue } from "../ui/Toast";
+import PaginationControls from "../ui/PaginationControls";
 
 type Produto = {
   id: string;
@@ -36,8 +37,6 @@ type LinhaProduto = {
   quantidade: number;
   total: number;
   ticketMedio: number;
-  destinoNomes: string[];
-  destinoIds: (string | null)[];
 };
 
 type ReciboDetalhe = {
@@ -117,9 +116,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [dataFim, setDataFim] = useState<string>(hojeISO());
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [buscaProduto, setBuscaProduto] = useState("");
-  const [produtosCadastro, setProdutosCadastro] = useState<
-    { tipo_produto: string | null; nome: string | null }[]
-  >([]);
   const [tipoReciboSelecionado, setTipoReciboSelecionado] = useState("");
   const [cidadeFiltro, setCidadeFiltro] = useState("");
   const [cidadeNomeInput, setCidadeNomeInput] = useState("");
@@ -130,11 +126,17 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const [erroCidade, setErroCidade] = useState<string | null>(null);
 
   const [vendas, setVendas] = useState<Venda[]>([]);
+  const [linhas, setLinhas] = useState<LinhaProduto[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [userCtx, setUserCtx] = useState<UserCtx | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [cidadesMap, setCidadesMap] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalLinhas, setTotalLinhas] = useState(0);
+  const [totalGeral, setTotalGeral] = useState(0);
+  const [totalQtd, setTotalQtd] = useState(0);
   const [exportFlags, setExportFlags] = useState<ExportFlags>({ pdf: true, excel: true });
   const [showExport, setShowExport] = useState(false);
   const [exportTipo, setExportTipo] = useState<"csv" | "excel" | "pdf">("csv");
@@ -178,22 +180,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
     carregarBase();
   }, []);
 
-  useEffect(() => {
-    async function carregarProdutosCadastro() {
-      try {
-        const { data, error } = await supabase
-          .from("produtos")
-          .select("tipo_produto, nome")
-          .order("nome", { ascending: true });
-        if (error) throw error;
-        setProdutosCadastro((data || []) as { tipo_produto: string | null; nome: string | null }[]);
-      } catch (e: any) {
-        console.error("Erro ao carregar produtos cadastros:", e);
-      }
-    }
-
-    carregarProdutosCadastro();
-  }, []);
 
   useEffect(() => {
     async function carregarCidades() {
@@ -274,20 +260,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
   }, [cidadeFiltro, cidadesLista]);
 
-  const nomeProdutosPorTipo = useMemo(() => {
-    const map = new Map<string, string[]>();
-    produtosCadastro.forEach(({ tipo_produto, nome }) => {
-      if (!tipo_produto || !nome) return;
-      const trimmed = nome.trim();
-      if (!trimmed) return;
-      const atual = map.get(tipo_produto) || [];
-      if (!atual.includes(trimmed)) {
-        atual.push(trimmed);
-        map.set(tipo_produto, atual);
-      }
-    });
-    return map;
-  }, [produtosCadastro]);
 
   useEffect(() => {
     async function carregarUserCtx() {
@@ -367,83 +339,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
     [produtos]
   );
 
-  const linhas: LinhaProduto[] = useMemo(() => {
-    const prodMap = new Map(produtos.map((p) => [p.id, p]));
-    const map = new Map<string, LinhaProduto>();
-
-    const adicionar = (
-      prodId: string | null,
-      valor: number,
-      destinoNome?: string,
-      destinoId?: string | null
-    ) => {
-      const key = prodId || "sem-produto";
-      const base = prodId ? prodMap.get(prodId) : undefined;
-      const nome = base?.nome || base?.tipo || "(sem produto)";
-      const atual =
-        map.get(key) ||
-        {
-          produto_id: prodId,
-          produto_nome: nome,
-          quantidade: 0,
-          total: 0,
-          ticketMedio: 0,
-          destinoNomes: [],
-          destinoIds: [],
-        };
-      atual.quantidade += 1;
-      atual.total += valor;
-      if (destinoNome) {
-        const nomeLimpo = destinoNome.trim();
-        if (nomeLimpo && !atual.destinoNomes.includes(nomeLimpo)) {
-          atual.destinoNomes.push(nomeLimpo);
-        }
-      }
-      if (destinoId != null && destinoId !== "") {
-        if (!atual.destinoIds.includes(destinoId)) {
-          atual.destinoIds.push(destinoId);
-        }
-      }
-      map.set(key, atual);
-    };
-
-    vendas.forEach((v) => {
-      if (statusFiltro !== "todos" && v.status !== statusFiltro) {
-        return;
-      }
-      const destinoNome = v.destinos?.nome || "";
-      const destinoId = v.destino_cidade_id || v.destinos?.cidade_id || null;
-      const recibos = v.vendas_recibos || [];
-      if (recibos.length) {
-        recibos.forEach((r) => {
-          const val = Number(r.valor_total || 0);
-          adicionar(r.produto_id, val, destinoNome, destinoId);
-        });
-      } else {
-        const val = v.valor_total ?? 0;
-        adicionar(v.produto_id, val, destinoNome, destinoId);
-      }
-    });
-
-    const arr = Array.from(map.values()).map((l) => ({
-      ...l,
-      ticketMedio: l.quantidade > 0 ? l.total / l.quantidade : 0,
-    }));
-
-    arr.sort((a, b) => {
-      let comp = 0;
-      if (ordenacao === "total") {
-        comp = a.total - b.total;
-      } else if (ordenacao === "quantidade") {
-        comp = a.quantidade - b.quantidade;
-      } else {
-        comp = a.ticketMedio - b.ticketMedio;
-      }
-      return ordemDesc ? -comp : comp;
-    });
-
-    return arr;
-  }, [vendas, produtos, ordenacao, ordemDesc, statusFiltro]);
+  const linhasExibidas = linhas;
+  const totalPaginas = Math.max(1, Math.ceil(totalLinhas / Math.max(pageSize, 1)));
+  const paginaAtual = Math.min(page, totalPaginas);
+  const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
 
   const recibosDetalhados = useMemo(() => {
     const rows: ReciboDetalhe[] = [];
@@ -519,33 +418,6 @@ export default function RelatorioAgrupadoProdutoIsland() {
   const recibosExibidos = useMemo(() => {
     return recibosFiltrados;
   }, [recibosFiltrados]);
-
-  const linhasFiltradas = useMemo(() => {
-    const term = normalizeText(buscaProduto);
-    const hasTerm = term.length > 0;
-    return linhas.filter((l) => {
-      if (cidadeFiltro) {
-        const temCidade = l.destinoIds.some((id) => id === cidadeFiltro);
-        if (!temCidade) {
-          return false;
-        }
-      }
-      if (!hasTerm) return true;
-      if (normalizeText(l.produto_nome).includes(term)) return true;
-      if (l.destinoNomes.some((nome) => normalizeText(nome).includes(term))) return true;
-      const tipo = l.produto_id || "";
-      const nomesExtra = nomeProdutosPorTipo.get(tipo) || [];
-      if (nomesExtra.some((nome) => normalizeText(nome).includes(term))) return true;
-      return false;
-    });
-  }, [linhas, buscaProduto, nomeProdutosPorTipo, cidadeFiltro]);
-  const linhasExibidas = useMemo(() => {
-    return linhasFiltradas;
-  }, [linhasFiltradas]);
-
-  const totalGeral = linhasFiltradas.reduce((acc, l) => acc + l.total, 0);
-  const totalQtd = linhasFiltradas.reduce((acc, l) => acc + l.quantidade, 0);
-  const ticketGeral = totalQtd > 0 ? totalGeral / totalQtd : 0;
   const totalRecibosCount = recibosFiltrados.length;
   const totalRecibosValor = recibosFiltrados.reduce((acc, r) => acc + r.valorTotal, 0);
   const totalRecibosTaxas = recibosFiltrados.reduce((acc, r) => acc + r.valorTaxas, 0);
@@ -592,7 +464,99 @@ export default function RelatorioAgrupadoProdutoIsland() {
     }
   }
 
-  async function carregar() {
+  async function carregarResumo(pageOverride?: number) {
+    if (!userCtx) return;
+    try {
+      setLoading(true);
+      setErro(null);
+
+      const paginaAtual = Math.max(1, pageOverride ?? page);
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_produto", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaProduto || null,
+        p_tipo_produto_id: null,
+        p_cidade_id: cidadeFiltro || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: paginaAtual,
+        p_page_size: pageSize,
+      });
+      if (error) throw error;
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        produto_id: row.produto_id,
+        produto_nome: row.produto_nome || "(sem produto)",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+
+      setLinhas(mapped);
+      if (rows.length > 0) {
+        setTotalLinhas(Number(rows[0].total_count || 0));
+        setTotalGeral(Number(rows[0].total_total || 0));
+        setTotalQtd(Number(rows[0].total_quantidade || 0));
+      } else {
+        setTotalLinhas(0);
+        setTotalGeral(0);
+        setTotalQtd(0);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setErro("Erro ao carregar vendas para relatório por produto.");
+      setLinhas([]);
+      setTotalLinhas(0);
+      setTotalGeral(0);
+      setTotalQtd(0);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function carregarTodasLinhas(): Promise<LinhaProduto[]> {
+    if (!userCtx) return [];
+    const pageSizeExport = 500;
+    let pagina = 1;
+    const todas: LinhaProduto[] = [];
+
+    while (true) {
+      const { data, error } = await supabase.rpc("relatorio_vendas_por_produto", {
+        p_data_inicio: dataInicio || null,
+        p_data_fim: dataFim || null,
+        p_status: statusFiltro !== "todos" ? statusFiltro : null,
+        p_busca: buscaProduto || null,
+        p_tipo_produto_id: null,
+        p_cidade_id: cidadeFiltro || null,
+        p_vendedor_ids: userCtx.papel === "ADMIN" ? null : userCtx.vendedorIds,
+        p_ordem: ordenacao,
+        p_ordem_desc: ordemDesc,
+        p_page: pagina,
+        p_page_size: pageSizeExport,
+      });
+      if (error) throw error;
+
+      const rows = (data || []) as any[];
+      const mapped = rows.map((row) => ({
+        produto_id: row.produto_id,
+        produto_nome: row.produto_nome || "(sem produto)",
+        quantidade: Number(row.quantidade || 0),
+        total: Number(row.total || 0),
+        ticketMedio: Number(row.ticket_medio || 0),
+      }));
+      todas.push(...mapped);
+
+      if (rows.length < pageSizeExport) break;
+      pagina += 1;
+    }
+
+    return todas;
+  }
+
+  async function carregarRecibos() {
     if (!userCtx) return;
     try {
       setLoading(true);
@@ -635,6 +599,10 @@ export default function RelatorioAgrupadoProdutoIsland() {
       if (dataFim) {
         query = query.lte("data_lancamento", dataFim);
       }
+      if (statusFiltro !== "todos") {
+        query = query.eq("status", statusFiltro);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       setVendas((data || []) as Venda[]);
@@ -653,27 +621,59 @@ export default function RelatorioAgrupadoProdutoIsland() {
       setOrdenacao(campo);
       setOrdemDesc(true);
     }
+    setPage(1);
   }
 
   useEffect(() => {
-    if (userCtx) {
-      carregar();
+    if (userCtx && activeTab === "agrupado") {
+      carregarResumo();
     }
-  }, [userCtx]);
+  }, [
+    userCtx,
+    activeTab,
+    page,
+    pageSize,
+    dataInicio,
+    dataFim,
+    statusFiltro,
+    buscaProduto,
+    cidadeFiltro,
+    ordenacao,
+    ordemDesc,
+  ]);
 
-  function exportarCSV() {
+  useEffect(() => {
+    if (userCtx && activeTab === "recibos") {
+      carregarRecibos();
+    }
+  }, [userCtx, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "agrupado") {
+      setPage(1);
+    }
+  }, [activeTab, dataInicio, dataFim, statusFiltro, buscaProduto, cidadeFiltro, ordenacao, ordemDesc]);
+
+  useEffect(() => {
+    if (activeTab === "agrupado" && page > totalPaginas) {
+      setPage(totalPaginas);
+    }
+  }, [activeTab, page, totalPaginas]);
+
+  async function exportarCSV() {
     let header: string[] = [];
     let rows: string[][] = [];
     let fileBase = "relatorio-vendas-por-produto";
 
     if (activeTab === "agrupado") {
-      if (linhasFiltradas.length === 0) {
+      const linhasExport = await carregarTodasLinhas();
+      if (linhasExport.length === 0) {
         showToast("Não há dados para exportar.", "warning");
         return;
       }
 
       header = ["produto", "quantidade", "total", "ticket_medio"];
-      rows = linhasFiltradas.map((l) => [
+      rows = linhasExport.map((l) => [
         l.produto_nome,
         l.quantidade.toString(),
         l.total.toFixed(2).replace(".", ","),
@@ -720,19 +720,20 @@ export default function RelatorioAgrupadoProdutoIsland() {
     URL.revokeObjectURL(url);
   }
 
-  function exportarExcel() {
+  async function exportarExcel() {
     if (!exportFlags.excel) {
       showToast("Exportação Excel desabilitada nos parâmetros.", "warning");
       return;
     }
 
     if (activeTab === "agrupado") {
-      if (linhasFiltradas.length === 0) {
+      const linhasExport = await carregarTodasLinhas();
+      if (linhasExport.length === 0) {
         showToast("Não há dados para exportar.", "warning");
         return;
       }
 
-      const data = linhasFiltradas.map((l) => ({
+      const data = linhasExport.map((l) => ({
         "Tipo de Produto": l.produto_nome,
         Quantidade: l.quantidade,
         "Faturamento (R$)": l.total,
@@ -771,7 +772,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
     XLSX.writeFile(wb, `relatorio-produtos-recibos-${ts}.xlsx`);
   }
 
-  function exportarPDF() {
+  async function exportarPDF() {
     if (!exportFlags.pdf) {
       showToast("Exportação PDF desabilitada nos parâmetros.", "warning");
       return;
@@ -789,13 +790,14 @@ export default function RelatorioAgrupadoProdutoIsland() {
         : undefined;
 
     if (activeTab === "agrupado") {
-      if (linhasFiltradas.length === 0) {
+      const linhasExport = await carregarTodasLinhas();
+      if (linhasExport.length === 0) {
         showToast("Não há dados para exportar.", "warning");
         return;
       }
 
       const headers = ["Tipo de Produto", "Qtde", "Faturamento", "Ticket médio"];
-      const rows = linhasFiltradas.map((l) => [
+      const rows = linhasExport.map((l) => [
         l.produto_nome,
         l.quantidade,
         formatCurrency(l.total),
@@ -847,16 +849,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
     });
   }
 
-  function exportarSelecionado() {
+  async function exportarSelecionado() {
     if (exportTipo === "csv") {
-      exportarCSV();
+      await exportarCSV();
       return;
     }
     if (exportTipo === "excel") {
-      exportarExcel();
+      await exportarExcel();
       return;
     }
-    exportarPDF();
+    await exportarPDF();
   }
 
   const exportDisabled =
@@ -1062,7 +1064,18 @@ export default function RelatorioAgrupadoProdutoIsland() {
             Limpar datas
           </button>
 
-          <button type="button" className="btn btn-primary" onClick={carregar}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              if (activeTab === "agrupado") {
+                setPage(1);
+                carregarResumo(1);
+                return;
+              }
+              carregarRecibos();
+            }}
+          >
             Aplicar filtros
           </button>
 
@@ -1195,7 +1208,7 @@ export default function RelatorioAgrupadoProdutoIsland() {
             <div className="form-row">
               <div className="form-group">
                 <span>
-                  Produtos: <strong>{linhasFiltradas.length}</strong>
+                  Produtos: <strong>{totalLinhas}</strong>
                 </span>
               </div>
               <div className="form-group">
@@ -1210,6 +1223,16 @@ export default function RelatorioAgrupadoProdutoIsland() {
               </div>
             </div>
           </div>
+          <PaginationControls
+            page={paginaAtual}
+            pageSize={pageSize}
+            totalItems={totalLinhas}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
           <div className="table-container overflow-x-auto">
             <table className="table-default table-header-purple table-mobile-cards min-w-[620px]">
               <thead>
@@ -1340,4 +1363,3 @@ export default function RelatorioAgrupadoProdutoIsland() {
     </div>
   );
 }
-
