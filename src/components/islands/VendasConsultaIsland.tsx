@@ -919,10 +919,12 @@ export default function VendasConsultaIsland() {
             />
           </div>
           {podeCriar && (
-            <div className="form-group hidden sm:flex" style={{ alignItems: "flex-end" }}>
-              <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
-                Nova venda
-              </a>
+            <div className="hidden sm:flex" style={{ alignItems: "flex-end" }}>
+              <div className="form-group">
+                <a className="btn btn-primary" href="/vendas/cadastro" style={{ textDecoration: "none" }}>
+                  Nova venda
+                </a>
+              </div>
             </div>
           )}
         </div>
