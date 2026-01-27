@@ -1304,7 +1304,7 @@ export default function ProdutosIsland() {
           )}
           {!carregouTodos && !erro && (
             <div className="card-base card-config mb-3">
-              Use a paginaÃ§Ã£o para navegar. Digite na busca para filtrar todos.
+              Use a paginação para navegar. Digite na busca para filtrar todos que estão no sistema.
             </div>
           )}
 
@@ -1401,6 +1401,5 @@ export default function ProdutosIsland() {
     </div>
   );
 }
-
 
 
