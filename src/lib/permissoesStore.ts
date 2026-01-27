@@ -18,7 +18,7 @@ type PermissoesState = {
   userEmail: string;
 };
 
-const initialCache = null;
+const initialCache = typeof window !== "undefined" ? readPermissoesCache() : null;
 let state: PermissoesState = {
   cache: initialCache,
   loading: false,

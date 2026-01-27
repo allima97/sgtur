@@ -1,9 +1,61 @@
 import { defineMiddleware } from "astro:middleware";
 import { createServerClient } from "@supabase/ssr";
-import { descobrirModulo } from "./config/modulos";
+import { descobrirModulo, MODULO_ALIASES } from "./config/modulos";
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const MENU_CACHE_COOKIE = "sgtur_menu_cache";
+const MENU_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const permLevel = (p?: string | null): number => {
+  switch ((p || "").toLowerCase()) {
+    case "admin":
+      return 5;
+    case "delete":
+      return 4;
+    case "edit":
+      return 3;
+    case "create":
+      return 2;
+    case "view":
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+const normalizePermissao = (value?: string | null) => {
+  const perm = (value || "").toLowerCase();
+  if (perm === "admin") return "admin";
+  if (perm === "delete") return "delete";
+  if (perm === "edit") return "edit";
+  if (perm === "create") return "create";
+  if (perm === "view") return "view";
+  return "none";
+};
+
+const setPerm = (perms: Record<string, string>, key: string, perm: string) => {
+  if (!key) return;
+  const normalizedKey = key.toLowerCase();
+  const atual = perms[normalizedKey] ?? "none";
+  perms[normalizedKey] = permLevel(perm) > permLevel(atual) ? perm : atual;
+};
+
+const buildPerms = (
+  rows: Array<{ modulo: string | null; permissao: string | null; ativo: boolean | null }>
+) => {
+  const perms: Record<string, string> = {};
+  rows.forEach((registro) => {
+    const modulo = String(registro.modulo || "").toLowerCase();
+    if (!modulo) return;
+    const permissaoNormalizada = normalizePermissao(registro.permissao);
+    const finalPerm = registro.ativo ? permissaoNormalizada : "none";
+    setPerm(perms, modulo, finalPerm);
+    const alias = MODULO_ALIASES[modulo];
+    if (alias) setPerm(perms, alias, finalPerm);
+  });
+  return perms;
+};
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url } = context;
@@ -73,6 +125,46 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
   context.locals.userId = user.id;
   context.locals.userEmail = user.email ?? "";
+
+  const cookieRaw = context.cookies.get(MENU_CACHE_COOKIE)?.value ?? "";
+  let shouldRefreshMenuCache = true;
+  if (cookieRaw) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(cookieRaw));
+      if (parsed?.userId === user.id) {
+        const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0;
+        if (updatedAt && Date.now() - updatedAt < MENU_CACHE_TTL_MS) {
+          shouldRefreshMenuCache = false;
+        }
+      }
+    } catch {
+      shouldRefreshMenuCache = true;
+    }
+  }
+
+  if (shouldRefreshMenuCache) {
+    const { data: accRows } = await supabase
+      .from("modulo_acesso")
+      .select("modulo, permissao, ativo")
+      .eq("usuario_id", user.id);
+
+    const acessos = buildPerms((accRows || []) as Array<{ modulo: string | null; permissao: string | null; ativo: boolean | null }>);
+    const payload = {
+      userId: user.id,
+      acessos,
+      updatedAt: Date.now(),
+      userEmail: user.email ?? "",
+    };
+    try {
+      const encoded = encodeURIComponent(JSON.stringify(payload));
+      context.cookies.set(MENU_CACHE_COOKIE, encoded, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: "Lax",
+        secure: true,
+      });
+    } catch {}
+  }
 
   // ============================
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
