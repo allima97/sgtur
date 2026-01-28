@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 import { MODULO_ALIASES } from "../config/modulos";
+import {
+  extractUserTypeName,
+  isSystemAdminRole,
+  normalizeUserType,
+} from "./adminAccess";
 
 export type Permissao =
   | "none"
@@ -15,6 +20,8 @@ export type PermissoesCache = {
   aliases: Record<string, string>;
   updatedAt: number;
   userEmail?: string;
+  userType?: string;
+  isSystemAdmin?: boolean;
 };
 
 type RegistroAcesso = {
@@ -110,6 +117,14 @@ export function readPermissoesCache(): PermissoesCache | null {
     if (parsed && !parsed.aliases) {
       parsed.aliases = MODULO_ALIASES;
     }
+    if (parsed) {
+      const normalizedType = normalizeUserType(parsed.userType);
+      parsed.userType = normalizedType;
+      parsed.isSystemAdmin =
+        typeof parsed.isSystemAdmin === "boolean"
+          ? parsed.isSystemAdmin
+          : isSystemAdminRole(normalizedType);
+    }
     if (parsed) setWindowCache(parsed);
     return parsed;
   } catch {
@@ -130,6 +145,8 @@ export function persistPermissoesCache(cache: PermissoesCache) {
     acessos: cache.acessos,
     updatedAt: cache.updatedAt,
     userEmail: cache.userEmail,
+    userType: cache.userType,
+    isSystemAdmin: cache.isSystemAdmin,
   };
 
   try {
@@ -208,23 +225,36 @@ export async function ensurePermissoes(userId: string, userEmail?: string | null
   }
 
   const promise = (async () => {
-    const { data, error } = await supabase
-      .from("modulo_acesso")
-      .select("modulo, permissao, ativo")
-      .eq("usuario_id", userId);
+    const [acessosRes, tipoRes] = await Promise.all([
+      supabase
+        .from("modulo_acesso")
+        .select("modulo, permissao, ativo")
+        .eq("usuario_id", userId),
+      supabase
+        .from("users")
+        .select("id, user_types(name)")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
 
-    if (error) {
-      console.error("Erro ao carregar permissoes", error);
+    if (acessosRes.error) {
+      console.error("Erro ao carregar permissoes", acessosRes.error);
       return null;
     }
 
-    const perms = buildPermissoes((data || []) as RegistroAcesso[]);
+    const tipoNome = extractUserTypeName(tipoRes.data);
+    const normalizedType = normalizeUserType(tipoNome);
+    const isSystemAdmin = isSystemAdminRole(normalizedType);
+
+    const perms = buildPermissoes((acessosRes.data || []) as RegistroAcesso[]);
     const cachePayload: PermissoesCache = {
       userId,
       acessos: perms,
       aliases: MODULO_ALIASES,
       updatedAt: Date.now(),
       userEmail: userEmail ? userEmail.toLowerCase() : cached?.userEmail,
+      userType: normalizedType,
+      isSystemAdmin,
     };
 
     persistPermissoesCache(cachePayload);

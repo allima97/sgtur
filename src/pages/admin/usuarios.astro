@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import UsuariosAdminIsland from "../../components/islands/UsuariosAdminIsland.tsx";
+---
+
+<DashboardLayout title="Usuários" activePage="admin-usuarios">
+  <div class="page-content-wrap">
+    <UsuariosAdminIsland client:visible />
+  </div>
+</DashboardLayout>

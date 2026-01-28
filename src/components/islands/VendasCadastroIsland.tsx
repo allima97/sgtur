@@ -19,7 +19,13 @@ type Produto = {
   todas_as_cidades?: boolean;
 };
 
+type VendedorOption = {
+  id: string;
+  nome_completo: string | null;
+};
+
 type FormVenda = {
+  vendedor_id: string;
   cliente_id: string;
   destino_id: string;
   data_lancamento: string;
@@ -40,6 +46,7 @@ type FormRecibo = {
 };
 
 const initialVenda: FormVenda = {
+  vendedor_id: "",
   cliente_id: "",
   destino_id: "",
   data_lancamento: new Date().toISOString().substring(0, 10),
@@ -141,6 +148,9 @@ export default function VendasCadastroIsland() {
   const [tipos, setTipos] = useState<
     { id: string; nome: string | null; tipo?: string | null }[]
   >([]);
+  const [vendedoresEquipe, setVendedoresEquipe] = useState<VendedorOption[]>([]);
+  const [isGestorUser, setIsGestorUser] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [formVenda, setFormVenda] = useState<FormVenda>(initialVenda);
   const [recibos, setRecibos] = useState<FormRecibo[]>([]);
@@ -177,6 +187,50 @@ export default function VendasCadastroIsland() {
   ) {
     try {
       setLoading(true);
+
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth?.user?.id || null;
+      setCurrentUserId(userId);
+
+      if (userId) {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("id, nome_completo, user_types(name)")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const tipo = ((userRow as any)?.user_types as any)?.name || "";
+        const tipoNorm = String(tipo).toUpperCase();
+        const gestorLocal = tipoNorm.includes("GESTOR");
+        setIsGestorUser(gestorLocal);
+
+        if (gestorLocal) {
+          const { data: rel } = await supabase
+            .from("gestor_vendedor")
+            .select("vendedor_id")
+            .eq("gestor_id", userId);
+          const ids =
+            rel
+              ?.map((r: any) => r.vendedor_id)
+              .filter((id: string | null): id is string => Boolean(id)) || [];
+          const unique = Array.from(new Set([userId, ...ids]));
+          const { data: vendedoresData } = await supabase
+            .from("users")
+            .select("id, nome_completo")
+            .in("id", unique)
+            .order("nome_completo");
+          setVendedoresEquipe((vendedoresData || []) as VendedorOption[]);
+        } else {
+          setVendedoresEquipe(
+            userRow ? [{ id: userRow.id, nome_completo: userRow.nome_completo || "Você" }] : []
+          );
+        }
+
+        setFormVenda((prev) => ({
+          ...prev,
+          vendedor_id: prev.vendedor_id || userId,
+        }));
+      }
 
       const [c, d, p, tiposResp] = await Promise.all([
         supabase.from("clientes").select("id, nome, cpf").order("nome"),
@@ -230,7 +284,7 @@ export default function VendasCadastroIsland() {
 
       const { data: vendaData, error: vendaErr } = await supabase
         .from("vendas")
-        .select("id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque, data_final")
+        .select("id, vendedor_id, cliente_id, destino_id, destino_cidade_id, data_lancamento, data_embarque, data_final")
         .eq("id", id)
         .maybeSingle();
 
@@ -265,13 +319,15 @@ export default function VendasCadastroIsland() {
         cidadeNome = cidadePrefillParam.nome;
       }
 
-      setFormVenda({
+      setFormVenda((prev) => ({
+        ...prev,
+        vendedor_id: vendaData.vendedor_id || prev.vendedor_id || "",
         cliente_id: vendaData.cliente_id,
         destino_id: cidadeId,
         data_lancamento: dataParaInput(vendaData.data_lancamento),
         data_embarque: dataParaInput(vendaData.data_embarque),
         data_final: dataParaInput(vendaData.data_final),
-      });
+      }));
       setBuscaDestino(cidadeNome || cidadeId || "");
       setBuscaCidadeSelecionada(cidadeNome || cidadeId || "");
 
@@ -694,6 +750,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   function resetFormAndGoToConsulta() {
     setFormVenda({
       ...initialVenda,
+      vendedor_id: currentUserId || "",
       data_lancamento: new Date().toISOString().substring(0, 10),
     });
     setRecibos([]);
@@ -709,7 +766,10 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
   }
 
   function cancelarCadastro() {
-    setFormVenda(initialVenda);
+    setFormVenda({
+      ...initialVenda,
+      vendedor_id: currentUserId || "",
+    });
     setRecibos([]);
     setEditId(null);
     setCidadePrefill({ id: "", nome: "" });
@@ -771,6 +831,13 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
       if (!userId) {
         setErro("Usuário não autenticado.");
         showToast("Usuário não autenticado.", "error");
+        setSalvando(false);
+        return;
+      }
+      const vendedorResponsavel = formVenda.vendedor_id || userId;
+      if (isGestorUser && !formVenda.vendedor_id) {
+        setErro("Selecione o vendedor responsável pela venda.");
+        showToast("Selecione o vendedor responsável pela venda.", "error");
         setSalvando(false);
         return;
       }
@@ -993,7 +1060,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
             venda_id: vendaId,
             recibo_id: params.reciboId,
             cliente_id: clienteId,
-            responsavel_user_id: userId,
+            responsavel_user_id: vendedorResponsavel,
             origem: origemLabel || null,
             destino: destinoLabel || null,
             data_inicio: params.dataInicio || null,
@@ -1070,6 +1137,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         const { error: vendaErr } = await supabase
           .from("vendas")
           .update({
+            vendedor_id: vendedorResponsavel,
             cliente_id: clienteId,
             destino_id: produtoDestinoId, // FK para produtos
             destino_cidade_id: formVenda.destino_id || null,
@@ -1110,7 +1178,7 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
         const { data: vendaData, error: vendaErr } = await supabase
           .from("vendas")
           .insert({
-            vendedor_id: userId,
+            vendedor_id: vendedorResponsavel,
             cliente_id: clienteId,
             destino_id: produtoDestinoId, // FK para produtos
             destino_cidade_id: formVenda.destino_id || null,
@@ -1198,6 +1266,25 @@ function garantirReciboPrincipal(recibos: FormRecibo[]): FormRecibo[] {
 
         <form onSubmit={salvarVenda}>
           <div className="flex flex-col md:flex-row gap-4">
+            {isGestorUser && (
+              <div className="form-group flex-1 min-w-[220px]">
+                <label className="form-label">Vendedor *</label>
+                <select
+                  className="form-select"
+                  value={formVenda.vendedor_id}
+                  onChange={(e) =>
+                    setFormVenda((prev) => ({ ...prev, vendedor_id: e.target.value }))
+                  }
+                  required
+                >
+                  {vendedoresEquipe.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome_completo || "Vendedor"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {/* CLIENTE */}
             <div className="form-group flex-1 min-w-[220px]">
               <label className="form-label">Cliente *</label>

@@ -43,7 +43,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
   const envMinutes = Number(import.meta.env.PUBLIC_AUTO_LOGOUT_MINUTES || "");
   const DEFAULT_LOGOUT_MINUTES =
     Number.isFinite(envMinutes) && envMinutes > 0 ? envMinutes : 15;
-  const { userId, isAdmin, can, ready } = usePermissoesStore();
+  const { userId, isSystemAdmin, can, ready, userType } = usePermissoesStore();
   const [cachedPerms, setCachedPerms] = useState(() => initialCache ?? readPermissoesCache());
   const [saindo, setSaindo] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,6 +57,9 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
   const deadlineRef = useRef(Date.now() + AUTO_LOGOUT_MS);
 
   const cacheUserId = cachedPerms?.userId ?? null;
+  const cacheUserType = cachedPerms?.userType ?? "";
+  const menuUserType = ready ? userType : cacheUserType;
+  const menuIsGestor = /GESTOR/i.test(menuUserType || "");
 
   const permLevel = (p?: Permissao | null): number => {
     switch (p) {
@@ -84,9 +87,9 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
 
   const canMenu = ready ? can : canFromCache;
   const menuUserId = ready ? userId : cacheUserId;
-  const menuIsAdmin = ready
-    ? isAdmin
-    : Object.values(cachedPerms?.acessos ?? {}).some((p) => p === "admin");
+  const menuIsSystemAdmin = ready
+    ? isSystemAdmin
+    : Boolean(cachedPerms?.isSystemAdmin);
 
   useEffect(() => {
     return subscribePermissoes((cache) => {
@@ -240,7 +243,44 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
   const sidebarId = "app-sidebar";
 
   const mobileNavItems: MobileNavItem[] = [];
-  if (canMenu("Dashboard")) {
+  if (menuIsSystemAdmin) {
+    mobileNavItems.push({
+      key: "admin-dashboard",
+      label: "Admin",
+      href: "/dashboard/admin",
+      icon: "🧭",
+      active: "admin-dashboard",
+    });
+    mobileNavItems.push({
+      key: "admin-empresas",
+      label: "Empresas",
+      href: "/admin/empresas",
+      icon: "🏢",
+      active: "admin-empresas",
+    });
+    mobileNavItems.push({
+      key: "admin-usuarios",
+      label: "Usuários",
+      href: "/admin/usuarios",
+      icon: "👥",
+      active: "admin-usuarios",
+    });
+    mobileNavItems.push({
+      key: "admin-planos",
+      label: "Planos",
+      href: "/admin/planos",
+      icon: "💳",
+      active: "admin-planos",
+    });
+    mobileNavItems.push({
+      key: "admin-financeiro",
+      label: "Financeiro",
+      href: "/admin/financeiro",
+      icon: "💰",
+      active: "admin-financeiro",
+    });
+  }
+  if (!menuIsSystemAdmin && canMenu("Dashboard")) {
     mobileNavItems.push({
       key: "dashboard",
       label: "Dashboard",
@@ -249,7 +289,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
       active: "dashboard",
     });
   }
-  if (canMenu("Vendas")) {
+  if (!menuIsSystemAdmin && canMenu("Vendas")) {
     mobileNavItems.push({
       key: "vendas",
       label: "Vendas",
@@ -258,7 +298,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
       active: "vendas",
     });
   }
-  if (canMenu("Orcamentos")) {
+  if (!menuIsSystemAdmin && canMenu("Orcamentos")) {
     mobileNavItems.push({
       key: "orcamentos",
       label: "Orçamentos",
@@ -267,7 +307,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
       active: "orcamentos",
     });
   }
-  if (canMenu("Clientes")) {
+  if (!menuIsSystemAdmin && canMenu("Clientes")) {
     mobileNavItems.push({
       key: "clientes",
       label: "Clientes",
@@ -318,9 +358,10 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
       <aside id={sidebarId} className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
             <div className="sidebar-logo">{SYSTEM_NAME}</div>
 
-        <div>
-          <div className="sidebar-section-title">Operação</div>
-          <ul className="sidebar-nav">
+        {!menuIsSystemAdmin && (
+          <div>
+            <div className="sidebar-section-title">Operação</div>
+            <ul className="sidebar-nav">
             {canMenu("Dashboard") && (
               <li>
                 <a
@@ -395,11 +436,12 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
                 </a>
               </li>
             )}
-          </ul>
-        </div>
+            </ul>
+          </div>
+        )}
 
         {/* CADASTROS */}
-        {hasCadastrosSection && (
+        {!menuIsSystemAdmin && hasCadastrosSection && (
           <div>
             <div className="sidebar-section-title">Cadastros</div>
             <ul className="sidebar-nav">
@@ -422,7 +464,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
         )}
 
         {/* RELATORIOS */}
-        {canMenu("Relatorios") && (
+        {!menuIsSystemAdmin && canMenu("Relatorios") && (
           <div>
             <div className="sidebar-section-title">Relatórios</div>
             <ul className="sidebar-nav">
@@ -467,7 +509,7 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
         )}
 
         {/* PARAMETROS */}
-        {canMenu("Parametros") && (
+        {!menuIsSystemAdmin && canMenu("Parametros") && (
           <div>
             <div className="sidebar-section-title">Parâmetros</div>
             <ul className="sidebar-nav">
@@ -489,6 +531,18 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
                     onClick={handleNavClick}
                   >
                     <span>🎯</span>Metas
+                  </a>
+                </li>
+              )}
+
+              {menuIsGestor && (
+                <li>
+                  <a
+                    className={`sidebar-link ${activePage === "parametros-equipe" ? "active" : ""}`}
+                    href="/parametros/equipe"
+                    onClick={handleNavClick}
+                  >
+                    <span>👥</span>Equipe
                   </a>
                 </li>
               )}
@@ -555,10 +609,55 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
         )}
 
         {/* ADMIN */}
-        {menuIsAdmin && (
+        {menuIsSystemAdmin && (
           <div>
             <div className="sidebar-section-title">Administração</div>
             <ul className="sidebar-nav">
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "admin-dashboard" ? "active" : ""}`}
+                  href="/dashboard/admin"
+                  onClick={handleNavClick}
+                >
+                  <span>🧭</span>Dashboard
+                </a>
+              </li>
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "admin-empresas" ? "active" : ""}`}
+                  href="/admin/empresas"
+                  onClick={handleNavClick}
+                >
+                  <span>🏢</span>Empresas
+                </a>
+              </li>
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "admin-planos" ? "active" : ""}`}
+                  href="/admin/planos"
+                  onClick={handleNavClick}
+                >
+                  <span>💳</span>Planos
+                </a>
+              </li>
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "admin-financeiro" ? "active" : ""}`}
+                  href="/admin/financeiro"
+                  onClick={handleNavClick}
+                >
+                  <span>💰</span>Financeiro
+                </a>
+              </li>
+              <li>
+                <a
+                  className={`sidebar-link ${activePage === "admin-usuarios" ? "active" : ""}`}
+                  href="/admin/usuarios"
+                  onClick={handleNavClick}
+                >
+                  <span>🧑</span>Usuários
+                </a>
+              </li>
               <li>
                 <a
                   className={`sidebar-link ${activePage === "admin-permissoes" ? "active" : ""}`}
@@ -579,11 +678,11 @@ export default function MenuIsland({ activePage, initialCache }: MenuIslandProps
               </li>
               <li>
                 <a
-                  className={`sidebar-link ${activePage === "admin-users" ? "active" : ""}`}
-                  href="/dashboard/admin"
+                  className={`sidebar-link ${activePage === "admin-documentacao" ? "active" : ""}`}
+                  href="/documentacao"
                   onClick={handleNavClick}
                 >
-                  <span>🧑</span>Usuários
+                  <span>📚</span>Documentação
                 </a>
               </li>
             </ul>

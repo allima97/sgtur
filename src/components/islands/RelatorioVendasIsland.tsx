@@ -113,7 +113,7 @@ type ReciboEnriquecido = {
 };
 
 type StatusFiltro = "todos" | "aberto" | "confirmado" | "cancelado";
-type MobileFiltroTipo = "cliente" | "cidade" | "tipo_produto" | "produto" | "data";
+type MobileFiltroTipo = "cliente" | "cidade" | "tipo_produto" | "produto" | "data" | "vendedor";
 type MobilePeriodoPreset =
   | "hoje"
   | "7"
@@ -243,6 +243,8 @@ export default function RelatorioVendasIsland() {
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
   const [valorMin, setValorMin] = useState<string>("");
   const [valorMax, setValorMax] = useState<string>("");
+  const [vendedoresEquipe, setVendedoresEquipe] = useState<{ id: string; nome_completo: string }[]>([]);
+  const [vendedorFiltro, setVendedorFiltro] = useState<string>("todos");
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [loading, setLoading] = useState(false);
@@ -382,6 +384,35 @@ export default function RelatorioVendasIsland() {
   }, []);
 
   useEffect(() => {
+    if (!userCtx || userCtx.papel !== "GESTOR") {
+      setVendedoresEquipe([]);
+      setVendedorFiltro("todos");
+      return;
+    }
+
+    async function carregarVendedoresEquipe() {
+      const ids = userCtx.vendedorIds || [];
+      if (ids.length === 0) {
+        setVendedoresEquipe([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, nome_completo")
+        .in("id", ids)
+        .order("nome_completo");
+      if (error) {
+        console.error("Erro ao carregar vendedores da equipe:", error);
+        setVendedoresEquipe([]);
+        return;
+      }
+      setVendedoresEquipe((data || []) as { id: string; nome_completo: string }[]);
+    }
+
+    carregarVendedoresEquipe();
+  }, [userCtx]);
+
+  useEffect(() => {
     async function carregarBase() {
       try {
         const [
@@ -419,7 +450,7 @@ export default function RelatorioVendasIsland() {
   useEffect(() => {
     if (!userCtx) return;
     carregarDadosComissao();
-  }, [userCtx, dataInicio, dataFim]);
+  }, [userCtx, dataInicio, dataFim, vendedorFiltro]);
 
   async function carregarDadosComissao() {
     if (!userCtx) return;
@@ -427,12 +458,16 @@ export default function RelatorioVendasIsland() {
       setCommissionLoading(true);
       setCommissionErro(null);
       const periodos = getPeriodosMeses(dataInicio, dataFim);
+      const vendedorIdsFiltro =
+        userCtx.papel === "GESTOR" && vendedorFiltro !== "todos"
+          ? [vendedorFiltro]
+          : userCtx.vendedorIds;
       let metasQuery = supabase
         .from("metas_vendedor")
         .select("id, meta_geral")
         .in("periodo", periodos);
-      if (userCtx.papel !== "ADMIN" && userCtx.vendedorIds.length > 0) {
-        metasQuery = metasQuery.in("vendedor_id", userCtx.vendedorIds);
+      if (userCtx.papel !== "ADMIN" && vendedorIdsFiltro.length > 0) {
+        metasQuery = metasQuery.in("vendedor_id", vendedorIdsFiltro);
       }
       const { data: metasData, error: metasError } = await metasQuery;
       if (metasError) throw metasError;
@@ -1028,7 +1063,11 @@ export default function RelatorioVendasIsland() {
         .order("data_lancamento", { ascending: false });
 
       if (userCtx.papel !== "ADMIN") {
-        query = query.in("vendedor_id", userCtx.vendedorIds);
+        if (userCtx.papel === "GESTOR" && vendedorFiltro !== "todos") {
+          query = query.eq("vendedor_id", vendedorFiltro);
+        } else {
+          query = query.in("vendedor_id", userCtx.vendedorIds);
+        }
       }
 
       if (dataInicio) {
@@ -1119,7 +1158,11 @@ export default function RelatorioVendasIsland() {
         .order("data_lancamento", { ascending: false });
 
       if (userCtx.papel !== "ADMIN") {
-        query = query.in("vendedor_id", userCtx.vendedorIds);
+        if (userCtx.papel === "GESTOR" && vendedorFiltro !== "todos") {
+          query = query.eq("vendedor_id", vendedorFiltro);
+        } else {
+          query = query.in("vendedor_id", userCtx.vendedorIds);
+        }
       }
 
       if (dataInicio) {
@@ -1482,6 +1525,23 @@ export default function RelatorioVendasIsland() {
               <option value="cancelado">Cancelado</option>
             </select>
           </div>
+          {userCtx?.papel === "GESTOR" && (
+            <div className="form-group">
+              <label className="form-label">Vendedor</label>
+              <select
+                className="form-select"
+                value={vendedorFiltro}
+                onChange={(e) => setVendedorFiltro(e.target.value)}
+              >
+                <option value="todos">Todos</option>
+                {vendedoresEquipe.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nome_completo}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Valor mínimo</label>
             <input
@@ -1765,12 +1825,33 @@ export default function RelatorioVendasIsland() {
                 style={{ width: "100%" }}
               >
                 <option value="cliente">Por Cliente</option>
+                {userCtx?.papel === "GESTOR" && (
+                  <option value="vendedor">Por Vendedor</option>
+                )}
                 <option value="cidade">Por Cidade</option>
                 <option value="tipo_produto">Por Tipo Produto</option>
                 <option value="produto">Por Produto</option>
                 <option value="data">Por Data</option>
               </select>
             </div>
+
+            {mobileFiltroTipo === "vendedor" && userCtx?.papel === "GESTOR" && (
+              <div className="form-group">
+                <label className="form-label">Vendedor</label>
+                <select
+                  className="form-select"
+                  value={vendedorFiltro}
+                  onChange={(e) => setVendedorFiltro(e.target.value)}
+                >
+                  <option value="todos">Todos</option>
+                  {vendedoresEquipe.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome_completo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {mobileFiltroTipo === "cliente" && (
               <div className="form-group">

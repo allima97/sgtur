@@ -20,6 +20,7 @@ type Perfil = {
   company_id?: string | null;
   company?: { nome_empresa?: string | null; cnpj?: string | null; endereco?: string | null; telefone?: string | null } | null;
   cargo?: string | null;
+  created_by_gestor?: boolean | null;
 };
 
 export default function PerfilIsland() {
@@ -37,6 +38,7 @@ export default function PerfilIsland() {
   const [empresaAtual, setEmpresaAtual] = useState<{ nome?: string | null; cnpj?: string | null } | null>(null);
   const [camposExtrasOk, setCamposExtrasOk] = useState(true);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
+  const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
 
   const cidadeEstado = useMemo(() => {
     if (!perfil) return "";
@@ -64,7 +66,7 @@ export default function PerfilIsland() {
         }
 
         const colsExtras =
-          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, created_by_gestor, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
         const colsBasicos =
           "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
 
@@ -100,6 +102,7 @@ export default function PerfilIsland() {
           company_id: data?.company_id || null,
           company: data?.companies || null,
           cargo: data?.user_types?.name || null,
+          created_by_gestor: (data as any)?.created_by_gestor ?? null,
         });
         setNovoEmail(data?.email || user.email || "");
         setUsoIndividual(data?.uso_individual ?? null);
@@ -247,6 +250,10 @@ function formatCep(value: string) {
   }
 
   async function trocarEmpresa() {
+    if (bloqueiaEmpresaTipo) {
+      setErro("A empresa é definida pelo gestor.");
+      return;
+    }
     if (!novoCnpj.trim()) {
       setErro("Informe o CNPJ da nova empresa.");
       return;
@@ -352,30 +359,36 @@ function formatCep(value: string) {
               Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
             </small>
           )}
-          <div className="form-group">
-            <label>Uso do sistema</label>
-            <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <input
-                  type="radio"
-                  name="uso"
-                  checked={usoIndividual !== false}
-                  onChange={() => setUsoIndividual(true)}
-                />
-                Individual
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <input
-                  type="radio"
-                  name="uso"
-                  checked={usoIndividual === false}
-                  onChange={() => setUsoIndividual(false)}
-                />
-                Corporativo
-              </label>
+            <div className="form-group">
+              <label>Uso do sistema</label>
+              <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="radio"
+                    name="uso"
+                    checked={usoIndividual !== false}
+                    onChange={() => setUsoIndividual(true)}
+                    disabled={bloqueiaEmpresaTipo}
+                  />
+                  Individual
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="radio"
+                    name="uso"
+                    checked={usoIndividual === false}
+                    onChange={() => setUsoIndividual(false)}
+                    disabled={bloqueiaEmpresaTipo}
+                  />
+                  Corporativo
+                </label>
+              </div>
+            <small>
+              {bloqueiaEmpresaTipo
+                ? "Definido pelo gestor."
+                : "Selecione conforme a forma de uso (pessoal ou vinculada à empresa)."}
+            </small>
             </div>
-            <small>Selecione conforme a forma de uso (pessoal ou vinculada à empresa).</small>
-          </div>
           <div
             className="perfil-grid"
             style={{
@@ -616,12 +629,18 @@ function formatCep(value: string) {
                 value={novoCnpj}
                 onChange={(e) => setNovoCnpj(e.target.value)}
                 placeholder="00.000.000/0000-00"
+                disabled={bloqueiaEmpresaTipo}
               />
             </div>
             <div className="mobile-stack-buttons" style={{ marginTop: "auto" }}>
-              <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando}>
+              <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando || bloqueiaEmpresaTipo}>
                 Trocar empresa
               </button>
+              {bloqueiaEmpresaTipo && (
+                <small style={{ opacity: 0.7 }}>
+                  Empresa e cargo são definidos pelo gestor.
+                </small>
+              )}
             </div>
           </div>
         </div>

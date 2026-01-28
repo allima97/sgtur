@@ -40,7 +40,10 @@ const MODULOS = [
   "Admin",
   "AdminDashboard",
   "AdminLogs",
-  "AdminUsers"
+  "AdminUsers",
+  "AdminEmpresas",
+  "AdminFinanceiro",
+  "AdminPlanos"
 ];
 
 

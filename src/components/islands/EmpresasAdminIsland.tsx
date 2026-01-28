@@ -16,6 +16,7 @@ type EmpresaRow = {
     valor_mensal: number | null;
     ultimo_pagamento: string | null;
     proximo_vencimento: string | null;
+    plan?: { nome: string } | null;
   } | null;
 };
 
@@ -56,6 +57,7 @@ const EmpresasAdminIsland: React.FC = () => {
             valor_mensal,
             ultimo_pagamento,
             proximo_vencimento
+            ,plan:plans (nome)
           )
         `
         )
@@ -107,6 +109,7 @@ const EmpresasAdminIsland: React.FC = () => {
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Nome Fantasia</th>
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">CNPJ</th>
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Cidade/Estado</th>
+                <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Plano</th>
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Status</th>
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Ult. Pagamento</th>
                 <th className="px-4 py-2 text-sm text-left border-b border-slate-700">Próx. Vencimento</th>
@@ -121,6 +124,9 @@ const EmpresasAdminIsland: React.FC = () => {
                   <td className="px-4 py-2 text-sm border-b border-slate-800">{e.nome_fantasia}</td>
                   <td className="px-4 py-2 text-sm border-b border-slate-800">{e.cnpj}</td>
                   <td className="px-4 py-2 text-sm border-b border-slate-800">{e.cidade}/{e.estado}</td>
+                  <td className="px-4 py-2 text-sm border-b border-slate-800">
+                    {e.billing?.plan?.nome || "—"}
+                  </td>
                   <td className="px-4 py-2 text-sm border-b border-slate-800">
                     <span
                       className="font-bold capitalize"

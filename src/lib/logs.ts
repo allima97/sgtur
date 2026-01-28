@@ -6,12 +6,20 @@ export async function registrarLog({
   modulo,
   detalhes = {}
 }: {
-  user_id: string | null;
+  user_id?: string | null;
   acao: string;
   modulo: string;
   detalhes?: any;
 }) {
   try {
+    let resolvedUserId = user_id ?? null;
+    if (!resolvedUserId) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        resolvedUserId = data?.user?.id ?? null;
+      } catch (_) {}
+    }
+
     let ip = "";
     try {
       const resp = await fetch("https://api.ipify.org?format=json");
@@ -23,7 +31,7 @@ export async function registrarLog({
       typeof navigator !== "undefined" ? navigator.userAgent : "";
 
     await supabase.from("logs").insert({
-      user_id,
+      user_id: resolvedUserId,
       acao,
       modulo,
       detalhes,

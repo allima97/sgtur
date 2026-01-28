@@ -173,14 +173,31 @@ drop policy if exists "cron_log_select_admin" on public.cron_log_alertas;
 create policy "cron_log_select_admin" on public.cron_log_alertas
   for select using (is_admin(auth.uid()));
 
--- LOGS DE EVENTOS (somente leitura para admins, inserção liberada a usuários autenticados)
+-- LOGS DE EVENTOS (somente leitura para admins; login permite inserção anon limitada)
 alter table public.logs enable row level security;
 drop policy if exists "logs_select_admin" on public.logs;
 create policy "logs_select_admin" on public.logs
   for select using (is_admin(auth.uid()));
 drop policy if exists "logs_insert" on public.logs;
 create policy "logs_insert" on public.logs
-  for insert with check (auth.uid() IS NOT NULL);
+  for insert with check (
+    (
+      auth.uid() IS NOT NULL
+      and user_id = auth.uid()
+    )
+    or (
+      auth.uid() IS NULL
+      and user_id IS NULL
+      and modulo = 'login'
+      and acao in (
+        'tentativa_login',
+        'login_falhou',
+        'login_erro_interno',
+        'solicitou_recuperacao_senha',
+        'reset_link_invalido'
+      )
+    )
+  );
 
 -- GARANTE VIAGEM_PASSAGEIROS EXISTE ANTES DAS POLÍTICAS
 create table if not exists public.viagem_passageiros (

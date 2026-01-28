@@ -39,6 +39,12 @@ function extrairNomesTipos(usuario?: Usuario | null) {
 const isUsuarioVendedor = (usuario?: Usuario | null) =>
   extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("VENDEDOR"));
 
+const isUsuarioGestor = (usuario?: Usuario | null) =>
+  extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("GESTOR"));
+
+const isUsuarioAdmin = (usuario?: Usuario | null) =>
+  extrairNomesTipos(usuario).some((nome) => nome.toUpperCase().includes("ADMIN"));
+
 export default function MetasVendedorIsland() {
   const { can, loading: loadingPerms, ready } = usePermissoesStore();
   const loadingPerm = loadingPerms || !ready;
@@ -51,6 +57,7 @@ export default function MetasVendedorIsland() {
 
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [vendedores, setVendedores] = useState<Usuario[]>([]);
+  const [equipeIds, setEquipeIds] = useState<string[]>([]);
   const [produtos, setProdutos] = useState<{ id: string; nome: string }[]>([]);
 
   const [vendedorSelecionado, setVendedorSelecionado] = useState<string>("");
@@ -59,6 +66,15 @@ export default function MetasVendedorIsland() {
 
   const [metaGeral, setMetaGeral] = useState<string>("");
   const [metaProdutos, setMetaProdutos] = useState<{ produto_id: string; valor: string }[]>([]);
+
+  const [metaEquipeGeral, setMetaEquipeGeral] = useState<string>("");
+  const [gestorParticipa, setGestorParticipa] = useState<boolean>(false);
+  const [metaGestor, setMetaGestor] = useState<string>("");
+  const [metaEquipeProdutos, setMetaEquipeProdutos] = useState<{ produto_id: string; valor: string }[]>([]);
+  const [periodoEquipe, setPeriodoEquipe] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [ativoEquipe, setAtivoEquipe] = useState<boolean>(true);
+  const [salvandoEquipe, setSalvandoEquipe] = useState<boolean>(false);
+  const [erroEquipe, setErroEquipe] = useState<string | null>(null);
 
   const [listaMetas, setListaMetas] = useState<Meta[]>([]);
   const [detalhesMetas, setDetalhesMetas] = useState<Record<string, MetaProduto[]>>({});
@@ -96,6 +112,7 @@ export default function MetasVendedorIsland() {
 
       const logado = (usuarios || []).find((u) => u.id === userId) || null;
       setUsuario(logado);
+      const gestorLocal = isUsuarioGestor(logado);
 
       // carregar produtos ativos
       const { data: produtosData } = await supabase
@@ -108,15 +125,44 @@ export default function MetasVendedorIsland() {
       const isAdminLocal = can("Metas", "admin");
       const isEditLocal = can("Metas", "edit");
 
+      let equipeIdsLocal: string[] = [];
+      let equipeUsuarios: Usuario[] = [];
+      if (gestorLocal) {
+        const { data: rel } = await supabase
+          .from("gestor_vendedor")
+          .select("vendedor_id")
+          .eq("gestor_id", userId);
+        equipeIdsLocal =
+          rel
+            ?.map((r: any) => r.vendedor_id)
+            .filter((id: string | null): id is string => Boolean(id)) || [];
+        equipeUsuarios = (usuarios || []).filter((u: any) =>
+          equipeIdsLocal.includes(u.id)
+        ) as Usuario[];
+      }
+      setEquipeIds(equipeIdsLocal);
+
       let vendedoresDisponiveis: Usuario[] = [];
-      if (isAdminLocal || isEditLocal) {
+      if (isAdminLocal) {
+        vendedoresDisponiveis = logado?.company_id
+          ? (usuarios || []).filter((u: any) => u.company_id === logado.company_id) as Usuario[]
+          : (usuarios || []);
+      } else if (gestorLocal) {
+        const base = [...equipeUsuarios, ...(logado ? [logado] : [])];
+        const unique = Array.from(
+          new Map(base.filter(Boolean).map((u) => [u.id, u])).values()
+        );
+        vendedoresDisponiveis = unique;
+      } else if (isEditLocal) {
         vendedoresDisponiveis = logado?.company_id
           ? (usuarios || []).filter((u: any) => u.company_id === logado.company_id) as Usuario[]
           : (usuarios || []);
       } else if (isUsuarioVendedor(logado)) {
         vendedoresDisponiveis = [logado];
       }
-      const vendedoresValidos = vendedoresDisponiveis.filter(isUsuarioVendedor);
+      const vendedoresValidos = gestorLocal
+        ? vendedoresDisponiveis
+        : vendedoresDisponiveis.filter(isUsuarioVendedor);
       setVendedores(vendedoresValidos);
 
       // carregar parametros_comissao (company)
@@ -128,7 +174,11 @@ export default function MetasVendedorIsland() {
       setParametros(params || null);
 
       if (vendedoresValidos.length === 0) {
-        setErro("Nenhum vendedor do tipo VENDEDOR disponível.");
+        setErro(
+          gestorLocal
+            ? "Nenhum vendedor vinculado ao gestor."
+            : "Nenhum vendedor do tipo VENDEDOR disponível."
+        );
         return;
       }
       const initialVendedor =
@@ -201,11 +251,14 @@ export default function MetasVendedorIsland() {
   // =============================================
   // 3. PERFIL DE ACESSO
   // =============================================
-  const usuarioPodeEditar =
-    usuario?.uso_individual || isAdmin || isEdit;
+  const isGestorRole = isUsuarioGestor(usuario);
+  const isAdminRole = isUsuarioAdmin(usuario);
+  const isVendedorOnly = isUsuarioVendedor(usuario) && !isGestorRole && !isAdminRole;
+
+  const usuarioPodeEditar = !isVendedorOnly && (isAdmin || isEdit || isGestorRole);
 
   const mostrarSelectVendedor =
-    usuario?.uso_individual === false && (isAdmin || isEdit);
+    !isVendedorOnly && (isAdmin || isEdit || isGestorRole) && vendedores.length > 1;
 
   // =============================================
   // 4. SALVAR / EDITAR META
@@ -240,6 +293,183 @@ export default function MetasVendedorIsland() {
     return metaProdutos.reduce((sum, item) => sum + normalizarMoeda(item.valor), 0);
   }
 
+  function totalMetaEquipeDiferenciada() {
+    return metaEquipeProdutos.reduce((sum, item) => sum + normalizarMoeda(item.valor), 0);
+  }
+
+  async function salvarMetaEquipe(e: React.FormEvent) {
+    e.preventDefault();
+    setErroEquipe(null);
+
+    if (!usuario || !isGestorRole) {
+      setErroEquipe("Apenas gestores podem definir metas gerais da equipe.");
+      return;
+    }
+
+    const metaTotal = normalizarMoeda(metaEquipeGeral);
+    if (!metaEquipeGeral || metaTotal <= 0) {
+      setErroEquipe("Informe uma meta geral válida para a equipe.");
+      return;
+    }
+
+    if (equipeIds.length === 0) {
+      setErroEquipe("Nenhum vendedor vinculado ao gestor.");
+      return;
+    }
+
+    const metaGestorNum = gestorParticipa ? normalizarMoeda(metaGestor) : 0;
+    if (gestorParticipa && metaGestorNum <= 0) {
+      setErroEquipe("Informe a meta do gestor para participar da meta geral.");
+      return;
+    }
+    if (gestorParticipa && metaGestorNum > metaTotal) {
+      setErroEquipe("A meta do gestor não pode ser maior que a meta geral.");
+      return;
+    }
+
+    const totalDifEquipe = totalMetaEquipeDiferenciada();
+    if (parametros?.foco_valor === "liquido" && totalDifEquipe <= 0) {
+      setErroEquipe("Quando o foco é valor líquido, informe metas diferenciadas por produto.");
+      return;
+    }
+
+    const restante = metaTotal - metaGestorNum;
+    const divisor = equipeIds.length;
+    if (divisor <= 0) {
+      setErroEquipe("Nenhum vendedor válido para dividir a meta.");
+      return;
+    }
+    const metaPorVendedor = restante / divisor;
+    if (metaPorVendedor < 0) {
+      setErroEquipe("A meta geral precisa ser maior que a meta do gestor.");
+      return;
+    }
+
+    const periodoFinal = `${periodoEquipe}-01`;
+    const idsParaMetas = gestorParticipa
+      ? Array.from(new Set([usuario.id, ...equipeIds]))
+      : [...equipeIds];
+    const idsDistribuicao = [...equipeIds];
+    const metaDifPorVendedor =
+      idsDistribuicao.length > 0 ? totalDifEquipe / idsDistribuicao.length : 0;
+
+    try {
+      setSalvandoEquipe(true);
+
+      const { data: metasExistentes, error: metasErr } = await supabase
+        .from("metas_vendedor")
+        .select("id, vendedor_id")
+        .eq("periodo", periodoFinal)
+        .in("vendedor_id", idsParaMetas);
+      if (metasErr) throw metasErr;
+
+      const mapExistentes = new Map<string, string>();
+      (metasExistentes || []).forEach((m: any) => {
+        if (m?.vendedor_id) mapExistentes.set(m.vendedor_id, m.id);
+      });
+
+      const updates: Promise<any>[] = [];
+      const inserts: any[] = [];
+
+      idsParaMetas.forEach((id) => {
+        const metaValue =
+          gestorParticipa && id === usuario.id ? metaGestorNum : metaPorVendedor;
+        const metaDifValue =
+          idsDistribuicao.includes(id) && totalDifEquipe > 0 ? metaDifPorVendedor : 0;
+        const existingId = mapExistentes.get(id);
+        if (existingId) {
+          updates.push(
+            supabase
+              .from("metas_vendedor")
+              .update({
+                meta_geral: metaValue,
+                meta_diferenciada: metaDifValue,
+                ativo: ativoEquipe,
+                scope: "vendedor",
+              })
+              .eq("id", existingId)
+          );
+        } else {
+          inserts.push({
+            vendedor_id: id,
+            periodo: periodoFinal,
+            meta_geral: metaValue,
+            meta_diferenciada: metaDifValue,
+            ativo: ativoEquipe,
+            scope: "vendedor",
+          });
+        }
+      });
+
+      if (updates.length) {
+        await Promise.all(updates);
+      }
+      if (inserts.length) {
+        const { error: insertErr } = await supabase
+          .from("metas_vendedor")
+          .insert(inserts);
+        if (insertErr) throw insertErr;
+      }
+
+      const { data: metasPeriodo } = await supabase
+        .from("metas_vendedor")
+        .select("id, vendedor_id")
+        .eq("periodo", periodoFinal)
+        .in("vendedor_id", idsParaMetas);
+      const metaIdsMap: Record<string, string> = {};
+      (metasPeriodo || []).forEach((m: any) => {
+        if (m?.vendedor_id && m?.id) metaIdsMap[m.vendedor_id] = m.id;
+      });
+      const metaIdsParaLimpar = (metasPeriodo || [])
+        .map((m: any) => m.id)
+        .filter(Boolean);
+      if (metaIdsParaLimpar.length > 0) {
+        await supabase
+          .from("metas_vendedor_produto")
+          .delete()
+          .in("meta_vendedor_id", metaIdsParaLimpar);
+      }
+
+      const linhasValidas = metaEquipeProdutos.filter(
+        (p) => p.produto_id && normalizarMoeda(p.valor) > 0
+      );
+      if (linhasValidas.length > 0 && idsDistribuicao.length > 0) {
+        const insertsProdutos: any[] = [];
+        linhasValidas.forEach((linha) => {
+          const valorTotalProduto = normalizarMoeda(linha.valor);
+          const valorPorVendedor =
+            idsDistribuicao.length > 0 ? valorTotalProduto / idsDistribuicao.length : 0;
+          idsDistribuicao.forEach((vid) => {
+            const metaId = metaIdsMap[vid];
+            if (!metaId) return;
+            insertsProdutos.push({
+              meta_vendedor_id: metaId,
+              produto_id: linha.produto_id,
+              valor: valorPorVendedor,
+            });
+          });
+        });
+        if (insertsProdutos.length > 0) {
+          const { error: prodErr } = await supabase
+            .from("metas_vendedor_produto")
+            .insert(insertsProdutos);
+          if (prodErr) throw prodErr;
+        }
+      }
+
+      await carregarMetas(vendedorSelecionado);
+      setMetaEquipeGeral("");
+      setMetaGestor("");
+      setMetaEquipeProdutos([]);
+      setGestorParticipa(false);
+    } catch (e: any) {
+      console.error(e);
+      setErroEquipe("Erro ao salvar meta geral da equipe.");
+    } finally {
+      setSalvandoEquipe(false);
+    }
+  }
+
   async function salvarMeta(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -250,7 +480,8 @@ export default function MetasVendedorIsland() {
       return;
     }
 
-    if (!isUsuarioVendedor(vendedorAtual)) {
+    const selecaoGestor = isGestorRole && vendedorAtual.id === usuario?.id;
+    if (!isUsuarioVendedor(vendedorAtual) && !selecaoGestor) {
       setErro("Selecione um vendedor com tipo VENDEDOR.");
       return;
     }
@@ -424,14 +655,227 @@ export default function MetasVendedorIsland() {
 
   if (loadingPerm || loadingMeta) return <LoadingUsuarioContext />;
   if (!podeVer) return <div>Acesso ao módulo de Metas bloqueado.</div>;
+  if (isVendedorOnly) {
+    return (
+      <div className="card-base card-config">
+        Metas são definidas pelo gestor da equipe.
+      </div>
+    );
+  }
 
   const metasExibidas = listaMetas.slice(0, 5);
+  const metaEquipeTotalNum = normalizarMoeda(metaEquipeGeral);
+  const metaGestorNum = gestorParticipa ? normalizarMoeda(metaGestor) : 0;
+  const equipeCount = equipeIds.length;
+  const metaPorVendedor =
+    equipeCount > 0 ? (metaEquipeTotalNum - metaGestorNum) / equipeCount : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 p-2 md:p-6 metas-page">
       {erro && !mostrarFormularioMeta && (
         <div className="card-base card-config mb-3">
           <strong>{erro}</strong>
+        </div>
+      )}
+
+      {isGestorRole && (
+        <div className="card-base card-blue mb-3">
+          <h3 className="mb-2">Meta geral da equipe</h3>
+          <p style={{ opacity: 0.8, marginBottom: 12 }}>
+            Defina a meta total do período e deixe o sistema dividir entre os vendedores.
+          </p>
+          <form onSubmit={salvarMetaEquipe}>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="form-group flex-1 min-w-[160px]">
+                <label className="form-label">Período *</label>
+                <input
+                  type="month"
+                  className="form-input w-full"
+                  value={periodoEquipe}
+                  onChange={(e) => setPeriodoEquipe(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group flex-1 min-w-[180px]">
+                <label className="form-label">Meta geral (R$) *</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={formatarMoeda(metaEquipeGeral)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setMetaEquipeGeral(raw);
+                  }}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                />
+              </div>
+
+              <div className="form-group flex-1 min-w-[160px]">
+                <label className="form-label">Gestor participa?</label>
+                <select
+                  className="form-select"
+                  value={gestorParticipa ? "true" : "false"}
+                  onChange={(e) => setGestorParticipa(e.target.value === "true")}
+                >
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+
+              {gestorParticipa && (
+                <div className="form-group flex-1 min-w-[180px]">
+                  <label className="form-label">Meta do gestor (R$)</label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    value={formatarMoeda(metaGestor)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setMetaGestor(raw);
+                    }}
+                    inputMode="decimal"
+                    placeholder="0,00"
+                  />
+                </div>
+              )}
+
+              <div className="form-group flex-1 min-w-[120px]">
+                <label className="form-label">Ativa?</label>
+                <select
+                  className="form-select"
+                  value={ativoEquipe ? "true" : "false"}
+                  onChange={(e) => setAtivoEquipe(e.target.value === "true")}
+                >
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Metas diferenciadas por produto (opcional)</label>
+              <div className="flex flex-col gap-2">
+                {metaEquipeProdutos.map((mp, idx) => (
+                  <div className="flex flex-col md:flex-row gap-2" key={idx}>
+                    <div className="form-group flex-1 min-w-[160px]">
+                      <label className="form-label">Produto</label>
+                      <select
+                        className="form-select"
+                        value={mp.produto_id}
+                        onChange={(e) => {
+                          const copia = [...metaEquipeProdutos];
+                          copia[idx] = { ...copia[idx], produto_id: e.target.value };
+                          setMetaEquipeProdutos(copia);
+                        }}
+                      >
+                        <option value="">Selecione</option>
+                        {produtos.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group flex-1 min-w-[140px]">
+                      <label className="form-label">Meta (R$)</label>
+                      <input
+                        className="form-input"
+                        type="text"
+                        inputMode="decimal"
+                        value={formatarMoeda(mp.valor)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          const copia = [...metaEquipeProdutos];
+                          copia[idx] = { ...copia[idx], valor: raw };
+                          setMetaEquipeProdutos(copia);
+                        }}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div className="form-group flex-none flex items-end">
+                      <button
+                        type="button"
+                        className="btn btn-light"
+                        onClick={() => {
+                          setMetaEquipeProdutos(
+                            metaEquipeProdutos.filter((_, i) => i !== idx)
+                          );
+                        }}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="form-row mobile-stack" style={{ alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full sm:w-auto"
+                    onClick={() =>
+                      setMetaEquipeProdutos([
+                        ...metaEquipeProdutos,
+                        { produto_id: "", valor: "" },
+                      ])
+                    }
+                  >
+                    + Adicionar produto
+                  </button>
+                  <div style={{ marginLeft: "auto", fontWeight: 600 }}>
+                    Total diferenciada:{" "}
+                    {totalMetaEquipeDiferenciada().toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </div>
+                </div>
+                {parametros?.foco_valor === "liquido" && (
+                  <small style={{ color: "#f97316" }}>
+                    Foco em valor líquido ativo: informe metas diferenciadas por produto.
+                  </small>
+                )}
+              </div>
+            </div>
+
+            <div className="card-base card-config mt-3">
+              <div style={{ fontWeight: 600 }}>
+                Equipe: {equipeCount} vendedor(es)
+              </div>
+              <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+                Meta por vendedor:{" "}
+                {Number.isFinite(metaPorVendedor)
+                  ? metaPorVendedor.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })
+                  : "—"}
+              </div>
+              {totalMetaEquipeDiferenciada() > 0 && (
+                <div style={{ fontSize: "0.8rem", opacity: 0.75 }}>
+                  Meta diferenciada por vendedor:{" "}
+                  {(equipeCount > 0
+                    ? totalMetaEquipeDiferenciada() / equipeCount
+                    : 0
+                  ).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </div>
+              )}
+            </div>
+
+            {erroEquipe && (
+              <div className="card-base card-config mb-2 mt-2">
+                <strong>{erroEquipe}</strong>
+              </div>
+            )}
+
+            <div className="mobile-stack-buttons" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+              <button type="submit" className="btn btn-primary" disabled={salvandoEquipe}>
+                {salvandoEquipe ? "Salvando..." : "Aplicar meta geral"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

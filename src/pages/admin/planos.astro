@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import PlanosAdminIsland from "../../components/islands/PlanosAdminIsland.tsx";
+---
+
+<DashboardLayout title="Planos" activePage="admin-planos">
+  <div class="page-content-wrap">
+    <PlanosAdminIsland client:visible />
+  </div>
+</DashboardLayout>

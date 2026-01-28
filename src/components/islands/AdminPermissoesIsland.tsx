@@ -48,6 +48,9 @@ const MODULOS: string[] = [
   "AdminDashboard",
   "AdminLogs",
   "AdminUsers",
+  "AdminEmpresas",
+  "AdminFinanceiro",
+  "AdminPlanos",
 ];
 
 

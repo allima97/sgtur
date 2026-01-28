@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import EmpresasAdminIsland from "../../components/islands/EmpresasAdminIsland.tsx";
+---
+
+<DashboardLayout title="Empresas" activePage="admin-empresas">
+  <div class="page-content-wrap">
+    <EmpresasAdminIsland client:visible />
+  </div>
+</DashboardLayout>

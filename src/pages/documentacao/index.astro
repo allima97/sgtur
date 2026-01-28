@@ -1,26 +1,11 @@
+---
 import Layout from "../../layouts/DashboardLayout.astro";
 import DocumentationPortalIsland from "../../components/islands/DocumentationPortalIsland.tsx";
 
 const pageTitle = "Documentação do Sistema";
-
-
-<Layout title={pageTitle} module="Admin">
-  <h1 class="page-title">{pageTitle}</h1>
-  <DocumentationPortalIsland client:load />
-</Layout>
-
-const pageTitle = "Documentação do Sistema";
 ---
 
-<Layout title={pageTitle} module="Admin">
+<Layout title={pageTitle} module="Admin" activePage="admin-documentacao">
   <h1 class="page-title">{pageTitle}</h1>
-
-  <div class="card-base card-blue mb-3">
-    <p>
-      Esta página exibe a documentação técnica gerada automaticamente.
-      Atualize este conteúdo conforme novos módulos forem implementados.
-    </p>
-  </div>
-
-  <DocumentationIsland client:idle />
+  <DocumentationPortalIsland client:load />
 </Layout>

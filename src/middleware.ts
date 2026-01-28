@@ -1,6 +1,11 @@
 import { defineMiddleware } from "astro:middleware";
 import { createServerClient } from "@supabase/ssr";
 import { descobrirModulo, MODULO_ALIASES } from "./config/modulos";
+import {
+  extractUserTypeName,
+  isSystemAdminRole,
+  normalizeUserType,
+} from "./lib/adminAccess";
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -128,12 +133,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const cookieRaw = context.cookies.get(MENU_CACHE_COOKIE)?.value ?? "";
   let shouldRefreshMenuCache = true;
+  let cachedUserType = "";
+  let cachedIsSystemAdmin = false;
   if (cookieRaw) {
     try {
       const parsed = JSON.parse(decodeURIComponent(cookieRaw));
       if (parsed?.userId === user.id) {
         const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : 0;
-        if (updatedAt && Date.now() - updatedAt < MENU_CACHE_TTL_MS) {
+        cachedUserType = normalizeUserType(parsed?.userType);
+        cachedIsSystemAdmin =
+          typeof parsed?.isSystemAdmin === "boolean"
+            ? parsed.isSystemAdmin
+            : isSystemAdminRole(cachedUserType);
+        const isFresh = updatedAt && Date.now() - updatedAt < MENU_CACHE_TTL_MS;
+        const hasUserType = Boolean(cachedUserType);
+        if (isFresh && hasUserType) {
           shouldRefreshMenuCache = false;
         }
       }
@@ -142,18 +156,44 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (shouldRefreshMenuCache) {
-    const { data: accRows } = await supabase
-      .from("modulo_acesso")
-      .select("modulo, permissao, ativo")
-      .eq("usuario_id", user.id);
+  let userType = cachedUserType;
+  let isSystemAdmin = cachedIsSystemAdmin;
 
-    const acessos = buildPerms((accRows || []) as Array<{ modulo: string | null; permissao: string | null; ativo: boolean | null }>);
+  // Bloqueio de onboarding: exige perfil completo antes de acessar outros módulos
+  const rotasOnboardingPermitidas = ["/perfil", "/auth"];
+
+  if (shouldRefreshMenuCache) {
+    const [accRowsRes, userTypeRes] = await Promise.all([
+      supabase
+        .from("modulo_acesso")
+        .select("modulo, permissao, ativo")
+        .eq("usuario_id", user.id),
+      supabase
+        .from("users")
+        .select("id, user_types(name)")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
+
+    const acessos = buildPerms(
+      (accRowsRes.data || []) as Array<{
+        modulo: string | null;
+        permissao: string | null;
+        ativo: boolean | null;
+      }>
+    );
+
+    const rawType = extractUserTypeName(userTypeRes.data);
+    userType = normalizeUserType(rawType);
+    isSystemAdmin = isSystemAdminRole(userType);
+
     const payload = {
       userId: user.id,
       acessos,
       updatedAt: Date.now(),
       userEmail: user.email ?? "",
+      userType,
+      isSystemAdmin,
     };
     try {
       const encoded = encodeURIComponent(JSON.stringify(payload));
@@ -164,6 +204,44 @@ export const onRequest = defineMiddleware(async (context, next) => {
         secure: true,
       });
     } catch {}
+  }
+
+  if (isSystemAdmin) {
+    const adminAllowedPrefixes = [
+      "/dashboard/admin",
+      "/dashboard/logs",
+      "/dashboard/permissoes",
+      "/admin",
+      "/documentacao",
+      "/perfil",
+    ];
+    const isAllowed = adminAllowedPrefixes.some((prefix) => pathname.startsWith(prefix));
+    if (isAllowed) {
+      return next();
+    }
+    return Response.redirect(new URL("/dashboard/admin", url), 302);
+  }
+
+  // Bloquear acesso até completar o onboarding (perfil obrigatório)
+  const isOnboardingAllowed = rotasOnboardingPermitidas.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+  if (!isOnboardingAllowed) {
+    const { data: perfil } = await supabase
+      .from("users")
+      .select("nome_completo, telefone, cidade, estado, uso_individual")
+      .eq("id", user.id)
+      .maybeSingle();
+    const precisaOnboarding =
+      !perfil?.nome_completo ||
+      !perfil?.telefone ||
+      !perfil?.cidade ||
+      !perfil?.estado ||
+      perfil?.uso_individual === null ||
+      perfil?.uso_individual === undefined;
+    if (precisaOnboarding) {
+      return Response.redirect(new URL("/perfil?onboarding=1", url), 302);
+    }
   }
 
   // ============================

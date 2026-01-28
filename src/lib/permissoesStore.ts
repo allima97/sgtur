@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { supabase } from "./supabase";
 import { MAPA_MODULOS } from "../config/modulos";
+import { isAdminModuleKey, isSystemAdminRole } from "./adminAccess";
 import {
   ensurePermissoes,
   getPermissaoFromCache,
@@ -16,6 +17,8 @@ type PermissoesState = {
   ready: boolean;
   userId: string | null;
   userEmail: string;
+  userType: string;
+  isSystemAdmin: boolean;
 };
 
 const initialCache = typeof window !== "undefined" ? readPermissoesCache() : null;
@@ -25,6 +28,8 @@ let state: PermissoesState = {
   ready: Boolean(initialCache),
   userId: initialCache?.userId ?? null,
   userEmail: initialCache?.userEmail ?? "",
+  userType: initialCache?.userType ?? "",
+  isSystemAdmin: Boolean(initialCache?.isSystemAdmin),
 };
 const hydrationSnapshot: PermissoesState = {
   cache: null,
@@ -32,6 +37,8 @@ const hydrationSnapshot: PermissoesState = {
   ready: false,
   userId: null,
   userEmail: "",
+  userType: "",
+  isSystemAdmin: false,
 };
 
 const listeners = new Set<() => void>();
@@ -67,6 +74,8 @@ const syncHydrationSnapshot = () => {
   hydrationSnapshot.ready = false;
   hydrationSnapshot.userId = null;
   hydrationSnapshot.userEmail = "";
+  hydrationSnapshot.userType = "";
+  hydrationSnapshot.isSystemAdmin = false;
 };
 
 const setState = (partial: Partial<PermissoesState>) => {
@@ -84,6 +93,8 @@ const ensureSubscribed = () => {
       ready: true,
       userId: cache.userId ?? null,
       userEmail: cache.userEmail ?? "",
+      userType: cache.userType ?? "",
+      isSystemAdmin: Boolean(cache.isSystemAdmin),
     });
   });
 };
@@ -131,7 +142,15 @@ export async function refreshPermissoes() {
 
       const user = userData?.user || sessionUser || null;
       if (!user) {
-        setState({ cache: null, ready: true, userId: null, userEmail: "", loading: false });
+        setState({
+          cache: null,
+          ready: true,
+          userId: null,
+          userEmail: "",
+          userType: "",
+          isSystemAdmin: false,
+          loading: false,
+        });
         return null;
       }
 
@@ -142,6 +161,8 @@ export async function refreshPermissoes() {
           ready: true,
           userId: cache.userId ?? user.id,
           userEmail: cache.userEmail ?? user.email ?? "",
+          userType: cache.userType ?? "",
+          isSystemAdmin: Boolean(cache.isSystemAdmin),
           loading: false,
         });
       } else {
@@ -149,6 +170,8 @@ export async function refreshPermissoes() {
           ready: true,
           userId: user.id,
           userEmail: user.email ?? "",
+          userType: "",
+          isSystemAdmin: isSystemAdminRole(null),
           loading: false,
         });
       }
@@ -184,6 +207,11 @@ export function usePermissoesStore() {
   }, [snapshot.ready, snapshot.loading]);
 
   const acessos = snapshot.cache?.acessos || {};
+  const userType = snapshot.cache?.userType ?? snapshot.userType ?? "";
+  const isSystemAdmin =
+    snapshot.cache?.isSystemAdmin ??
+    snapshot.isSystemAdmin ??
+    isSystemAdminRole(userType);
   const isAdmin = useMemo(
     () => Object.values(acessos).some((p) => p === "admin"),
     [acessos]
@@ -191,21 +219,28 @@ export function usePermissoesStore() {
 
   const canDb = useCallback(
     (moduloDb: string, min: Permissao = "view") => {
+      if (isSystemAdmin) {
+        return isAdminModuleKey(moduloDb);
+      }
       if (isAdmin) return true;
       const key = String(moduloDb || "").toLowerCase();
       const perm = acessos[key] ?? "none";
       return permLevel(perm) >= permLevel(min);
     },
-    [acessos, isAdmin]
+    [acessos, isAdmin, isSystemAdmin]
   );
 
   const can = useCallback(
     (modulo: string, min: Permissao = "view") => {
+      if (isSystemAdmin) {
+        const resolved = MAPA_MODULOS[modulo] || modulo;
+        return isAdminModuleKey(modulo) || isAdminModuleKey(resolved);
+      }
       if (isAdmin) return true;
       const modDb = MAPA_MODULOS[modulo] || modulo;
       return canDb(modDb, min);
     },
-    [canDb, isAdmin]
+    [canDb, isAdmin, isSystemAdmin]
   );
 
   const getPermissao = useCallback(
@@ -222,6 +257,8 @@ export function usePermissoesStore() {
     ...snapshot,
     acessos,
     isAdmin,
+    isSystemAdmin,
+    userType,
     can,
     canDb,
     getPermissao,

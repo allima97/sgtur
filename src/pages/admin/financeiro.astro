@@ -1,0 +1,10 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import FinanceiroAdminIsland from "../../components/islands/FinanceiroAdminIsland.tsx";
+---
+
+<DashboardLayout title="Financeiro" activePage="admin-financeiro">
+  <div class="page-content-wrap">
+    <FinanceiroAdminIsland client:visible />
+  </div>
+</DashboardLayout>

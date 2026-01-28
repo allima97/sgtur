@@ -1,0 +1,12 @@
+---
+import Layout from "../../layouts/DashboardLayout.astro";
+import EquipeGestorIsland from "../../components/islands/EquipeGestorIsland.tsx";
+
+const pageTitle = "Equipe";
+---
+
+<Layout title={pageTitle} module="Parametros" activePage="parametros-equipe">
+  <h1 class="page-title">{pageTitle}</h1>
+
+  <EquipeGestorIsland client:idle />
+</Layout>
