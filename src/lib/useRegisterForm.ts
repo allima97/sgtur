@@ -136,6 +136,18 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
           await onSuccess({ id: user.id, email: user.email });
         }
 
+        try {
+          await fetch("/api/users", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ id: user.id, email: user.email }),
+          });
+        } catch (err) {
+          console.error("Falha ao persistir perfil via API interna", err);
+        }
+
         showMessage(
           successMessage ||
             "Conta criada! Verifique seu e-mail para confirmar. Depois faça login para completar o cadastro."
