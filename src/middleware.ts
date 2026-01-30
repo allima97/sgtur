@@ -11,6 +11,11 @@ const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const MENU_CACHE_COOKIE = "sgtur_menu_cache";
 const MENU_CACHE_TTL_MS = 5 * 60 * 1000;
+const supabaseProjectRef =
+  supabaseUrl?.match(/https:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1] ?? "";
+const SUPABASE_AUTH_COOKIE_NAME = supabaseProjectRef
+  ? `sb-${supabaseProjectRef}-auth-token`
+  : "sb-auth-token";
 
 const permLevel = (p?: string | null): number => {
   switch ((p || "").toLowerCase()) {
@@ -62,6 +67,36 @@ const buildPerms = (
   return perms;
 };
 
+type MiddlewareCookies = {
+  get: (name: string) => { value?: string } | undefined;
+  delete: (name: string, options?: { path?: string; sameSite?: string; secure?: boolean }) => void;
+};
+
+const deleteCookieOptions = {
+  path: "/",
+  sameSite: "Lax",
+  secure: true,
+};
+
+const SUPABASE_COOKIE_BASES = [SUPABASE_AUTH_COOKIE_NAME, "sb-auth-token"];
+
+function clearSupabaseCookies(cookies: MiddlewareCookies) {
+  SUPABASE_COOKIE_BASES.forEach((base) => {
+    cookies.delete(base, deleteCookieOptions);
+    for (let idx = 0; idx < 6; idx += 1) {
+      const chunkName = `${base}.${idx}`;
+      if (!cookies.get(chunkName)) break;
+      cookies.delete(chunkName, deleteCookieOptions);
+    }
+  });
+}
+
+function isInvalidSupabaseCookieError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = String((error as any).message ?? "").toLowerCase();
+  return message.includes("base64-url") || message.includes("base64url") || message.includes("utf-8");
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url } = context;
   const pathname = url.pathname;
@@ -98,28 +133,37 @@ const rotasPublicas = [
 
   // Criar supabase SSR
   const { cookies } = context;
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        get: (name) => cookies.get(name)?.value ?? "",
-        set: (name, value, options) =>
-          cookies.set(name, value, {
-            ...options,
-            httpOnly: true,
-            secure: true,
-            sameSite: "Lax",
-            path: "/",
-          }),
-        remove: (name, options) =>
-          cookies.delete(name, {
-            ...options,
-            path: "/",
-          }),
-      },
+  let supabase;
+  try {
+    supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get: (name) => cookies.get(name)?.value ?? "",
+          set: (name, value, options) =>
+            cookies.set(name, value, {
+              ...options,
+              httpOnly: true,
+              secure: true,
+              sameSite: "Lax",
+              path: "/",
+            }),
+          remove: (name, options) =>
+            cookies.delete(name, {
+              ...options,
+              path: "/",
+            }),
+        },
+      }
+    );
+  } catch (error) {
+    if (isInvalidSupabaseCookieError(error)) {
+      clearSupabaseCookies(cookies as any);
+      return Response.redirect(new URL("/auth/login", url), 302);
     }
-  );
+    throw error;
+  }
 
   // Verifica usuário logado
   const {
