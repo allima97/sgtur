@@ -98,14 +98,16 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
         });
 
         if (error) {
-          const msg =
-            error.message.includes("already registered") ||
-            error.message.includes("already exists") ||
-            error.message.includes("User already registered")
+          console.error("Registro error:", error);
+          const lower = error.message.toLowerCase();
+          const customMsg =
+            lower.includes("already registered") ||
+            lower.includes("already exists") ||
+            lower.includes("user already registered")
               ? "Este e-mail já está cadastrado. Faça login para acessar sua conta."
-              : "Não foi possível criar a conta. Verifique o e-mail.";
-          showMessage(msg);
-          if (msg.startsWith("Este e-mail")) {
+              : error.message || "Não foi possível criar a conta. Verifique o e-mail.";
+          showMessage(customMsg);
+          if (customMsg.startsWith("Este e-mail")) {
             setTimeout(() => {
               window.location.href = "/auth/login";
             }, 2000);
