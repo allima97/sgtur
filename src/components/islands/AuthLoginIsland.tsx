@@ -85,7 +85,9 @@ export default function AuthLoginIsland() {
       // Buscar dados do usuário
       const { data: perfil, error: userError } = await supabase
         .from("users")
-        .select("nome_completo, active, company_id, cpf, telefone, cidade, estado, uso_individual")
+        .select(
+          "nome_completo, active, company_id, cpf, telefone, cidade, estado, uso_individual, user_types(name)"
+        )
         .eq("id", userId)
         .maybeSingle();
       // Fallback para bancos sem coluna active
@@ -123,7 +125,23 @@ export default function AuthLoginIsland() {
         window.location.replace("/perfil?onboarding=1");
         return;
       }
-      window.location.replace("/dashboard");
+
+      const tipoRaw =
+        perfilFinal.user_types?.name ||
+        (user.user_metadata as any)?.tipo_usuario ||
+        (user.user_metadata as any)?.role ||
+        "";
+      const tipoNorm = tipoRaw.trim().toUpperCase();
+
+      const destino = tipoNorm.includes("ADMIN")
+        ? "/dashboard/admin"
+        : tipoNorm.includes("GESTOR")
+        ? "/dashboard/gestor"
+        : tipoNorm.includes("VENDEDOR")
+        ? "/dashboard/vendedor"
+        : "/dashboard";
+
+      window.location.replace(destino);
     } catch (e: any) {
       await registrarLog({ user_id: null, acao: "login_erro_interno", modulo: "login", detalhes: { email, erro: e.message, ip, userAgent } });
       mostrarMensagem("Erro inesperado ao fazer login.");
