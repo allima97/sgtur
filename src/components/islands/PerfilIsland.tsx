@@ -49,7 +49,11 @@ export default function PerfilIsland() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setOnboarding(params.get("onboarding") === "1");
+    const onboardingQuery = params.get("onboarding") === "1";
+    const onboardingPath =
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/perfil/onboarding");
+    setOnboarding(onboardingQuery || onboardingPath);
   }, []);
 
   useEffect(() => {

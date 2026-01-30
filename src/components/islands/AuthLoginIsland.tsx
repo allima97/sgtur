@@ -120,7 +120,7 @@ export default function AuthLoginIsland() {
       if (!perfilFinal) {
         await ensureUserProfile(userId, (userInfo?.user?.email || emailLimpo));
         mostrarMensagem("Criando seu perfil de acesso. Complete os dados abaixo.");
-        window.location.replace("/perfil?onboarding=1");
+        window.location.replace("/perfil/onboarding");
         return;
       }
       // Usuário suspenso
@@ -139,7 +139,7 @@ export default function AuthLoginIsland() {
         perfilFinal.uso_individual === null ||
         perfilFinal.uso_individual === undefined;
       if (precisaOnboarding) {
-        window.location.replace("/perfil?onboarding=1");
+        window.location.replace("/perfil/onboarding");
         return;
       }
 

@@ -150,7 +150,7 @@ export default function EquipeGestorIsland() {
       const senhaTemp = gerarSenhaTemporaria();
       const redirectTo =
         typeof window !== "undefined"
-          ? `${window.location.origin}/perfil?onboarding=1`
+          ? `${window.location.origin}/perfil/onboarding`
           : undefined;
 
       const { data, error } = await supabase.auth.signUp({

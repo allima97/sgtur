@@ -317,7 +317,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       perfil?.uso_individual === null ||
       perfil?.uso_individual === undefined;
     if (precisaOnboarding) {
-      return Response.redirect(new URL("/perfil?onboarding=1", url), 302);
+      return Response.redirect(new URL("/perfil/onboarding", url), 302);
     }
   }
 
