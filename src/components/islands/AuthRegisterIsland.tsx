@@ -1,20 +1,10 @@
 import React from "react";
-import { supabase } from "../../lib/supabase";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
 import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthRegisterIsland() {
-  const registerForm = useRegisterForm({
-    onSuccess: async (user) => {
-      await supabase.from("users").upsert({
-        id: user.id,
-        email: user.email,
-        nome_completo: null,
-        uso_individual: null,
-      });
-    },
-  });
+  const registerForm = useRegisterForm();
 
   return (
     <div className="auth-container">

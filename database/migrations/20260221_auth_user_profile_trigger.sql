@@ -1,4 +1,5 @@
--- 2026-02-21: garante upsert do perfil mínimo após criação no auth.users
+-- 2026-02-21: garante upsert do perfil minimo apos criacao no auth.users
+-- 2026-01-30: refeito para nao depender de constraint inexistente
 
 create or replace function public.ensure_user_profile()
 returns trigger
@@ -31,9 +32,9 @@ begin
     timezone('UTC', now()),
     timezone('UTC', now())
   )
-  on conflict on constraint users_email_partial_key do update
+  on conflict (id) do update
     set
-      id = excluded.id,
+      email = excluded.email,
       updated_at = timezone('UTC', now()),
       active = coalesce(users.active, excluded.active, true),
       uso_individual = coalesce(users.uso_individual, excluded.uso_individual, true);

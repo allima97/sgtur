@@ -128,15 +128,24 @@ const UsuariosAdminIsland: React.FC = () => {
     successMessage:
       "Usuário cadastrado! Ele receberá instruções por e-mail para validar o endereço.",
     onSuccess: async (user) => {
-      await supabase.from("users").upsert({
-        id: user.id,
-        email: user.email,
-        nome_completo: novoNomeCompleto || null,
-        company_id: novaEmpresaId || null,
-        user_type_id: novoTipoUsuarioId || null,
-        active: novoAtivo,
-        uso_individual: false,
+      const resp = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          nome_completo: novoNomeCompleto || null,
+          company_id: novaEmpresaId || null,
+          user_type_id: novoTipoUsuarioId || null,
+          active: novoAtivo,
+          uso_individual: false,
+        }),
       });
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
       await carregarUsuarios();
       setCreateModalOpen(false);
       setNovoNomeCompleto("");
