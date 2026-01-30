@@ -87,7 +87,8 @@ export default function AuthLoginIsland() {
         setLoading(false);
         return;
       }
-      const userId = data.user?.id || null;
+      const user = data.user;
+      const userId = user?.id || null;
       await registrarLog({ user_id: userId, acao: "login_sucesso", modulo: "login", detalhes: { email: emailLimpo, userId, ip, userAgent } });
       const { data: userInfo } = await supabase.auth.getUser();
       const emailConfirmado = Boolean(userInfo?.user?.email_confirmed_at || userInfo?.user?.confirmed_at);
@@ -144,8 +145,8 @@ export default function AuthLoginIsland() {
 
       const tipoRaw =
         perfilFinal.user_types?.name ||
-        (user.user_metadata as any)?.tipo_usuario ||
-        (user.user_metadata as any)?.role ||
+        (user?.user_metadata as any)?.tipo_usuario ||
+        (user?.user_metadata as any)?.role ||
         "";
       const tipoNorm = tipoRaw.trim().toUpperCase();
 
