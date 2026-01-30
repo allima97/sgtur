@@ -9,6 +9,7 @@ export default function AuthRecoverIsland() {
   const [loading, setLoading] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const COOLDOWN_STORAGE_KEY = "sgtur:recover-cooldown-end";
 
   function mostrarMensagem(msg: string) {
     setErro(msg);
@@ -25,6 +26,9 @@ export default function AuthRecoverIsland() {
   useEffect(() => {
     if (cooldownSeconds <= 0) {
       clearCooldownTimer();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+      }
       return;
     }
 
@@ -47,6 +51,24 @@ export default function AuthRecoverIsland() {
     };
   }, [cooldownSeconds]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem(COOLDOWN_STORAGE_KEY);
+    if (!stored) return;
+    const endTimestamp = Number(stored);
+    if (!Number.isFinite(endTimestamp)) {
+      localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+      return;
+    }
+    const diffSeconds = Math.ceil((endTimestamp - Date.now()) / 1000);
+    if (diffSeconds > 0) {
+      setCooldownSeconds(diffSeconds);
+      setErro(`Muitas solicitações. Aguarde ${diffSeconds} segundos antes de tentar novamente.`);
+    } else {
+      localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+    }
+  }, []);
+
   function extractRetrySeconds(details?: string | null, hint?: string | null) {
     const source = `${details ?? ""} ${hint ?? ""}`;
     const secondsMatch = source.match(/(\d+)\s*(seconds?|segundos?)?/i);
@@ -54,6 +76,13 @@ export default function AuthRecoverIsland() {
       return Number(secondsMatch[1]);
     }
     return null;
+  }
+
+  function startCooldown(seconds: number) {
+    setCooldownSeconds(seconds);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(COOLDOWN_STORAGE_KEY, String(Date.now() + seconds * 1000));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,7 +109,7 @@ export default function AuthRecoverIsland() {
       if (error) {
         if (error.status === 429) {
           const parsedSeconds = extractRetrySeconds(error.details, error.hint) ?? 60;
-          setCooldownSeconds(parsedSeconds);
+          startCooldown(parsedSeconds);
           setErro(`Muitas solicitações. Aguarde ${parsedSeconds} segundos antes de tentar novamente.`);
         } else {
           mostrarMensagem("Não foi possível enviar o link. Tente novamente.");
