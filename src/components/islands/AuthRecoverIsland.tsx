@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { registrarLog } from "../../lib/logs";
 
@@ -7,10 +7,53 @@ export default function AuthRecoverIsland() {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   function mostrarMensagem(msg: string) {
     setErro(msg);
     setTimeout(() => setErro(""), 6000);
+  }
+
+  function clearCooldownTimer() {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+      cooldownTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      clearCooldownTimer();
+      return;
+    }
+
+    if (cooldownTimerRef.current) return;
+
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        const next = prev <= 1 ? 0 : prev - 1;
+        if (next > 0) {
+          setErro(`Muitas solicitações. Aguarde ${next} segundos antes de tentar novamente.`);
+        } else {
+          setErro("");
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      clearCooldownTimer();
+    };
+  }, [cooldownSeconds]);
+
+  function extractRetrySeconds(details?: string | null, hint?: string | null) {
+    const source = `${details ?? ""} ${hint ?? ""}`;
+    const secondsMatch = source.match(/(\d+)\s*(seconds?|segundos?)?/i);
+    if (secondsMatch) {
+      return Number(secondsMatch[1]);
+    }
+    return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,7 +78,13 @@ export default function AuthRecoverIsland() {
         redirectTo ? { redirectTo } : undefined
       );
       if (error) {
-        mostrarMensagem("Não foi possível enviar o link. Tente novamente.");
+        if (error.status === 429) {
+          const parsedSeconds = extractRetrySeconds(error.details, error.hint) ?? 60;
+          setCooldownSeconds(parsedSeconds);
+          setErro(`Muitas solicitações. Aguarde ${parsedSeconds} segundos antes de tentar novamente.`);
+        } else {
+          mostrarMensagem("Não foi possível enviar o link. Tente novamente.");
+        }
       } else {
         setOk(true);
       }
@@ -83,10 +132,19 @@ export default function AuthRecoverIsland() {
             />
           </div>
           <div className="auth-actions">
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-block"
+              disabled={loading || cooldownSeconds > 0}
+            >
               <i className="fa-solid fa-paper-plane"></i>
               {loading ? " Enviando..." : " Enviar link"}
             </button>
+            {cooldownSeconds > 0 && (
+              <small className="text-muted" style={{ display: "block", marginTop: 6 }}>
+                Aguarde {cooldownSeconds} segundos antes de reenviar.
+              </small>
+            )}
             <div className="auth-divider">
               <span>ou</span>
             </div>
