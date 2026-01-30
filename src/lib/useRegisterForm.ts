@@ -13,6 +13,30 @@ export type UseRegisterFormOptions = {
   resetOnSuccess?: boolean;
 };
 
+type CheckEmailResponse = {
+  exists: boolean;
+  userId?: string | null;
+  error?: string;
+};
+
+async function checkEmailAvailability(email: string) {
+  const resp = await fetch("/api/auth/check-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+  if (!resp.ok) {
+    throw new Error("Não foi possível verificar o e-mail.");
+  }
+  const json = (await resp.json()) as CheckEmailResponse;
+  if (json.error) {
+    throw new Error(json.error);
+  }
+  return json.exists;
+}
+
 export function useRegisterForm(options: UseRegisterFormOptions = {}) {
   const {
     onSuccess,
@@ -87,6 +111,22 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
       }
       if (password !== confirmPassword) {
         showMessage("As senhas não conferem");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const emailInUse = await checkEmailAvailability(emailClean);
+        if (emailInUse) {
+          showMessage(
+            "Este e-mail já está cadastrado. Faça login ou recupere a senha para continuar."
+          );
+          setLoading(false);
+          return;
+        }
+      } catch (err: any) {
+        console.error("Falha ao verificar e-mail", err);
+        showMessage("Não foi possível verificar o e-mail. Tente novamente.");
         setLoading(false);
         return;
       }
