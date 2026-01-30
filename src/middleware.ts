@@ -67,11 +67,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = url.pathname;
 
   // ROTAS PUBLICAS
-  const rotasPublicas = [
-    "/auth/login",
-    "/auth/register",
-    "/auth/recover",
-    "/auth/update-password",
+const rotasPublicas = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/recover",
+  "/auth/reset",
+  "/auth/update-password",
     "/test-env",
     "/favicon",
     "/_astro",
