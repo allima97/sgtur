@@ -26,6 +26,21 @@ export default function AuthLoginIsland() {
     setTimeout(() => setMensagem(null), 5000);
   }
 
+  async function ensureUserProfile(userId: string, email: string) {
+    try {
+      const resp = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, email }),
+      });
+      if (!resp.ok) {
+        throw new Error(await resp.text());
+      }
+    } catch (err) {
+      console.error("Falha ao criar perfil mínimo", err);
+    }
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -102,8 +117,9 @@ export default function AuthLoginIsland() {
         perfilFinal = fallbackData;
       }
       if (!perfilFinal) {
-        mostrarMensagem("Não foi possível carregar seu perfil. Tente novamente.");
-        setLoading(false);
+        await ensureUserProfile(userId, (userInfo?.user?.email || emailLimpo));
+        mostrarMensagem("Criando seu perfil de acesso. Complete os dados abaixo.");
+        window.location.replace("/perfil?onboarding=1");
         return;
       }
       // Usuário suspenso

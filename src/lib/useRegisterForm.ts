@@ -137,15 +137,22 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
         }
 
         try {
-          await fetch("/api/users", {
+          const resp = await fetch("/api/users", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ id: user.id, email: user.email }),
           });
-        } catch (err) {
+          if (!resp.ok) {
+            throw new Error(await resp.text());
+          }
+        } catch (err: any) {
           console.error("Falha ao persistir perfil via API interna", err);
+          showMessage(
+            "Usuário criado, mas houve falha ao salvar o perfil. Tente entrar e complete os dados ou contate o suporte.",
+            "warning"
+          );
         }
 
         showMessage(
