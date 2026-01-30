@@ -94,26 +94,42 @@ function buildExpiredCookieHeaders() {
 function isInvalidSupabaseCookieError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const message = String((error as any).message ?? "").toLowerCase();
-  return message.includes("base64-url") || message.includes("base64url") || message.includes("utf-8");
+  const patterns = [
+    "base64-url",
+    "base64url",
+    "utf-8",
+    "jwt",
+    "token",
+    "cookie",
+    "session",
+    "invalid",
+    "malformed",
+    "parse",
+    "signature",
+    "expired",
+  ];
+  return patterns.some((pattern) => message.includes(pattern));
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url } = context;
   const pathname = url.pathname;
 
+  try {
+
   // ROTAS PUBLICAS
-const rotasPublicas = [
+  const rotasPublicas = [
   "/auth/login",
   "/auth/register",
   "/auth/recover",
   "/auth/reset",
   "/auth/update-password",
-    "/test-env",
-    "/favicon",
-    "/_astro",
-    "/assets",
-    "/public",
-    "/pdfs",
+  "/test-env",
+  "/favicon",
+  "/_astro",
+  "/assets",
+  "/public",
+  "/pdfs",
   ];
 
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
@@ -169,10 +185,22 @@ const rotasPublicas = [
     throw error;
   }
 
-  // Verifica usuário logado
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verifica usuario logado
+  let user = null as any;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data?.user ?? null;
+  } catch (error) {
+    console.error("[middleware] falha ao ler sessao", error);
+    const headers = buildExpiredCookieHeaders();
+    return new Response(null, {
+      status: 302,
+      headers: [
+        ["location", "/auth/login"],
+        ...headers.map((value) => ["set-cookie", value]),
+      ],
+    });
+  }
 
   if (!user) {
     return Response.redirect(new URL("/auth/login", url), 302);
@@ -339,4 +367,10 @@ const rotasPublicas = [
   // Para qualquer outra permissão (view / create / edit / delete)
   // acesso à rota é permitido, restrições de função ficam nos islands.
   return next();
+
+  } catch (error) {
+    console.error("[middleware] erro inesperado", error);
+    return new Response("Erro interno.", { status: 500 });
+  }
+
 });
