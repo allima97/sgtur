@@ -108,6 +108,7 @@ const rotasPublicas = [
   "/auth/recover",
   "/auth/reset",
   "/auth/update-password",
+  "/api/auth/check-email",
     "/test-env",
     "/favicon",
     "/_astro",

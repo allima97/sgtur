@@ -125,10 +125,8 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
           return;
         }
       } catch (err: any) {
+        // If the check fails, don't block signup; signUp handles duplicates.
         console.error("Falha ao verificar e-mail", err);
-        showMessage("Não foi possível verificar o e-mail. Tente novamente.");
-        setLoading(false);
-        return;
       }
 
       try {
