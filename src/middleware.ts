@@ -80,15 +80,15 @@ const deleteCookieOptions = {
 
 const SUPABASE_COOKIE_BASES = [SUPABASE_AUTH_COOKIE_NAME, "sb-auth-token"];
 
-function clearSupabaseCookies(cookies: MiddlewareCookies) {
+function buildExpiredCookieHeaders() {
+  const headers: string[] = [];
   SUPABASE_COOKIE_BASES.forEach((base) => {
-    cookies.delete(base, deleteCookieOptions);
+    headers.push(`${base}=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
     for (let idx = 0; idx < 6; idx += 1) {
-      const chunkName = `${base}.${idx}`;
-      if (!cookies.get(chunkName)) break;
-      cookies.delete(chunkName, deleteCookieOptions);
+      headers.push(`${base}.${idx}=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
     }
   });
+  return headers;
 }
 
 function isInvalidSupabaseCookieError(error: unknown): boolean {
@@ -134,33 +134,37 @@ const rotasPublicas = [
   // Criar supabase SSR
   const { cookies } = context;
   let supabase;
+  const builderOptions = {
+    cookies: {
+      get: (name: string) => cookies.get(name)?.value ?? "",
+      set: (name: string, value: string, options: any) =>
+        cookies.set(name, value, {
+          ...options,
+          httpOnly: true,
+          secure: true,
+          sameSite: "Lax",
+          path: "/",
+        }),
+      remove: (name: string, options: any) =>
+        cookies.delete(name, {
+          ...options,
+          path: "/",
+        }),
+    },
+  } as const;
+
   try {
-    supabase = createServerClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        cookies: {
-          get: (name) => cookies.get(name)?.value ?? "",
-          set: (name, value, options) =>
-            cookies.set(name, value, {
-              ...options,
-              httpOnly: true,
-              secure: true,
-              sameSite: "Lax",
-              path: "/",
-            }),
-          remove: (name, options) =>
-            cookies.delete(name, {
-              ...options,
-              path: "/",
-            }),
-        },
-      }
-    );
+    supabase = createServerClient(supabaseUrl, supabaseAnonKey, builderOptions);
   } catch (error) {
     if (isInvalidSupabaseCookieError(error)) {
-      clearSupabaseCookies(cookies as any);
-      return Response.redirect(new URL("/auth/login", url), 302);
+      const headers = buildExpiredCookieHeaders();
+      return new Response(null, {
+        status: 302,
+        headers: [
+          ["location", "/auth/login"],
+          ...headers.map((value) => ["set-cookie", value]),
+        ],
+      });
     }
     throw error;
   }
