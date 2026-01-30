@@ -154,8 +154,6 @@ export default function AuthLoginIsland() {
         ? "/dashboard/admin"
         : tipoNorm.includes("GESTOR")
         ? "/dashboard/gestor"
-        : tipoNorm.includes("VENDEDOR")
-        ? "/dashboard/vendedor"
         : "/dashboard";
 
       window.location.replace(destino);

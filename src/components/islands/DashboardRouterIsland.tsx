@@ -57,10 +57,7 @@ const DashboardRouterIsland: React.FC = () => {
           return;
         }
 
-        if (tipoNorm.includes("VENDEDOR")) {
-          window.location.href = "/dashboard/vendedor";
-          return;
-        }
+        window.location.href = "/dashboard";
 
         window.location.href = "/dashboard/geral";
       } catch (e: any) {
