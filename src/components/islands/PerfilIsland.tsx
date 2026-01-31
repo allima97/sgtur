@@ -66,6 +66,8 @@ export default function PerfilIsland() {
   const [camposExtrasOk, setCamposExtrasOk] = useState(true);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
   const [modalOnboardingSucesso, setModalOnboardingSucesso] = useState(false);
+  const [modalCamposObrigatorios, setModalCamposObrigatorios] = useState(false);
+  const [camposObrigatorios, setCamposObrigatorios] = useState<string[]>([]);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const empresaDisabled = bloqueiaEmpresaTipo || usoIndividual !== false;
 
@@ -324,6 +326,20 @@ function formatCnpj(value: string) {
       }
 
       const usoFinal = typeof usoIndividual === "boolean" ? usoIndividual : true;
+      if (onboarding) {
+        const camposPendentes: string[] = [];
+        if (!perfil.nome_completo?.trim()) camposPendentes.push("Nome completo");
+        if (!perfil.telefone?.replace(/\D/g, "")) camposPendentes.push("Telefone");
+        if (!perfil.cidade?.trim()) camposPendentes.push("Cidade");
+        if (!perfil.estado?.trim()) camposPendentes.push("Estado");
+        if (typeof usoFinal !== "boolean") camposPendentes.push("Uso do sistema");
+        if (camposPendentes.length > 0) {
+          setCamposObrigatorios(camposPendentes);
+          setModalCamposObrigatorios(true);
+          setSalvando(false);
+          return;
+        }
+      }
       let companyId = perfil.company_id ?? null;
       if (usoFinal === false) {
         const empresa = await resolverEmpresa(true);
@@ -523,6 +539,33 @@ function formatCnpj(value: string) {
 
   return (
     <div className="perfil-page">
+      {modalCamposObrigatorios && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-panel" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <i className="fa-solid fa-circle-exclamation text-yellow-600"></i>
+                Campos obrigatórios
+              </div>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 12 }}>
+                Para finalizar o cadastro, preencha os campos abaixo:
+              </p>
+              <ul style={{ paddingLeft: 18, margin: 0, display: "grid", gap: 6 }}>
+                {camposObrigatorios.map((campo) => (
+                  <li key={campo}>{campo}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setModalCamposObrigatorios(false)} className="btn btn-primary">
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {modalOnboardingSucesso && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-panel" style={{ maxWidth: 520 }}>
