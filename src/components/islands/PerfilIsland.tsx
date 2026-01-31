@@ -65,6 +65,7 @@ export default function PerfilIsland() {
   const [empresaLoading, setEmpresaLoading] = useState(false);
   const [camposExtrasOk, setCamposExtrasOk] = useState(true);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
+  const [modalOnboardingSucesso, setModalOnboardingSucesso] = useState(false);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const empresaDisabled = bloqueiaEmpresaTipo || usoIndividual !== false;
 
@@ -317,7 +318,7 @@ function formatCnpj(value: string) {
         companyId = empresa.id;
       }
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("users")
         .update({
           nome_completo: perfil.nome_completo || null,
@@ -341,6 +342,8 @@ function formatCnpj(value: string) {
         })
         .eq("id", user.id);
 
+      if (updateError) throw updateError;
+
       await registrarLog({
         user_id: user.id,
         acao: "perfil_atualizado",
@@ -348,13 +351,24 @@ function formatCnpj(value: string) {
         detalhes: { cidade: perfil.cidade, estado: perfil.estado },
       });
 
-      setMsg("Dados salvos com sucesso.");
+      if (onboarding) {
+        setModalOnboardingSucesso(true);
+      } else {
+        setMsg("Dados salvos com sucesso.");
+      }
     } catch (e: any) {
       console.error(e);
       setErro("Não foi possível salvar seus dados.");
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function confirmarLoginNoSistema() {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+    window.location.href = "/auth/login";
   }
 
   async function alterarSenha() {
@@ -493,6 +507,28 @@ function formatCnpj(value: string) {
 
   return (
     <div className="perfil-page">
+      {modalOnboardingSucesso && (
+        <div className="modal">
+          <div className="modal-overlay" onClick={() => setModalOnboardingSucesso(false)}></div>
+          <div className="modal-content">
+            <div className="modal-header">
+              <i className="fa-solid fa-circle-check text-green-600"></i>
+              <h2>Dados salvos</h2>
+            </div>
+            <div className="modal-body">
+              <p>Dados salvos com sucesso! Deseja fazer o login no sistema?</p>
+            </div>
+            <div className="modal-footer">
+              <button onClick={confirmarLoginNoSistema} className="btn btn-primary">
+                Sim
+              </button>
+              <button onClick={() => setModalOnboardingSucesso(false)} className="btn btn-secondary">
+                Nao
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {onboarding && (
         <div className="card-base card-config mb-3">
           Complete os dados para finalizar seu primeiro acesso.
