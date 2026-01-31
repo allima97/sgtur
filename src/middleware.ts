@@ -237,7 +237,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   let isSystemAdmin = cachedIsSystemAdmin;
 
   // Bloqueio de onboarding: exige perfil completo antes de acessar outros módulos
-  const rotasOnboardingPermitidas = ["/perfil", "/auth"];
+  const rotasOnboardingPermitidas = ["/perfil", "/auth", "/api/companies"];
 
   if (shouldRefreshMenuCache) {
     const [accRowsRes, userTypeRes] = await Promise.all([
