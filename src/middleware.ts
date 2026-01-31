@@ -324,6 +324,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // ============================
   // 1) MAPEAMENTO DE ROTAS → MÓDULOS
   // ============================
+  // Rotas que exigem login, mas nao exigem modulo_acesso.
+  if (pathname.startsWith("/perfil") || pathname.startsWith("/negado")) {
+    return next();
+  }
+
   const modulo = descobrirModulo(pathname);
   if (!modulo) return next(); // rota não associada a módulo
 

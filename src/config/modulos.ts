@@ -68,7 +68,12 @@ export const ROTAS_MODULOS: Record<string, string> = {
 };
 
 export function descobrirModulo(pathname: string): string | null {
-  const entradas = Object.keys(ROTAS_MODULOS);
+  if (pathname === "/") return ROTAS_MODULOS["/"] ?? null;
+
+  const entradas = Object.keys(ROTAS_MODULOS)
+    .filter((rota) => rota !== "/")
+    .sort((a, b) => b.length - a.length);
+
   for (const rota of entradas) {
     if (pathname.startsWith(rota)) return ROTAS_MODULOS[rota];
   }
