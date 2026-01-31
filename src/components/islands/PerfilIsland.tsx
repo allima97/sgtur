@@ -138,7 +138,9 @@ export default function PerfilIsland() {
           created_by_gestor: (data as any)?.created_by_gestor ?? null,
         });
         setNovoEmail(data?.email || user.email || "");
-        setUsoIndividual(data?.uso_individual ?? null);
+        const usoInicial =
+          typeof data?.uso_individual === "boolean" ? data.uso_individual : true;
+        setUsoIndividual(usoInicial);
         setEmpresaForm({
           cnpj: data?.companies?.cnpj || "",
           nome_empresa: data?.companies?.nome_empresa || "",
@@ -321,8 +323,9 @@ function formatCnpj(value: string) {
         return;
       }
 
+      const usoFinal = typeof usoIndividual === "boolean" ? usoIndividual : true;
       let companyId = perfil.company_id ?? null;
-      if (usoIndividual === false) {
+      if (usoFinal === false) {
         const empresa = await resolverEmpresa(true);
         if (!empresa?.id) {
           setSalvando(false);
@@ -340,7 +343,7 @@ function formatCnpj(value: string) {
           cidade: perfil.cidade || null,
           estado: perfil.estado || null,
           data_nascimento: perfil.data_nascimento || null,
-          uso_individual: usoIndividual,
+          uso_individual: usoFinal,
           company_id: companyId,
           ...(camposExtrasOk
             ? {
