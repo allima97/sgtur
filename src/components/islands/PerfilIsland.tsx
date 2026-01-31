@@ -521,12 +521,13 @@ function formatCnpj(value: string) {
   return (
     <div className="perfil-page">
       {modalOnboardingSucesso && (
-        <div className="modal">
-          <div className="modal-overlay"></div>
-          <div className="modal-content">
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-panel" style={{ maxWidth: 520 }}>
             <div className="modal-header">
-              <i className="fa-solid fa-circle-check text-green-600"></i>
-              <h2>Dados salvos</h2>
+              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <i className="fa-solid fa-circle-check text-green-600"></i>
+                Dados salvos
+              </div>
             </div>
             <div className="modal-body">
               <p>Dados salvos com sucesso! Deseja fazer o login no sistema?</p>
