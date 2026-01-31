@@ -509,7 +509,7 @@ function formatCnpj(value: string) {
     <div className="perfil-page">
       {modalOnboardingSucesso && (
         <div className="modal">
-          <div className="modal-overlay" onClick={() => setModalOnboardingSucesso(false)}></div>
+          <div className="modal-overlay"></div>
           <div className="modal-content">
             <div className="modal-header">
               <i className="fa-solid fa-circle-check text-green-600"></i>
@@ -523,7 +523,7 @@ function formatCnpj(value: string) {
                 Sim
               </button>
               <button onClick={() => setModalOnboardingSucesso(false)} className="btn btn-secondary">
-                Nao
+                Não
               </button>
             </div>
           </div>
