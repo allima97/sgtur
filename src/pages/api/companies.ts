@@ -44,6 +44,7 @@ export async function POST({ request }: { request: Request }) {
       .from("companies")
       .select(selectCols)
       .eq("cnpj", cnpjLimpo)
+      .limit(1)
       .maybeSingle();
 
     if (selectErr) {
@@ -59,6 +60,7 @@ export async function POST({ request }: { request: Request }) {
         .from("companies")
         .select(selectCols)
         .eq("cnpj", cnpjFormatado)
+        .limit(1)
         .maybeSingle();
       if (selectFmtErr) {
         return new Response(`Falha ao buscar empresa: ${selectFmtErr.message}`, { status: 500 });
