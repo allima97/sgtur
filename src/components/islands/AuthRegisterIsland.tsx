@@ -1,14 +1,45 @@
-import React from "react";
+import React, { useState } from "react";
 import { useRegisterForm } from "../../lib/useRegisterForm";
 import CredentialsForm from "../forms/CredentialsForm";
 import { SYSTEM_NAME } from "../../lib/systemName";
 
 export default function AuthRegisterIsland() {
-  const registerForm = useRegisterForm();
+  const [modalSucesso, setModalSucesso] = useState(false);
+  const registerForm = useRegisterForm({
+    showSuccessMessage: false,
+    resetOnSuccess: true,
+    onSuccess: () => setModalSucesso(true),
+  });
+
+  function fecharModalSucesso() {
+    setModalSucesso(false);
+    window.location.href = "/auth/login";
+  }
 
   return (
     <div className="auth-container">
       <div className="auth-card auth-card-lg">
+        {modalSucesso && (
+          <div className="modal">
+            <div className="modal-overlay" onClick={fecharModalSucesso}></div>
+            <div className="modal-content">
+              <div className="modal-header">
+                <i className="fa-solid fa-envelope-open-text text-green-600"></i>
+                <h2>Confirme seu e-mail</h2>
+              </div>
+              <div className="modal-body">
+                <p>
+                  Conta criada com sucesso! Para continuar, confirme o e-mail de cadastro e depois faça login.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button onClick={fecharModalSucesso} className="btn btn-primary">
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="auth-header">
           <div className="auth-icon">
             <i className="fa-solid fa-plane-departure"></i>

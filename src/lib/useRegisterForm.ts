@@ -11,6 +11,7 @@ export type UseRegisterFormOptions = {
   successMessage?: string;
   autoHide?: boolean;
   resetOnSuccess?: boolean;
+  showSuccessMessage?: boolean;
 };
 
 export function useRegisterForm(options: UseRegisterFormOptions = {}) {
@@ -19,6 +20,7 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
     successMessage,
     autoHide = true,
     resetOnSuccess = true,
+    showSuccessMessage = true,
   } = options;
 
   const [email, setEmail] = useState("");
@@ -136,10 +138,12 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
           await onSuccess({ id: user.id, email: user.email });
         }
 
-        showMessage(
-          successMessage ||
-            "Conta criada! Verifique seu e-mail para confirmar. Depois faça login para completar o cadastro."
-        );
+        if (showSuccessMessage) {
+          showMessage(
+            successMessage ||
+              "Conta criada! Verifique seu e-mail para confirmar. Depois faça login para completar o cadastro."
+          );
+        }
 
         if (resetOnSuccess) {
           resetFields();
@@ -160,6 +164,7 @@ export function useRegisterForm(options: UseRegisterFormOptions = {}) {
       resetOnSuccess,
       showMessage,
       clearMessage,
+      showSuccessMessage,
     ]
   );
 

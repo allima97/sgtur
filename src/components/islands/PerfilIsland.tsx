@@ -18,7 +18,15 @@ type Perfil = {
   email: string;
   uso_individual: boolean | null;
   company_id?: string | null;
-  company?: { nome_empresa?: string | null; cnpj?: string | null; endereco?: string | null; telefone?: string | null } | null;
+  company?: {
+    nome_empresa?: string | null;
+    nome_fantasia?: string | null;
+    cnpj?: string | null;
+    endereco?: string | null;
+    telefone?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+  } | null;
   cargo?: string | null;
   created_by_gestor?: boolean | null;
 };
@@ -34,11 +42,31 @@ export default function PerfilIsland() {
   const [novoEmail, setNovoEmail] = useState("");
   const [onboarding, setOnboarding] = useState(false);
   const [usoIndividual, setUsoIndividual] = useState<boolean | null>(null);
-  const [novoCnpj, setNovoCnpj] = useState("");
-  const [empresaAtual, setEmpresaAtual] = useState<{ nome?: string | null; cnpj?: string | null } | null>(null);
+  const [empresaForm, setEmpresaForm] = useState({
+    cnpj: "",
+    nome_empresa: "",
+    nome_fantasia: "",
+    telefone: "",
+    endereco: "",
+    cidade: "",
+    estado: "",
+  });
+  const [empresaAtual, setEmpresaAtual] = useState<{
+    id?: string | null;
+    nome_empresa?: string | null;
+    nome_fantasia?: string | null;
+    cnpj?: string | null;
+    endereco?: string | null;
+    telefone?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+  } | null>(null);
+  const [empresaStatus, setEmpresaStatus] = useState<string | null>(null);
+  const [empresaLoading, setEmpresaLoading] = useState(false);
   const [camposExtrasOk, setCamposExtrasOk] = useState(true);
   const [cepStatus, setCepStatus] = useState<string | null>(null);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
+  const empresaDisabled = bloqueiaEmpresaTipo || usoIndividual !== false;
 
   const cidadeEstado = useMemo(() => {
     if (!perfil) return "";
@@ -70,9 +98,9 @@ export default function PerfilIsland() {
         }
 
         const colsExtras =
-          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, created_by_gestor, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+          "nome_completo, cpf, data_nascimento, telefone, whatsapp, rg, cep, endereco, numero, complemento, cidade, estado, email, uso_individual, company_id, created_by_gestor, companies(nome_empresa, nome_fantasia, cnpj, endereco, telefone, cidade, estado), user_types(name)";
         const colsBasicos =
-          "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, cnpj, endereco, telefone), user_types(name)";
+          "nome_completo, cpf, data_nascimento, telefone, cidade, estado, email, uso_individual, company_id, companies(nome_empresa, nome_fantasia, cnpj, endereco, telefone, cidade, estado), user_types(name)";
 
         let extrasDisponiveis = true;
         let { data, error } = await supabase.from("users").select(colsExtras).eq("id", user.id).maybeSingle();
@@ -110,10 +138,29 @@ export default function PerfilIsland() {
         });
         setNovoEmail(data?.email || user.email || "");
         setUsoIndividual(data?.uso_individual ?? null);
-        setEmpresaAtual({
-          nome: data?.companies?.nome_empresa || null,
-          cnpj: data?.companies?.cnpj || null,
+        setEmpresaForm({
+          cnpj: data?.companies?.cnpj || "",
+          nome_empresa: data?.companies?.nome_empresa || "",
+          nome_fantasia: data?.companies?.nome_fantasia || "",
+          telefone: data?.companies?.telefone || "",
+          endereco: data?.companies?.endereco || "",
+          cidade: data?.companies?.cidade || "",
+          estado: data?.companies?.estado || "",
         });
+        setEmpresaAtual(
+          data?.companies
+            ? {
+                id: data?.company_id || null,
+                nome_empresa: data?.companies?.nome_empresa || null,
+                nome_fantasia: data?.companies?.nome_fantasia || null,
+                cnpj: data?.companies?.cnpj || null,
+                endereco: data?.companies?.endereco || null,
+                telefone: data?.companies?.telefone || null,
+                cidade: data?.companies?.cidade || null,
+                estado: data?.companies?.estado || null,
+              }
+            : null
+        );
       } catch (e) {
         console.error(e);
         setErro("Não foi possível carregar seu perfil.");
@@ -127,6 +174,16 @@ export default function PerfilIsland() {
 
   function atualizarCampo(campo: keyof Perfil, valor: string) {
     setPerfil((prev) => (prev ? { ...prev, [campo]: valor } : prev));
+  }
+
+  function atualizarEmpresa(
+    campo: "cnpj" | "nome_empresa" | "nome_fantasia" | "telefone" | "endereco" | "cidade" | "estado",
+    valor: string
+  ) {
+    if (campo === "cnpj") {
+      setEmpresaStatus(null);
+    }
+    setEmpresaForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
 function formatCpf(value: string) {
@@ -154,6 +211,89 @@ function formatCep(value: string) {
   return digits.replace(/(\d{5})(\d)/, "$1-$2");
 }
 
+function formatCnpj(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 14);
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
+  async function resolverEmpresa(permitirCriar: boolean) {
+    const cnpjLimpo = (empresaForm.cnpj || "").replace(/\D/g, "");
+    if (!cnpjLimpo) {
+      setErro("Informe o CNPJ da empresa.");
+      return null;
+    }
+    if (permitirCriar && !empresaForm.nome_empresa.trim()) {
+      setErro("Informe o nome da empresa.");
+      return null;
+    }
+
+    setEmpresaLoading(true);
+    setEmpresaStatus(permitirCriar ? "Salvando empresa..." : "Buscando empresa...");
+    setErro(null);
+
+    try {
+      const payload = {
+        cnpj: cnpjLimpo,
+        allowCreate: permitirCriar,
+        nome_empresa: empresaForm.nome_empresa.trim() || null,
+        nome_fantasia: empresaForm.nome_fantasia.trim() || null,
+        telefone: empresaForm.telefone.trim() || null,
+        endereco: empresaForm.endereco.trim() || null,
+        cidade: empresaForm.cidade.trim() || null,
+        estado: empresaForm.estado.trim().toUpperCase() || null,
+      };
+
+      const resp = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (resp.status === 404) {
+        setEmpresaStatus("Empresa não encontrada. Preencha os dados para cadastrar.");
+        return null;
+      }
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || "Falha ao resolver empresa.");
+      }
+
+      const empresa = await resp.json();
+      setEmpresaAtual({
+        id: empresa?.id ?? null,
+        nome_empresa: empresa?.nome_empresa ?? null,
+        nome_fantasia: empresa?.nome_fantasia ?? null,
+        cnpj: empresa?.cnpj ?? null,
+        endereco: empresa?.endereco ?? null,
+        telefone: empresa?.telefone ?? null,
+        cidade: empresa?.cidade ?? null,
+        estado: empresa?.estado ?? null,
+      });
+      setEmpresaForm((prev) => ({
+        ...prev,
+        cnpj: formatCnpj(empresa?.cnpj || cnpjLimpo),
+        nome_empresa: empresa?.nome_empresa || prev.nome_empresa,
+        nome_fantasia: empresa?.nome_fantasia || prev.nome_fantasia,
+        telefone: empresa?.telefone || prev.telefone,
+        endereco: empresa?.endereco || prev.endereco,
+        cidade: empresa?.cidade || prev.cidade,
+        estado: empresa?.estado || prev.estado,
+      }));
+      setEmpresaStatus("Empresa vinculada.");
+      return empresa;
+    } catch (e) {
+      console.error(e);
+      setErro("Não foi possível vincular a empresa.");
+      return null;
+    } finally {
+      setEmpresaLoading(false);
+    }
+  }
+
   async function salvarPerfil() {
     if (!perfil) return;
     setErro(null);
@@ -167,15 +307,27 @@ function formatCep(value: string) {
         return;
       }
 
+      let companyId = perfil.company_id ?? null;
+      if (usoIndividual === false) {
+        const empresa = await resolverEmpresa(true);
+        if (!empresa?.id) {
+          setSalvando(false);
+          return;
+        }
+        companyId = empresa.id;
+      }
+
       await supabase
         .from("users")
         .update({
           nome_completo: perfil.nome_completo || null,
+          cpf: perfil.cpf || null,
           telefone: perfil.telefone || null,
           cidade: perfil.cidade || null,
           estado: perfil.estado || null,
           data_nascimento: perfil.data_nascimento || null,
           uso_individual: usoIndividual,
+          company_id: companyId,
           ...(camposExtrasOk
             ? {
                 whatsapp: perfil.whatsapp || null,
@@ -258,25 +410,18 @@ function formatCep(value: string) {
       setErro("A empresa é definida pelo gestor.");
       return;
     }
-    if (!novoCnpj.trim()) {
-      setErro("Informe o CNPJ da nova empresa.");
+    if (!empresaForm.cnpj.trim()) {
+      setErro("Informe o CNPJ da empresa.");
       return;
     }
 
     try {
       setSalvando(true);
-      const cnpjLimpo = novoCnpj.replace(/\D/g, "");
-      const { data: empresas, error: empErr } = await supabase
-        .from("companies")
-        .select("id, nome_empresa, cnpj")
-        .eq("cnpj", cnpjLimpo)
-        .limit(1);
-      if (empErr) throw empErr;
-      if (!empresas || empresas.length === 0) {
-        setErro("Empresa não encontrada para o CNPJ informado.");
+      const empresa = await resolverEmpresa(true);
+      if (!empresa?.id) {
+        setSalvando(false);
         return;
       }
-      const empresa = empresas[0];
 
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
@@ -286,7 +431,17 @@ function formatCep(value: string) {
       }
 
       await supabase.from("users").update({ company_id: empresa.id }).eq("id", user.id);
-      setEmpresaAtual({ nome: empresa.nome_empresa, cnpj: empresa.cnpj });
+      setEmpresaAtual({
+        id: empresa.id,
+        nome_empresa: empresa?.nome_empresa || null,
+        nome_fantasia: empresa?.nome_fantasia || null,
+        cnpj: empresa?.cnpj || null,
+        endereco: empresa?.endereco || null,
+        telefone: empresa?.telefone || null,
+        cidade: empresa?.cidade || null,
+        estado: empresa?.estado || null,
+      });
+      setPerfil((prev) => (prev ? { ...prev, company_id: empresa.id } : prev));
       setMsg("Empresa atualizada com sucesso.");
       setErro(null);
     } catch (e: any) {
@@ -414,7 +569,7 @@ function formatCep(value: string) {
               <input
                 className="form-input"
                 value={formatCpf(perfil.cpf || "")}
-                readOnly
+                onChange={(e) => atualizarCampo("cpf", formatCpf(e.target.value))}
                 placeholder="000.000.000-00"
               />
             </div>
@@ -617,32 +772,125 @@ function formatCep(value: string) {
             <h3>🏢 Empresa</h3>
             {empresaAtual ? (
               <p className="perfil-text-wrap" style={{ marginBottom: 12, lineHeight: 1.5 }}>
-                <strong>Empresa:</strong> {empresaAtual.nome || "-"}<br />
+                <strong>Empresa:</strong> {empresaAtual.nome_empresa || "-"}<br />
+                <strong>Fantasia:</strong> {empresaAtual.nome_fantasia || "-"}<br />
                 <strong>CNPJ:</strong> {empresaAtual.cnpj || "-"}<br />
-                <strong>Endereço:</strong> {perfil.company?.endereco || "-"}<br />
-                <strong>Telefone:</strong> {perfil.company?.telefone || "-"}<br />
+                <strong>Endereço:</strong> {empresaAtual.endereco || "-"}<br />
+                <strong>Telefone:</strong> {empresaAtual.telefone || "-"}<br />
+                <strong>Cidade/Estado:</strong>{" "}
+                {[empresaAtual.cidade, empresaAtual.estado].filter(Boolean).join(" / ") || "-"}<br />
                 <strong>Cargo:</strong> {perfil.cargo || "-"}
               </p>
             ) : (
               <p style={{ marginBottom: 12 }}>Nenhuma empresa vinculada.</p>
             )}
             <div className="form-group">
-              <label>Trocar empresa (CNPJ)</label>
+              <label>CNPJ</label>
               <input
                 className="form-input"
-                value={novoCnpj}
-                onChange={(e) => setNovoCnpj(e.target.value)}
+                value={formatCnpj(empresaForm.cnpj)}
+                onChange={(e) => atualizarEmpresa("cnpj", formatCnpj(e.target.value))}
+                onBlur={() => {
+                  if (!empresaDisabled && empresaForm.cnpj.trim()) {
+                    resolverEmpresa(false);
+                  }
+                }}
                 placeholder="00.000.000/0000-00"
-                disabled={bloqueiaEmpresaTipo}
+                disabled={empresaDisabled}
               />
+              <small style={{ opacity: 0.75 }}>
+                {empresaStatus || "Informe o CNPJ para buscar uma empresa existente."}
+              </small>
+            </div>
+            <div
+              className="perfil-grid"
+              style={{
+                gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1.2fr)",
+                marginTop: 8,
+              }}
+            >
+              <div className="form-group">
+                <label>Nome da empresa</label>
+                <input
+                  className="form-input"
+                  value={empresaForm.nome_empresa}
+                  onChange={(e) => atualizarEmpresa("nome_empresa", e.target.value)}
+                  placeholder="Razao social"
+                  disabled={empresaDisabled}
+                />
+              </div>
+              <div className="form-group">
+                <label>Nome fantasia</label>
+                <input
+                  className="form-input"
+                  value={empresaForm.nome_fantasia}
+                  onChange={(e) => atualizarEmpresa("nome_fantasia", e.target.value)}
+                  placeholder="Nome fantasia"
+                  disabled={empresaDisabled}
+                />
+              </div>
+            </div>
+            <div
+              className="perfil-grid"
+              style={{
+                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.7fr)",
+                marginTop: 8,
+              }}
+            >
+              <div className="form-group">
+                <label>Telefone</label>
+                <input
+                  className="form-input"
+                  value={formatTelefone(empresaForm.telefone || "")}
+                  onChange={(e) => atualizarEmpresa("telefone", formatTelefone(e.target.value))}
+                  placeholder="(00) 00000-0000"
+                  disabled={empresaDisabled}
+                />
+              </div>
+              <div className="form-group">
+                <label>Endereço</label>
+                <input
+                  className="form-input"
+                  value={empresaForm.endereco}
+                  onChange={(e) => atualizarEmpresa("endereco", e.target.value)}
+                  placeholder="Rua / Avenida"
+                  disabled={empresaDisabled}
+                />
+              </div>
+              <div className="form-group">
+                <label>Cidade</label>
+                <input
+                  className="form-input"
+                  value={empresaForm.cidade}
+                  onChange={(e) => atualizarEmpresa("cidade", e.target.value)}
+                  disabled={empresaDisabled}
+                />
+              </div>
+              <div className="form-group">
+                <label>Estado</label>
+                <input
+                  className="form-input"
+                  value={empresaForm.estado}
+                  maxLength={2}
+                  onChange={(e) => atualizarEmpresa("estado", e.target.value.toUpperCase())}
+                  placeholder="UF"
+                  disabled={empresaDisabled}
+                />
+              </div>
             </div>
             <div className="mobile-stack-buttons" style={{ marginTop: "auto" }}>
-              <button className="btn btn-primary" onClick={trocarEmpresa} disabled={salvando || bloqueiaEmpresaTipo}>
-                Trocar empresa
+              <button
+                className="btn btn-primary"
+                onClick={trocarEmpresa}
+                disabled={salvando || empresaLoading || empresaDisabled}
+              >
+                Vincular empresa
               </button>
-              {bloqueiaEmpresaTipo && (
+              {empresaDisabled && (
                 <small style={{ opacity: 0.7 }}>
-                  Empresa e cargo são definidos pelo gestor.
+                  {bloqueiaEmpresaTipo
+                    ? "Empresa e cargo sao definidos pelo gestor."
+                    : "Selecione uso corporativo para informar a empresa."}
                 </small>
               )}
             </div>
