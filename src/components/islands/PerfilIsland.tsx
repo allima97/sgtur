@@ -68,8 +68,21 @@ export default function PerfilIsland() {
   const [modalOnboardingSucesso, setModalOnboardingSucesso] = useState(false);
   const [modalCamposObrigatorios, setModalCamposObrigatorios] = useState(false);
   const [camposObrigatorios, setCamposObrigatorios] = useState<string[]>([]);
+  const [camposObrigatoriosKeys, setCamposObrigatoriosKeys] = useState<string[]>([]);
   const bloqueiaEmpresaTipo = Boolean(perfil?.created_by_gestor);
   const empresaDisabled = bloqueiaEmpresaTipo || usoIndividual !== false;
+  const campoPendenteStyle = {
+    borderColor: "#ef4444",
+    boxShadow: "0 0 0 1px rgba(239,68,68,0.35)",
+  } as const;
+
+  const campoIdMap: Record<string, string> = {
+    nome_completo: "perfil-nome-completo",
+    telefone: "perfil-telefone",
+    cidade: "perfil-cidade",
+    estado: "perfil-estado",
+    uso_individual: "perfil-uso-individual",
+  };
 
   const cidadeEstado = useMemo(() => {
     if (!perfil) return "";
@@ -179,6 +192,11 @@ export default function PerfilIsland() {
 
   function atualizarCampo(campo: keyof Perfil, valor: string) {
     setPerfil((prev) => (prev ? { ...prev, [campo]: valor } : prev));
+    if (["nome_completo", "telefone", "cidade", "estado"].includes(campo)) {
+      setCamposObrigatoriosKeys((prev) =>
+        prev.includes(campo) ? prev.filter((item) => item !== campo) : prev
+      );
+    }
   }
 
   function atualizarEmpresa(
@@ -328,13 +346,30 @@ function formatCnpj(value: string) {
       const usoFinal = typeof usoIndividual === "boolean" ? usoIndividual : true;
       if (onboarding) {
         const camposPendentes: string[] = [];
-        if (!perfil.nome_completo?.trim()) camposPendentes.push("Nome completo");
-        if (!perfil.telefone?.replace(/\D/g, "")) camposPendentes.push("Telefone");
-        if (!perfil.cidade?.trim()) camposPendentes.push("Cidade");
-        if (!perfil.estado?.trim()) camposPendentes.push("Estado");
-        if (typeof usoFinal !== "boolean") camposPendentes.push("Uso do sistema");
+        const camposPendentesKeys: string[] = [];
+        if (!perfil.nome_completo?.trim()) {
+          camposPendentes.push("Nome completo");
+          camposPendentesKeys.push("nome_completo");
+        }
+        if (!perfil.telefone?.replace(/\D/g, "")) {
+          camposPendentes.push("Telefone");
+          camposPendentesKeys.push("telefone");
+        }
+        if (!perfil.cidade?.trim()) {
+          camposPendentes.push("Cidade");
+          camposPendentesKeys.push("cidade");
+        }
+        if (!perfil.estado?.trim()) {
+          camposPendentes.push("Estado");
+          camposPendentesKeys.push("estado");
+        }
+        if (typeof usoFinal !== "boolean") {
+          camposPendentes.push("Uso do sistema");
+          camposPendentesKeys.push("uso_individual");
+        }
         if (camposPendentes.length > 0) {
           setCamposObrigatorios(camposPendentes);
+          setCamposObrigatoriosKeys(camposPendentesKeys);
           setModalCamposObrigatorios(true);
           setSalvando(false);
           return;
@@ -559,7 +594,25 @@ function formatCnpj(value: string) {
               </ul>
             </div>
             <div className="modal-footer">
-              <button onClick={() => setModalCamposObrigatorios(false)} className="btn btn-primary">
+              <button
+                onClick={() => {
+                  setModalCamposObrigatorios(false);
+                  const firstKey = camposObrigatoriosKeys[0];
+                  const targetId = campoIdMap[firstKey];
+                  if (targetId && typeof window !== "undefined") {
+                    setTimeout(() => {
+                      const el = document.getElementById(targetId) as HTMLElement | null;
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        if (typeof (el as any).focus === "function") {
+                          (el as any).focus();
+                        }
+                      }
+                    }, 60);
+                  }
+                }}
+                className="btn btn-primary"
+              >
                 OK
               </button>
             </div>
@@ -614,7 +667,14 @@ function formatCnpj(value: string) {
               Campos extras indisponíveis. Adicione as colunas novas em "users" no banco para editar CEP/WhatsApp/RG/endereço.
             </small>
           )}
-            <div className="form-group">
+            <div
+              className="form-group"
+              style={
+                camposObrigatoriosKeys.includes("uso_individual")
+                  ? { border: "1px solid #ef4444", borderRadius: 8, padding: 8 }
+                  : undefined
+              }
+            >
               <label>Uso do sistema</label>
               <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -622,8 +682,14 @@ function formatCnpj(value: string) {
                     type="radio"
                     name="uso"
                     checked={usoIndividual !== false}
-                    onChange={() => setUsoIndividual(true)}
+                    onChange={() => {
+                      setUsoIndividual(true);
+                      setCamposObrigatoriosKeys((prev) =>
+                        prev.includes("uso_individual") ? prev.filter((item) => item !== "uso_individual") : prev
+                      );
+                    }}
                     disabled={bloqueiaEmpresaTipo}
+                    id="perfil-uso-individual"
                   />
                   Individual
                 </label>
@@ -632,7 +698,12 @@ function formatCnpj(value: string) {
                     type="radio"
                     name="uso"
                     checked={usoIndividual === false}
-                    onChange={() => setUsoIndividual(false)}
+                    onChange={() => {
+                      setUsoIndividual(false);
+                      setCamposObrigatoriosKeys((prev) =>
+                        prev.includes("uso_individual") ? prev.filter((item) => item !== "uso_individual") : prev
+                      );
+                    }}
                     disabled={bloqueiaEmpresaTipo}
                   />
                   Corporativo
@@ -658,6 +729,8 @@ function formatCnpj(value: string) {
                 value={perfil.nome_completo}
                 onChange={(e) => atualizarCampo("nome_completo", e.target.value)}
                 required
+                id="perfil-nome-completo"
+                style={camposObrigatoriosKeys.includes("nome_completo") ? campoPendenteStyle : undefined}
               />
             </div>
             <div className="form-group">
@@ -778,6 +851,8 @@ function formatCnpj(value: string) {
                 value={formatTelefone(perfil.telefone || "")}
                 onChange={(e) => atualizarCampo("telefone", formatTelefone(e.target.value))}
                 placeholder="(00) 00000-0000"
+                id="perfil-telefone"
+                style={camposObrigatoriosKeys.includes("telefone") ? campoPendenteStyle : undefined}
               />
             </div>
             <div className="form-group">
@@ -796,6 +871,8 @@ function formatCnpj(value: string) {
                 className="form-input"
                 value={perfil.cidade || ""}
                 onChange={(e) => atualizarCampo("cidade", e.target.value)}
+                id="perfil-cidade"
+                style={camposObrigatoriosKeys.includes("cidade") ? campoPendenteStyle : undefined}
               />
             </div>
             <div className="form-group">
@@ -806,6 +883,8 @@ function formatCnpj(value: string) {
                 maxLength={2}
                 onChange={(e) => atualizarCampo("estado", e.target.value.toUpperCase())}
                 placeholder="UF"
+                id="perfil-estado"
+                style={camposObrigatoriosKeys.includes("estado") ? campoPendenteStyle : undefined}
               />
             </div>
           </div>
