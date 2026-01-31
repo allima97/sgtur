@@ -111,12 +111,18 @@ type Viagem = {
 
 type FollowUpVenda = {
   id: string;
-  data_embarque: string | null;
-  data_final: string | null;
-  vendedor_id: string | null;
-  clientes?: { id: string; nome: string | null } | null;
-  destino_cidade?: { id: string; nome: string | null } | null;
-  viagens?: { id: string; data_fim?: string | null }[] | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  follow_up_fechado?: boolean | null;
+  venda?: {
+    id: string;
+    data_embarque: string | null;
+    data_final: string | null;
+    vendedor_id: string | null;
+    cancelada?: boolean | null;
+    clientes?: { id: string; nome: string | null } | null;
+    destino_cidade?: { id: string; nome: string | null } | null;
+  } | null;
 };
 
 type PresetPeriodo = "mes_atual" | "ultimos_30" | "personalizado";
@@ -630,27 +636,34 @@ const DashboardGeralIsland: React.FC = () => {
         if (fimFollowUp >= inicio) {
           try {
             let followUpQuery = supabase
-              .from("vendas")
+              .from("viagens")
               .select(
                 `
                 id,
-                data_embarque,
-                data_final,
-                vendedor_id,
-                clientes:clientes (id, nome),
-                destino_cidade:cidades!destino_cidade_id (id, nome),
-                viagens:viagens (id, data_fim)
+                data_inicio,
+                data_fim,
+                follow_up_fechado,
+                venda:vendas (
+                  id,
+                  data_embarque,
+                  data_final,
+                  vendedor_id,
+                  cancelada,
+                  clientes:clientes (id, nome),
+                  destino_cidade:cidades!destino_cidade_id (id, nome)
+                )
               `
               )
-              .not("data_final", "is", null)
-              .gte("data_final", inicio)
-              .lte("data_final", fimFollowUp)
-              .eq("cancelada", false)
-              .order("data_final", { ascending: false })
+              .not("data_fim", "is", null)
+              .gte("data_fim", inicio)
+              .lte("data_fim", fimFollowUp)
+              .or("follow_up_fechado.is.null,follow_up_fechado.eq.false")
+              .eq("venda.cancelada", false)
+              .order("data_fim", { ascending: false })
               .limit(20);
 
             if (userCtx.vendedorIds.length > 0) {
-              followUpQuery = followUpQuery.in("vendedor_id", userCtx.vendedorIds);
+              followUpQuery = followUpQuery.in("venda.vendedor_id", userCtx.vendedorIds);
             }
 
             const { data: followUpResp, error: followUpErr } = await followUpQuery;
@@ -1156,8 +1169,8 @@ const DashboardGeralIsland: React.FC = () => {
 
   const followUpsRecentes = useMemo(() => {
     const ordenado = [...followUps].sort((a, b) => {
-      const da = a.data_final || "";
-      const db = b.data_final || "";
+      const da = a.data_fim || a.venda?.data_final || "";
+      const db = b.data_fim || b.venda?.data_final || "";
       if (da === db) return 0;
       return da < db ? 1 : -1;
     });
@@ -1801,30 +1814,19 @@ const DashboardGeralIsland: React.FC = () => {
                   )}
                   {followUpsRecentes.map((item) => (
                     <tr key={item.id}>
-                      <td data-label="Cliente">{item.clientes?.nome || "-"}</td>
-                      <td data-label="Destino">{item.destino_cidade?.nome || "-"}</td>
-                      <td data-label="Embarque">{formatarDataParaExibicao(item.data_embarque || "")}</td>
-                      <td data-label="Retorno">{formatarDataParaExibicao(item.data_final || "")}</td>
+                      <td data-label="Cliente">{item.venda?.clientes?.nome || "-"}</td>
+                      <td data-label="Destino">{item.venda?.destino_cidade?.nome || "-"}</td>
+                      <td data-label="Embarque">
+                        {formatarDataParaExibicao(item.data_inicio || item.venda?.data_embarque || "")}
+                      </td>
+                      <td data-label="Retorno">
+                        {formatarDataParaExibicao(item.data_fim || item.venda?.data_final || "")}
+                      </td>
                       <td className="th-actions" data-label="Ver">
                         <div className="action-buttons">
-                          {(() => {
-                            const viagemId =
-                              item.viagens?.find((v) => v.data_fim && v.data_fim === item.data_final)?.id ||
-                              item.viagens?.[0]?.id ||
-                              null;
-                            if (!viagemId) {
-                              return (
-                                <span className="btn-icon" title="Dossiê indisponível">
-                                  👁️
-                                </span>
-                              );
-                            }
-                            return (
-                              <a className="btn-icon" href={`/operacao/viagens/${viagemId}`} title="Ver dossiê">
-                                👁️
-                              </a>
-                            );
-                          })()}
+                          <a className="btn-icon" href={`/operacao/viagens/${item.id}`} title="Ver dossi??">
+                            ???????
+                          </a>
                         </div>
                       </td>
                     </tr>

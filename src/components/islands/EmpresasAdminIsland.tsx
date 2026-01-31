@@ -28,10 +28,31 @@ const statusColors: Record<string, string> = {
   canceled: "#ef4444",
 };
 
+function formatCnpj(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 14);
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
 const EmpresasAdminIsland: React.FC = () => {
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [novoCadastro, setNovoCadastro] = useState({
+    nome_empresa: "",
+    nome_fantasia: "",
+    cnpj: "",
+    telefone: "",
+    endereco: "",
+    cidade: "",
+    estado: "",
+  });
+  const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+  const [erroCadastro, setErroCadastro] = useState<string | null>(null);
   const { toasts, showToast, dismissToast } = useToastQueue({ durationMs: 3500 });
 
   useEffect(() => {
@@ -74,6 +95,65 @@ const EmpresasAdminIsland: React.FC = () => {
     }
   }
 
+  function abrirModalNovaEmpresa() {
+    setNovoCadastro({
+      nome_empresa: "",
+      nome_fantasia: "",
+      cnpj: "",
+      telefone: "",
+      endereco: "",
+      cidade: "",
+      estado: "",
+    });
+    setErroCadastro(null);
+    setCreateModalOpen(true);
+  }
+
+  async function salvarEmpresa() {
+    const nomeEmpresa = novoCadastro.nome_empresa.trim();
+    const cnpjLimpo = novoCadastro.cnpj.replace(/\D/g, "");
+    if (!nomeEmpresa) {
+      setErroCadastro("Informe o nome da empresa.");
+      return;
+    }
+    if (!cnpjLimpo || cnpjLimpo.length !== 14) {
+      setErroCadastro("Informe um CNPJ válido.");
+      return;
+    }
+    try {
+      setSalvandoEmpresa(true);
+      setErroCadastro(null);
+      const payload = {
+        nome_empresa: nomeEmpresa,
+        nome_fantasia: novoCadastro.nome_fantasia.trim() || nomeEmpresa,
+        cnpj: cnpjLimpo,
+        telefone: novoCadastro.telefone.trim() || null,
+        endereco: novoCadastro.endereco.trim() || null,
+        cidade: novoCadastro.cidade.trim() || null,
+        estado: novoCadastro.estado.trim().toUpperCase().slice(0, 2) || null,
+      };
+      const { error } = await supabase.from("companies").insert(payload).select("id").single();
+      if (error) throw error;
+      showToast("Empresa cadastrada com sucesso!", "success");
+      setCreateModalOpen(false);
+      setNovoCadastro({
+        nome_empresa: "",
+        nome_fantasia: "",
+        cnpj: "",
+        telefone: "",
+        endereco: "",
+        cidade: "",
+        estado: "",
+      });
+      await carregarEmpresas();
+    } catch (e: any) {
+      console.error(e);
+      setErroCadastro("Erro ao cadastrar empresa.");
+    } finally {
+      setSalvandoEmpresa(false);
+    }
+  }
+
   async function atualizarStatus(id: string, novoStatus: string) {
     try {
       const { error } = await supabase
@@ -91,7 +171,12 @@ const EmpresasAdminIsland: React.FC = () => {
 
   return (
     <div className="mt-10">
-      <h3 className="text-xl font-semibold mb-4">🏢 Empresas Cadastradas</h3>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+        <h3 className="text-xl font-semibold">🏢 Empresas Cadastradas</h3>
+        <button className="btn btn-primary" onClick={abrirModalNovaEmpresa}>
+          Nova empresa
+        </button>
+      </div>
 
       {erro && (
         <div className="mb-3">
@@ -182,6 +267,159 @@ const EmpresasAdminIsland: React.FC = () => {
           </table>
         </div>
       )}
+
+      {createModalOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <form
+            className="modal-panel"
+            style={{ maxWidth: 720, width: "95vw", background: "#f8fafc" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              salvarEmpresa();
+            }}
+          >
+            <div className="modal-header">
+              <div className="modal-title" style={{ color: "#1d4ed8", fontWeight: 800 }}>
+                Cadastro de empresa
+              </div>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setCreateModalOpen(false)}
+                disabled={salvandoEmpresa}
+              >
+                âœ–
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {erroCadastro && (
+                <div className="mb-3">
+                  <AlertMessage variant="error">{erroCadastro}</AlertMessage>
+                </div>
+              )}
+
+              <div className="form-row">
+                <div className="form-group flex-1">
+                  <label className="form-label">Nome da empresa</label>
+                  <input
+                    className="form-input"
+                    value={novoCadastro.nome_empresa}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, nome_empresa: e.target.value }));
+                      setErroCadastro(null);
+                    }}
+                    placeholder="RazÃ£o social"
+                    disabled={salvandoEmpresa}
+                    required
+                  />
+                </div>
+                <div className="form-group flex-1">
+                  <label className="form-label">Nome fantasia</label>
+                  <input
+                    className="form-input"
+                    value={novoCadastro.nome_fantasia}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, nome_fantasia: e.target.value }));
+                      setErroCadastro(null);
+                    }}
+                    placeholder="Nome fantasia"
+                    disabled={salvandoEmpresa}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group flex-1">
+                  <label className="form-label">CNPJ</label>
+                  <input
+                    className="form-input"
+                    value={formatCnpj(novoCadastro.cnpj)}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, cnpj: formatCnpj(e.target.value) }));
+                      setErroCadastro(null);
+                    }}
+                    placeholder="00.000.000/0000-00"
+                    disabled={salvandoEmpresa}
+                    required
+                  />
+                </div>
+                <div className="form-group flex-1">
+                  <label className="form-label">Telefone</label>
+                  <input
+                    className="form-input"
+                    value={novoCadastro.telefone}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, telefone: e.target.value }));
+                      setErroCadastro(null);
+                    }}
+                    placeholder="(00) 00000-0000"
+                    disabled={salvandoEmpresa}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">EndereÃ§o</label>
+                <input
+                  className="form-input"
+                  value={novoCadastro.endereco}
+                  onChange={(e) => {
+                    setNovoCadastro((prev) => ({ ...prev, endereco: e.target.value }));
+                    setErroCadastro(null);
+                  }}
+                  placeholder="Rua, nÃºmero, complemento"
+                  disabled={salvandoEmpresa}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group flex-1">
+                  <label className="form-label">Cidade</label>
+                  <input
+                    className="form-input"
+                    value={novoCadastro.cidade}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, cidade: e.target.value }));
+                      setErroCadastro(null);
+                    }}
+                    disabled={salvandoEmpresa}
+                  />
+                </div>
+                <div className="form-group" style={{ maxWidth: 120 }}>
+                  <label className="form-label">Estado</label>
+                  <input
+                    className="form-input"
+                    value={novoCadastro.estado}
+                    onChange={(e) => {
+                      setNovoCadastro((prev) => ({ ...prev, estado: e.target.value }));
+                      setErroCadastro(null);
+                    }}
+                    maxLength={2}
+                    placeholder="UF"
+                    disabled={salvandoEmpresa}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer mobile-stack-buttons">
+              <button type="submit" className="btn btn-primary" disabled={salvandoEmpresa}>
+                {salvandoEmpresa ? "Salvando..." : "Salvar empresa"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => setCreateModalOpen(false)}
+                disabled={salvandoEmpresa}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

@@ -71,9 +71,17 @@ type Viagem = {
 
 type FollowUpVenda = {
   id: string;
-  data_final: string | null;
-  clientes?: { nome: string | null } | null;
-  destino_cidade?: { nome: string | null } | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  follow_up_fechado?: boolean | null;
+  venda?: {
+    vendedor_id: string | null;
+    cancelada?: boolean | null;
+    data_embarque?: string | null;
+    data_final?: string | null;
+    clientes?: { nome: string | null } | null;
+    destino_cidade?: { nome: string | null } | null;
+  } | null;
 };
 
 type Cliente = {
@@ -310,24 +318,32 @@ export default function DashboardGestorIsland() {
         if (fimFollowUp >= inicio) {
           try {
             let followUpQuery = supabase
-              .from("vendas")
+              .from("viagens")
               .select(
                 `
                 id,
-                data_final,
-                vendedor_id,
-                clientes:clientes (nome),
-                destino_cidade:cidades!destino_cidade_id (nome)
+                data_inicio,
+                data_fim,
+                follow_up_fechado,
+                venda:vendas (
+                  vendedor_id,
+                  cancelada,
+                  data_embarque,
+                  data_final,
+                  clientes:clientes (nome),
+                  destino_cidade:cidades!destino_cidade_id (nome)
+                )
               `
               )
-              .not("data_final", "is", null)
-              .gte("data_final", inicio)
-              .lte("data_final", fimFollowUp)
-              .eq("cancelada", false)
-              .order("data_final", { ascending: false })
+              .not("data_fim", "is", null)
+              .gte("data_fim", inicio)
+              .lte("data_fim", fimFollowUp)
+              .or("follow_up_fechado.is.null,follow_up_fechado.eq.false")
+              .eq("venda.cancelada", false)
+              .order("data_fim", { ascending: false })
               .limit(20);
             if (papel === "GESTOR" && equipeFiltro.length > 0) {
-              followUpQuery = followUpQuery.in("vendedor_id", equipeFiltro);
+              followUpQuery = followUpQuery.in("venda.vendedor_id", equipeFiltro);
             }
             const { data: followUpResp, error: followUpErr } = await followUpQuery;
             if (followUpErr) throw followUpErr;
@@ -466,7 +482,9 @@ export default function DashboardGestorIsland() {
 
   const followUpsRecentes = useMemo(() => {
     return [...followUps]
-      .sort((a, b) => (a.data_final || "").localeCompare(b.data_final || ""))
+      .sort((a, b) =>
+        (a.data_fim || a.venda?.data_final || "").localeCompare(b.data_fim || b.venda?.data_final || "")
+      )
       .reverse()
       .slice(0, 5);
   }, [followUps]);
@@ -762,9 +780,9 @@ export default function DashboardGestorIsland() {
               )}
               {followUpsRecentes.map((f) => (
                 <tr key={f.id}>
-                  <td>{formatarDataParaExibicao(f.data_final)}</td>
-                  <td>{f.clientes?.nome || "—"}</td>
-                  <td>{f.destino_cidade?.nome || "—"}</td>
+                  <td>{formatarDataParaExibicao(f.data_fim || f.venda?.data_final || "")}</td>
+                  <td>{f.venda?.clientes?.nome || "—"}</td>
+                  <td>{f.venda?.destino_cidade?.nome || "—"}</td>
                 </tr>
               ))}
             </tbody>

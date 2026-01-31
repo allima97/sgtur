@@ -81,6 +81,8 @@ type ViagemDetalhe = {
   responsavel_user_id: string | null;
   responsavel?: { nome_completo?: string | null } | null;
   observacoes: string | null;
+  follow_up_text?: string | null;
+  follow_up_fechado?: boolean | null;
   venda?: {
     id: string;
     cliente_id: string | null;
@@ -174,6 +176,9 @@ export default function DossieViagemIsland({ viagemId }: Props) {
   const [savingDoc, setSavingDoc] = useState(false);
   const [removendoDocId, setRemovendoDocId] = useState<string | null>(null);
   const [abrindoDocId, setAbrindoDocId] = useState<string | null>(null);
+  const [followUpForm, setFollowUpForm] = useState({ texto: "", fechado: false });
+  const [savingFollowUp, setSavingFollowUp] = useState(false);
+  const [followUpFeedback, setFollowUpFeedback] = useState<string | null>(null);
   const [viagensVenda, setViagensVenda] = useState<ViagemResumo[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<"dados" | "acompanhantes" | "servicos" | "documentos">("dados");
   const [mostrarCadastroAcomp, setMostrarCadastroAcomp] = useState(false);
@@ -223,6 +228,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     return viagensVenda.find((v) => v.recibo_id === reciboPrincipal.id) || null;
   }, [viagensVenda, reciboPrincipal]);
   const dadosViagem = viagemPrincipalDados || viagem;
+  const dataEmbarqueIso = (dadosViagem?.data_inicio || viagem?.data_inicio || "").slice(0, 10);
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const followUpLiberado = Boolean(dataEmbarqueIso && dataEmbarqueIso <= hojeIso);
+  const followUpDisabled = !podeCriar || !followUpLiberado || savingFollowUp;
+  const dataEmbarqueLabel = dataEmbarqueIso ? formatarDataParaExibicao(dataEmbarqueIso) : "";
 
   function resetCadastroAcompanhante(hideForm = false) {
     setCadastroAcompForm({
@@ -279,6 +289,8 @@ export default function DossieViagemIsland({ viagemId }: Props) {
             nome_completo
           ),
           observacoes,
+          follow_up_text,
+          follow_up_fechado,
           venda:vendas (
             id,
             cliente_id,
@@ -351,6 +363,11 @@ export default function DossieViagemIsland({ viagemId }: Props) {
       if (error) throw error;
       const detalhe = (data || null) as ViagemDetalhe | null;
       setViagem(detalhe);
+      setFollowUpForm({
+        texto: detalhe?.follow_up_text || "",
+        fechado: detalhe?.follow_up_fechado ?? false,
+      });
+      setFollowUpFeedback(null);
       if (detalhe?.venda_id) {
         const { data: viagensData, error: viagensErr } = await supabase
           .from("viagens")
@@ -676,6 +693,33 @@ export default function DossieViagemIsland({ viagemId }: Props) {
     }
   }
 
+  async function salvarFollowUp() {
+    if (!viagem) return;
+    if (!podeCriar) return;
+    if (!followUpLiberado) {
+      setErro("Follow-up disponÃ­vel apÃ³s a data de embarque.");
+      return;
+    }
+    try {
+      setSavingFollowUp(true);
+      setErro(null);
+      setFollowUpFeedback(null);
+      const payload = {
+        follow_up_text: followUpForm.texto.trim() || null,
+        follow_up_fechado: Boolean(followUpForm.fechado),
+      };
+      const { error } = await supabase.from("viagens").update(payload).eq("id", viagem.id);
+      if (error) throw error;
+      setViagem((prev) => (prev ? { ...prev, ...payload } : prev));
+      setFollowUpFeedback("Follow-up atualizado.");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro ao salvar follow-up.");
+    } finally {
+      setSavingFollowUp(false);
+    }
+  }
+
   async function removerDocumento(id: string) {
     if (!podeExcluir) return;
     try {
@@ -819,6 +863,70 @@ export default function DossieViagemIsland({ viagemId }: Props) {
                       </table>
                     </div>
                   )}
+
+                  <div className="card-base" style={{ border: "1px solid #e2e8f0" }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Follow-up do cliente</div>
+                    <div style={{ color: "#64748b", fontSize: 13, marginBottom: 10 }}>
+                      Parecer do cliente apÃ³s o retorno da viagem.
+                    </div>
+                    {!followUpLiberado && (
+                      <div style={{ color: "#b45309", fontSize: 13, marginBottom: 10 }}>
+                        DisponÃ­vel apÃ³s a data de embarque{dataEmbarqueLabel ? `: ${dataEmbarqueLabel}` : ""}.
+                      </div>
+                    )}
+                    {followUpFeedback && (
+                      <div style={{ color: "#166534", fontSize: 13, marginBottom: 10 }}>
+                        {followUpFeedback}
+                      </div>
+                    )}
+                    <div className="form-group">
+                      <label className="form-label">Follow-up</label>
+                      <textarea
+                        className="form-textarea"
+                        value={followUpForm.texto}
+                        onChange={(e) => {
+                          setFollowUpForm((prev) => ({ ...prev, texto: e.target.value }));
+                          setFollowUpFeedback(null);
+                        }}
+                        disabled={followUpDisabled}
+                        placeholder="Escreva o parecer do cliente..."
+                      />
+                    </div>
+                    <div className="form-row" style={{ alignItems: "flex-end" }}>
+                      <div className="form-group">
+                        <label className="form-label">Status</label>
+                        <select
+                          className="form-select"
+                          value={followUpForm.fechado ? "fechado" : "aberto"}
+                          onChange={(e) => {
+                            setFollowUpForm((prev) => ({ ...prev, fechado: e.target.value === "fechado" }));
+                            setFollowUpFeedback(null);
+                          }}
+                          disabled={followUpDisabled}
+                        >
+                          <option value="aberto">Aberto</option>
+                          <option value="fechado">Fechado</option>
+                        </select>
+                      </div>
+                      {podeCriar && (
+                        <div className="form-group">
+                          <button
+                            type="button"
+                            className="btn btn-light w-full sm:w-auto"
+                            onClick={salvarFollowUp}
+                            disabled={followUpDisabled}
+                            style={{
+                              backgroundColor: "#dcfce7",
+                              color: "#166534",
+                              borderColor: "#86efac",
+                            }}
+                          >
+                            {savingFollowUp ? "Salvando..." : "Salvar follow-up"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
