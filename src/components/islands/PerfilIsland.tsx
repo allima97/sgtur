@@ -237,6 +237,8 @@ function formatCnpj(value: string) {
     setErro(null);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       const payload = {
         cnpj: cnpjLimpo,
         allowCreate: permitirCriar,
@@ -252,7 +254,11 @@ function formatCnpj(value: string) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
+        cache: "no-store",
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (resp.status === 404) {
         setEmpresaStatus("Empresa não encontrada. Preencha os dados para cadastrar.");
@@ -261,6 +267,12 @@ function formatCnpj(value: string) {
       if (!resp.ok) {
         const text = await resp.text();
         throw new Error(text || "Falha ao resolver empresa.");
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await resp.text();
+        throw new Error(text || "Resposta inesperada ao buscar empresa.");
       }
 
       const empresa = await resp.json();
@@ -288,6 +300,7 @@ function formatCnpj(value: string) {
       return empresa;
     } catch (e) {
       console.error(e);
+      setEmpresaStatus("Não foi possível buscar a empresa. Tente novamente.");
       setErro("Não foi possível vincular a empresa.");
       return null;
     } finally {

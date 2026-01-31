@@ -68,6 +68,21 @@ export async function POST({ request }: { request: Request }) {
       }
     }
 
+    // Fallback para casos com espacos ou formatacao irregular.
+    const ilikeTarget = cnpjFormatado !== cnpjLimpo ? cnpjFormatado : cnpjLimpo;
+    const { data: existenteIlike, error: ilikeErr } = await supabaseServer
+      .from("companies")
+      .select(selectCols)
+      .ilike("cnpj", `%${ilikeTarget}%`)
+      .limit(1)
+      .maybeSingle();
+    if (ilikeErr) {
+      return new Response(`Falha ao buscar empresa: ${ilikeErr.message}`, { status: 500 });
+    }
+    if (existenteIlike) {
+      return jsonResponse(existenteIlike, 200);
+    }
+
     if (!body.allowCreate) {
       return new Response("Empresa nao encontrada.", { status: 404 });
     }
