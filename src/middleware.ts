@@ -135,7 +135,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isPublic = rotasPublicas.some((r) => pathname.startsWith(r));
 
   // Rotas públicas e assets não precisam de sessão (evita set-cookie após response).
-  if (isPublic) return next();
+  if (isPublic) return await next();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error(
@@ -294,7 +294,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ];
     const isAllowed = adminAllowedPrefixes.some((prefix) => pathname.startsWith(prefix));
     if (isAllowed) {
-      return next();
+      return await next();
     }
     return Response.redirect(new URL("/dashboard/admin", url), 302);
   }
@@ -326,11 +326,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // ============================
   // Rotas que exigem login, mas nao exigem modulo_acesso.
   if (pathname.startsWith("/perfil") || pathname.startsWith("/negado")) {
-    return next();
+    return await next();
   }
 
   const modulo = descobrirModulo(pathname);
-  if (!modulo) return next(); // rota não associada a módulo
+  if (!modulo) return await next(); // rota não associada a módulo
 
   // ============================
   // 2) PEGAR PERMISSÃO DO USUÁRIO
@@ -367,11 +367,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // ADMIN → sempre permitido
-  if (permissao === "admin") return next();
+  if (permissao === "admin") return await next();
 
   // Para qualquer outra permissão (view / create / edit / delete)
   // acesso à rota é permitido, restrições de função ficam nos islands.
-  return next();
+  return await next();
 
   } catch (error) {
     console.error("[middleware] erro inesperado", error);
